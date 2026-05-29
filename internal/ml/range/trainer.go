@@ -1,6 +1,6 @@
-// Phase-50 / 0063 — ML2 Range-prediction model.
+// Package mlrange contains deterministic per-vehicle range-prediction training.
 //
-// trainer.go ships the deterministic statistical trainer that
+// The trainer
 // computes a per-vehicle range-prediction model: a per-bucket
 // (temp_bucket × speed_bucket) Wh/km envelope (mean, stddev, p5,
 // p95) over a recent window of `drives` rows, with per-bucket
@@ -30,11 +30,9 @@
 //
 // The trainer never mutates the `drives` table or persists any
 // learned bucket. It is a one-shot statistical projection over the
-// rows the [DriveStatsSource] returns. A future slice may add a
-// daily ai_ml_range_trainer job (forward-compat-listed in the
-// registry's RouteSet.JobNames) that persists the learned model per
-// vehicle for cross-pod reuse; today's slice is request-scoped and
-// recomputes on demand.
+// rows the [DriveStatsSource] returns. A future ai_ml_range_trainer job may
+// persist the learned model per vehicle for cross-pod reuse; the current path
+// is request-scoped and recomputes on demand.
 //
 // ADR-015 alignment:
 //
@@ -197,8 +195,7 @@ type Trainer struct {
 
 // NewTrainer constructs a trainer with the supplied sample source
 // and the package defaults for MinSamples / Days. Override the
-// fields directly after construction if a slice ever needs different
-// thresholds.
+// fields directly after construction if a caller needs different thresholds.
 func NewTrainer(src DriveStatsSource) *Trainer {
 	return &Trainer{
 		Source:     src,

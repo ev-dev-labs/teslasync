@@ -1,4 +1,4 @@
-// Package auth — session tracker middleware (Phase-46 / Prompt 42).
+// Package auth provides session tracker middleware.
 //
 // The tracker mints a TeslaSync-issued opaque cookie on the first
 // authenticated request from a browser, persists the (subject, cookie
@@ -8,9 +8,8 @@
 // the cookie cleared on the browser — independently of the upstream
 // ForwardAuth provider's session state.
 //
-// The package is deliberately a sibling of `internal/api` so the future
-// auth-mode contract (prompt 57) can land helpers like `subject.go`
-// here without churning the API package's import graph.
+// The package is deliberately a sibling of `internal/api` so auth-mode
+// helpers can live here without churning the API package's import graph.
 //
 // Open-mode policy
 // ----------------

@@ -12,22 +12,14 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
-// ---------------------------------------------------------------------------
-// Outbound api_call_logs sink registry for package geocoding
-// (Phase 38 / Prompt 13)
+// Outbound api_call_logs sink registry for package geocoding.
 //
-// All four geocoding adapters (nominatim, google, azure, search) share a
-// single outbound APICallSink installed once at startup via SetSink. Each
-// adapter's constructor builds its own httputil.NewClient inline (so the
-// service tag is local to the file) and reads the shared sink via
-// currentGeoSink(). Constructing the client in the file owning the
-// adapter — instead of in a helper — keeps the service-name literal
-// alongside the adapter and lets the gate verify that every migrated
-// file references httputil.NewClient directly.
+// All geocoding adapters share a single outbound APICallSink installed once
+// at startup via SetSink. Each adapter constructor builds httputil.NewClient
+// inline so the service-name literal stays next to the adapter.
 //
-// Disabled mode (cfg.APILogs.Enabled=false) installs nil — LoggedTransport
-// tolerates a nil sink (zerolog only).
-// ---------------------------------------------------------------------------
+// Disabled mode (cfg.APILogs.Enabled=false) installs nil; LoggedTransport
+// tolerates a nil sink and falls back to zerolog only.
 
 var (
 	geoOutboundSinkMu sync.RWMutex

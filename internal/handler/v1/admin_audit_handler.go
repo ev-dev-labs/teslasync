@@ -1,9 +1,8 @@
 package v1
 
-// Phase-45 — Admin audit handler. Wraps auditviewersvc with filter
-// parsing for the admin UI's audit log viewer. WRITE access to the
-// audit log goes through internal/audit directly; there is no POST
-// route here — auditing happens as a side-effect of other actions.
+// Admin audit handler for the admin UI's audit log viewer. Write access
+// goes through internal/audit directly; there is no POST route here
+// because auditing happens as a side effect of other actions.
 
 import (
 	"errors"

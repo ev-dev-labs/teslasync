@@ -7,7 +7,7 @@ import "context"
 // secondary dual-write to signal_log that the Router performs after
 // every non-signal_log / non-unit_history primary write completes.
 //
-// Phase-10 propagates the role through context so each writer's
+// The Router propagates the role through context so each writer's
 // tesla.writer.<dest> span can carry the write.role attribute
 // without the writer needing to know which call-site invoked it. The
 // writers package reads the value via WriteRoleFromContext; the key

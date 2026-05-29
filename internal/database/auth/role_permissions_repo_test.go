@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 44 — RolePermissionsRepo unit tests.
+// RolePermissionsRepo unit tests cover pure-Go validation and short-circuit paths.
 //
 // The repo's queries themselves require a live PostgreSQL connection,
 // so DB integration coverage lives in the API handler tests (which use

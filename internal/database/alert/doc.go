@@ -3,20 +3,16 @@
 // validateVehicleSelection + dedupAndSortVehicleIDs helpers) and
 // AlertRuleStateRepo (per-rule materialised state).
 //
-// Carved from internal/database in Phase R4.9 per ADR-011. Callers
-// import as `dbalert` to disambiguate from internal/alert (runtime
-// alert engine, if added).
+// Callers import as `dbalert` to disambiguate this repository package from
+// any runtime alert engine package.
 //
-// Lesson 26 + 30 NEW: the compile-time assertion
+// The compile-time assertion
 //
 //	_ settingsdb.SettingsSerializerAlertRepo = (*AlertRuleRepo)(nil)
 //
-// originally lived in parent settings_serializer.go and would create
-// a parent -> child cycle after the carve. Solution: relocate the
-// assertion to internal/database/alert/settings_serializer_assertion.go
-// where the alert subpackage imports parent for the interface type.
-// This keeps signature drift detection at build time AND avoids the
-// cycle. Apply the same pattern to geofence/quiet_hours carves later.
+// lives in internal/database/alert/settings_serializer_assertion.go so the
+// subpackage can import the parent interface without creating an import cycle.
+// Apply the same pattern to future bounded-context repository packages.
 //
 // Layer: adapter
 package alert

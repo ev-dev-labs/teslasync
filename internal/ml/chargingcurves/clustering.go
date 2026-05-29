@@ -1,8 +1,7 @@
-// Package mlchargingcurves is the Phase-50 / 0064 (ML3) deterministic
-// statistical clustering trainer for per-vehicle charging-curve
-// fingerprints.
+// Package mlchargingcurves contains deterministic per-vehicle charging-curve
+// clustering.
 //
-// clustering.go ships the deterministic statistical trainer that
+// The trainer
 // computes a per-vehicle charging-curve cluster envelope. Sessions
 // are first hard-bucketed by the canonical L1/L2/DC peak-power tier
 // the SPA's helpers.ts already applies (mirrored byte-for-byte by
@@ -26,20 +25,14 @@
 // The trainer never mutates the `charging_sessions` table or
 // persists any learned cluster. It is a one-shot statistical
 // projection over the rows the [SessionSource] returns. A future
-// slice may add a daily ai_ml_charge_curve_trainer job
-// (forward-compat-listed in the registry's RouteSet.JobNames) that
-// persists the learned cluster envelope per vehicle for cross-pod
-// reuse; today's slice is request-scoped and recomputes on demand.
+// ai_ml_charge_curve_trainer job may persist the learned cluster envelope per
+// vehicle for cross-pod reuse; the current path is request-scoped and
+// recomputes on demand.
 //
-// Why this lives next to internal/ml/range/ and internal/ml/anomaly/:
-//
-//	The Phase-50 / 0064 slice's allowed-files list explicitly admits
-//	`internal/ml/**` for ML-tier slices. Keeping the deterministic
-//	statistical trainer in the same place as the other ML-tier
-//	trainers (ML1 anomaly, ML2 range) keeps the dependency direction
-//	consistent: api → ml/chargingcurves, ai/tools → ml/chargingcurves.
-//	internal/ml/chargingcurves imports nothing project-local except
-//	models for the ChargingSession DTO.
+// Keeping this trainer next to the other ML trainers preserves the dependency
+// direction: api → ml/chargingcurves and ai/tools → ml/chargingcurves.
+// internal/ml/chargingcurves imports no project-local packages except the
+// ChargingSession DTO.
 //
 // ADR-015 alignment:
 //
@@ -122,9 +115,8 @@ const MaxExampleSessionIDs = 5
 
 // Power-tier thresholds — pinned to the same physical regime
 // boundaries the SPA's helpers.ts already applies when classifying
-// a session into L1/L2/DC. Mirrors the C3 sibling slice 0028's
-// constants in internal/ai/tools/charge_curve_clustering.go and
-// is pinned by the parity test
+// a session into L1/L2/DC. Mirrors the constants in
+// internal/ai/tools/charge_curve_clustering.go and is pinned by the parity test
 // internal/api/ai_ml_charging_curve_parity_test.go so a future
 // drift between the ML trainer and the rule labels is surfaced.
 //

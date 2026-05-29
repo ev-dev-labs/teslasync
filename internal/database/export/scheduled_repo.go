@@ -1,5 +1,3 @@
-// Phase-46 / Prompt 65 — Scheduled / recurring exports repository.
-//
 // Persists user-configured cron schedules backing /scheduled-exports.
 // The handler creates / updates / deletes rows via this repo; the
 // export package's Scheduler tick reads due rows via DueBefore and
@@ -309,8 +307,8 @@ func NormalizeScheduledExportInput(in ScheduledExportInput) (ScheduledExportInpu
 		return ScheduledExportInput{}, err
 	}
 	out.RangeWindow = canonWindow
-	// Columns: trim each entry; drop blanks. Per Phase-46 / Prompt 62
-	// nil/empty signals "every catalog column" so we deliberately
+	// Columns trim each entry and drop blanks. Nil/empty signals "every catalog"
+	// column so we deliberately
 	// allow that distinction to round-trip.
 	if len(in.Columns) > 0 {
 		cleaned := make([]string, 0, len(in.Columns))

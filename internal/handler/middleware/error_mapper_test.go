@@ -66,7 +66,7 @@ func TestHandleError(t *testing.T) {
 	}
 }
 
-// --- Phase-45 / Prompt 33 — RateLimitError / UpstreamBreakerError tests ---
+// RateLimitError and UpstreamBreakerError mapping tests.
 
 func TestRateLimitError_MapsTo429WithCode(t *testing.T) {
 	rl := &RateLimitError{Inner: errors.New("too many requests"), RetryAfterSec: 30}

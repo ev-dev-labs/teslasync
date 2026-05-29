@@ -36,9 +36,8 @@ import (
 // The test is reflective: the only inputs are protomodel.Signals,
 // protomodel.SignalsByName, and the embedded routing.yaml. There is
 // no hand-curated list of Field names. Adding a new SignalMeta via
-// re-vendor + regen is the ONLY way the missing-entries assertion
-// can change — exactly the property phase-42 needs to make the
-// single-pipeline guarantee enforceable in CI.
+// re-vendor + regen is the only way the missing-entries assertion can
+// change, which keeps the single-pipeline guarantee enforceable in CI.
 //
 // Compounds (IsCompound == true) are skipped from the coverage check
 // because the codec flattens them at internal/tesla/codec/flatten.go

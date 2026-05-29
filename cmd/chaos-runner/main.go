@@ -5,8 +5,6 @@
 // each scenario, and exits non-zero if any scenario fails or any
 // recovery probe times out.
 //
-// Phase-49 / p49-chaos.
-//
 // Usage:
 //
 //	docker compose --profile chaos up -d

@@ -1,16 +1,16 @@
-// Phase 44 / Prompt 0080 — trace-coverage audit.
+// Command trace-coverage-audit statically checks tracing coverage.
 //
 // Static analyzer that walks the Go source tree and counts trace
 // instrumentation sites along every critical request flow.
 //
 // Flows (kept in sync with .github/instructions/observability.instructions.md):
 //
-//	API hot paths (Phase-44 baseline):
+//	API hot paths:
 //	  1. GET /vehicles/{id}/state           → http handler → service → repo → cache
 //	  2. POST /commands/{vehicleId}/wake    → http handler → service → tesla client
 //	  3. MQTT consume → normalize → store   → mqtt subscriber → pipeline → routers
 //
-//	Full-coverage expansion (Phase-44b — every async path covered):
+//	Async and background paths:
 //	  4. notification_dispatch     → API publish → MQTT envelope → consume → send
 //	  5. export_job                → API publish → MQTT envelope → consume → process → SSE
 //	  6. automation_evaluate       → engine.Evaluate span + actions
@@ -26,8 +26,8 @@
 // INSUFFICIENT_SPANS so the gate blocks the prompt.
 //
 // This is a static audit, not a runtime one. The gate only requires that
-// the docs/runbooks/phase-44-trace-coverage-audit.md report does NOT
-// contain INSUFFICIENT_SPANS or MISSING_FLOW substrings. Runtime
+// the generated report does NOT contain INSUFFICIENT_SPANS or MISSING_FLOW
+// substrings. Runtime
 // regression coverage lives in the unit tests under each instrumented
 // package (e.g. internal/mqtt/propagation_test.go, internal/tracing/
 // fsmtracer_test.go) — those exercise the Init+SpanRecorder pattern and
@@ -103,8 +103,6 @@ var flows = []flow{
 			"internal/tesla/normalize/pipeline.go",
 		},
 	},
-
-	// Phase-44b expansion — full coverage of every async path.
 
 	{
 		Name:        "notification_dispatch",
@@ -208,7 +206,7 @@ var flows = []flow{
 		},
 	},
 
-	// Phase-10 — full Tesla signal-ingestion pipeline tracing.
+	// Tesla signal-ingestion pipeline tracing.
 	// From MQTT receive → VIN resolve → codec decode → normalize.process_atomics
 	// → router.route → writers DB save → side-effects (live store + L1/L2 +
 	// FSM + sessions + alerts + SSE Redis Pub/Sub publish) + Setting*Unit

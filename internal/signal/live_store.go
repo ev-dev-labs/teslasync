@@ -130,8 +130,8 @@ func (s *HybridLiveSignalStore) Update(ctx context.Context, vehicleID int64, sig
 	}
 
 	s.l1.Update(vehicleID, signals)
-	// Phase-44 prompt 0022: stamp the per-vehicle "last seen" timestamp so
-	// the telemetry-lag refresher can compute (now - lastSeen).
+	// Stamp the per-vehicle "last seen" timestamp so the telemetry-lag
+	// refresher can compute now - lastSeen.
 	metrics.RecordSignalReceived(strconv.FormatInt(vehicleID, 10), time.Now())
 	l2 := s.redisCache()
 	if len(signals) == 0 || l2 == nil {
@@ -156,7 +156,7 @@ func (s *HybridLiveSignalStore) UpdateNonBlocking(ctx context.Context, vehicleID
 	}
 
 	s.l1.Update(vehicleID, signals)
-	// Phase-44 prompt 0022: same telemetry-lag stamp on the non-blocking path.
+	// Keep telemetry-lag metrics consistent with the blocking update path.
 	metrics.RecordSignalReceived(strconv.FormatInt(vehicleID, 10), time.Now())
 	l2 := s.redisCache()
 	if len(signals) == 0 || l2 == nil {

@@ -124,16 +124,12 @@ func TestAllowedAccountTablesIncludesCoreEntities(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Phase-46 / Prompt 62 — column allowlist on exports
-// ---------------------------------------------------------------------------
-
-// TestExport_NoColumns_BackwardsCompat is the canary the phase-46/62 gate
-// asserts is present: an export request with no `columns` field MUST behave
-// identically to today. Specifically:
+// TestExport_NoColumns_BackwardsCompat protects the default export contract:
+// a request with no `columns` field must behave identically to the legacy
+// full-column export. Specifically:
 //   - resolveColumnSelection returns the full catalog in catalog order
 //   - snapshotToCSV with allowedColumns=nil emits sorted-alphabetic column
-//     order matching the pre-Phase-46/62 byte-for-byte contract
+//     order matching the legacy byte-for-byte contract
 //   - ValidateColumns([]) returns nil/nil (no-op)
 func TestExport_NoColumns_BackwardsCompat(t *testing.T) {
 	t.Run("resolveColumnSelection returns full catalog", func(t *testing.T) {
@@ -157,9 +153,8 @@ func TestExport_NoColumns_BackwardsCompat(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		// Empty request returns the whole catalog as a normalised name slice
-		// (spec'd "byte-for-byte same default behaviour"), so we assert the
-		// shape is the catalog rather than nil.
+		// Empty requests return the full catalog as a normalized name slice,
+		// so assert the catalog shape rather than nil.
 		if len(out) != len(AvailableColumns("drives")) {
 			t.Errorf("len = %d, want catalog size", len(out))
 		}

@@ -119,8 +119,8 @@ type baselineSnapshot struct {
 
 // goFilesIn returns the production-source .go files (no _test.go) that
 // the baseline records for the given package path. The lookup prefers
-// the explicit FilesByPackage map populated by phase-47/06; for older
-// baselines without that field it falls back to scanning Packages.
+// the explicit FilesByPackage map when present; for older baselines
+// without that field it falls back to scanning Packages.
 func (s *baselineSnapshot) goFilesIn(pkg string) []string {
 	if files, ok := s.FilesByPackage[pkg]; ok {
 		return files
@@ -228,8 +228,8 @@ func walkInternal(t *testing.T, repoRoot string) (pkgs int, docGo int) {
 	return pkgs, docGo
 }
 
-// TestEveryInternalPackageHasDocGoWithLayer enforces phase-47/03: every
-// package under internal/, cmd/, or tools/ that ships at least one .go
+// TestEveryInternalPackageHasDocGoWithLayer enforces that every package
+// under internal/, cmd/, or tools/ that ships at least one .go
 // file MUST have a doc.go containing a `// Layer: <name>` declaration
 // from the closed set { domain, port, adapter, app, handler, platform,
 // cmd-internal, tool }. testdata/ trees are skipped (golden fixtures).
@@ -304,8 +304,8 @@ func parseLayer(src string) string {
 	return m[1]
 }
 
-// TestFrozenPackagesNoNewFiles enforces ADR-009 (phase-47/06): packages
-// listed in FrozenPackages must not gain new production .go files
+// TestFrozenPackagesNoNewFiles enforces ADR-009: packages listed in
+// FrozenPackages must not gain new production .go files
 // relative to tools/archmetrics/baseline.json. _test.go files for
 // existing source files are exempt — tests must live in the same Go
 // package as the code under test.
@@ -366,7 +366,7 @@ func stringSet(values []string) map[string]bool {
 	return out
 }
 
-// TestDomainPurity enforces ADR-006 (phase-47/07): packages under
+// TestDomainPurity enforces ADR-006: packages under
 // internal/domain/* may import only stdlib and other internal/domain/*
 // subpackages (including the parent internal/domain package).
 // Persistence (internal/database, internal/adapter/*), transport
@@ -417,7 +417,7 @@ func TestDomainPurity(t *testing.T) {
 	}
 }
 
-// TestModelsHaveStructTags enforces ADR-006 (phase-47/07): every
+// TestModelsHaveStructTags enforces ADR-006: every
 // exported field of every exported struct under internal/models/*.go
 // (excluding *_test.go) must carry at least one struct tag containing
 // `db:` or `json:`. Embedded fields (no field names) and fields whose
@@ -507,16 +507,15 @@ func TestModelsHaveStructTags(t *testing.T) {
 	}
 }
 
-// TestModelsImportsRestricted enforces ADR-006 (phase-47/07): packages
+// TestModelsImportsRestricted enforces ADR-006: packages
 // under internal/models AND all bounded-context subpackages
 // internal/models/<sub> may NOT import internal/database,
 // internal/adapter/*, internal/api, internal/handler/*,
 // internal/app/*, or internal/port/*. Imports of stdlib and
 // internal/domain/* (for ToDomain helpers) are explicitly allowed.
 //
-// Phase-R5.0 (2026-05-28): widened load path from "./internal/models"
-// to "./internal/models/..." so newly-created bounded-context
-// subpackages inherit the DTO-leaf contract automatically.
+// The load path uses "./internal/models/..." so newly-created
+// bounded-context subpackages inherit the DTO-leaf contract automatically.
 func TestModelsImportsRestricted(t *testing.T) {
 	cfg := &packages.Config{
 		Mode: packages.NeedName | packages.NeedImports,
@@ -560,7 +559,7 @@ func TestModelsImportsRestricted(t *testing.T) {
 	}
 }
 
-// TestPlatformSubpackagesGated enforces ADR-007 (phase-47/08): the
+// TestPlatformSubpackagesGated enforces ADR-007: the
 // directories directly under internal/platform/ must match the closed
 // set in AllowedPlatformSubpackages. Adding a new subpackage requires
 // an ADR-007 amendment AND updating AllowedPlatformSubpackages in the
@@ -587,7 +586,7 @@ func TestPlatformSubpackagesGated(t *testing.T) {
 	}
 }
 
-// TestPortPurity enforces the phase-47/09 hexagonal contract for ports:
+// TestPortPurity enforces the hexagonal contract for ports:
 // every package under internal/port/* may import only stdlib, the
 // parent internal/port package, sibling internal/port/* packages, and
 // internal/domain/* (entity types appearing in port signatures).
@@ -638,7 +637,7 @@ func TestPortPurity(t *testing.T) {
 	}
 }
 
-// TestAdapterPurity enforces the phase-47/09 hexagonal contract for
+// TestAdapterPurity enforces the hexagonal contract for
 // adapters: no package under internal/adapter/* may import any of the
 // prefixes in AdapterForbiddenImports (internal/api, internal/handler/*,
 // internal/app/*). Adapters live at the bottom of the dependency stack
@@ -690,7 +689,7 @@ func TestAdapterPurity(t *testing.T) {
 	}
 }
 
-// TestHandlerV1Thinness enforces the phase-47/10 contract: files under
+// TestHandlerV1Thinness enforces the thin-handler contract: files under
 // internal/handler/v1 MUST NOT import internal/database,
 // internal/platform/database, internal/adapter/*, internal/models, or
 // internal/api. Handlers stay thin — they decode requests, call

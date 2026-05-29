@@ -300,8 +300,7 @@ func TestPipelineObserver_RunInRegistrationOrder(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Bonus: confirm that registering ZERO observers is the supported no-op
-// path (variadic source-compat with pre-Phase-42a/0030 callers).
+// Registering zero observers is the supported no-op path.
 // ---------------------------------------------------------------------------
 
 func TestPipelineObserver_ZeroObserversNoOp(t *testing.T) {

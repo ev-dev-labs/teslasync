@@ -77,10 +77,9 @@ func posAtom(field string, value any, ts time.Time) codec.Atomic {
 	return codec.Atomic{Field: field, Value: value, EmittedAt: ts, VehicleID: posTestVIN}
 }
 
-// dstFor returns a router.Entry naming the field/column combination as
-// the dispatcher would. The positions writer ignores Entry.Column per
-// Decision #5 but supplying a realistic Entry guards against any
-// future change that starts consulting it.
+// dstFor returns a realistic router.Entry. The positions writer ignores
+// Entry.Column today, but the value guards against future changes that
+// start consulting it.
 func dstFor(field, col string) router.Entry {
 	return router.Entry{Field: field, Destination: router.DestPositions, Column: col}
 }
@@ -475,8 +474,8 @@ func TestPositionsWrite_TypeMismatchPerField(t *testing.T) {
 	}
 }
 
-// TestWrite_UnroutedFieldErrorWording locks Decision #5's exact error
-// text — defence-in-depth for a routing.yaml/positions_writer.go drift.
+// TestWrite_UnroutedFieldErrorWording locks the exact error text as
+// defence-in-depth for routing.yaml/positions_writer.go drift.
 func TestPositionsWrite_UnroutedFieldErrorWording(t *testing.T) {
 	rec := &recorder{rows: 1}
 	w, _ := newPositionsTestWriter(t, rec)
@@ -635,9 +634,8 @@ func TestPositionsWrite_ConcurrentWritesNoRace(t *testing.T) {
 
 // concurrentRecorder is a thread-safe pgxPool fake used only by the
 // concurrent stress test. The package's stock recorder fake is
-// single-thread; copying it in-file with a Mutex preserves the
-// "no test infrastructure outside writers/" boundary the prompt
-// implies via the allowed-files list.
+// single-threaded, so this in-file variant adds a Mutex without
+// introducing shared test infrastructure.
 type concurrentRecorder struct {
 	mu    sync.Mutex
 	rows  int64

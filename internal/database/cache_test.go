@@ -48,7 +48,6 @@ func TestCache_TTLExpiry(t *testing.T) {
 	defer c.Close()
 	ctx := context.Background()
 
-	// Set with 1ms TTL so it expires almost immediately
 	c.Set(ctx, "ephemeral", "value", 1*time.Millisecond)
 	time.Sleep(5 * time.Millisecond)
 
@@ -96,7 +95,6 @@ func TestCache_Overwrite(t *testing.T) {
 }
 
 func TestCache_NilSafe(t *testing.T) {
-	// All methods should be safe to call on a nil *Cache
 	var c *Cache
 	ctx := context.Background()
 
@@ -122,7 +120,7 @@ func TestCache_Evict(t *testing.T) {
 	c.Set(ctx, "fresh", "val", 5*time.Minute)
 	time.Sleep(5 * time.Millisecond)
 
-	c.evict() // manually trigger eviction
+	c.evict()
 
 	c.mu.RLock()
 	_, staleExists := c.items["stale"]

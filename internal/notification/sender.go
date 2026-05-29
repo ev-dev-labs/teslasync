@@ -29,20 +29,19 @@ type Request struct {
 	ChannelID   int64             `json:"channel_id,omitempty"` // for logging
 	// AlertID, when > 0, links the resulting notification_logs row to its
 	// originating alert_rules row. Required for the frontend's drill-through
-	// from alert toast to context page (Phase 40 / Prompt 14) and for
-	// computed-metric alerts to surface as alert-backed notifications.
+	// from alert toast to context page and for computed-metric alerts to surface
+	// as alert-backed notifications.
 	AlertID int64 `json:"alert_id,omitempty"`
 	// Severity is the wire-level severity ('info' | 'warn' | 'critical')
 	// used by the quiet-hours dispatcher to decide whether to bypass an
 	// active Do-Not-Disturb window. Empty values are treated as 'info'.
-	// Phase-46 / Prompt 19.
 	Severity string `json:"severity,omitempty"`
 	// SuppressTransportTitle asks transports that render a separate
 	// title field (Discord/Slack/Telegram/ntfy/webhook) to deliver
 	// body-only output: no bold header line, no X-Title header. The
 	// canonical Title is still passed in for transports that REQUIRE
 	// one (WebPush, email Subject, Pushover) and for notification_logs
-	// persistence. Phase-50 / ADR-005.
+	// persistence. See ADR-005.
 	SuppressTransportTitle bool `json:"suppress_transport_title,omitempty"`
 }
 
@@ -83,7 +82,7 @@ func Send(req *Request) error {
 const ChannelTypeWebPush = "webpush"
 
 // webpushDispatcher is the dispatcher hook for the synthetic "webpush"
-// channel (Phase 40 / Prompt 52). Each binary that wires Web Push registers
+// channel. Each binary that wires Web Push registers
 // it via SetWebPushDispatcher in main(); the package keeps the function
 // behind an indirection because internal/webpush imports
 // internal/database which transitively depends on this package, so a
@@ -188,7 +187,7 @@ func senderClient() *http.Client {
 // title renders bold. When `suppressTitle` is set (rule.IncludeTitle =
 // false) we drop the bold header AND the leading newline so the body
 // stands alone — empty body is treated as a no-op rather than sending
-// a blank message. Phase-50 / ADR-005.
+// a blank message. See ADR-005.
 func sendDiscord(webhookURL, title, message string, suppressTitle bool) error {
 	content := fmt.Sprintf("**%s**\n%s", title, message)
 	if suppressTitle {

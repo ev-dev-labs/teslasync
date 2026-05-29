@@ -1,4 +1,4 @@
-// Phase 44 / Prompt 0082 — SLO coverage audit.
+// Command slo-coverage-audit verifies SLO coverage for user-facing routes.
 //
 // Per ADR-008 §6, every user-facing endpoint must be covered by at least
 // one SLO. Coverage need not be 1:1 — most routes are covered transitively

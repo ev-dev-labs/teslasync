@@ -26,12 +26,13 @@ import (
 //   - start_lat / start_lng / end_lat / end_lng (DOUBLE PRECISION, WGS84°)
 //   - start_place / end_place (TEXT, geocoded place names)
 //
-// Phase-48 (SI canonical mega-PR): drivemodel.Drive is now SI canonical, so this
-// repo no longer performs any unit conversion. The frontend converts at the
-// display boundary using useUnits()/lib/unitConversion's SI-floor formatters.
+// drivemodel.Drive is SI canonical, so this repo performs no unit conversion.
+// The frontend converts at the display boundary using useUnits() and
+// lib/unitConversion's SI-floor formatters.
 //
-// Phase-42 dropped these columns (forward-only — ADR-004 #2). The fields
-// survive on drivemodel.Drive for JSON shape stability and surface nil/derived:
+// Migration 000185 dropped these columns (forward-only per ADR-004 #2). The
+// fields survive on drivemodel.Drive for JSON shape stability and surface
+// nil/derived:
 //   - InsideTempAvgC, Score, EndedStatus → always nil
 //   - CreatedAt → started_at; UpdatedAt → ended_at-or-started_at
 
@@ -78,8 +79,8 @@ func scanDrive(row interface{ Scan(dest ...any) error }) (*drivemodel.Drive, err
 	d.StartBatteryPct = socPctToInt16(startSocPct)
 	d.EndBatteryPct = socPctToInt16(endSocPct)
 
-	// Phase-42 dropped columns (forward-only — ADR-004 #2): surface as nil
-	// so the JSON shape stays stable while the value is honestly absent.
+	// Migration 000185 dropped these columns; surface nil so the JSON shape
+	// stays stable while the value is honestly absent.
 	d.InsideTempAvgC = nil
 	d.Score = nil
 	d.EndedStatus = nil
@@ -139,9 +140,9 @@ func pctInt16ToFloat32(p *int16) *float32 {
 	return &v
 }
 
-// Complete finalizes a drive with end-of-drive aggregates. All arguments
-// are SI canonical (Phase-48): distance in meters, duration in seconds,
-// max speed in m/s, avg power in Watts, outside temp in °C. The drive's
+// Complete finalizes a drive with end-of-drive aggregates. All arguments are
+// SI canonical: distance in meters, duration in seconds, max speed in m/s,
+// avg power in Watts, outside temp in °C. The drive's
 // inside cabin temp column was dropped in migration 000185 (forward-only)
 // and is no longer accepted.
 func (r *DriveRepo) Complete(ctx context.Context, id int64, endTs time.Time,
@@ -229,9 +230,9 @@ func (r *DriveRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*drivemod
 
 // FindRecentEndedForMerge returns the most recent ended drive for a vehicle
 // whose ended_at falls within `window` before the candidate startTs. Returns
-// (nil, nil) when no eligible drive is found. C3 (v3.4 prod-replay accuracy
-// fix): used to merge spurious back-to-back drives caused by transient
-// Gear=P frames within a longer trip. The merge target's ended_at is
+// (nil, nil) when no eligible drive is found. This merges spurious
+// back-to-back drives caused by transient Gear=P frames within a longer trip.
+// The merge target's ended_at is
 // cleared by ResumeForMerge so the live tracker can extend it to the true
 // end timestamp.
 func (r *DriveRepo) FindRecentEndedForMerge(ctx context.Context, vehicleID int64, startTs time.Time, window time.Duration) (*drivemodel.Drive, error) {
@@ -262,7 +263,6 @@ func (r *DriveRepo) FindRecentEndedForMerge(ctx context.Context, vehicleID int64
 // instead of treating it as a new drive. Distance, duration and end_*
 // aggregates are NOT zeroed — they will be overwritten by the next
 // Complete() with values that include the gap+continuation segment.
-// C3 (v3.4 prod-replay accuracy fix).
 func (r *DriveRepo) ResumeForMerge(ctx context.Context, id int64) error {
 	_, err := r.db.Pool.Exec(ctx,
 		`UPDATE drives SET ended_at = NULL WHERE id = $1`, id)
@@ -270,8 +270,8 @@ func (r *DriveRepo) ResumeForMerge(ctx context.Context, id int64) error {
 }
 
 // DrivePartialAllowed enumerates the SI canonical columns that PartialUpdate
-// is allowed to mutate. Callers MUST pass SI canonical keys directly
-// (Phase-48 — no display-unit aliasing).
+// is allowed to mutate. Callers MUST pass SI canonical keys directly;
+// display-unit aliases are not accepted.
 var DrivePartialAllowed = map[string]string{
 	"ended_at":           "ended_at",
 	"distance_m":         "distance_m",
@@ -290,16 +290,16 @@ var DrivePartialAllowed = map[string]string{
 	"start_lng":          "start_lng",
 	"end_lat":            "end_lat",
 	"end_lng":            "end_lng",
-	// C7 (Phase-41 v3.4): SI-canonical odometer columns persistable via
-	// PartialUpdate. Required so completeDriveLocked can write the
-	// authoritative drive boundary odometer (meters) directly.
+	// SI-canonical odometer columns are persistable via PartialUpdate so
+	// completeDriveLocked can write authoritative drive boundary odometer
+	// values in meters directly.
 	"start_odometer_m": "start_odometer_m",
 	"end_odometer_m":   "end_odometer_m",
 }
 
 // PartialUpdate updates only the provided fields on a drive. The fields map
-// MUST be keyed by SI canonical column names (Phase-48 — no display-unit
-// aliasing).
+// MUST be keyed by SI canonical column names; display-unit aliases are not
+// accepted.
 func (r *DriveRepo) PartialUpdate(ctx context.Context, id int64, fields map[string]interface{}) error {
 	query, args := database.BuildPartialUpdate("drives", id, fields, DrivePartialAllowed)
 	if query == "" {
@@ -362,8 +362,8 @@ func (r *DriveRepo) BulkDelete(ctx context.Context, ids []int64) (int64, error) 
 }
 
 // CompleteWithTx is like Complete but uses the provided transaction.
-// All arguments are SI canonical (Phase-48): distance in meters, duration
-// in seconds, max speed in m/s, avg power in Watts, outside temp in °C.
+// All arguments are SI canonical: distance in meters, duration in seconds,
+// max speed in m/s, avg power in Watts, outside temp in °C.
 func (r *DriveRepo) CompleteWithTx(ctx context.Context, tx database.DBTX, id int64, endTs time.Time,
 	distanceM float64, durationS int64, endBatteryPct *int16,
 	maxSpeedMps, avgPowerW, outsideTempAvgC *float64) error {
@@ -421,8 +421,8 @@ func (r *DriveRepo) PartialUpdateWithTx(ctx context.Context, tx database.DBTX, i
 // Idempotent: rows already attributed to a different drive are NOT
 // overwritten — the WHERE clause skips them via `drive_id IS NULL`.
 //
-// Per Phase-41 v3.4 commit C4 (PE-blocking issue B5): this MUST be invoked
-// inside the same transaction as DriveRepo.CompleteWithTx so a partial
+// This MUST be invoked inside the same transaction as DriveRepo.CompleteWithTx
+// so a partial
 // failure cannot leave a drive marked complete with orphaned per-tick rows
 // (the bug reproduced as drive_telemetry.drive_id IS NULL on every row).
 //

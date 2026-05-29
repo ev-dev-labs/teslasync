@@ -1,12 +1,11 @@
-// Phase-46 / Prompt 43 — VehicleSettingsRepo unit tests.
+// VehicleSettingsRepo unit tests.
 //
-// Repo's pgx queries themselves require a live PostgreSQL connection
-// so the bulk of bulk-resolver coverage lives in the in-process
-// resolver tests below (which use stub stores). These tests cover
-// the pure-Go pieces:
+// Repo's pgx queries require a live PostgreSQL connection, so the
+// bulk-resolver coverage lives in the in-process resolver tests below
+// (which use stub stores). These tests cover the pure-Go pieces:
 //
-//   - The Phase-1 whitelist matches the documented set (no
-//     accidental polling_seconds slip).
+//   - The whitelist matches the documented set (no accidental
+//     polling_seconds slip).
 //   - Per-key validators reject every documented bad shape and
 //     accept every good shape.
 //   - The resolver returns vehicle override > user > default in

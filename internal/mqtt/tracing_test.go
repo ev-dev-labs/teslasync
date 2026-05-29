@@ -57,8 +57,8 @@ func (p *ctxRecordingPipeline) ProcessAtomics(ctx context.Context, _ []codec.Ato
 	return nil
 }
 
-// TestOnPipelineMessage_OpensConsumeSpan_PropagatesContext is the Phase-44
-// prompt 0014 contract test:
+// TestOnPipelineMessage_OpensConsumeSpan_PropagatesContext pins the MQTT
+// receive-boundary trace contract:
 //   - onPipelineMessage MUST open a span named "mqtt.consume".
 //   - The span MUST carry attributes mqtt.topic and mqtt.message_size.
 //   - The span MUST appear with SpanKind=Consumer.
@@ -102,9 +102,8 @@ func TestOnPipelineMessage_OpensConsumeSpan_PropagatesContext(t *testing.T) {
 	}
 
 	spans := rec.Ended()
-	// Phase 10 added a codec.decode_json_field child span. The
-	// mqtt.consume parent is still emitted exactly once — we look
-	// it up by name now that the recorder captures the child too.
+	// The recorder also captures the codec.decode_json_field child span, so
+	// look up mqtt.consume by name instead of assuming it is the only span.
 	// (mqtt.vin_resolve is only emitted when the resolver is wrapped
 	// in a VINCache; the test injects a bare staticResolver so the
 	// cache-level span is absent here.)

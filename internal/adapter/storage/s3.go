@@ -18,7 +18,6 @@ type S3Provider struct {
 	bucket    string
 }
 
-// NewS3Provider creates a new S3 storage provider.
 func NewS3Provider(ctx context.Context, bucket, region string) (*S3Provider, error) {
 	cfg, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion(region))
 	if err != nil {

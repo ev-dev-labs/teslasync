@@ -69,9 +69,8 @@ var _ signalLogPool = (*pgxpool.Pool)(nil)
 // enforcing it. The static SQL also avoids per-write fmt.Sprintf
 // allocation that a column-name-templated form would incur.
 //
-// VIN→numeric vehicle_id resolution happens INSIDE the INSERT per the
-// VIN RESOLUTION CONTRACT inherited from phase-42a prompt 0010 commit
-// a53135018: codec.Atomic.VehicleID is the Payload-level Vin string
+// VIN→numeric vehicle_id resolution happens INSIDE the INSERT:
+// codec.Atomic.VehicleID is the Payload-level Vin string
 // (codec/types.go:57-59), and signal_log.vehicle_id is BIGINT NOT NULL
 // (000186_signal_log.up.sql:99) so the writer must resolve VIN→id
 // against the unique-indexed vehicles.vin column.
@@ -106,13 +105,12 @@ ON CONFLICT (vehicle_id, ts, field) DO UPDATE SET
 	time_value  = EXCLUDED.time_value`
 
 // signalLogWriter is the bespoke router.Writer for destination
-// signal_log. Per phase-42a prompt 0021 Decision #2 it is NOT composed
-// from snapshotWriter — signal_log carries one of five typed columns
-// per row dictated by value_kind, which doesn't fit snapshot_base.go's
-// single-column-per-write model. Decision #4 also notes this writer
-// handles BOTH `dest: signal_log` (primary) AND `also_signal_log: true`
-// (dual-write); the router (in prompt 0050) orchestrates the dual-write
-// by invoking this writer in addition to the primary writer when
+// signal_log. It is NOT composed from snapshotWriter because signal_log
+// carries one of five typed columns per row dictated by value_kind,
+// which doesn't fit snapshot_base.go's single-column-per-write model.
+// This writer handles both `dest: signal_log` (primary) and
+// `also_signal_log: true` (dual-write); the router orchestrates the
+// dual-write by invoking this writer in addition to the primary writer when
 // `also_signal_log: true`. The writer itself doesn't need to know.
 //
 // Concurrency: a *signalLogWriter holds no per-Write mutable state
@@ -127,9 +125,8 @@ type signalLogWriter struct {
 // than the first integration test.
 var _ router.Writer = (*signalLogWriter)(nil)
 
-// NewSignalLogWriter constructs the production cold-path writer.
-// Returns the router.Writer for destination signal_log (constructor
-// signature is locked by phase-42a prompt 0021 Decision #1).
+// NewSignalLogWriter constructs the production cold-path writer for
+// destination signal_log.
 //
 // A nil pool is a wiring bug and panics at process start so the
 // failure is surfaced before any payload is processed. Same panic

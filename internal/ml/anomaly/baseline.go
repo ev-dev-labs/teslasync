@@ -1,6 +1,6 @@
-// Phase-50 / 0062 — ML1 Learned per-vehicle anomaly baselines.
+// Package anomaly contains deterministic per-vehicle anomaly baseline training.
 //
-// baseline.go ships the deterministic statistical trainer that
+// The trainer
 // computes a per-vehicle anomaly baseline envelope (lower, upper)
 // for each tracked signal in [StaticSignals], using mean/stddev/p5/p95
 // over a recent window of signal_log observations.
@@ -27,11 +27,9 @@
 //
 // The trainer never mutates the signal_log table or persists any
 // learned baseline. It is a one-shot statistical projection over
-// the rows the SignalSampleSource returns. A future slice may add
-// a daily ai_ml_anomaly_trainer job (forward-compat-listed in the
-// registry's RouteSet.JobNames) that persists the learned envelope
-// per vehicle for cross-pod reuse; today's slice is request-scoped
-// and recomputes on demand.
+// the rows the SignalSampleSource returns. A future ai_ml_anomaly_trainer
+// job may persist the learned envelope per vehicle for cross-pod reuse; the
+// current path is request-scoped and recomputes on demand.
 //
 // ADR-015 alignment:
 //
@@ -162,8 +160,7 @@ type Trainer struct {
 
 // NewTrainer constructs a trainer with the supplied sample source
 // and the package defaults for MinSamples / Days. Override the
-// fields directly after construction if a slice ever needs different
-// thresholds.
+// fields directly after construction if a caller needs different thresholds.
 func NewTrainer(src SignalSampleSource) *Trainer {
 	return &Trainer{
 		Source:     src,

@@ -1,6 +1,6 @@
 package settings
 
-// Phase-46 / Prompt 36 — Settings export/import serializer.
+// Settings export/import serializer.
 //
 // The serializer assembles a portable JSON bundle from the four
 // repos that own the user-discoverable preference surface (settings,
@@ -499,16 +499,13 @@ func settingsEquivalent(a, b *systemmodel.Settings) bool {
 // "skipped" reflects "no behavioural difference" rather than "no
 // timestamp difference".
 //
-// Phase-49 / Slice 0005: AllVehicles + VehicleIDs (sorted) are part of
-// the equivalence so settings export/import round-trips multi-vehicle
-// rules cleanly. The legacy VehicleID pointer is intentionally not
-// compared independently — it is mirrored from VehicleIDs by the repo
-// on read, so two rules with identical AllVehicles + VehicleIDs always
-// have identical VehicleID.
+// AllVehicles and sorted VehicleIDs are part of the equivalence so
+// settings export/import round-trips multi-vehicle rules cleanly. The
+// legacy VehicleID pointer is intentionally not compared independently:
+// the repo mirrors it from VehicleIDs on read.
 //
-// Phase-50 / ADR-005: MsgTemplate + IncludeTitle are compared so a
-// reimport that toggles the title or rewords the body is recognised
-// as a behavioural change (and not silently skipped).
+// MsgTemplate and IncludeTitle are compared so a reimport that toggles
+// the title or rewords the body is recognised as a behavioural change.
 func AlertRulesEquivalent(a, b *alertmodel.AlertRule) bool {
 	if a == nil || b == nil {
 		return a == b
@@ -543,9 +540,8 @@ func AlertRulesEquivalent(a, b *alertmodel.AlertRule) bool {
 }
 
 // int64SliceEqSorted reports whether two int64 slices contain the same
-// elements (order-insensitive). Both slices are copied + sorted before
-// comparison so a caller-supplied unsorted slice doesn't trigger a
-// false negative. Phase-49 / Slice 0005.
+// elements (order-insensitive). Both slices are copied and sorted so a
+// caller-supplied unsorted slice doesn't trigger a false negative.
 func int64SliceEqSorted(a, b []int64) bool {
 	if len(a) != len(b) {
 		return false
@@ -673,8 +669,8 @@ func ptrTimeEq(a, b *time.Time) bool {
 // Compile-time assertion for *SettingsRepo only — *GeofenceRepo and
 // *QuietHoursRepo are asserted from their respective subpackages
 // (internal/database/geofence/assertion.go, internal/database/quiethours/
-// assertion.go) per Lesson 30/34: the assertion lives with the concrete
-// type and depends on the parent interface (child -> parent), keeping the
+// assertion.go): the assertion lives with the concrete type and depends
+// on the parent interface (child -> parent), keeping the
 // parent free of child imports.
 var (
 	_ SettingsSerializerSettingsRepo = (*SettingsRepo)(nil)

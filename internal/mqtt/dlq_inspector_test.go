@@ -1,7 +1,5 @@
 // DLQ inspector unit tests.
 //
-// Phase-44 / observability-batch / Prompt F4.
-//
 // These tests use an in-file fakeDLQInspectorClient that satisfies the
 // subset of pahomqtt.Client the inspector touches (Subscribe + Publish +
 // Unsubscribe). We deliberately do NOT share fakePahoClient from

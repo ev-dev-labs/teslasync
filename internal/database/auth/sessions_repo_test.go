@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 42 — AuthSessionsRepo unit tests.
+// AuthSessionsRepo unit tests cover pure-Go helpers and guard paths.
 //
 // The repo's queries themselves require a live PostgreSQL connection so
 // the bulk of integration coverage lives in the API handler tests

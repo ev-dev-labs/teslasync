@@ -15,8 +15,6 @@ import (
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 )
 
-// --- Mocks ---
-
 type mockVehicleRepo struct {
 	vehicles []*vehiclemodel.Vehicle
 	byID     map[int64]*vehiclemodel.Vehicle

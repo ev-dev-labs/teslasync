@@ -147,7 +147,6 @@ func TestStore_EvictLocal(t *testing.T) {
 }
 
 func TestStore_Shutdown_NoSubscriber(t *testing.T) {
-	// shutdown on a never-started store is a no-op.
 	s := NewStore(nil)
 	s.shutdown()
 }

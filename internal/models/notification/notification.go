@@ -15,20 +15,18 @@ type NotificationChannel struct {
 
 // NotificationLog records a notification delivery attempt.
 //
-// ReadAt / ArchivedAt (Phase 40 / Prompt 29) drive the inbox UX on
-// /notifications: NULL means "unread" / "still in the inbox", a non-nil
-// timestamp records when the user (or an auto-mark policy) flipped the bit.
+// ReadAt and ArchivedAt drive the /notifications inbox: NULL means
+// unread or still visible, while a timestamp records when the user or an
+// auto-mark policy changed that state.
 //
-// Severity (Phase-46 / Prompt 19) is the wire severity the dispatcher
-// saw when the row was enqueued. NULL on legacy rows captured before
-// the quiet-hours migration. Used by the replay loop to re-evaluate a
-// deferred row against active DND windows.
+// Severity is the wire severity captured when the dispatcher enqueued the
+// row. Legacy rows before quiet-hours support may be NULL; the replay loop
+// uses this value to re-evaluate deferred rows against active DND windows.
 //
-// AcknowledgedAt / AcknowledgedBy / AcknowledgementNote (Phase-46 / Prompt 20)
-// carry the latest acknowledgement state of the alert this row represents.
-// NULL means "not yet acknowledged"; a non-nil AcknowledgedAt records when,
-// by whom, and (optionally) why. Cleared by /alerts/{id}/reopen. The
-// per-acknowledgement audit timeline lives in notification_log_events.
+// AcknowledgedAt, AcknowledgedBy, and AcknowledgementNote carry the latest
+// acknowledgement state for the alert this row represents. NULL means not
+// yet acknowledged; /alerts/{id}/reopen clears the fields. The per-
+// acknowledgement audit timeline lives in notification_log_events.
 type NotificationLog struct {
 	ID                  int64      `json:"id" db:"id"`
 	ChannelID           int64      `json:"channel_id" db:"channel_id"`

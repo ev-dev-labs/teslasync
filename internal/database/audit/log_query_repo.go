@@ -1,8 +1,6 @@
 package audit
 
-// Phase-45 / Prompt 1 — Audit log read path.
-//
-// AuditLogQueryRepo is the read-side companion to internal/audit's
+// AuditLogQueryRepo is the audit log read path and the read-side companion to internal/audit's
 // Recorder. The recorder writes; this repo serves the admin audit
 // viewer page with filtering + pagination.
 

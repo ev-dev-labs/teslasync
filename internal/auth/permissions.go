@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 44 — Permissions catalog + role-resolution helpers.
+// Package auth defines the permission catalog and role-resolution helpers.
 //
 // This file is the single source of truth for the application-level
 // permission catalog the RBAC matrix admin page renders. Adding a new

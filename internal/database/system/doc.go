@@ -2,7 +2,7 @@
 //
 // Layer: adapter
 //
-// Carved files (Phase R4.19 — bounded-context restructure per ADR-011):
+// Files moved into this bounded context per ADR-011:
 //
 //   - software_update_repo.go (was internal/database/software_update_repo.go)
 //     Per-vehicle Tesla software-update history with idempotent
@@ -17,7 +17,7 @@
 //     Vehicle Sentry/Guard-mode event store (sentry_clip events,
 //     security-related telemetry triggers). Owns ErrGuardEventNotFound.
 //
-// Intentionally NOT carved (kept in parent internal/database):
+// Files kept in parent internal/database:
 //
 //   - maintenance.go          — methods receive *DB (CleanupOldPositions /
 //     CleanupOldStates / VacuumAnalyze / GetPositionStats); moving them

@@ -1,20 +1,17 @@
-// Package database — VehicleStatesRepo backs the restored
-// /vehicle-states/timeline + /vehicle-states/summary endpoints.
+// Package database backs /vehicle-states/timeline and
+// /vehicle-states/summary.
 //
-// Phase-43a / Prompt 0003. Phase-42 prompt 0077 deleted the legacy
-// vehicle_states snapshot table; this repo re-derives the same product
-// surface from the fsm_transitions append-only log (mig 000187), filtered
-// to fsm_name = 'vehicle' (mirrors the precedent in
-// internal/api/sleep_handler.go and internal/service/vehicle_service.go).
+// The legacy vehicle_states snapshot table is gone; this repo re-derives
+// the same product surface from the fsm_transitions append-only log
+// (migration 000187), filtered to fsm_name = 'vehicle'.
 //
-// Schema reality vs prompt:
+// Schema mapping:
 //
 //	mig 000187 fsm_transitions has columns
 //	(id, vehicle_id, ts, fsm_name, from_state, to_state, trigger TEXT, details JSONB).
 //
-// The prompt's Decision #5 named columns trigger_field/trigger_value that
-// do not exist on the table. Per the prompt's escape hatch, this repo
-// adapts:
+// Earlier design notes named trigger_field/trigger_value columns that do
+// not exist on fsm_transitions. This repo maps them as:
 //
 //	trigger_field <- trigger
 //	trigger_value <- details ->> trigger
@@ -60,8 +57,7 @@ type VehicleStateSummaryRow struct {
 }
 
 // vehicleStatesPool is the minimal pgxpool subset this repo needs.
-// Declared locally so tests can supply a fake without dragging in
-// pgxmock (the codebase does not vendor pgxmock — see repo memories).
+// Declared locally so tests can supply a fake without pgxmock.
 type vehicleStatesPool interface {
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
@@ -161,7 +157,7 @@ func (r *VehicleStatesRepo) Summary(ctx context.Context, vehicleID int64, window
 // transitions inside [windowStart, windowEnd] and returns the dwell-time
 // breakdown per to_state, plus total_seconds.
 //
-// Algorithm (per locked Decision #6 with safety clamps):
+// Algorithm with safety clamps:
 //
 //  1. If transitions is empty: return ([], 0). Operator-visible
 //     evidence that the vehicle has no recorded vehicle-FSM transitions
@@ -201,24 +197,20 @@ func computeStateSummary(transitions []VehicleStateTransition, windowStart, wind
 		dwell[state] += d
 	}
 
-	// Prefix.
 	first := transitions[0]
 	if first.FromState != nil && *first.FromState != "" {
 		add(*first.FromState, first.Ts.Sub(windowStart))
 	}
 
-	// Middle.
 	for i := 0; i < len(transitions)-1; i++ {
 		add(transitions[i].ToState, transitions[i+1].Ts.Sub(transitions[i].Ts))
 		counts[transitions[i].ToState]++
 	}
 
-	// Suffix.
 	last := transitions[len(transitions)-1]
 	add(last.ToState, windowEnd.Sub(last.Ts))
 	counts[last.ToState]++
 
-	// Materialize.
 	totalSec := 0.0
 	for _, d := range dwell {
 		totalSec += d.Seconds()

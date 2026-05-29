@@ -50,18 +50,13 @@ func sortedKeys(m map[string]any) []string {
 	return keys
 }
 
-// --- Per-repo bulk entry points for the map-based write path (Phase 6 fan-out).
-//
-// Each wrapper delegates to the shared insertRowFromMap helper bound to the
-// repo's table. They are the single map-based bulk entry point per repo so
-// the telemetry handler dispatch can route by table name without leaking SQL.
+// Map-based bulk write entry points delegate to insertRowFromMap for each
+// repo's table, keeping telemetry dispatch table-oriented without leaking SQL.
 
 func (r *PositionRepo) InsertFromMap(ctx context.Context, vehicleID int64, ts time.Time, row map[string]any) error {
 	return insertRowFromMap(ctx, r.db, "positions", vehicleID, ts, row)
 }
 
-// Phase-42 (prompt 0077): SecurityRepo.InsertFromMap was deleted alongside
-// security_repo.go and the security_events typed-table fan-out (the
-// "case security_events" branch in telemetry_handler_ingest.go). Security
-// signals (Locked, SentryMode, DoorState, FdWindow, etc.) flow through the
-// typed signal_log pipeline (000167+).
+// SecurityRepo.InsertFromMap was removed with security_repo.go and the
+// security_events typed-table fan-out. Security signals (Locked, SentryMode,
+// DoorState, FdWindow, etc.) flow through the typed signal_log pipeline.

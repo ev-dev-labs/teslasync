@@ -1,13 +1,10 @@
-// Phase-46 / Prompt 57 — Auth-subjects repository.
-//
-// Persists every distinct subject observed in an authenticated request
-// behind the configured FORWARD_AUTH_HEADER. The recorder middleware
-// upserts rows here; downstream tables that need a stable per-user
-// foreign-key target (TOTP credentials, RBAC bindings, vehicle
-// settings overrides keyed per-user, future user preferences, …)
-// should reference auth_subjects(subject) ON DELETE CASCADE rather
-// than invent their own users(id) column — TeslaSync has no users
-// table because the upstream proxy is the sole identity authority.
+// Package auth persists subjects observed behind the configured
+// FORWARD_AUTH_HEADER. Downstream tables that need a stable per-user
+// foreign-key target (TOTP credentials, RBAC bindings, vehicle settings
+// overrides, future user preferences, …) should reference
+// auth_subjects(subject) ON DELETE CASCADE rather than invent their own
+// users(id) column; TeslaSync has no users table because the upstream
+// proxy is the sole identity authority.
 //
 // Open-mode policy
 // ----------------
@@ -173,11 +170,6 @@ func (r *AuthSubjectsRepo) List(ctx context.Context) ([]AuthSubjectRow, error) {
 	return out, nil
 }
 
-// isNoRowsError centralises the pgx.ErrNoRows comparison so the
-// rest of this file reads at the AuthSubjectsRepo abstraction level
-// rather than leaking a driver-specific sentinel into every method.
-// Kept lower-case + package-private so it doesn't compete with the
-// pgx.ErrNoRows checks elsewhere in this package.
 func isNoRowsError(err error) bool {
 	return errors.Is(err, pgx.ErrNoRows)
 }

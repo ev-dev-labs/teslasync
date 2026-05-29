@@ -1,11 +1,8 @@
 package indexers
 
-// Phase-50 / 0051 — M3 software-update-changelog-summarizer.
-//
-// ai_update_notes_indexer.go is the cross-cutting cron stub that
-// the software-update-changelog-summarizer slice registers as its
-// background-job surface (`ai_update_notes_indexer` in the
-// features registry's JobNames list).
+// ai_update_notes_indexer.go provides the cron surface for the
+// software-update-changelog-summarizer feature (`ai_update_notes_indexer`
+// in the features registry's JobNames list).
 //
 // The stub is fail-closed by design: every tick re-reads the
 // settings table and refuses to do anything when ai_mode is off
@@ -13,9 +10,9 @@ package indexers
 // dispatcher gate trips before execution"). The real fan-out
 // implementation (re-embed per-version Tesla release notes into
 // the F7 vector store keyed under user_subject="" so
-// retrieve_update_notes sees fresh chunks) will land alongside a
-// future indexer-fan-out slice; this file ships the gate +
-// telemetry envelope so the off-mode invariant is provable today.
+// retrieve_update_notes sees fresh chunks) will land with the fan-out
+// implementation; this file ships the gate and telemetry envelope so the
+// off-mode invariant is provable today.
 //
 // The function is exported so a future scheduler (cmd/scheduler
 // or the existing internal/worker pool) can install it on a
@@ -62,11 +59,9 @@ type UpdateNotesSettingsReader interface {
 	AIFeatureEnabled(ctx context.Context, featureID string) (bool, error)
 }
 
-// UpdateNotesResult reports the outcome of one tick. The
-// fields are all int because the real fan-out implementation will
-// tally per-version re-embed counts here; today the values stay
-// zero (the stub is a no-op when off, and a no-op-with-log when
-// on — the actual indexing lands in a future slice).
+// UpdateNotesResult reports the outcome of one tick. The fields are ints
+// because the fan-out implementation will tally per-version re-embed counts;
+// today they stay zero because this gate performs no indexing work.
 type UpdateNotesResult struct {
 	// Skipped is 1 when the tick early-returned because ai_mode
 	// was off OR the per-feature toggle was off. Reported
@@ -74,24 +69,22 @@ type UpdateNotesResult struct {
 	// distinguish a degraded settings table from an idle day.
 	Skipped int
 
-	// VersionsConsidered is the number of firmware versions the
-	// tick fanned out a re-embed request for. Always 0 in this
-	// slice (the fan-out implementation lands in a future
-	// slice); the field is in the envelope so callers can pin
-	// the shape today.
+	// VersionsConsidered is the number of firmware versions the tick fanned
+	// out a re-embed request for. It stays 0 until fan-out is implemented,
+	// but remains in the envelope so callers can pin the shape today.
 	VersionsConsidered int
 
-	// Indexed is the number of release-note chunks whose
-	// re-embed succeeded. Always 0 in this slice.
+	// Indexed is the number of release-note chunks whose re-embed succeeded.
+	// It stays 0 until fan-out is implemented.
 	Indexed int
 
-	// Failed is the number of release-note chunks whose re-embed
-	// failed. Always 0 in this slice.
+	// Failed is the number of release-note chunks whose re-embed failed.
+	// It stays 0 until fan-out is implemented.
 	Failed int
 }
 
-// RunUpdateNotes is the once-per-day cron entry for the
-// software-update-changelog-summarizer slice's background fan-out.
+// RunUpdateNotes is the once-per-day cron entry for
+// software-update-changelog-summarizer background fan-out.
 //
 // Re-checks ai_mode + the per-feature toggle at execution time
 // per ADR-015 §I12 #3 — the scheduler may have started this loop
@@ -106,9 +99,8 @@ type UpdateNotesResult struct {
 // must not silently leak embedding API calls to off-mode users.
 //
 // The current implementation is deliberately a no-op gate. The
-// per-version re-embed loop, the chunking + cleanup logic, and
-// the telemetry counters land in a future indexer-fan-out slice.
-// Today's contract:
+// per-version re-embed loop, chunking, cleanup, and telemetry counters
+// are deferred. Today's contract:
 //
 //   - off mode (any kind) → Skipped=1, no embed calls, no DB writes;
 //   - on mode             → Skipped=0, no embed calls (yet), no DB writes;
@@ -155,12 +147,9 @@ func RunUpdateNotes(
 		return UpdateNotesResult{Skipped: 1}, nil
 	}
 
-	// On-mode path. The fan-out implementation (per-version
-	// re-embed + chunking + cleanup) lands in a future slice;
-	// today the function returns a zeroed envelope so callers
-	// can pin the shape and the off-mode test
-	// (TestRunAIUpdateNotesIndexer_*) has a positive control to
-	// assert against.
+	// In on mode, return a zeroed envelope until per-version fan-out,
+	// chunking, and cleanup are implemented. This gives callers a stable
+	// shape and gives the off-mode tests a positive control.
 	log.Debug().
 		Str("job", "ai_update_notes_indexer").
 		Msg("ai_mode + feature on; fan-out implementation pending future slice")

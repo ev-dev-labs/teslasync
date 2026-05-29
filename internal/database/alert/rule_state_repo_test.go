@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// Phase-49 / Slice 0002 — SQL-shape tests for alert_rule_state_repo.
+// SQL-shape tests for alert_rule_state_repo.
 //
 // The codebase has no pgxmock / testcontainers harness (see
 // guard_repo_test.go, vampire_drain_repo_test.go, mileage_repo_test.go
@@ -67,10 +67,10 @@ func TestAlertRuleStateRepo_MarkFiredSQL_RaceSafe(t *testing.T) {
 		"CASE WHEN $3 THEN $4::timestamptz END",
 		"CASE WHEN $3 THEN $4::timestamptz ELSE alert_rule_state.latched_at END",
 		// last_fired_at always updates regardless of mode — feeds the
-		// cooldown gate (slice 0004 will use this column).
+		// cooldown gate.
 		"last_fired_at",
 		// Counter increments every fire — feeds the
-		// max_fires_per_resolution cap (slice 0003).
+		// max_fires_per_resolution cap.
 		"fire_count_since_reset = alert_rule_state.fire_count_since_reset + 1",
 		// (xmax = 0) AS inserted distinguishes INSERT from UPDATE in
 		// the same round trip. Future audits may use this signal.

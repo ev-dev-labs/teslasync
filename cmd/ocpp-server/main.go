@@ -4,8 +4,6 @@
 // `ocpp1.6` subprotocol and routes the protocol messages through
 // the internal/ocpp dispatcher.
 //
-// Phase-50 / p50-ocpp.
-//
 // Usage:
 //
 //	docker compose up ocpp-server

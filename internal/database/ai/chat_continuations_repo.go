@@ -1,6 +1,4 @@
-// Phase-50 / 0005 — F4 AI Tool-Use Framework.
-//
-// AIChatContinuationsRepo persists + reads paused dispatcher state
+// AIChatContinuationsRepo persists and reads paused dispatcher state
 // (internal/ai/dispatch.ContinuationState) into the
 // ai_chat_continuations table (migration 000204).
 //
@@ -9,9 +7,8 @@
 //   - Load             — read a row by id (returns ErrContinuationNotFound
 //     if the row is missing OR expired)
 //   - Delete           — remove a row after the dispatcher resumes
-//   - CleanupExpired   — bulk delete rows whose expires_at < now() (called
-//     by a periodic worker tick — wiring lands in the
-//     next worker-touching slice)
+//   - CleanupExpired   — bulk delete rows whose expires_at < now(), for use
+//     by a periodic worker tick
 //
 // Subject scoping: every call carries the FORWARD_AUTH_HEADER subject
 // so a multi-user deployment can attribute paused conversations to a
@@ -37,8 +34,7 @@ import (
 // was queued, and the dispatcher state may reference data the user
 // has since changed.
 //
-// Mirrors the migration's CHECK (expires_at > created_at) and the
-// methodology's 24h cap.
+// Mirrors the migration's CHECK (expires_at > created_at) and 24h cap.
 const DefaultContinuationTTL = 24 * time.Hour
 
 // ErrContinuationNotFound is returned by Load when the requested

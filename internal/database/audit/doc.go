@@ -3,14 +3,14 @@
 //
 // Layer: adapter
 //
-// Carved files (Phase R4.10 — bounded-context restructure per ADR-011):
+// Bounded-context files per ADR-011:
 //
 //   - repo.go                          (was internal/database/audit_repo.go)
 //     Reveal + impersonation audit-event writers backing /api/v1/admin/audit-* endpoints.
 //   - log_query_repo.go                (was internal/database/audit_log_query_repo.go)
 //     Read-side query repo over the full audit_logs table.
 //   - dlq_replay_repo.go               (was internal/database/dlq_replay_audit_repo.go)
-//     Replay-attempt audit ledger for the MQTT DLQ tooling (Phase-46).
+//     Replay-attempt audit ledger for the MQTT DLQ tooling.
 //   - feature_flag_changes_repo.go     (was internal/database/feature_flag_changes_repo.go)
 //     Audit ledger for runtime feature-flag mutations (internal/flags).
 //

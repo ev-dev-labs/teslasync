@@ -3,9 +3,7 @@
 // processor uses, verifying its checksum, decoding the table dump,
 // and asserting a small set of invariants over the restored data.
 //
-// Phase-49 / p49-backup-verify.
-//
-// The verifier is a separate package (not a Processor method) for
+// The verifier is a separate package rather than a Processor method for
 // two reasons:
 //
 //  1. It is invoked by an external scheduler (cron / k8s CronJob /
@@ -174,7 +172,7 @@ func (v *Verifier) VerifyLatest(ctx context.Context) (*Result, error) {
 		res.DurationMs = v.now().Sub(start).Milliseconds()
 		return res, err
 	}
-	res.ChecksumOK = true // RestoreBackup already verified checksum and returned error otherwise
+	res.ChecksumOK = true // RestoreBackup returns an error when checksum verification fails.
 
 	res.TablesVerified = make([]TableResult, 0, len(v.criticals))
 	allOK := true

@@ -28,7 +28,6 @@ func TestBuildHistoryWhere_AllFilters(t *testing.T) {
 		t.Fatal("expected non-empty WHERE clause")
 	}
 
-	// Should have 3 positional parameters.
 	if len(args) != 3 {
 		t.Fatalf("expected 3 args, got %d", len(args))
 	}
@@ -42,7 +41,6 @@ func TestBuildHistoryWhere_AllFilters(t *testing.T) {
 		t.Errorf("expected since=%v, got %v", since, args[2])
 	}
 
-	// Check that clause contains all three conditions.
 	if !containsSubstring(where, "automation_id = $1") {
 		t.Errorf("WHERE clause missing automation_id filter: %s", where)
 	}

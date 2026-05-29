@@ -1,10 +1,6 @@
-// Package database — DriveDiagnosticRepo answers "why did this drive
-// end?" without the operator having to grep traces.
+// Package drive provides per-drive diagnostics that explain why a drive ended.
 //
-// Phase-44 / observability-batch / Prompt F10.
-//
-// One read-only query per concern (kept separate so the handler can
-// degrade individually):
+// Queries are split by concern so handlers can degrade independently:
 //
 //  1. The fsm_transitions in a window centered on the drive's end_ts.
 //     The drive-end FSM transition + any neighboring transitions

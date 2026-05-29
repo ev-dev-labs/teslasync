@@ -1,5 +1,3 @@
-// Phase-46 / Prompt 35 — TOTP enrollment repository.
-//
 // Stores per-subject TOTP secrets (encrypted) + hashed backup codes.
 // The two tables (user_totp_enrollments + user_totp_credentials) split
 // pending enrollments from active credentials so a user that walks away

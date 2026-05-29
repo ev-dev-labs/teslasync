@@ -4,8 +4,6 @@
 // failures roll into the same alertmsg + Prometheus surface) but can
 // also be invoked from cmd/synthetic-probe as a one-shot CI gate.
 //
-// Phase-46 / p46-synthetic.
-//
 // Probes are deliberately small + idempotent — they create a single
 // synthetic vehicle (`synthetic_canary`), publish a known signal via
 // the existing pub-test-signal pathway, and then poll the read side

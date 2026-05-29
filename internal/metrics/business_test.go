@@ -37,7 +37,6 @@ func TestRecordSignalReceived_AndRefresh(t *testing.T) {
 }
 
 func TestRecordSignalReceived_EmptyVehicleIDSkipped(t *testing.T) {
-	// Should not panic and should not register a series.
 	RecordSignalReceived("", time.Now())
 }
 
@@ -119,7 +118,6 @@ func TestMQTTConsumerBacklog_IncDec(t *testing.T) {
 		t.Errorf("backlog delta=%v want 2 (3 inc - 1 dec)", got-beforeVal)
 	}
 
-	// Cleanup
 	DecMQTTConsumerBacklog()
 	DecMQTTConsumerBacklog()
 }

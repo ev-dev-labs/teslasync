@@ -3,10 +3,9 @@
 //
 // Layer: platform
 //
-// Phase-46 / p46-synthetic. Designed to be embedded inside the
-// TeslaSync API process so failures roll into the same alert + metric
-// surface, but it can also be invoked from a one-shot binary as a CI
-// gate.
+// Designed to be embedded inside the TeslaSync API process so failures roll
+// into the same alert + metric surface, but it can also be invoked from a
+// one-shot binary as a CI gate.
 //
 // Probes are deliberately small + idempotent — they create a single
 // synthetic vehicle (`synthetic_canary`), publish a known signal via

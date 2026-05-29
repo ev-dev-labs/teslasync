@@ -1,6 +1,6 @@
-// Package worker — unit-drift validator.
+// Package worker runs the unit-drift validator.
 //
-// Decision 9 (phase-42 ADR-004) mandates dynamic per-vehicle wire units
+// ADR-004 Decision 9 mandates dynamic per-vehicle wire units
 // with a fail-closed "drop value if no unit context" policy. The catch:
 // if Tesla's docs are wrong AND we set interval_seconds=1 on Setting*Unit
 // AND those settings still don't stream as expected, the pipeline could
@@ -165,7 +165,7 @@ const (
 	canaryNoHistoryWindow = 7 * 24 * time.Hour
 
 	// defaultLookback is how far back into signal_log a single Run pass
-	// reads for drift comparisons. 1 hour matches the prompt spec.
+	// reads for drift comparisons.
 	defaultLookback = time.Hour
 
 	// defaultCronInterval is the nightly cadence the long-running
@@ -174,7 +174,7 @@ const (
 )
 
 // vehicleLister is the subset of vehicledb.VehicleRepo the validator
-// needs. Carved as an interface so unit tests can inject without a
+// needs. Kept as an interface so unit tests can inject without a
 // real DB.
 type vehicleLister interface {
 	GetAll(ctx context.Context) ([]int64, error)
@@ -268,7 +268,6 @@ func (v *UnitDriftValidator) Start(ctx context.Context, opts Options) {
 		Bool("dry_run", opts.DryRun).
 		Msg("unit-drift validator started")
 
-	// Immediate first pass.
 	if err := v.Run(ctx, opts); err != nil && !errors.Is(err, context.Canceled) {
 		log.Warn().Err(err).Msg("unit-drift validator first pass failed")
 	}
@@ -536,8 +535,7 @@ func (v *UnitDriftValidator) incrementDrift(vehicleID int64, kind string) {
 	driftSuspectedTotal.WithLabelValues(fmt.Sprintf("%d", vehicleID), kind).Inc()
 }
 
-// incrementCanary mirrors incrementDrift for the canary metric. Same
-// dry-run gate.
+// incrementCanary mirrors incrementDrift for the canary metric.
 func (v *UnitDriftValidator) incrementCanary(vehicleID int64, reason string) {
 	v.metricsMu.RLock()
 	dry := v.dryRun

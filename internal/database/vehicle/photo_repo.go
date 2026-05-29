@@ -1,7 +1,5 @@
-// Phase-46 / Prompt 54 — Vehicle photo repo.
-//
-// Owns the `vehicle_photos` table (migration 000177). One row per
-// vehicle keyed by vehicle_id PK; each row records the disk-relative
+// Vehicle photos are stored in `vehicle_photos` (migration 000177), one
+// row per vehicle keyed by vehicle_id PK. Each row records the disk-relative
 // paths to the three rendered sizes plus the upload timestamp the
 // SPA uses as a cache buster.
 //

@@ -1,7 +1,7 @@
-// Phase-50 / 0045 — S4 Log and trace summarization.
+// Log and trace summarization indexer tests.
 //
 // Tests for RunLogTrace. The off-mode + per-feature gate
-// tests are the slice's load-bearing ADR-015 §I12 evidence — they
+// tests are load-bearing ADR-015 §I12 evidence — they
 // prove the cron is fail-closed even when the scheduler keeps
 // ticking after an admin disables AI mid-day.
 

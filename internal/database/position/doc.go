@@ -1,10 +1,10 @@
-// Package position contains the PositionRepo for the positions
-// hypertable (Phase-42 SI canonical: lat/lng/altitude_m/speed_mps/
-// heading_deg/odometer_m/est_range_m/rated_range_m/ideal_range_m).
+// Package position contains the PositionRepo for the SI-canonical
+// positions hypertable (lat/lng/altitude_m/speed_mps/heading_deg/
+// odometer_m/est_range_m/rated_range_m/ideal_range_m).
 //
 // Layer: adapter
 //
-// Carved out of internal/database during Phase R restructure (R4.23):
+// Files:
 //   - repo.go         (PositionRepo, BulkInsert, ListByVehicle, ...)
 //   - from_map.go     (InsertFromMap + parent-private insertRowFromMap helper)
 //

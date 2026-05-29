@@ -3,10 +3,9 @@ package notification
 // NotificationLogGroup is a server-grouped bucket of notification_logs
 // rows that share the same group_key (sha256(alert_id || severity)).
 //
-// Returned by the inbox listing endpoint when ?grouped=true (Phase-46 /
-// Prompt 27). The frontend renders one row per group; expanding a group
-// fetches its members via the flat listing endpoint with
-// ?group_key=<hex>.
+// Returned by the inbox listing endpoint when ?grouped=true. The
+// frontend renders one row per group; expanding a group fetches its
+// members via the flat listing endpoint with ?group_key=<hex>.
 //
 // GroupKey is nil for ungrouped singleton rows (e.g. test sends,
 // ad-hoc notifications, or legacy rows captured before group_key was

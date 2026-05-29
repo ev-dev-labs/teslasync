@@ -2,7 +2,7 @@
 //
 // Layer: adapter
 //
-// Carved files (Phase R4.16 — bounded-context restructure per ADR-011):
+// Files split by bounded context per ADR-011:
 //
 //   - repo.go               (was internal/database/export_repo.go)
 //     Account-table snapshot read API (ExportTableSnapshot,

@@ -3,16 +3,15 @@
 // first-run state) + UserFeedbackRepo (in-product feedback submissions
 // with bug/feature/other categorisation).
 //
-// Carved from internal/database in Phase R4.8 per ADR-011. Callers
-// import as `dbuser` to disambiguate from the runtime user-service
-// layers (when added).
+// Callers import this package as `dbuser` to disambiguate it from
+// runtime user-service layers.
 //
 // Settings + vehicle_settings are deliberately NOT included in this
 // carve. settings_repo.go is referenced by parent peers
 // vehicle_settings_repo.go + vehicle_settings_resolver.go (which
 // hold `*SettingsRepo` fields and `NewUserSettingsLookup(repo *SettingsRepo)`).
-// Per Lesson 26, settings stays in parent until vehicle_settings is
-// also carved into the same subpackage in a future R4.x batch.
+// Settings stays in the parent package until vehicle_settings can move
+// with it.
 //
 // Layer: adapter
 package user

@@ -8,7 +8,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/port/external"
 )
 
-// mapVehicleState converts raw Tesla API JSON into a domain VehicleState.
 func mapVehicleState(data json.RawMessage) (external.VehicleState, error) {
 	var raw struct {
 		VIN         string `json:"vin"`

@@ -1,7 +1,7 @@
 // Package messaging defines the hexagonal port interfaces for MQTT
 // publish / subscribe seams.
 //
-// Phase-42 contract (see ADR-004 §2 and .github/instructions/tesla-pipeline.instructions.md):
+// Telemetry MQTT contract (see ADR-004 §2 and .github/instructions/tesla-pipeline.instructions.md):
 //
 //   - Inbound Tesla Fleet Telemetry payloads are opaque proto bytes. The
 //     MQTT subscriber adapter is a dumb bytes-and-acks pipe: it resolves
@@ -14,9 +14,9 @@
 //     internal/tesla/codec; orchestration in internal/tesla/normalize;
 //     dispatch in internal/tesla/router.
 //
-//   - The subscriber port deliberately omits Unsubscribe — Phase-42
-//     pipeline subscribers are long-lived per process and tear down via
-//     Close() on shutdown.
+//   - The subscriber port deliberately omits Unsubscribe: pipeline
+//     subscribers are long-lived per process and tear down via Close()
+//     on shutdown.
 package messaging
 
 import "context"
@@ -26,7 +26,7 @@ type MQTTPublisher interface {
 	Publish(ctx context.Context, topic string, payload []byte) error
 }
 
-// MessageHandler is the Phase-42 pipeline-aware MQTT message handler.
+// MessageHandler is the pipeline-aware MQTT message handler.
 //
 // The adapter resolves VIN→vehicleID before invoking the handler; the
 // handler receives only the raw payload bytes and the resolved vehicleID.
@@ -38,7 +38,7 @@ type MQTTPublisher interface {
 // application and may be acknowledged to the broker.
 type MessageHandler func(ctx context.Context, payload []byte, vehicleID int64) error
 
-// Subscriber is the Phase-42 minimal MQTT subscriber port.
+// Subscriber is the minimal MQTT subscriber port for the ingest pipeline.
 //
 // Implementations own broker connection lifecycle, VIN resolution,
 // manual ack, bounded redelivery, and DLQ publication. The application
@@ -53,12 +53,8 @@ type Subscriber interface {
 	Close()
 }
 
-// --------------------------------------------------------------------
-// Legacy types — retained ONLY to keep the pre-Phase-42 generic adapter
-// at internal/adapter/mqtt/publisher.go compiling until it is removed
-// in a follow-up cleanup prompt. New consumers MUST use MessageHandler
-// and Subscriber above.
-// --------------------------------------------------------------------
+// Legacy types keep the generic adapter at internal/adapter/mqtt/publisher.go
+// compiling during cleanup. New consumers MUST use MessageHandler and Subscriber above.
 
 // MQTTHandler is the legacy topic-aware handler.
 //
@@ -68,8 +64,8 @@ type MQTTHandler func(ctx context.Context, topic string, payload []byte) error
 
 // MQTTSubscriber is the legacy generic subscribe / unsubscribe surface.
 //
-// Deprecated: use [Subscriber]. The Phase-42 port drops Unsubscribe —
-// pipeline subscribers manage their lifecycle via Close().
+// Deprecated: use [Subscriber]. Pipeline subscribers manage their lifecycle
+// via Close() instead of Unsubscribe.
 type MQTTSubscriber interface {
 	Subscribe(ctx context.Context, topic string, handler MQTTHandler) error
 	Unsubscribe(ctx context.Context, topic string) error

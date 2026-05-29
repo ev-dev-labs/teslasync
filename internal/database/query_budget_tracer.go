@@ -1,6 +1,6 @@
 package database
 
-// Phase-45 / Prompt 5 — Query budget tracer + chi middleware.
+// Query budget tracer for HTTP request accounting.
 //
 // queryBudgetTracer wraps another pgx.QueryTracer (here: otelpgx) and
 // increments a per-context query counter. The chi middleware records

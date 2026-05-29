@@ -8,13 +8,10 @@
 // internal/adapter/*, internal/handler/*, internal/app/*, internal/port/*,
 // or internal/api.
 //
-// Per ADR-011 this package was carved out of the formerly-flat
-// internal/models in phase-R5.10 (extracted from models.go). Recommended
-// caller alias when importing alongside other models subpackages
-// (per ADR-011 §3): `automationmodel "internal/models/automation"`.
+// ADR-011 §3 recommends the caller alias `automationmodel` when importing
+// alongside other model subpackages.
 //
-// Note: The root `Automation` type (trigger / conditions / actions CTI
-// tree) already lives in internal/models/automation.go (the standalone
-// file). This subpackage carve-out moves only the AutomationHistory +
-// AutomationVariable DTOs out of the flat models.go grab-bag.
+// The root `Automation` type and its CTI tree live in
+// internal/models/automation.go. This subpackage contains only the
+// AutomationHistory and AutomationVariable DTOs.
 package automation

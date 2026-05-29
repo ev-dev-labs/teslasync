@@ -1,9 +1,6 @@
-// Phase-50 / 0013 — U3 Year-in-review narration.
-//
-// Tests for RunYIR. The off-mode + per-feature gate
-// tests are the slice's load-bearing ADR-015 §I12 evidence — they
-// prove the cron is fail-closed even when the scheduler keeps
-// ticking after an admin disables AI mid-cycle.
+// Tests for RunYIR. The off-mode and per-feature gate cases prove the
+// cron is fail-closed even when the scheduler keeps ticking after an
+// admin disables AI mid-cycle.
 
 package digests
 
@@ -39,10 +36,9 @@ func (f fakeYIRSettings) AIFeatureEnabled(_ context.Context, id string) (bool, e
 	return f.enabled[id], nil
 }
 
-// TestRunAIYIRPregen_OffMode_NoFanout is the §I12 #3 evidence
-// test: when ai_mode='off' the cron MUST NOT touch the LLM, the
-// tools, or the push fan-out. Pure Go — no DB required because the
-// off-mode branch returns before any LLM/SQL is issued.
+// TestRunAIYIRPregen_OffMode_NoFanout verifies that ai_mode='off'
+// prevents LLM, tool, and push fan-out work. Pure Go is enough because
+// the off-mode branch returns before any LLM or SQL work is issued.
 func TestRunAIYIRPregen_OffMode_NoFanout(t *testing.T) {
 	t.Parallel()
 	settings := fakeYIRSettings{
@@ -63,7 +59,7 @@ func TestRunAIYIRPregen_OffMode_NoFanout(t *testing.T) {
 }
 
 // TestRunAIYIRPregen_FeatureToggleOff_NoFanout proves the
-// per-feature gate trips even when ai_mode is on (§I7 + §I12 #3).
+// per-feature gate trips even when ai_mode is on.
 // An admin who flips just the yir-narration toggle off mid-cycle
 // must see the next tick no-op immediately — no waiting for a mode
 // flip.
@@ -100,7 +96,7 @@ func TestRunAIYIRPregen_OnMode_NoOp(t *testing.T) {
 	if res.Skipped != 0 {
 		t.Errorf("on mode: Skipped = %d, want 0", res.Skipped)
 	}
-	// Stub slice: no narrations yet.
+	// Narration fan-out is intentionally not wired yet.
 	if res.Narrated != 0 || res.Failed != 0 || res.VehiclesConsidered != 0 {
 		t.Errorf("on mode (stub): any non-zero work counter unexpected: %+v", res)
 	}

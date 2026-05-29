@@ -4,7 +4,7 @@
 //
 // Layer: adapter
 //
-// Carved out of internal/database during Phase R restructure (R4.22):
+// Files moved into this bounded context:
 //   - reader.go, reader_aggregations.go, reader_query.go (Postgres reads)
 //   - log_repo.go (Mongo signal_log backend)
 //   - history_writer.go (Postgres signal_log writer)

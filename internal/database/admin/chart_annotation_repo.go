@@ -14,7 +14,7 @@ import (
 )
 
 // ChartAnnotationRepo is the data-access layer for the `chart_annotations`
-// table introduced by migration 000159 (Phase 40 / Prompt 43).
+// table introduced by migration 000159.
 //
 // Annotations are user-authored event markers rendered on time-series charts
 // (battery replacement, software update, tire change…). The repo deliberately

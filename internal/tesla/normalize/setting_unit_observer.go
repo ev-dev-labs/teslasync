@@ -15,8 +15,8 @@ import (
 )
 
 // settingUnitTracerName is the OpenTelemetry tracer name for spans
-// emitted by observeSettingUnit. The Phase-10 trace-coverage audit
-// greps for this constant.
+// emitted by observeSettingUnit. Trace-coverage audit greps for this
+// constant.
 const settingUnitTracerName = "normalize"
 
 // observeSettingUnit records a Setting*Unit atomic into

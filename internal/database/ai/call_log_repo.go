@@ -1,6 +1,4 @@
-// Phase-50 / 0004 — F3 AI Call Log + Usage Card.
-//
-// AICallLogRepo persists + reads the per-call audit trail written by
+// AICallLogRepo persists and reads the per-call audit trail written by
 // the audit decorator (internal/ai/provider/audit.go) into the
 // ai_call_log TimescaleDB hypertable (migration 000203).
 //
@@ -34,15 +32,13 @@ type AICallLogRepo struct {
 	db *database.DB
 }
 
-// NewAICallLogRepo constructs the repo. Single-line constructor matches
-// every other *Repo in this package; the *database.DB carries the pool.
+// NewAICallLogRepo constructs the repo.
 func NewAICallLogRepo(db *database.DB) *AICallLogRepo {
 	return &AICallLogRepo{db: db}
 }
 
-// AICallTodayAggregate is the result of Today: total volume + spend
-// for the requested user since 00:00 UTC. Zero values are valid (a
-// fresh user with no AI activity returns the zero struct).
+// AICallTodayAggregate is Today's per-user volume and spend since 00:00 UTC.
+// Zero values are valid for users with no AI activity.
 //
 // JSON shape mirrors the frontend AiUsageToday DTO in
 // web/src/api/hooks/useAiUsage.ts — keep both in sync. Field names
@@ -302,7 +298,7 @@ func (r *AICallLogRepo) Recent(ctx context.Context, subject string, limit int) (
 	return out, nil
 }
 
-// AIRedactionBypassRow is one entry in the F8 bypass report. Calls is
+// AIRedactionBypassRow is one entry in the redaction bypass report. Calls is
 // the total volume in the window; Bypassed is the subset where the
 // redact decorator skipped redaction (local-loopback or no policy in
 // ctx). BypassRatio is Bypassed/Calls as a fraction in [0,1] —

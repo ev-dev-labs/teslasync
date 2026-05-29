@@ -15,7 +15,7 @@ type ChatMessage struct {
 // listing endpoint. The frontend sidebar uses Title (renameable, may fall
 // back to FirstMessage when no explicit title is set), MessageCount, and
 // LastMessageAt to render and order the list. Backed by chatbot_sessions
-// (Phase 40 / Prompt 56) joined against chatbot_messages.
+// joined against chatbot_messages.
 type ChatSessionInfo struct {
 	ID            string     `json:"id" db:"session_id"`
 	Title         *string    `json:"title" db:"title"`

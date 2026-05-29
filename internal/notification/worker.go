@@ -44,9 +44,9 @@ func NewWorker(db *database.DB) *Worker {
 }
 
 // WithQuietHoursDecider wires a Do-Not-Disturb decider that is consulted
-// before every delivery (Phase-46 / Prompt 19). Passing nil disables the
-// check, which is the historical behaviour. Returns the worker for
-// fluent setup so cmd/notification-worker can chain construction.
+// before every delivery. Passing nil disables the check, preserving the
+// historical behaviour. Returns the worker for fluent setup so
+// cmd/notification-worker can chain construction.
 func (w *Worker) WithQuietHoursDecider(d QuietHoursDecider) *Worker {
 	w.decider = d
 	return w
@@ -141,10 +141,9 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 	)
 	defer procSpan.End()
 
-	// Phase-46 / Prompt 19 — Do-Not-Disturb gate. When a quiet-hours
-	// window is active and the request severity is not on its bypass
-	// list, skip delivery and persist a deferred row so the replay loop
-	// in cmd/notification-worker can dispatch it later.
+	// Do-Not-Disturb gate: when a quiet-hours window is active and the
+	// request severity is not on its bypass list, skip delivery and persist
+	// a deferred row for the replay loop in cmd/notification-worker.
 	if w.decider != nil && req.ChannelID > 0 {
 		shouldDefer, win, err := w.decider.ShouldDefer(procCtx, req.Severity, time.Now())
 		if err != nil {
@@ -189,7 +188,6 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 
 		latencyMs := int(time.Since(startTime).Milliseconds())
 
-		// Success — log it
 		if req.ChannelID > 0 {
 			logEntry := &notificationmodel.NotificationLog{
 				ChannelID: req.ChannelID,
@@ -204,7 +202,6 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 			if err := w.repo.CreateLog(procCtx, logEntry); err != nil {
 				log.Warn().Err(err).Msg("notification: failed to create success log")
 			}
-			// Record delivery metric
 			if err := w.metricRepo.Record(procCtx, req.ChannelID, true, latencyMs); err != nil {
 				log.Warn().Err(err).Msg("notification: failed to record metric")
 			}
@@ -220,7 +217,6 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 
 	latencyMs := int(time.Since(startTime).Milliseconds())
 
-	// All retries exhausted
 	procSpan.SetAttributes(
 		attribute.String("notification.outcome", "failed_retries_exhausted"),
 		attribute.Int("notification.latency_ms", latencyMs),
@@ -248,7 +244,6 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 		if err := w.repo.CreateLog(procCtx, logEntry); err != nil {
 			log.Warn().Err(err).Msg("notification: failed to create failure log")
 		}
-		// Record failure metric
 		if err := w.metricRepo.Record(procCtx, req.ChannelID, false, latencyMs); err != nil {
 			log.Warn().Err(err).Msg("notification: failed to record failure metric")
 		}
@@ -275,7 +270,7 @@ func (w *Worker) Shutdown() {
 
 // persistDeferred writes a notification_logs row in the deferred_dnd
 // state. The replay loop in cmd/notification-worker promotes the row to
-// 'sent' once the matching window ends. (Phase-46 / Prompt 19.)
+// 'sent' once the matching window ends.
 func (w *Worker) persistDeferred(ctx context.Context, req *Request, win *models.QuietHoursWindow) {
 	logEntry := &notificationmodel.NotificationLog{
 		ChannelID: req.ChannelID,
@@ -313,8 +308,6 @@ func (w *Worker) persistDeferred(ctx context.Context, req *Request, win *models.
 // Channels are looked up at replay time so disabled / deleted channels
 // short-circuit cleanly (the row is marked failed with a descriptive
 // error message rather than blocking the replay queue forever).
-//
-// Phase-46 / Prompt 19.
 func (w *Worker) ReplayDeferred(ctx context.Context) (replayed, failed int, err error) {
 	if w == nil || w.repo == nil {
 		return 0, 0, nil

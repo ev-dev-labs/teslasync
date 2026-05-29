@@ -4,8 +4,6 @@ import (
 	"testing"
 )
 
-// ─── DefaultPriority Tests ─────────────────────────────
-
 func TestDefaultPriority_KnownCategories(t *testing.T) {
 	tests := []struct {
 		category string
@@ -32,8 +30,6 @@ func TestDefaultPriority_UnknownCategory(t *testing.T) {
 		t.Errorf("DefaultPriority(unknown) = %d, want %d", got, DefaultPriorityComfort)
 	}
 }
-
-// ─── Enqueue Validation Tests ──────────────────────────
 
 func TestEnqueue_ValidPriorities(t *testing.T) {
 	tests := []struct {
@@ -93,8 +89,6 @@ func TestEnqueue_InvalidPriorities(t *testing.T) {
 		})
 	}
 }
-
-// ─── Drain Ordering Tests ──────────────────────────────
 
 func TestDrain_OrdersByPriority(t *testing.T) {
 	pq := NewPriorityQueue()
@@ -186,8 +180,6 @@ func TestDrain_EmptiesQueue(t *testing.T) {
 	}
 }
 
-// ─── Peek Tests ────────────────────────────────────────
-
 func TestPeek_ReturnsOrderedCopy(t *testing.T) {
 	pq := NewPriorityQueue()
 	mustEnqueue(t, pq, QueueItem{AutomationID: 1, Priority: 90, CreatedAt: 1000})
@@ -208,8 +200,6 @@ func TestPeek_Empty(t *testing.T) {
 		t.Errorf("Peek() on empty queue = %v, want nil", got)
 	}
 }
-
-// ─── Len / Reset Tests ─────────────────────────────────
 
 func TestLen(t *testing.T) {
 	pq := NewPriorityQueue()
@@ -235,8 +225,6 @@ func TestReset(t *testing.T) {
 	}
 }
 
-// ─── Payload Preservation Test ─────────────────────────
-
 func TestDrain_PreservesPayload(t *testing.T) {
 	pq := NewPriorityQueue()
 	payload := map[string]string{"action": "lock_doors"}
@@ -257,8 +245,6 @@ func TestDrain_PreservesPayload(t *testing.T) {
 		t.Errorf("payload[action] = %q, want %q", got["action"], "lock_doors")
 	}
 }
-
-// ─── ValidatePriority Tests ────────────────────────────
 
 func TestValidatePriority(t *testing.T) {
 	tests := []struct {
@@ -284,8 +270,6 @@ func TestValidatePriority(t *testing.T) {
 		})
 	}
 }
-
-// ─── Helpers ────────────────────────────────────────────
 
 func mustEnqueue(t *testing.T, pq *PriorityQueue, item QueueItem) {
 	t.Helper()

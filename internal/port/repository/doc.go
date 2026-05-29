@@ -1,4 +1,4 @@
-// Package repository declares ports for persistent repositories implemented under internal/adapter/postgres. declares the application's hexagonal-architecture ports.
+// Package repository declares persistence ports for the hexagonal architecture.
 //
 // Layer: port
 // Layering: imports stdlib + internal/domain/* + sibling internal/port/* only. arch_test (TestPortPurity) enforces.

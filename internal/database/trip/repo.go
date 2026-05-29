@@ -11,8 +11,8 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Phase-42 SI canonical schema (migration 000185_drives_si). The trips and
-// trip_drives tables are forward-only:
+// The SI canonical schema (migration 000185_drives_si) keeps trips and
+// trip_drives forward-only:
 //   - trips: id, vehicle_id, name, started_at, ended_at, created_by_user,
 //            auto_generated, notes
 //   - trip_drives: trip_id, drive_id, position INT NOT NULL
@@ -195,8 +195,7 @@ func (r *TripRepo) GetDriveIDs(ctx context.Context, tripID int64) ([]int64, erro
 // the current month (marked as in-progress). Idempotent — existing trips are
 // updated for the current month, and completed months are never re-created.
 func (r *TripRepo) GenerateMonthlyTrips(ctx context.Context) (int, error) {
-	// Find all vehicle/month combinations that have drives but no trip yet
-	// (excluding the current month — handled separately with upsert)
+	// Completed months are inserted only once; the current month is upserted below.
 	query := `
 		WITH drive_months AS (
 			SELECT vehicle_id,
@@ -252,7 +251,7 @@ func (r *TripRepo) GenerateMonthlyTrips(ctx context.Context) (int, error) {
 		created++
 	}
 
-	// Also upsert the current month as in-progress (updates if it already exists)
+	// Upsert the current month as in-progress.
 	currentMonth := time.Now().UTC().Truncate(24 * time.Hour)
 	currentMonth = time.Date(currentMonth.Year(), currentMonth.Month(), 1, 0, 0, 0, 0, time.UTC)
 
@@ -295,8 +294,8 @@ func (r *TripRepo) vehiclesWithDrivesInMonth(ctx context.Context, monthStart tim
 // UpsertMonthTrip creates or updates a trip summary for a given vehicle/month.
 // For in-progress months, it updates the existing trip with fresh aggregates.
 //
-// Phase-42 (migration 000185) eliminated the total_distance / total_energy /
-// total_duration columns from trips entirely — those values are recomputed
+// Migration 000185 eliminated the total_distance, total_energy, and
+// total_duration columns from trips; those values are recomputed
 // from constituent drives on read (see tripSelectColumns). The writer now
 // only persists the columns that still exist on the SI schema (vehicle_id,
 // name, started_at, ended_at). The legacy ON CONFLICT clause is removed
@@ -310,7 +309,7 @@ func (r *TripRepo) UpsertMonthTrip(ctx context.Context, vehicleID int64, monthSt
 		name = monthStart.Format("Jan 2006") + " (In Progress)"
 	}
 
-	// Use NOW() as ended_at for the current in-progress month
+	// Use the current time as ended_at for the in-progress month.
 	effectiveEnd := monthEnd
 	if inProgress {
 		effectiveEnd = time.Now().UTC()
@@ -324,7 +323,7 @@ func (r *TripRepo) UpsertMonthTrip(ctx context.Context, vehicleID int64, monthSt
 	`, vehicleID, monthStart).Scan(&tripID)
 	switch {
 	case err == nil:
-		// Existing — update name + ended_at.
+		// Existing monthly trip: refresh name and end time.
 		if _, err := r.db.Pool.Exec(ctx, `
 			UPDATE trips SET name=$1, ended_at=$2
 			WHERE id=$3
@@ -332,7 +331,6 @@ func (r *TripRepo) UpsertMonthTrip(ctx context.Context, vehicleID int64, monthSt
 			return 0, fmt.Errorf("update trip: %w", err)
 		}
 	case errors.Is(err, pgx.ErrNoRows):
-		// Insert new.
 		if err := r.db.Pool.QueryRow(ctx, `
 			INSERT INTO trips (vehicle_id, name, started_at, ended_at)
 			VALUES ($1, $2, $3, $4)

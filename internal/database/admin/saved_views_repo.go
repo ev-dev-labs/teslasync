@@ -13,8 +13,8 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// SavedViewsRepo is the data-access layer for the `saved_views` table
-// introduced by migration 000164 (Phase 40 / Prompt 50).
+// SavedViewsRepo is the data-access layer for the `saved_views` table introduced
+// by migration 000164.
 //
 // The repo follows the same single-user / future-multi-tenant pattern as
 // PinnedRepo: a `*int64` user scope (NULL meaning the install-wide

@@ -13,8 +13,7 @@ import (
 )
 
 // PushSubscriptionsRepo is the data-access layer for the
-// `push_subscriptions` table introduced by migration 000165
-// (Phase 40 / Prompt 52).
+// `push_subscriptions` table introduced by migration 000165.
 //
 // Like saved_views and pinned_items, the repo accepts a `*int64` user
 // scope (NULL meaning the install-wide bucket) rather than enforcing a

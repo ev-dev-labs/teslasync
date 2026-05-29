@@ -1,4 +1,4 @@
-// Package presets ships built-in automation presets shipped with the product. implements the user-defined automation engine.
+// Package presets ships built-in automation presets for the automation engine.
 //
 // Layer: platform
 package presets

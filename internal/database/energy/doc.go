@@ -5,7 +5,7 @@
 //
 // Layer: adapter
 //
-// Carved files (Phase R4.14 — bounded-context restructure per ADR-011):
+// Repository layout:
 //
 //   - repo.go                    (was internal/database/energy_repo.go)
 //     Vehicle energy-stats history + CommandLogRepo (command-execution log).
@@ -26,6 +26,6 @@
 //
 // CommandLogRepo is grouped here for now because its sole producer is
 // the energy-site command flow (charge-set, backup-reserve, etc); if a
-// separate command aggregate emerges later it can be carved out into
+// separate command aggregate emerges later it can move into
 // internal/database/command/.
 package energy

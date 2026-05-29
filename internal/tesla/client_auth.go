@@ -111,7 +111,6 @@ func (c *Client) GetPartnerToken(ctx context.Context) (token string, err error) 
 // e.g. https://fleet-api.prd.na.vn.cloud.tesla.com → https://fleet-auth.prd.vn.cloud.tesla.com
 // Falls back to https://fleet-auth.prd.vn.cloud.tesla.com if parsing fails.
 func (c *Client) partnerAuthURL() string {
-	// Known mappings
 	regionMap := map[string]string{
 		"https://fleet-api.prd.na.vn.cloud.tesla.com": "https://fleet-auth.prd.vn.cloud.tesla.com",
 		"https://fleet-api.prd.eu.vn.cloud.tesla.com": "https://fleet-auth.prd.vn.cloud.tesla.com",
@@ -120,7 +119,6 @@ func (c *Client) partnerAuthURL() string {
 	if authURL, ok := regionMap[c.baseURL]; ok {
 		return authURL
 	}
-	// Default fallback
 	return "https://fleet-auth.prd.vn.cloud.tesla.com"
 }
 

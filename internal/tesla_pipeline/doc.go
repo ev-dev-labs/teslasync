@@ -2,6 +2,5 @@
 //
 // Layer: platform
 //
-// NOTE: subject to phase-42 reorganisation; treat doc.go content
-// as authoritative for layer only.
+// This doc file is authoritative for the package layer only.
 package teslapipeline

@@ -1,6 +1,5 @@
 // Package system hosts persistence + transport DTOs for the
-// system/admin bounded context — the largest cluster carved out of
-// the formerly-flat internal/models in phase-R5.18.
+// system/admin bounded context.
 //
 // Types:
 //
@@ -23,10 +22,8 @@
 // internal/adapter/*, internal/handler/*, internal/app/*, internal/port/*,
 // or internal/api.
 //
-// Per ADR-011 this package was carved out of the formerly-flat
-// internal/models in phase-R5.18 (via `git mv` of system.go).
 // Recommended caller alias (per ADR-011 §3) — mandatory at any callsite
-// importing alongside other models subpackages because the short name
+// importing alongside other model subpackages because the short name
 // "system" is generic and prone to collision:
 //
 //	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"

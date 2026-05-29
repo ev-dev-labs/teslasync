@@ -1,16 +1,14 @@
 // Package notifier holds reusable outbound notification primitives that
 // are decoupled from the historical [internal/notification] package.
 //
-// Phase-46 / Prompt 37 introduced this package so the new webhook
-// channel UI could ship a delivery path with HMAC SHA-256 request
-// signing and a structured result (status + latency + body preview)
-// without having to touch the legacy [internal/api/notification_handler]
-// dispatch code that drives every other channel kind.
+// This package gives webhook delivery its own HMAC SHA-256 request
+// signing and structured result (status + latency + body preview)
+// without changing the legacy [internal/api/notification_handler]
+// dispatch code used by other channel kinds.
 //
 // The body of every webhook delivery is a fixed JSON envelope today.
-// The Blocked Path on Phase-46 / Prompt 37 explicitly defers Go
-// text/template-based body templating to a follow-up because templating
-// untrusted user input safely is its own design problem.
+// Go text/template-based body templating is deferred because safely
+// templating untrusted user input needs its own design.
 package notifier
 
 import (

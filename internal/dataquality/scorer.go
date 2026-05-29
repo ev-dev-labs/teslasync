@@ -3,8 +3,6 @@
 // /admin/observability/data-quality so operators can spot a degraded
 // signal field before downstream consumers notice.
 //
-// Phase-46 / p46-dq-lineage.
-//
 // Two primitives:
 //
 //   - Scorer queries signal_log via a narrow Querier interface and

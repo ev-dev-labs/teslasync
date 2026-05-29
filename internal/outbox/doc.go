@@ -11,8 +11,8 @@
 // acceptable for the in-process notification worker which subscribes
 // from the SAME broker (broker outage means subscriber outage), but
 // EXTERNAL integrations (Zapier, n8n, Splunk, Home Assistant via the
-// Phase-47 MQTT discovery bridge, bespoke automations) lose every
-// event published while the broker is partitioned, restarting, or
+// MQTT discovery bridge, bespoke automations) lose every event
+// published while the broker is partitioned, restarting, or
 // backpressured.
 //
 // The transactional outbox pattern fixes this: domain writers Append

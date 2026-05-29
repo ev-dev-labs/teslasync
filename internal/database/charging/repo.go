@@ -12,8 +12,8 @@ import (
 )
 
 // ChargingRepo provides charging session data access against the SI canonical
-// charging_sessions table (migration 000184_charging_si). Phase-48 Slice 2
-// removes the former translation layer; callers pass and receive SI fields.
+// charging_sessions table (migration 000184_charging_si). The former translation
+// layer is gone; callers pass and receive SI fields.
 type ChargingRepo struct {
 	db *database.DB
 }

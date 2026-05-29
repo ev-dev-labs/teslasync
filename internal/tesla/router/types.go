@@ -27,12 +27,6 @@
 //     dispatch time, so a typo (e.g. "positons") fails the process
 //     at startup rather than silently dropping every atomic for that
 //     field forever.
-//
-// This prompt (phase-42 0025) ships the loader, the dispatcher, the
-// closed Destination set, and the test scaffolding; routing.yaml
-// itself begins EMPTY. Per-category prompts 0030-0037 fill it in
-// incrementally; the coverage test in 0038 will then assert every
-// protomodel.Signals entry has exactly one routing entry.
 package router
 
 // Destination names a single typed write target. The closed set below
@@ -40,10 +34,9 @@ package router
 // validateEntries (in routing_loader.go) rejects anything else at
 // process start.
 //
-// New destinations are added by (a) appending a const here, (b)
-// adding the const to validDestinations in routing_loader.go, and
-// (c) wiring a Writer for it in normalize.Pipeline (Prompt 0026).
-// All three steps land in the same commit.
+// New destinations are added by appending a const here, adding it to
+// validDestinations in routing_loader.go, and wiring a Writer for it in
+// normalize.Pipeline. All three steps must land in the same commit.
 type Destination string
 
 const (

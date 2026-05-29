@@ -9,10 +9,9 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// TestWithHotPathSampling_DropsAfterBurst exercises the contract
-// documented in docs/runbooks/phase-44-log-sampling.md: the first
-// `hotPathLogSamplerBurst` events fire unconditionally, then sampling
-// kicks in.
+// TestWithHotPathSampling_DropsAfterBurst exercises the hot-path
+// sampling contract: the first `hotPathLogSamplerBurst` events fire
+// unconditionally, then sampling kicks in.
 func TestWithHotPathSampling_DropsAfterBurst(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer

@@ -3,9 +3,8 @@
 //
 // Layer: handler
 //
-// CANONICAL per ADR-009. New endpoints land here. Handlers are THIN
-// per the contract installed in phase-47/10 and enforced by arch_test
-// (TestHandlerV1Thinness):
+// ADR-009 makes this package the home for new endpoints. Handlers stay
+// thin; arch_test (TestHandlerV1Thinness) enforces these boundaries:
 //
 //   - May import: stdlib, internal/app/<name>svc, internal/handler/dto,
 //     internal/handler/middleware, internal/port/*, internal/domain/*,
@@ -14,8 +13,7 @@
 //   - May NOT import: internal/database, internal/platform/database,
 //     internal/adapter/*, internal/models, or internal/api.
 //
-// Canonical handler shape (see example_thin_handler_test.go for a
-// runnable copy):
+// Handler shape (see example_thin_handler_test.go for a runnable copy):
 //
 //  1. Decode the request from r.Body / chi.URLParam.
 //  2. Call a use-case method on internal/app/<name>svc (always typed as
@@ -31,11 +29,10 @@
 // Subpackages (ADR-011):
 //
 //	v1 currently holds <30 files (1 per resource), so per ADR-011's
-//	≥30-file threshold no subpackage split is required yet. Once the
-//	internal/api -> handler/v1 migration (Phase R2) lands in waves
-//	and one or more resources need multiple handler files (split by
-//	surface: list / detail / bulk / events / ...), each resource
-//	graduates to its own subpkg following the alias convention:
+//	≥30-file threshold no subpackage split is required yet. Once one
+//	or more resources need multiple handler files (split by surface:
+//	list / detail / bulk / events / ...), each resource graduates to
+//	its own subpkg following the alias convention:
 //
 //	  internal/handler/v1/<resource>/
 //

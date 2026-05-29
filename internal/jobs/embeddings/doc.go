@@ -5,11 +5,8 @@
 // Layer: platform
 //
 // First subpackage extracted under [internal/jobs] per ADR-011
-// (bounded-context subpackages). This package is the canary slice
-// for Phase R / R0.5: it validates the move recipe (doc.go layer
-// declaration, package rename, alias-import convention, archmetrics
-// report-mode descriptors) before the larger R6 batch reshuffles
-// the remaining ai_*_indexer jobs.
+// (bounded-context subpackages). It documents the package layout and
+// naming convention used by the remaining ai_*_indexer jobs.
 //
 // Naming: per Go style (golang.org/wiki/CodeReviewComments#package-
 // names) the exported types drop the redundant `Embeddings` prefix

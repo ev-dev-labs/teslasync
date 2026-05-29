@@ -121,9 +121,8 @@ func (t *CronTrigger) Stop() {
 	t.logger.Info().Msg("cron trigger stopped")
 }
 
-// Register adds a single hydrated automation to the cron scheduler.
-// Returns an error if the schedule's cron expression is empty/invalid or
-// specifies an unknown timezone.
+// Register adds a hydrated automation to the scheduler and rejects empty,
+// invalid, or unknown-timezone schedules.
 func (t *CronTrigger) Register(ca CronAutomation) error {
 	if ca.Trigger.CronExpr == "" {
 		return fmt.Errorf("cron_expr is required")
@@ -149,7 +148,7 @@ func (t *CronTrigger) Register(ca CronAutomation) error {
 	}
 
 	t.mu.Lock()
-	// If already registered, remove the old entry first.
+	// Replace any existing schedule for this automation.
 	if oldID, exists := t.entries[automationID]; exists {
 		t.scheduler.Remove(oldID)
 	}
@@ -191,7 +190,7 @@ func (t *CronTrigger) Reload(ctx context.Context) error {
 		return fmt.Errorf("reload cron automations: %w", err)
 	}
 
-	// Remove all current entries.
+	// Clear stale schedules before re-registering current database state.
 	t.mu.Lock()
 	for id, entryID := range t.entries {
 		t.scheduler.Remove(entryID)
@@ -199,7 +198,6 @@ func (t *CronTrigger) Reload(ctx context.Context) error {
 	}
 	t.mu.Unlock()
 
-	// Re-register all.
 	for _, ca := range automations {
 		if err := t.Register(ca); err != nil {
 			t.logger.Warn().Err(err).

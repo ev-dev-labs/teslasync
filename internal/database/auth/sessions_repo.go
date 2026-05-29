@@ -1,6 +1,4 @@
-// Phase-46 / Prompt 42 — Auth-sessions repository.
-//
-// Stores TeslaSync's own per-cookie session bindings so the Settings
+// Package auth stores TeslaSync's own per-cookie session bindings so the Settings
 // page can list active devices and revoke individual sessions
 // independently of the upstream ForwardAuth provider's IdP state. The
 // proxy is still the identity authority; this layer is purely a local

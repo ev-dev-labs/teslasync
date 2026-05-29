@@ -10,7 +10,7 @@ import (
 // returned by SignalTrace for time-series reconstruction (position traces,
 // energy curves, etc.).
 //
-// Phase-42: signal_log carries one typed column per ValueKind
+// signal_log carries one typed column per ValueKind
 // (str_value/bool_value/int_value/float_value/time_value); ValueNum holds
 // the merged numeric (Float64 ∪ Int64) projection so consumers do not have
 // to switch on value_kind. ValueJson is retained as a no-op nil since the
@@ -30,7 +30,7 @@ type SignalTraceEntry struct {
 // sorted by timestamp ASC. Designed for position traces, energy curves, and
 // other time-series visualizations.
 //
-// Phase-42 schema: SELECT ts, field, str_value, bool_value, int_value,
+// Current schema: SELECT ts, field, str_value, bool_value, int_value,
 // float_value FROM signal_log; the legacy single value_num column has
 // been replaced with two typed columns and we COALESCE float_value with
 // int_value::float8 so callers continue to receive a single *float64.
@@ -71,7 +71,7 @@ func (r *SignalLogReader) SignalTrace(ctx context.Context, vehicleID int64, sign
 // LatestTimestamp returns the most recent signal timestamp for a vehicle.
 // Returns (zero time, nil) if no signals exist for the vehicle.
 //
-// Phase-42 schema: signal_log uses `ts` (TIMESTAMPTZ) instead of the
+// signal_log uses `ts` (TIMESTAMPTZ) instead of the
 // legacy `created_at` column.
 func (r *SignalLogReader) LatestTimestamp(ctx context.Context, vehicleID int64) (time.Time, error) {
 	ctx, cancel := context.WithTimeout(ctx, queryTimeout)

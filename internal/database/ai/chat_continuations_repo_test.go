@@ -1,5 +1,3 @@
-// Phase-50 / 0005 — F4 ai_chat_continuations repo tests.
-//
 // Pure-Go validators run unconditionally (no DSN). Live SQL coverage
 // runs only when DATABASE_URL or TESLASYNC_TEST_DSN points at a
 // reachable PostgreSQL instance, mirroring the rest of

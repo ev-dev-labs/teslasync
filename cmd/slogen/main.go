@@ -1,4 +1,4 @@
-// Command slogen is the SLO codegen toolkit for phase-44.
+// Command slogen is the SLO codegen toolkit.
 //
 // Usage:
 //
@@ -9,9 +9,6 @@
 //	slogen generate recording [--catalog slo/catalog.yaml] [--out <file>]
 //	    Regenerates the Prometheus recording rules YAML from the catalog.
 //	    Default output: helm/teslasync/files/prometheus/recording-rules.yaml.
-//
-// Subsequent prompts add `alerts` and `dashboards` subcommands consuming
-// the same catalogue.
 //
 // Implementation note:
 //

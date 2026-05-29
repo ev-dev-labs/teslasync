@@ -1,9 +1,8 @@
 // Package database — VampireDrainRepo backs the restored
 // /vampire-drain + /vampire-drain/stats endpoints.
 //
-// Phase-43a / Prompt 0005. Phase-42 prompt 0077 deleted the
-// vampire_drain_events table along with the /vampire-drain handler
-// family; this repo re-derives the same product surface from the
+// The legacy vampire_drain_events table was removed; this repo re-derives
+// the same product surface from the
 // fsm_transitions append-only log (mig 000187) paired with
 // signal_log.field='BatteryLevel' samples (mig 000186).
 //
@@ -29,16 +28,15 @@
 //	is excluded — vampire drain is by definition battery loss while
 //	UNPLUGGED.
 //
-// Decision #5 escape hatch: the prompt names the field 'ChargingState',
-// but the actual routed field name in routing.yaml line 124 is
+// routing.yaml names the field 'ChargeState', although some specs call it
+// 'ChargingState'. The actual routed field name is
 // 'ChargeState' (the 'ChargingState' suffix is the proto enum *type*
 // name, not the field). This repo uses the actual routed name.
 //
 // The repo SQL returns raw windows with battery endpoints; drain_pct,
 // duration_hours, and drain_pct_per_day are computed in Go via
 // computeDrainEvents so they remain pure-Go testable without a DB
-// harness (the codebase has no pgxmock — see repo memories from
-// Phase-42a / Phase-43a prompts).
+// harness (the codebase has no pgxmock).
 package drive
 
 import (
@@ -67,12 +65,11 @@ type VampireDrainRawWindow struct {
 // case JSON tags so the frontend hooks can read either
 // camelCaseKeys-transformed or original keys per project convention.
 //
-// AmbientTempCAvg is preserved as a *float64 for forward-compatibility
-// with Decision #2's optional `ambient_temp_c_avg?` field — the current
+// AmbientTempCAvg is preserved as a *float64 for forward-compatibility with
+// the optional `ambient_temp_c_avg?` field — the current
 // implementation always emits null because joining climate_snapshots
 // per-window adds query cost the prompt's 50-event default does not
-// justify. A future prompt can populate this without changing the
-// JSON contract.
+// justify. Future work can populate this without changing the JSON contract.
 type VampireDrainEvent struct {
 	StartedAt       time.Time `json:"started_at"`
 	EndedAt         time.Time `json:"ended_at"`
@@ -296,9 +293,8 @@ func (r *VampireDrainRepo) Stats(ctx context.Context, vehicleID int64, windowSta
 	return stats, nil
 }
 
-// computeDrainEvents projects raw windows into JSON-shaped events,
-// computing duration_hours, drain_pct, and drain_pct_per_day per
-// Decision #2.
+// computeDrainEvents projects raw windows into JSON-shaped events, computing
+// duration_hours, drain_pct, and drain_pct_per_day.
 //
 // drain_pct_per_day = drain_pct * (24 / duration_hours)
 //
@@ -331,8 +327,8 @@ func computeDrainEvents(raw []VampireDrainRawWindow) []VampireDrainEvent {
 }
 
 // computeStats reduces a slice of events to the /vampire-drain/stats
-// payload. Per Decision #6 escape hatch, percentile math is pure Go
-// rather than SQL percentile_disc/percentile_cont — the codebase has
+// payload. Percentile math is pure Go rather than SQL
+// percentile_disc/percentile_cont because the codebase has
 // no pgxmock harness, and at the prompt's bounded result set (default
 // 90-day window, ~tens to hundreds of events per vehicle) the cost is
 // negligible.
@@ -341,10 +337,9 @@ func computeDrainEvents(raw []VampireDrainRawWindow) []VampireDrainEvent {
 // distinguish "no qualifying data" from "actual zero drain".
 //
 // Median uses linear interpolation on the sorted event list (matches
-// percentile_cont(0.5)). Decision #6 named percentile_disc(0.5) but
-// percentile_cont is more standard for sample-size-stable medians; the
-// difference is one sample only when EventCount is even, and a future
-// prompt can revisit if the discrete variant is preferred.
+// percentile_cont(0.5)). percentile_cont is more standard for
+// sample-size-stable medians; the
+// difference is one sample only when EventCount is even.
 //
 // P95 also uses linear interpolation. For < 20 events, percentile_cont
 // degenerates toward the maximum, which is the desired behavior for a

@@ -39,13 +39,13 @@ func (a *App) Run(ctx context.Context) error {
 		SignalStore:      a.SignalStore,
 		CacheStore:       a.Cache,
 
-		// Phase-44 / observability-batch.
+		// Dead-letter and feature-flag observability.
 		DLQInspector:           a.DLQInspector,
 		DLQReplayAuditRepo:     a.DLQReplayAuditRepo,
 		FlagStore:              a.FlagStore,
 		FeatureFlagChangesRepo: a.FeatureFlagChangesRepo,
 
-		// Phase-45 — Operator confidence.
+		// Operator-confidence repositories.
 		AuditRecorder:         a.AuditRecorder,
 		AuditLogQueryRepo:     a.AuditLogQueryRepo,
 		SlowQueriesRepo:       a.SlowQueriesRepo,
@@ -55,7 +55,7 @@ func (a *App) Run(ctx context.Context) error {
 		RotationTracker:       a.RotationTracker,
 		SchemaSeed:            a.SchemaSeed,
 
-		// Phase-46 SOTA observability batch.
+		// SLO and synthetic-check observability.
 		SLOCatalog:        a.SLOCatalog,
 		SLOTracker:        a.SLOTracker,
 		DataQualityScorer: a.DataQualityScorer,

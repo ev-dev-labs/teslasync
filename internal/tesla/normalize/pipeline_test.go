@@ -98,9 +98,9 @@ func TestPipelineProcess_ObserverInvokedFromBytesEntry(t *testing.T) {
 	}
 }
 
-// TestPipelineProcessAtomics_DelegatesToInternalDispatch is the unit
-// test for the SECOND public ingest entry added in Phase-42a/0060.
-// Whereas TestPipelineProcess_ObserverInvokedFromBytesEntry exercises
+// TestPipelineProcessAtomics_DelegatesToInternalDispatch covers the
+// atomics-in public ingest entry. Whereas
+// TestPipelineProcess_ObserverInvokedFromBytesEntry exercises
 // the bytes-in path (proto.Unmarshal -> codec.Decode -> processAtomics),
 // this test exercises the atomics-in path used by the HTTP webhook
 // adapter — Pipeline.ProcessAtomics(ctx, []codec.Atomic, vehicleID)

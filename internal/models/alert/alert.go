@@ -5,41 +5,37 @@ import (
 	"time"
 )
 
-// AlertRule mirrors the post-migration `alert_rules` schema (Phase 3, ADR-001).
-// Typed alert rule storage: handlers reject legacy CEP request fields such as
+// AlertRule mirrors the post-migration `alert_rules` schema (ADR-001).
+// Typed alert rule storage rejects legacy CEP request fields such as
 // rule_def, conditions, threshold, and notify_channels. Per-rule message
-// templates (`msg_template`) were removed in ADR-001 and RESTORED in
-// Phase-50 / ADR-005 as a typed TEXT field (NOT JSONB) together with
-// `include_title`.
+// templates (`msg_template`) are typed TEXT (NOT JSONB), paired with
+// `include_title` per ADR-005.
 //
 // Schema source: .github/prompts/db-refactor/schema/18-alert-rules.sql
-// Multi-select extension: migration 000195 (Phase-49 / Slice 0005) adds
-// `all_vehicles` + the `alert_rule_vehicles` junction table; the legacy
-// `vehicle_id` column is kept for one release for rolling-deploy safety.
-// Message template + include_title extension: migration 000200 (Phase-50 /
-// ADR-005). See internal/alertmsg for the rendering contract.
+// Migration 000195 adds `all_vehicles` and the `alert_rule_vehicles`
+// junction table; the legacy `vehicle_id` column remains for rolling-deploy
+// safety. Migration 000200 adds `msg_template` and `include_title`; see
+// internal/alertmsg for the rendering contract.
 type AlertRule struct {
 	ID          int64   `db:"id"           json:"id"`
 	Name        string  `db:"name"         json:"name"`
 	Description *string `db:"description"  json:"description,omitempty"`
 	Enabled     bool    `db:"enabled"      json:"enabled"`
 	// VehicleID is DEPRECATED. Reads return MIN(VehicleIDs) when
-	// AllVehicles=false, NULL when AllVehicles=true. Writes mirror this:
-	// the repo Create/Update writes vehicle_id = MIN(VehicleIDs) so that
-	// a downgraded API binary still sees a sensible value during a
-	// rolling deploy. Removed in a future phase. See Phase-49 / Slice
-	// 0005 / Decision D7.
+	// AllVehicles=false and NULL when AllVehicles=true. Writes mirror this:
+	// repo Create/Update writes vehicle_id = MIN(VehicleIDs) so a downgraded
+	// API binary still sees a sensible value during a rolling deploy.
 	VehicleID *int64 `db:"vehicle_id"   json:"vehicle_id,omitempty"`
 	// AllVehicles is the sticky-all flag. TRUE means the rule applies
-	// to every current AND future vehicle owned by the user; the
+	// to every current and future vehicle owned by the user; the
 	// alert_rule_vehicles junction is empty for such rules. FALSE means
-	// the explicit subset in alert_rule_vehicles applies. Default for
-	// new rules is TRUE. Phase-49 / Slice 0005.
+	// the explicit subset in alert_rule_vehicles applies. New rules default
+	// to TRUE.
 	AllVehicles bool `db:"all_vehicles" json:"all_vehicles"`
 	// VehicleIDs is the explicit (rule, vehicle) subset hydrated from the
-	// alert_rule_vehicles junction table. Always non-nil after a repo
-	// read (empty slice when AllVehicles=true). Sorted ascending for
-	// deterministic equality comparison + JSON output. Phase-49 / Slice 0005.
+	// alert_rule_vehicles junction table. It is always non-nil after a repo
+	// read (empty when AllVehicles=true) and sorted ascending for deterministic
+	// equality comparison and JSON output.
 	VehicleIDs []int64 `db:"-"            json:"vehicle_ids"`
 	SignalName string  `db:"signal_name"  json:"signal_name"`
 	// Op is one of: '=','!=','<','<=','>','>=','changed','between','outside'.
@@ -85,7 +81,7 @@ type AlertRule struct {
 	// a repeat-mode rule may emit between successive falling-edge resets.
 	// NULL means unlimited (legacy behaviour). Once-mode rules ignore
 	// this column — the latch already caps them at 1 per resolution.
-	// Added in migration 000194 (Phase-49 / Slice 0003 / Decision D5).
+	// Added in migration 000194.
 	MaxFiresPerResolution *int `db:"max_fires_per_resolution" json:"max_fires_per_resolution,omitempty"`
 
 	// EscalationAfterMin and EscalationSeverity together configure the
@@ -93,14 +89,13 @@ type AlertRule struct {
 	// its declared `Severity` for at least this many minutes of
 	// continuously unresolved condition fires at `EscalationSeverity`
 	// instead. Both fields are NULL together (no escalation) or both set
-	// together (mutual-presence + repeat-only + strict-severity-ordering
-	// CHECK constraints in migration 000196). Added in migration 000196
-	// (Phase-49 / Slice 0009 / Decision D8).
+	// together (mutual-presence, repeat-only, and strict-severity-ordering
+	// CHECK constraints in migration 000196).
 	EscalationAfterMin *int    `db:"escalation_after_min" json:"escalation_after_min,omitempty"`
 	EscalationSeverity *string `db:"escalation_severity"  json:"escalation_severity,omitempty"`
 
-	// MsgTemplate is the per-rule notification body template (Phase-50 /
-	// ADR-005). NULL means "use the op-aware default rendered by
+	// MsgTemplate is the per-rule notification body template. NULL means
+	// "use the op-aware default rendered by
 	// internal/alertmsg". When non-empty, the template supports {{key}}
 	// substitution against the merged signal context plus a curated set of
 	// built-in placeholders (VehicleName, RuleName, Severity, Threshold,
@@ -108,18 +103,16 @@ type AlertRule struct {
 	// Length is capped at 1024 chars by the API boundary; unknown
 	// placeholders are left as literal text rather than rejected.
 	//
-	// ADR-005 restores this column after Phase-3 / ADR-001 removed it. The
-	// field is typed TEXT (NOT JSONB), so ADR-001's anti-JSONB stance is
-	// preserved.
+	// ADR-005 keeps this field typed TEXT (NOT JSONB), preserving ADR-001's
+	// anti-JSONB stance.
 	MsgTemplate *string `db:"msg_template"  json:"msg_template,omitempty"`
 
 	// IncludeTitle controls whether transports that render a separate
 	// title field (Discord/Slack/Telegram/ntfy/webhook) include the bold
 	// header line. Defaults to TRUE for backward compatibility with rules
-	// authored before Phase-50. When FALSE, those transports deliver
+	// authored before this field existed. When FALSE, those transports deliver
 	// body-only output; the canonical title is still persisted in
-	// notification_logs and broadcast over SSE so the in-app UI is
-	// unaffected. Phase-50 / ADR-005.
+	// notification_logs and broadcast over SSE so the in-app UI is unaffected.
 	IncludeTitle bool `db:"include_title" json:"include_title"`
 
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
@@ -134,7 +127,7 @@ type AlertRule struct {
 // (AllVehicles=false) match only vehicles in the hydrated VehicleIDs
 // slice. Callers MUST ensure VehicleIDs is hydrated by the repo before
 // calling — `internal/dbalert.AlertRuleRepo` populates it on every
-// read path. A nil receiver returns false. Phase-49 / Slice 0005.
+// read path. A nil receiver returns false.
 func (r *AlertRule) AppliesTo(vehicleID int64) bool {
 	if r == nil {
 		return false
@@ -156,9 +149,9 @@ const (
 	AlertRuleKindComputedMetric = "computed_metric"
 )
 
-// NotificationLogEvent represents one entry in the per-alert audit timeline
-// introduced by Phase-46 / Prompt 20. Stored in `notification_log_events`,
-// one row per state-changing action against a notification_logs row.
+// NotificationLogEvent represents one entry in the per-alert audit timeline.
+// Stored in `notification_log_events`, one row per state-changing action
+// against a notification_logs row.
 //
 // The synthetic "created" event surfaced to the frontend is reconstructed
 // from `notification_logs.created_at` at read time and is NOT persisted —

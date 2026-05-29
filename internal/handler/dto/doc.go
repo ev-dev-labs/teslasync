@@ -1,4 +1,4 @@
-// Package dto defines the HTTP request/response DTOs used by handlers. groups HTTP-layer handlers, middleware, and DTOs.
+// Package dto defines the HTTP request/response DTOs used by handlers.
 //
 // Layer: handler
 package dto

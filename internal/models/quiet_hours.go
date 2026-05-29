@@ -2,9 +2,8 @@ package models
 
 import "time"
 
-// Phase-46 / Prompt 19 — per-user notification Do-Not-Disturb windows.
-//
-// QuietHoursWindow mirrors a row in the notification_quiet_hours table.
+// QuietHoursWindow mirrors a per-user Do-Not-Disturb window in the
+// notification_quiet_hours table.
 // Multiple windows per user are allowed; the dispatcher considers any
 // enabled window when deciding whether to defer a notification.
 //

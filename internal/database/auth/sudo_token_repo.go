@@ -1,6 +1,5 @@
-// Package database — Phase-46 / Prompt 31.
-//
-// In-memory sudo-token store for sensitive-action step-up reauth.
+// Package auth provides an in-memory sudo-token store for sensitive-action
+// step-up reauth.
 //
 // Why in-memory and not a SQL table:
 //

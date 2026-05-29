@@ -1,11 +1,9 @@
 package indexers
 
-// Phase-50 / 0030 — C5 Vampire-drain explanation.
+// Vampire-drain explanation background job.
 //
-// ai_idle_drain_indexer.go is the cross-cutting cron stub that the
-// vampire-drain-explanation slice registers as its background-job
-// surface (`ai_idle_drain_indexer` in the features registry's
-// JobNames list).
+// ai_idle_drain_indexer is registered as the vampire-drain-explanation
+// background-job surface in the features registry's JobNames list.
 //
 // The stub is fail-closed by design: every tick re-reads the
 // settings table and refuses to do anything when ai_mode is off
@@ -14,7 +12,7 @@ package indexers
 // implementation (re-embed idle_drain / vehicle_state /
 // climate_state chunks into the F7 vector store keyed under the
 // calling user_subject so retrieve_idle_drain_chunks sees fresh
-// chunks) will land alongside a future indexer-fan-out slice; this
+// chunks) belongs in the indexer fan-out implementation; this
 // file ships the gate + telemetry envelope so the off-mode
 // invariant is provable today.
 //
@@ -65,10 +63,8 @@ type IdleDrainSettingsReader interface {
 }
 
 // IdleDrainResult reports the outcome of one tick. The
-// fields are all int because the real fan-out implementation will
-// tally per-source re-embed counts here; today the values stay
-// zero (the stub is a no-op when off, and a no-op-with-log when
-// on — the actual indexing lands in a future slice).
+// fields are int counters reserved for the fan-out implementation;
+// the current gate-only implementation leaves them at zero.
 type IdleDrainResult struct {
 	// Skipped is 1 when the tick early-returned because ai_mode
 	// was off OR the per-feature toggle was off. Reported
@@ -78,22 +74,21 @@ type IdleDrainResult struct {
 
 	// SourcesConsidered is the number of source rows (across
 	// idle_drain / vehicle_state / climate_state) the tick
-	// fanned out a re-embed request for. Always 0 in this slice
-	// (the fan-out implementation lands in a future slice); the
-	// field is in the envelope so callers can pin the shape today.
+	// fanned out a re-embed request for. Always 0 until fan-out is wired;
+	// the field is in the envelope so callers can pin the shape.
 	SourcesConsidered int
 
 	// Indexed is the number of sources whose re-embed succeeded.
-	// Always 0 in this slice.
+	// Always 0 until the fan-out implementation is wired.
 	Indexed int
 
 	// Failed is the number of sources whose re-embed failed.
-	// Always 0 in this slice.
+	// Always 0 until the fan-out implementation is wired.
 	Failed int
 }
 
 // RunIdleDrain is the once-per-day cron entry for the
-// vampire-drain-explanation slice's background fan-out.
+// vampire-drain-explanation background fan-out.
 //
 // Re-checks ai_mode + the per-feature toggle at execution time
 // per ADR-015 §I12 #3 — the scheduler may have started this loop
@@ -109,7 +104,7 @@ type IdleDrainResult struct {
 //
 // The current implementation is deliberately a no-op gate. The
 // per-source re-embed loop, the chunking + cleanup logic, and
-// the telemetry counters land in a future indexer-fan-out slice.
+// the telemetry counters belong in the indexer fan-out implementation.
 // Today's contract:
 //
 //   - off mode (any kind) → Skipped=1, no embed calls, no DB writes;
@@ -157,10 +152,9 @@ func RunIdleDrain(
 		return IdleDrainResult{Skipped: 1}, nil
 	}
 
-	// On-mode path. The fan-out implementation (per-source
-	// re-embed + chunking + cleanup) lands in a future slice;
-	// today the function returns a zeroed envelope so callers
-	// can pin the shape and the off-mode test
+	// With both gates open, return the zeroed envelope until
+	// per-source re-embed, chunking, and cleanup are wired. This lets callers
+	// pin the shape and gives the off-mode test
 	// (TestRunAIIdleDrainIndexer_*) has a positive control to
 	// assert against.
 	log.Debug().

@@ -9,13 +9,12 @@ import (
 	geomodel "github.com/ev-dev-labs/teslasync/internal/models/geo"
 )
 
-// Phase-42 / Prompt 0076 covenant #11: the legacy visited_locations and
-// addresses tables are dropped without a recreate (ADR-004 #4 forward-only).
-// All visited-location queries now derive on demand from the SI canonical
-// drives table (migration 000185_drives_si) by grouping on end_place
-// — the geocoded place name persisted at end-of-drive. Synthetic IDs come
-// from MIN(d.id) per (vehicle_id, end_place) so callers that round-trip
-// through the locations URL stay anchored to a stable underlying drive.
+// The legacy visited_locations and addresses tables are intentionally
+// dropped without recreation (ADR-004 #4 forward-only). Visited-location
+// queries derive on demand from the SI canonical drives table (migration
+// 000185_drives_si) by grouping on end_place, the geocoded place name
+// persisted at end-of-drive. Synthetic IDs use MIN(d.id) per
+// (vehicle_id, end_place) so locations URLs stay anchored to a stable drive.
 
 type VisitedLocationRepo struct {
 	db *database.DB
@@ -33,9 +32,8 @@ func (r *VisitedLocationRepo) GetAll(ctx context.Context, limit int) ([]*geomode
 	return r.deriveFromDrives(ctx, nil, limit)
 }
 
-// deriveFromDrives aggregates visited locations from the SI canonical drives
-// table by grouping on (vehicle_id, end_place). Used as the SOLE path now
-// that the legacy visited_locations table is gone.
+// deriveFromDrives is the only visited-location read path now that the
+// legacy visited_locations table is gone.
 func (r *VisitedLocationRepo) deriveFromDrives(ctx context.Context, vehicleID *int64, limit int) ([]*geomodel.VisitedLocation, error) {
 	query := `SELECT MIN(d.id) AS id,
 			d.vehicle_id,
@@ -83,11 +81,9 @@ func (r *VisitedLocationRepo) deriveFromDrives(ctx context.Context, vehicleID *i
 
 // UpsertFromDrive is a no-op stub kept for caller compatibility.
 //
-// Phase-42 / Prompt 0076: the legacy visited_locations table is dropped
-// without a recreate. Visit counts are computed on demand from drives via
-// deriveFromDrives, so an explicit upsert call is no longer needed; this
-// method is preserved as a no-op so existing callers (out of allowed-files
-// scope for this prompt) continue to compile and call it harmlessly.
+// The legacy visited_locations table is gone. Visit counts are computed on
+// demand from drives via deriveFromDrives, so explicit upserts are unnecessary;
+// this no-op preserves existing caller compatibility.
 func (r *VisitedLocationRepo) UpsertFromDrive(ctx context.Context, vehicleID int64, address string, durationS float64) error {
 	_ = ctx
 	_ = vehicleID

@@ -2,8 +2,8 @@ package queries
 
 // Charging session SQL queries.
 //
-// Phase-42 (migration 000184_charging_si) replaced charging_sessions with
-// SI-canonical columns. The hexagonal adapter now exposes those units directly.
+// Migration 000184_charging_si replaced charging_sessions with SI-canonical
+// columns. The hexagonal adapter exposes those units directly.
 const (
 	aliasStartSocPct = "start" + "_battery_pct"
 	aliasEndSocPct   = "end" + "_battery_pct"

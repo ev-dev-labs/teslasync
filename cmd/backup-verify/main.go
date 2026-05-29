@@ -1,5 +1,3 @@
-// Phase-49 / p49-backup-verify.
-//
 // cmd/backup-verify is a one-shot binary that exercises the most
 // recent successful backup_run artifact and verifies it round-trips
 // through the storage provider, decompresses cleanly, matches its

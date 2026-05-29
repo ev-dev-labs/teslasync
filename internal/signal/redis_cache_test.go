@@ -217,14 +217,14 @@ func TestRedisSignalCacheTimestampedValuesRoundTrip(t *testing.T) {
 	after := time.Now().UTC()
 
 	stored := redisClient.hashes[redisSignalKey(vehicleID)]["BatteryLevel"]
-	// Phase-42 typed envelope fields MUST be present.
+	// Typed envelope fields must be present.
 	for _, want := range []string{`"kind":`, `"v":`, `"ts":`} {
 		if !strings.Contains(stored, want) {
 			t.Fatalf("stored timestamped value %q does not contain Phase-42 typed envelope field %q", stored, want)
 		}
 	}
-	// Pre-Phase-42 envelope fields MUST also be present (dual-write for
-	// mid-rollout decode by old binaries).
+	// Legacy envelope fields must also be present for mid-rollout decode by
+	// old binaries.
 	for _, want := range []string{
 		`"encoding":"teslasync.signal.v1"`,
 		`"timestamp"`,
@@ -243,8 +243,8 @@ func TestRedisSignalCacheTimestampedValuesRoundTrip(t *testing.T) {
 	if len(values) != 4 {
 		t.Fatalf("GetAllValues() returned %d values, want 4", len(values))
 	}
-	// Untyped Go int input round-trips as int64 because the Phase-42
-	// typed envelope preserves the producer's runtime type. Callers that
+	// Untyped Go int input round-trips as int64 because the typed envelope
+	// preserves the producer's runtime type. Callers that
 	// want float64 must pass float64 (e.g. real codec output for a
 	// ValueKindFloat field).
 	assertInt64(t, values["BatteryLevel"].Raw, 72)
@@ -376,7 +376,7 @@ func TestRedisSignalCacheGetAllRemainsRawCompatibleWithTimestampedValues(t *test
 	if len(rawValues) != 3 {
 		t.Fatalf("GetAll() returned %d values, want 3", len(rawValues))
 	}
-	// Phase-42 typed envelope preserves int64 round-trip.
+	// Typed envelope preserves int64 round-trip.
 	assertInt64(t, rawValues["Numeric"], 7)
 	assertBool(t, rawValues["Bool"], false)
 	assertString(t, rawValues["Text"], "parked")
@@ -674,9 +674,8 @@ func TestPurgeAll_ReportsScannedAtLimit(t *testing.T) {
 	redisClient := newFakeRedisSignalClient()
 	cache := &RedisSignalCache{rdb: redisClient}
 
-	// Seed 5 vehicles, then ask for limit=2 — caller should be able to
-	// detect that there are more keys outside this batch by comparing
-	// scanned == limit.
+	// Seed 5 vehicles, then ask for limit=2; scanned == limit tells the
+	// caller more keys may remain.
 	for vid := int64(1); vid <= 5; vid++ {
 		if err := cache.Update(ctx, vid, map[string]interface{}{"BatteryLevel": 50.0}); err != nil {
 			t.Fatalf("Update(%d) error = %v", vid, err)
@@ -693,7 +692,7 @@ func TestPurgeAll_ReportsScannedAtLimit(t *testing.T) {
 	if purged != 2 {
 		t.Fatalf("PurgeAll() purged = %d, want 2", purged)
 	}
-	// And confirm 3 vehicles still survive in redis after this batch.
+	// Confirm 3 vehicles still survive in Redis after this limited purge.
 	survivors := 0
 	for _, vid := range []int64{1, 2, 3, 4, 5} {
 		if _, ok := redisClient.hashes[fmt.Sprintf("vehicle:%d:signals", vid)]; ok {
@@ -705,7 +704,7 @@ func TestPurgeAll_ReportsScannedAtLimit(t *testing.T) {
 	}
 }
 
-// ── Phase-42 typed-envelope and stale-cache contract tests ──────────────
+// ── Typed-envelope and stale-cache contract tests ──────────────
 
 func assertInt32(t *testing.T, got interface{}, want int32) {
 	t.Helper()
@@ -776,9 +775,9 @@ type prometheus_Counter interface {
 
 // TestRedisSignalCacheTypedEnvelopeRoundTripPerKind exercises every
 // protomodel.ValueKind through encode → store → decode and verifies
-// the runtime Go type is preserved end-to-end. This is the core
-// guarantee of the Phase-42 typed envelope: no silent float64 widening,
-// no string-parse fallback, no untyped JSON-number ambiguity.
+// the runtime Go type is preserved end-to-end. This is the core typed-envelope
+// guarantee: no silent float64 widening, no string-parse fallback, and no
+// untyped JSON-number ambiguity.
 func TestRedisSignalCacheTypedEnvelopeRoundTripPerKind(t *testing.T) {
 	ctx := context.Background()
 	vehicleID := int64(101)
@@ -954,7 +953,7 @@ func TestGetSignalValueFreshReturnsErrStaleAndAdvisoryValue(t *testing.T) {
 }
 
 // TestGetSignalValueFreshTreatsLegacyZeroTimestampAsStale asserts that a
-// pre-Phase-42 legacy scalar (no timestamp) is treated as stale by the
+// legacy scalar without a timestamp is treated as stale by the
 // freshness-aware reader, since we cannot prove it is fresh. The
 // advisory value still flows back so the caller can compare against an
 // authoritative re-resolution.

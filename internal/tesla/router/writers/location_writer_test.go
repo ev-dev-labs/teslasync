@@ -27,13 +27,12 @@ func newLocationTestWriter(t *testing.T, rec *recorder) *snapshotWriter {
 }
 
 // TestLocationWriter_ColumnMapMatchesRoutingYAML is the reflective
-// coverage gate from phase-42a prompt 0017 Decision #4. It walks
-// router.LoadMap() (which parses the embedded routing.yaml), filters
+// coverage gate. It walks router.LoadMap() (which parses the embedded routing.yaml), filters
 // to entries with Destination == DestLocationSnapshot, and asserts the
 // locationColumnByField map in location_writer.go matches the routing
 // layer entry-for-entry — same field set, same column for each field.
 //
-// As of prompt 0017 there are ZERO routes for dest: location_snapshot
+// There are currently ZERO routes for dest: location_snapshot
 // (the location_snapshots table is populated by the geocoding worker on
 // a separate write path, NOT by telemetry atomics). The empty case is
 // the expected outcome today; the assertion will fail the moment a
@@ -100,10 +99,10 @@ func TestLocationWriter_ColumnMapMatchesRoutingYAML(t *testing.T) {
 	}
 }
 
-// TestLocationWriter_EmptyMapConstructsSuccessfully covers phase-42a
-// prompt 0017 Decision #4's empty-case clause: with zero routes today
+// TestLocationWriter_EmptyMapConstructsSuccessfully covers the empty-case
+// clause: with zero routes today
 // the writer constructor must still return successfully so the router
-// in 0050's MQTT cutover can wire one writer per Destination const
+// can wire one writer per Destination const
 // without panicking on "no writer for destination location_snapshot".
 //
 // We exercise the unexported newSnapshotWriter (with a recorder pool)
@@ -127,8 +126,8 @@ func TestLocationWriter_EmptyMapConstructsSuccessfully(t *testing.T) {
 	var _ router.Writer = w
 }
 
-// TestLocationWriter_AnyFieldReturnsError covers phase-42a prompt
-// 0017 Decision #5: with the columnFor map empty today, EVERY Field
+// TestLocationWriter_AnyFieldReturnsError covers the empty-map contract:
+// with the columnFor map empty today, EVERY Field
 // must produce a "no column mapping" error and MUST NOT touch the DB.
 // This is the empty-map analogue of the other writers'
 // UnknownFieldReturnsError test.
@@ -184,7 +183,7 @@ func TestLocationWriter_AnyFieldReturnsError(t *testing.T) {
 }
 
 // TestNewLocationWriter_NilPoolPanics locks the constructor's
-// fail-fast contract from phase-42a prompt 0017 Decision #1. A nil
+// fail-fast contract. A nil
 // pool is a wiring bug and panics so the failure surfaces at process
 // start, not at the first payload.
 func TestNewLocationWriter_NilPoolPanics(t *testing.T) {

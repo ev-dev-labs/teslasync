@@ -13,11 +13,10 @@ import (
 )
 
 // normalizeTracerName is the OpenTelemetry tracer name for spans produced
-// by the normalize pipeline. Phase-44 prompt 0015 contract: every call to
-// Pipeline.Process produces a parent span "normalize.process" with sub
-// spans normalize.parse / normalize.route / normalize.write, and the parent
-// span carries normalize.duration_us / signal.count / vehicle_id /
-// normalize.dropped / normalize.errors attributes.
+// by the normalize pipeline. Pipeline.Process produces a parent
+// "normalize.process" span with parse/route/write children and the
+// normalize.duration_us, signal.count, vehicle_id, normalize.dropped, and
+// normalize.errors attributes.
 const normalizeTracerName = "normalize"
 
 // startProcessSpan opens the parent span for Pipeline.Process or
@@ -74,10 +73,9 @@ func (b *batchSpan) stop() {
 		attribute.Int("normalize.errors", b.errors),
 	)
 	b.span.End()
-	// Phase-44 prompt 0022: derive instantaneous throughput (signals/sec)
-	// from this batch and publish to the gauge so PromQL has a live value
-	// without needing rate(). Empty batches and zero-duration batches are
-	// skipped to avoid divide-by-zero / NaN.
+	// Publish instantaneous throughput so PromQL has a live value without
+	// needing rate(). Empty and zero-duration batches are skipped to avoid
+	// divide-by-zero / NaN.
 	if b.signalCount > 0 && dur > 0 {
 		throughput := float64(b.signalCount) / dur.Seconds()
 		metrics.SetNormalizePipelineThroughput(throughput)

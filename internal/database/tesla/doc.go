@@ -1,11 +1,10 @@
 // Package tesla holds Tesla-account / Tesla-Fleet-API persistence
-// repositories (NOT vehicle-telemetry SI signals — those go through
-// internal/database/{drive,charging,energy,signal} via the phase-42
-// normalize pipeline).
+// repositories. Vehicle-telemetry SI signals go through
+// internal/database/{drive,charging,energy,signal} via the normalize pipeline.
 //
 // Layer: adapter
 //
-// Carved files (Phase R4.20 — bounded-context restructure per ADR-011):
+// Bounded-context repositories:
 //
 //   - charging_history_repo.go (was internal/database/tesla_charging_history_repo.go)
 //     Account-level historical charging data fetched from the Fleet API

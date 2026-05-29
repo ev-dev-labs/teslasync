@@ -1,18 +1,8 @@
-// Phase-46 / Prompt 43 — Per-vehicle settings repo + hierarchical resolver.
+// Package settings stores per-vehicle overrides in `vehicle_settings`
+// (migration 000175) and resolves them above install-global settings
+// and hard-coded defaults.
 //
-// The repo owns the `vehicle_settings` table (migration 000175) — a
-// thin override layer that sits on top of the install-global
-// `settings` table and the hard-coded defaults. The resolver glues the
-// three layers together for the API handler and exposes a single
-// `EffectiveSetting{Key,Value,Source}` value per supported key.
-//
-// SCOPE
-// -----
-// Phase-1 keys (the prompt's "Step 1" set, minus polling_seconds —
-// per-vehicle polling tuning is already owned by the canonical
-// polling_config table; surfacing it here would create a second source
-// of truth and the rubber-duck pre-implementation review correctly
-// flagged that as a duplicate-state bug):
+// Supported override keys:
 //
 //	nickname              text       (override → vehicle.display_name)
 //	mute_until            timestamp  (override → null)
@@ -21,14 +11,10 @@
 //	units_temperature     text       (override → settings.unit_of_temp   → "C")
 //	units_energy          text       (override → "kWh")
 //
-// "Vehicle override" is recorded in this table; "user-level" reads
-// SettingsRepo (which is install-global today — this is documented in
-// the EffectiveSettingSource constants below). Hot-path callers
-// (polling worker, charge-cost calculator, units formatters) are NOT
-// migrated by this prompt — see the prompt's Blocked Path. They keep
-// reading from the existing user-level sources; the override layer is
-// shipped first so a follow-up sprint can switch consumers
-// table-by-table without coordinating a second backend deploy.
+// Per-vehicle polling stays in `polling_config`; exposing polling_seconds
+// here would create a second source of truth. Hot-path callers continue
+// reading the existing user-level settings until each consumer is moved
+// to the override layer deliberately.
 package settings
 
 import (
@@ -53,10 +39,9 @@ const (
 	// found and produced the value. This is the only source the
 	// API can reset (DELETE the row reverts to the next layer).
 	EffectiveSourceOverride EffectiveSettingSource = "override"
-	// EffectiveSourceUser means the value came from the
-	// install-global SettingsRepo (the per-user settings table).
-	// "User" is a misnomer in single-user installs but is kept for
-	// forward-compat with a future prompt-57 multi-tenant world.
+	// EffectiveSourceUser means the value came from the install-global
+	// SettingsRepo. "User" is a misnomer in single-user installs but keeps
+	// the API compatible with future subject-aware settings.
 	EffectiveSourceUser EffectiveSettingSource = "user"
 	// EffectiveSourceDefault means the value came from the
 	// hard-coded fallback in this package — no row in either
@@ -92,8 +77,8 @@ var (
 	// rather than surfacing a 404.
 	ErrVehicleSettingNotFound = errors.New("vehicle_settings: not found")
 	// ErrVehicleSettingInvalidKey is returned by every entry point
-	// when the supplied key is not in the Phase-1 whitelist. The
-	// handler maps this to 400 INVALID_KEY.
+	// when the supplied key is unsupported. The handler maps this to
+	// 400 INVALID_KEY.
 	ErrVehicleSettingInvalidKey = errors.New("vehicle_settings: unsupported key")
 	// ErrVehicleSettingInvalidValue is returned by Upsert when the
 	// supplied value does not match the key's expected shape (e.g.
@@ -107,18 +92,16 @@ var (
 // values would push the page header into a truncated render.
 const VehicleNicknameMaxLen = 64
 
-// PollingSecondsMin / Max are reserved for a follow-up prompt that
-// migrates the polling_config consumers; documented here so the
-// per-vehicle range is not silently divergent across the codebase
-// when that work lands.
+// PollingSecondsMin / Max are reserved for a later polling_config
+// migration; documenting them here prevents the per-vehicle range from
+// silently diverging across the codebase.
 //
 // Intentionally NOT exported — no caller today should be able to
 // write a polling_seconds row through this repo.
 
 // VehicleSettingDef describes one supported key, its expected value
-// kind, and the resolver wiring. Phase-1 set (without polling_seconds);
-// add new entries here in lockstep with the frontend's SETTING_DEFS
-// table to keep the SPA UI rendering correctly.
+// kind, and the resolver wiring. Add entries here in lockstep with the
+// frontend's SETTING_DEFS table so the SPA renders the same contract.
 type VehicleSettingDef struct {
 	// Key is the canonical identifier used in URLs, the PK, and
 	// the JSON payload. Do not rename — it's the public contract.
@@ -131,10 +114,9 @@ type VehicleSettingDef struct {
 	Validate func(value any) error
 }
 
-// vehicleSettingDefs is the canonical Phase-1 whitelist. Iteration
-// order matters — the resolver returns settings in this order so the
-// SPA renders rows deterministically, which keeps snapshot tests +
-// visual diffs stable.
+// vehicleSettingDefs is the supported-key whitelist. Iteration order
+// matters: the resolver returns settings in this order so the SPA renders
+// deterministic rows for snapshot tests and visual diffs.
 var vehicleSettingDefs = []VehicleSettingDef{
 	{
 		Key:      "nickname",
@@ -200,9 +182,8 @@ func VehicleSettingDefs() []VehicleSettingDef {
 	return out
 }
 
-// IsValidVehicleSettingKey reports whether key is in the Phase-1
-// whitelist. Centralised here so handlers, repos, and tests use the
-// same predicate.
+// IsValidVehicleSettingKey centralizes the supported-key predicate for
+// handlers, repos, and tests.
 func IsValidVehicleSettingKey(key string) bool {
 	_, ok := vehicleSettingDefByKey[key]
 	return ok
@@ -439,8 +420,6 @@ func (r *VehicleSettingsRepo) Delete(ctx context.Context, vehicleID int64, key s
 	return nil
 }
 
-// ─── Per-key validators ─────────────────────────────────────────────
-
 // validateNickname enforces "non-empty, ≤ VehicleNicknameMaxLen runes,
 // no leading/trailing whitespace". Empty / whitespace-only nicknames
 // would silently render as the vehicle base name and look like a bug
@@ -486,9 +465,8 @@ func validateMuteUntil(value any) error {
 }
 
 // validateChargeCostTariffID accepts any non-empty, ≤ 64-rune ASCII
-// string. There is no tariffs table to FK against today; the field
-// is recorded as opaque so a follow-up prompt can introduce one
-// without a migration.
+// string. There is no tariffs table to FK against today; the field stays
+// opaque so one can be introduced later without a migration.
 func validateChargeCostTariffID(value any) error {
 	s, ok := value.(string)
 	if !ok {

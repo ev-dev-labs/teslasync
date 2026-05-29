@@ -197,15 +197,14 @@ func (c CompoundKind) String() string {
 // form persisted by the rest of the pipeline. It is populated only when
 // ValueKind == ValueKindEnum.
 //
-// EnumStringPrefix is the canonical SINGLE source of truth for the
-// per-enum trim prefix; the per-Value-variant TrimPrefix calls in
-// datum_decoder_gen.go MUST be derived from the same proto-side
-// computation that populates this field. Per the Phase-41 codec
-// canonical-string contract (Rule 11 in
-// .github/instructions/tesla-pipeline.instructions.md) downstream code
-// MUST NOT re-derive the prefix; it MUST consume EnumStringPrefix when
-// it needs to trim a JSON-shaped enum value (the per-field MQTT path)
-// or compare against canonical short strings.
+// EnumStringPrefix is the canonical source of truth for the per-enum
+// trim prefix; the per-Value-variant TrimPrefix calls in
+// datum_decoder_gen.go must be derived from the same proto-side
+// computation that populates this field. Downstream code must not
+// re-derive the prefix; it must consume EnumStringPrefix when trimming
+// JSON-shaped enum values (the per-field MQTT path) or comparing against
+// canonical short strings. See Rule 11 in
+// .github/instructions/tesla-pipeline.instructions.md.
 //
 // IsCompound is true for ValueKind == ValueKindCompound and exists as a
 // convenience boolean so hot-path code can avoid a switch on ValueKind

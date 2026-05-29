@@ -1,7 +1,7 @@
-// Phase-50 / 0023 — D3 Route-efficiency suggestions.
+// Route-efficiency suggestions indexer tests.
 //
 // Tests for RunRoute. The off-mode + per-feature gate
-// tests are the slice's load-bearing ADR-015 §I12 evidence — they
+// tests are load-bearing ADR-015 §I12 evidence — they
 // prove the cron is fail-closed even when the scheduler keeps
 // ticking after an admin disables AI mid-day.
 
@@ -84,8 +84,8 @@ func TestRunAIRouteIndexer_FeatureToggleOff_NoFanout(t *testing.T) {
 
 // TestRunAIRouteIndexer_OnMode_NoOp is the positive control. With
 // both gates open the function returns a zeroed envelope (the
-// fan-out implementation lands in a future slice). Pinning the
-// shape today protects future slices from accidentally changing
+// fan-out implementation is not wired yet). Pinning the
+// shape protects future changes from accidentally changing
 // the contract.
 func TestRunAIRouteIndexer_OnMode_NoOp(t *testing.T) {
 	t.Parallel()

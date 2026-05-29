@@ -1,4 +1,4 @@
-// Package auth — subject recorder middleware (Phase-46 / Prompt 57).
+// Package auth provides subject recorder middleware.
 //
 // The recorder bumps the auth_subjects table on every authenticated
 // request so the table stays an accurate materialisation of who has

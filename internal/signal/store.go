@@ -49,8 +49,7 @@ func New() *Store {
 }
 
 // SetRedisCache sets the Redis signal cache for startup recovery.
-// When set, LoadFromDB tries Redis HSET first (all 230+ signals) before
-// falling back to the Postgres vehicle_live_state table (~30 columns).
+// When set, LoadFromDB tries Redis HSET before signal_log hydration.
 func (s *Store) SetRedisCache(cache *RedisSignalCache) {
 	s.redisCache = cache
 }
@@ -301,7 +300,7 @@ func (s *Store) GetRawMap(vehicleID int64) map[string]interface{} {
 // Two-tier fallback chain:
 //
 //	Tier 1: Redis HSET (has ALL 230+ signals, survives pod restart)
-//	Tier 2: signal_log (query latest value per signal — prompt 06)
+//	Tier 2: signal_log (query latest value per signal)
 func (s *Store) LoadFromDB(ctx context.Context, vehicleID int64) {
 	// Tier 1: Redis HSET (has ALL 230+ signals, survives pod restart)
 	if s.redisCache != nil {
@@ -316,7 +315,7 @@ func (s *Store) LoadFromDB(ctx context.Context, vehicleID int64) {
 		}
 	}
 
-	// Tier 2: signal_log (implemented in prompt 06 — hydrated separately via SignalHistoryWriter)
+	// Tier 2: signal_log hydration is handled separately via SignalHistoryWriter.
 }
 
 // Hydrate merges signals into the store without flushing.

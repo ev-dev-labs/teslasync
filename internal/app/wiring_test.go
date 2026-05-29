@@ -1,14 +1,7 @@
-// Phase-42a/0050 hard cutover compile-time + source-level guards,
-// migrated to internal/app in phase-47/04.
-//
-// These tests do NOT exercise the runtime wiring (that requires a live
-// pgxpool, redis, MQTT broker, and is covered end-to-end by the
-// docker-compose smoke tests). Instead they pin the cutover at the
-// SOURCE level: the legacy mqtt.NewSubscriber must NOT appear in any
-// of the internal/app top-level files, and every component the prompt
-// requires must appear by name. Honesty Covenant rule 12 forbids
-// "production blind spots" — these greps are the testable expression
-// of that rule.
+// These tests pin telemetry cutover wiring at the source level. Runtime
+// wiring needs live Postgres, Redis, and MQTT dependencies, so these
+// guards ensure legacy mqtt.NewSubscriber is absent and every required
+// pipeline component is still wired by name.
 package app
 
 import (
@@ -57,10 +50,8 @@ func readAppSources(t *testing.T) string {
 	return b.String()
 }
 
-// TestCutover_LegacyMQTTSubscriberRemoved enforces ADR-004 #12 (single
-// ingest cutover) at the source level: the legacy mqtt.NewSubscriber
-// must not appear in any internal/app source after the phase-42a/0050
-// cutover.
+// TestCutover_LegacyMQTTSubscriberRemoved enforces ADR-004 #12 at the
+// source level: legacy mqtt.NewSubscriber must not appear in internal/app.
 //
 // We match `mqtt.NewSubscriber(` with the trailing open-paren so this
 // test is robust against e.g. a future `mqtt.NewSubscriberConfig` type
@@ -83,10 +74,9 @@ func TestCutover_PipelineSubscriberPresent(t *testing.T) {
 	}
 }
 
-// TestCutover_PipelineCoreWiringPresent pins the two core constructors
-// the prompt enumerates explicitly: normalize.New (the single ingest
-// entry point) and router.New (the writer registry). If either is
-// missing the cutover diff is incomplete.
+// TestCutover_PipelineCoreWiringPresent pins the two core constructors:
+// normalize.New is the single ingest entry point, and router.New is the
+// writer registry. If either is missing, the pipeline is incomplete.
 func TestCutover_PipelineCoreWiringPresent(t *testing.T) {
 	src := readAppSources(t)
 	for _, sym := range []string{"normalize.New(", "router.New("} {
@@ -96,9 +86,9 @@ func TestCutover_PipelineCoreWiringPresent(t *testing.T) {
 	}
 }
 
-// TestCutover_AllTwelveWritersWired pins every router.Writer
-// constructor the prompt requires. router.New itself rejects an
-// incomplete writer map at process-start (see internal/tesla/router/
+// TestCutover_AllTwelveWritersWired pins every router.Writer constructor.
+// router.New itself rejects an incomplete writer map at process-start
+// (see internal/tesla/router/
 // router.go:127), but a STARTUP failure is a worse signal than a TEST
 // failure: a missing writer here means the binary crash-loops on
 // every pod after deploy. Catching it at `go test` keeps the cutover
@@ -142,8 +132,8 @@ func TestCutover_SideEffectsObserverWired(t *testing.T) {
 }
 
 // TestCutover_ProductionMQTTHelperWired pins the helper that
-// constructs a paho client with auto-ack disabled + a DLQ publisher
-// (added in phase-42a/0040). The PipelineSubscriber's manual-ack +
+// constructs a paho client with auto-ack disabled and a DLQ publisher.
+// The PipelineSubscriber's manual-ack +
 // DLQ contract assumes the underlying client honours
 // SetAutoAckDisabled(true); using a different constructor would
 // silently break the redelivery semantics.

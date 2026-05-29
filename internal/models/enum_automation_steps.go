@@ -1,8 +1,7 @@
 package models
 
 // Typed Go constants for the condition-* and action-* members of the Postgres
-// `automation_step_kind` ENUM (see migration 000142_baseline_typed and
-// .github/prompts/db-refactor/phase-3-schema/_baseline_source/14-automations.sql).
+// `automation_step_kind` ENUM defined by migration 000142_baseline_typed.
 //
 // These types exist so callers cannot pass arbitrary strings into repository
 // or service code; every value below maps 1:1 to a member of the closed
@@ -18,7 +17,7 @@ package models
 
 // AutomationConditionKind is the discriminator for `condition_*` members of
 // the `automation_step_kind` enum. Each value selects exactly one CTI child
-// table under automation_steps (see prompts 22-23).
+// table under automation_steps.
 type AutomationConditionKind string
 
 const (
@@ -48,7 +47,7 @@ func (k AutomationConditionKind) String() string { return string(k) }
 
 // AutomationActionKind is the discriminator for `action_*` members of the
 // `automation_step_kind` enum. Each value selects exactly one CTI child
-// table under automation_steps (see prompts 24-25).
+// table under automation_steps.
 type AutomationActionKind string
 
 const (

@@ -1,11 +1,11 @@
-// Package signal — Phase-46 / Prompt 64 — read-only point-in-time snapshot.
+// Package signal provides read-only point-in-time snapshots.
 //
 // asof.go provides the parsing and read helpers that back the global
 // `?as_of=` query parameter recognised by SignalStore-backed read paths.
 // The parameter is read-only by contract: handlers may use it to
 // reconstruct historical state from signal_log, but it MUST NEVER influence
-// any write path. The READ_ONLY_GUARD in the phase-46/64 gate enforces
-// this by failing if `as_of` appears on any line that also mentions
+// any write path. The read-only architecture guard enforces this by
+// failing if `as_of` appears on any line that also mentions
 // POST/PUT/DELETE/Insert/Update in the api package.
 //
 // Parameter format: RFC 3339 (e.g. `2024-11-12T14:30:00Z`). Empty or

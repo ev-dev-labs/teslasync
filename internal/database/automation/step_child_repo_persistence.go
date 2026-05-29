@@ -45,7 +45,7 @@ func (r *AutomationStepChildRepo) Upsert(ctx context.Context, step models.Automa
 // or roll back atomically.
 func (r *AutomationStepChildRepo) UpsertTx(ctx context.Context, exec database.DBTX, step models.AutomationStep, payload any) error {
 	switch step.Kind {
-	// ---- triggers ----
+	// Triggers.
 	case string(models.AutomationTriggerSignal):
 		t, ok := payload.(*models.AutomationStepTriggerSignal)
 		if !ok {
@@ -71,7 +71,7 @@ func (r *AutomationStepChildRepo) UpsertTx(ctx context.Context, exec database.DB
 		}
 		return r.upsertTriggerEvent(ctx, exec, step.ID, t)
 
-	// ---- conditions ----
+	// Conditions.
 	case string(models.ConditionSignal):
 		c, ok := payload.(*models.AutomationStepConditionSignal)
 		if !ok {
@@ -97,7 +97,7 @@ func (r *AutomationStepChildRepo) UpsertTx(ctx context.Context, exec database.DB
 		}
 		return r.upsertConditionOtherAutomation(ctx, exec, step.ID, c)
 
-	// ---- actions ----
+	// Actions.
 	case string(models.ActionCommand):
 		a, ok := payload.(*models.AutomationAction)
 		if !ok {
@@ -127,8 +127,6 @@ func (r *AutomationStepChildRepo) UpsertTx(ctx context.Context, exec database.DB
 		return fmt.Errorf("automation-step-children-upsert-router: unknown step kind %q", step.Kind)
 	}
 }
-
-// ---------------- trigger upserts ----------------
 
 func (r *AutomationStepChildRepo) upsertTriggerSignal(ctx context.Context, exec database.DBTX, stepID int64, t *models.AutomationStepTriggerSignal) error {
 	const q = `
@@ -188,8 +186,6 @@ func (r *AutomationStepChildRepo) upsertTriggerEvent(ctx context.Context, exec d
 	}
 	return nil
 }
-
-// ---------------- condition upserts ----------------
 
 func (r *AutomationStepChildRepo) upsertConditionSignal(ctx context.Context, exec database.DBTX, stepID int64, c *models.AutomationStepConditionSignal) error {
 	const q = `
@@ -260,8 +256,6 @@ func (r *AutomationStepChildRepo) upsertConditionOtherAutomation(ctx context.Con
 	}
 	return nil
 }
-
-// ---------------- action upserts ----------------
 
 // upsertActionCommand handles automation_actions, whose primary key is `id`
 // (not `step_id`), so an ON CONFLICT (step_id) clause cannot be used. Instead

@@ -41,7 +41,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/worker"
 )
 
-// version is overwritten at build time via -ldflags '-X main.version=X.Y.Z'.
 var version = "dev"
 
 // operatorTokenEnv is the credential gate. Identical sentinel to

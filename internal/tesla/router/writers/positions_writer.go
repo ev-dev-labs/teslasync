@@ -34,9 +34,9 @@ import (
 // half until the other arrives so the (lat, lng) pair lands on a
 // single row. Routing is field-static per ADR-004 #8 — the pair-up
 // logic lives in the writer, not here." That comment is the source of
-// truth for the writer's stateful contract; the prompt 0011 Decision #2
-// reference to a hypothetical compound `Location` atomic is stale —
-// the codec never emits one (codec/codec.go:160 dispatches Location to
+// truth for the writer's stateful contract; the old reference to a
+// hypothetical compound `Location` atomic is stale — the codec never emits
+// one (codec/codec.go:160 dispatches Location to
 // flattenLocation which always emits two children) and routing the
 // compound `Location` itself is forbidden (routing.yaml:537).
 //
@@ -128,9 +128,8 @@ const (
 	defaultPositionsEvictionInterval = 30 * time.Second
 )
 
-// NewPositionsWriter constructs the production positions writer. The
-// constructor signature is locked by phase-42a prompt 0011 Decision #1.
-// A nil pool is a wiring bug and panics at process start so the
+// NewPositionsWriter constructs the production positions writer. A nil
+// pool is a wiring bug and panics at process start so the
 // failure is surfaced before any payload is processed.
 func NewPositionsWriter(pool *pgxpool.Pool) router.Writer {
 	if pool == nil {
@@ -161,8 +160,7 @@ func newPositionsWriter(db pgxPool) *positionsWriter {
 // flushed key) update only the new column, preserving prior columns
 // via COALESCE. The vehicle_id is resolved INSIDE the INSERT against
 // vehicles.vin so the writer stays at the codec.Atomic.VehicleID
-// (string VIN) boundary and never carries the numeric vehicles.id —
-// see the VIN RESOLUTION CONTRACT in phase-42a prompt 0011.
+// (string VIN) boundary and never carries the numeric vehicles.id.
 //
 // $1 = VIN (string), $2 = ts (time.Time), $3 = lat (float64),
 // $4 = lng (float64), $5 = heading_deg (float64 or nil),
@@ -208,10 +206,9 @@ ON CONFLICT (vehicle_id, ts) DO UPDATE SET
 // Failure modes (per ADR-004 #8 these are surfaced to the router
 // caller — they MUST NOT propagate to MQTT redelivery):
 //
-//   - atom.Field not in the routed set: returns "unrouted field" error
-//     per Decision #5. Defence-in-depth — routing.yaml is the gate so
-//     this is reachable only on a routing.yaml/positions_writer.go
-//     drift.
+//   - atom.Field not in the routed set: returns "unrouted field" as
+//     defense-in-depth. routing.yaml is the gate, so this is reachable
+//     only on routing.yaml/positions_writer.go drift.
 //
 //   - atom.Value's runtime type does not match the column's storage
 //     type: producer/codec contract drift, returns error.
@@ -230,12 +227,11 @@ ON CONFLICT (vehicle_id, ts) DO UPDATE SET
 //     before TTL evicts.
 //
 // dst is part of the Writer interface contract but the positions
-// writer deliberately does NOT consult dst.Column — the column
-// mapping is a hard-coded switch on atom.Field per Decision #5
-// because the four routed fields each map to a different column in
-// the same INSERT statement.
+// writer deliberately does NOT consult dst.Column. The column mapping
+// is a hard-coded switch on atom.Field because the four routed fields
+// each map to a different column in the same INSERT statement.
 func (w *positionsWriter) Write(ctx context.Context, atom codec.Atomic, dst router.Entry) error {
-	_ = dst // see godoc above — column mapping is hard-coded per Decision #5.
+	_ = dst // see godoc above — column mapping is hard-coded by field.
 
 	ctx, span, end := startWriterSpan(ctx, "positions", atom.Field)
 	var err error
@@ -280,9 +276,8 @@ func (w *positionsWriter) Write(ctx context.Context, atom codec.Atomic, dst rout
 		}
 		gpsState = &v
 	default:
-		// routing.yaml is the gate — any field here is a drift between
-		// routing.yaml and this switch. The error message is verbatim
-		// per Decision #5.
+		// routing.yaml is the gate — any field here is drift between
+		// routing.yaml and this switch.
 		err = fmt.Errorf("positionsWriter: unrouted field %q", atom.Field)
 		return err
 	}

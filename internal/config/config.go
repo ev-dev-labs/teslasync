@@ -17,8 +17,8 @@ type Config struct {
 	ServiceVersion       string
 	OTLPEndpoint         string
 	OTELTracesSamplerArg string
-	// RequireCookieConsent (Phase-46 / Prompt 70) opts the deployment
-	// into the GDPR / ePrivacy cookie-consent banner. Default false so
+	// RequireCookieConsent opts the deployment into the GDPR / ePrivacy
+	// cookie-consent banner. Default false so
 	// the typical self-hosted single-user instance is unaffected — only
 	// fleet operators serving multiple EU drivers, or instances exposed
 	// publicly with analytics enabled, need to flip this to true.
@@ -52,8 +52,7 @@ type Config struct {
 	System               SystemConfig
 	GitHub               GitHubConfig
 
-	// Phase-44 / observability-batch / Prompt F4 + F8. Operator-toggled
-	// behaviors that we don't want gated on a code change.
+	// Operator-toggled behaviors that should not require a code change.
 	Features FeaturesConfig
 }
 
@@ -61,8 +60,7 @@ type Config struct {
 // gated on a code change. These are read at startup; the dynamic
 // internal/flags store is for runtime toggles that can change without
 // a restart.
-//
-// Phase-44 / observability-batch / Prompt F4 + F8.
+
 type FeaturesConfig struct {
 	// DLQReplayEnabled gates the POST /system/dlq/{id}/replay endpoint.
 	// Default false — an operator must explicitly opt in (env var or
@@ -76,8 +74,8 @@ type FeaturesConfig struct {
 	DLQRingCapacity int
 }
 
-// bridge in the admin feedback queue (Phase-46 / Prompt 08). When Repo
-// or Token is empty the bridge is disabled — the admin endpoint
+// GitHubConfig controls the bridge from the admin feedback queue. When
+// Repo or Token is empty the bridge is disabled — the admin endpoint
 // surfaces this in its response and the SPA hides the "Forward to
 // GitHub" action.
 type GitHubConfig struct {
@@ -89,8 +87,8 @@ type GitHubConfig struct {
 	Token string
 }
 
-// SystemConfig holds the operator-controlled service-mode banner state
-// (Phase-46 / Prompt 04). When Mode is empty, the effective state comes
+// SystemConfig holds the operator-controlled service-mode banner state.
+// When Mode is empty, the effective state comes
 // from the system_state DB row; when Mode is non-empty (any of "ok",
 // "degraded", "maintenance"), the env values override the DB so an
 // operator can force-clear or force-set the banner without touching the
@@ -113,7 +111,7 @@ type SystemConfig struct {
 }
 
 // WebPushConfig holds VAPID credentials used to sign and deliver Web Push
-// notifications to subscribed browsers (Phase 40 / Prompt 52).
+// notifications to subscribed browsers.
 //
 // All three fields are required for the push channel to be active. When
 // any is empty, the push channel is disabled and the public-key endpoint
@@ -147,13 +145,13 @@ func (w WebPushConfig) Enabled() bool {
 	return w.PublicKey != "" && w.PrivateKey != "" && w.Subject != ""
 }
 
-// APILogsConfig controls the inbound api_call_logs middleware (Phase 38-10).
+// APILogsConfig controls the inbound api_call_logs middleware.
 //
 // When Enabled is false the middleware uses a no-op logger, so a misconfigured
 // or under-provisioned writer can be disabled at runtime without a rebuild.
 //
 // CaptureBodies toggles request/response body persistence (default OFF, per
-// ADR phase-38-08); when enabled both bodies are truncated at 10 KB.
+// ADR-038-08); when enabled both bodies are truncated at 10 KB.
 //
 // QueueCapacity, BatchSize and FlushInterval tune the async writer's
 // channel/batcher.
@@ -188,10 +186,7 @@ type OpenTelemetryConfig struct {
 // the runtime profilers stay at their stock rates. When enabled, every
 // long-lived binary (API + 3 workers) uploads CPU/heap/goroutine/mutex
 // profiles to the Pyroscope server using godeltaprof deltas (<1% CPU
-// overhead). See docs/runbooks/phase-49-pyroscope.md for the dashboard
-// taxonomy.
-//
-// Phase-49 / Prompt p49-profiling.
+// overhead). See the Pyroscope runbook for the dashboard taxonomy.
 type ProfilingConfig struct {
 	// Enabled gates the entire profiler. Default false.
 	Enabled bool
@@ -204,7 +199,7 @@ type ProfilingConfig struct {
 	UploadRate time.Duration
 }
 
-// SLOConfig — Phase-46 / p46-slo. Live SLO board configuration.
+// SLOConfig controls the live SLO board.
 type SLOConfig struct {
 	// CatalogPath points at slo/catalog.yaml. Default
 	// "slo/catalog.yaml" (relative to the binary's CWD).
@@ -217,8 +212,8 @@ type SLOConfig struct {
 	PromBaseURL string
 }
 
-// DataQualityConfig — Phase-46 / p46-dq-lineage. Per-field freshness /
-// gap / duplicate scoring from signal_log.
+// DataQualityConfig controls per-field freshness, gap, and duplicate
+// scoring from signal_log.
 type DataQualityConfig struct {
 	// Enabled gates the scorer. Default true — lineage graph is
 	// always served because it reads embedded routing.yaml.
@@ -228,8 +223,8 @@ type DataQualityConfig struct {
 	WindowMins int
 }
 
-// SyntheticConfig — Phase-46 / p46-synthetic. Outside-in canary
-// probes that exercise health/readiness endpoints.
+// SyntheticConfig controls outside-in canary probes for health and
+// readiness endpoints.
 type SyntheticConfig struct {
 	// Enabled gates the runner. Default false (opt-in to keep test
 	// + local dev quiet).
@@ -246,8 +241,8 @@ type SyntheticConfig struct {
 	ProbeURLs string
 }
 
-// HomeAssistantConfig — Phase-47 / p47-homeassist. MQTT discovery
-// publisher that emits a Home Assistant entity catalog for every
+// HomeAssistantConfig controls the MQTT discovery publisher that emits a
+// Home Assistant entity catalog for every
 // vehicle on a periodic tick. Opt-in via HOMEASSISTANT_ENABLED=true
 // to avoid surprising operators who don't run HA.
 type HomeAssistantConfig struct {
@@ -412,8 +407,8 @@ func Load() (*Config, error) {
 		ServiceVersion:       envStr("TESLASYNC_SERVICE_VERSION", envStr("VERSION", "dev")),
 		OTLPEndpoint:         envStr("OTEL_EXPORTER_OTLP_ENDPOINT", envStr("OTEL_ENDPOINT", "http://otel-collector:4317")),
 		OTELTracesSamplerArg: envStr("OTEL_TRACES_SAMPLER_ARG", "1.0"),
-		// Phase-46 / Prompt 70 — default OFF so self-hosted installs
-		// keep working without a banner. Set TESLASYNC_REQUIRE_COOKIE_CONSENT=true
+		// Default off so self-hosted installs keep working without a banner.
+		// Set TESLASYNC_REQUIRE_COOKIE_CONSENT=true
 		// only on multi-user / public-facing deployments where GDPR /
 		// ePrivacy compliance applies.
 		RequireCookieConsent: envBool("TESLASYNC_REQUIRE_COOKIE_CONSENT", false),

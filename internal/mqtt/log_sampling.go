@@ -10,7 +10,7 @@ import (
 // hotPathLogSamplerEvery configure the per-process log sampler shared
 // by the MQTT consumer (and mirrored by the normalize pipeline in
 // internal/tesla/normalize/log_sampling.go). The contract is documented
-// in docs/runbooks/phase-44-log-sampling.md:
+// in the log-sampling runbook:
 //
 //   - The first `Burst` events in any rolling `Period` window are
 //     emitted unconditionally so a fresh outage produces immediate

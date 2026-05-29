@@ -1,4 +1,4 @@
-// Package auth — admin impersonation primitives (Phase-46 / Prompt 46).
+// Package auth provides admin impersonation primitives.
 //
 // When supporting another user (or family member) an admin needs to
 // "see what they see" without juggling browsers/incognito sessions.

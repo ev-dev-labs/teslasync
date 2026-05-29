@@ -2,8 +2,8 @@ package charging
 
 import "time"
 
-// ChargingSession mirrors the Phase-42 SI-canonical `charging_sessions` schema
-// introduced in migrations/000184_charging_si.up.sql.
+// ChargingSession mirrors the SI-canonical `charging_sessions` schema introduced
+// in migrations/000184_charging_si.up.sql.
 //
 // One row per charging session. EndedAt is NULL while a session is in progress.
 // Nullable columns are pointer types; db/json tags match column names exactly.

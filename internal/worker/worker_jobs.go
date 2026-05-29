@@ -23,11 +23,9 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *vehiclemodel.Vehicle)
 	logger := log.With().Int64("vehicle_id", vehicle.ID).Str("vin", vehicle.VIN).Logger()
 	pollStart := time.Now()
 
-	// Apply timeout to prevent hanging on unresponsive Tesla API
 	pollCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	// Build dynamic endpoint list from polling config
 	var endpoints []string
 	if w.pollingConfig != nil {
 		endpoints = w.pollingConfig.EnabledVehicleDataEndpoints()
@@ -44,7 +42,6 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *vehiclemodel.Vehicle)
 	}
 	if errors.Is(err, tesla.ErrRateLimited) {
 		logger.Warn().Msg("Tesla API rate limited (429) — backing off without counting as failure")
-		// Apply temporary backoff but don't count as a failure
 		w.mu.Lock()
 		if vh, ok := w.vehicleHealth[vehicle.ID]; ok {
 			vh.backoffUntil = time.Now().Add(60 * time.Second)
@@ -55,7 +52,6 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *vehiclemodel.Vehicle)
 	if errors.Is(err, tesla.ErrUnauthorized) {
 		logger.Warn().Msg("received 401 — attempting token refresh")
 		if w.doRefreshToken(ctx) {
-			// Retry once after successful refresh
 			retryCtx, retryCancel := context.WithTimeout(ctx, 30*time.Second)
 			defer retryCancel()
 			data, err = w.teslaClient.GetVehicleData(retryCtx, vehicle.VIN, endpoints...)
@@ -75,33 +71,26 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *vehiclemodel.Vehicle)
 		return
 	}
 
-	// Successful poll — reset backoff
 	w.recordVehicleSuccess(vehicle.ID)
 	metrics.PollsTotal.WithLabelValues("success").Inc()
 	metrics.PollCycleDuration.Observe(time.Since(pollStart).Seconds())
 
-	// Store position
 	pos := w.buildPosition(vehicle.ID, data)
 	if err := w.posRepo.BulkInsert(ctx, []telemetrymodel.Position{*pos}); err != nil {
 		logger.Error().Err(err).Msg("failed to insert position")
 	}
 
-	// Persist Tesla-reported timezone (Phase 40 / 22) so vehicle-anchored
-	// timestamps render in the car's local time. Only writes when the value
-	// changed to avoid an UPDATE on every poll. Bounded with a short context
-	// so a slow DB write never extends the poll path beyond its budget.
+	// Persist Tesla-reported timezone so vehicle-anchored timestamps render
+	// in the car's local time. Only writes on change, with a short DB timeout
+	// so timezone metadata cannot extend the poll path beyond its budget.
 	w.maybeUpdateVehicleTimezone(ctx, vehicle, data)
 
-	// Track driving sessions
 	w.trackDriving(ctx, vehicle, data)
 
-	// Track charging sessions
 	w.trackCharging(ctx, vehicle, data)
 
-	// Evaluate alert rules
 	w.evaluateAlerts(ctx, vehicle, data)
 
-	// Publish to MQTT
 	w.publishVehicleData(vehicle, data)
 
 	// Feed response to the adaptive polling engine for next-interval decision
@@ -182,10 +171,7 @@ func (w *Worker) evaluateAlerts(ctx context.Context, vehicle *vehiclemodel.Vehic
 		if !rule.Enabled {
 			continue
 		}
-		// Phase-49 / Slice 0005: multi-vehicle picker. AppliesTo
-		// honours both the sticky-all flag and the explicit subset
-		// hydrated by the repo; replaces the legacy single-VehicleID
-		// nil/match check.
+		// AppliesTo handles both fleet-wide rules and explicit vehicle subsets.
 		if !rule.AppliesTo(vehicle.ID) {
 			continue
 		}
@@ -239,7 +225,6 @@ func (w *Worker) evaluateAlerts(ctx context.Context, vehicle *vehiclemodel.Vehic
 				})
 			}
 
-			// Send notification to all enabled channels
 			w.sendAlertNotifications(ctx, vehicle, rule.Name, message)
 		}
 	}

@@ -1,29 +1,16 @@
-// Package database — SignalsCatalogRepo backs the restored
-// /signals/catalog + /signals/observations endpoints.
+// Package signal backs the /signals/catalog and /signals/observations
+// endpoints from the typed signal_log hypertable.
 //
-// Phase-43a / Prompt 0007. Phase-42 prompt 0077 deleted both endpoints
-// alongside signal_catalog_handler.go; the typed signal_log hypertable
-// from mig 000186 (recreated by phase-42) is the new source of truth.
+// Catalog rows combine the static routing.yaml spine (`field`, destination,
+// value_kind) with signal_log aggregates for last_seen_at and counts. Routed
+// but unobserved fields appear with NULL last_seen_at.
 //
-// Catalog spine: routing.yaml entries provide the static "field +
-// destination + value_kind" rows. signal_log aggregates provide the
-// dynamic last_seen_at + counts via a single GROUP BY query. The
-// handler merges the two — entries without aggregates appear with
-// NULL last_seen_at (routed but unobserved).
+// Observations are paged signal_log scans with optional filters on vehicle_id,
+// field, since, and until. Migration 000186 defines the typed value columns:
+// str_value, bool_value, int_value, float_value, and time_value.
 //
-// Observations: per-request paged scan over signal_log with optional
-// filters on vehicle_id, field, since, until. The handler pulls the
-// populated typed column out per row using value_kind as discriminator
-// (per mig 000186 lines 79-89): str_value / bool_value / int_value /
-// float_value / time_value.
-//
-// All queries scope to signal_log only — no vehicles JOIN. The
-// vehicles existence check is handled implicitly by the empty result
-// when filtering by an unknown vehicle_id, mirroring the 200 + empty
-// pattern from the existing /signals/{vehicleID}/available endpoint
-// (an admin's catalog/observations probe never carries a 404 risk
-// because the catalog is fleet-wide and the observations endpoint is
-// optional-filter, not required-filter).
+// Queries intentionally avoid joining vehicles. Filtering by an unknown
+// vehicle_id returns 200 with an empty result, matching /signals/{vehicleID}/available.
 package signal
 
 import (
@@ -46,11 +33,9 @@ type CatalogAggregate struct {
 	VehicleCount     int64
 }
 
-// SignalObservation is one row from /signals/observations. The Value
-// field carries whichever typed column was populated for the row's
-// ValueKind; the handler renders it as the JSON `value` key. ValueKind
-// is the protomodel.ValueKind ordinal stored in signal_log.value_kind
-// (SMALLINT, range 0..10 per mig 000186).
+// SignalObservation is one row from /signals/observations. Value carries
+// whichever typed column matches ValueKind. Migration 000186 stores
+// signal_log.value_kind as a SMALLINT in range 0..10.
 type SignalObservation struct {
 	VehicleID int64     `json:"vehicle_id"`
 	Ts        time.Time `json:"ts"`
@@ -73,9 +58,7 @@ type ObservationsParams struct {
 }
 
 // signalsCatalogPool is the minimal pgxpool subset this repo needs.
-// Declared locally so tests can supply a fake without dragging in
-// pgxmock (the codebase does not vendor pgxmock — see repo memories
-// from prior phase-43a prompts).
+// Declared locally so tests can supply a fake without adding pgxmock.
 type signalsCatalogPool interface {
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
@@ -235,10 +218,10 @@ func (r *SignalsCatalogRepo) Observations(ctx context.Context, params Observatio
 	return out, nil
 }
 
-// scanObservation reads one signal_log row into a SignalObservation
-// and selects the typed column dictated by value_kind (per mig 000186
-// lines 79-89). Unknown / Compound / Invalid kinds (0, 8, 10) yield
-// Value=nil; the handler will render `null`.
+// scanObservation reads one signal_log row and selects the typed column
+// dictated by value_kind. Migration 000186 maps those columns as
+// str_value, bool_value, int_value, float_value, and time_value. Unknown,
+// Compound, and Invalid kinds (0, 8, 10) yield Value=nil.
 func scanObservation(rows pgx.Rows) (SignalObservation, error) {
 	var (
 		obs       SignalObservation
@@ -267,10 +250,9 @@ func scanObservation(rows pgx.Rows) (SignalObservation, error) {
 	return obs, nil
 }
 
-// decodeObservationValue picks the populated typed column for the
-// row's ValueKind. Pulled out of scanObservation so the per-kind
-// dispatch is unit-testable without a database. Mapping mirrors mig
-// 000186 lines 79-89 verbatim.
+// decodeObservationValue picks the populated typed column for the row's
+// ValueKind. Keeping the dispatch separate makes the migration 000186
+// column mapping testable without a database.
 func decodeObservationValue(
 	valueKind int16,
 	strVal *string,

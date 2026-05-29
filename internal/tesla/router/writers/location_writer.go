@@ -9,16 +9,15 @@ import (
 )
 
 // locationColumnByField is the static field→column map for destination
-// location_snapshot. As of phase-42a prompt 0017, routing.yaml has
-// ZERO entries with `dest: location_snapshot` — the location_snapshots
+// location_snapshot. Today routing.yaml has ZERO entries with
+// `dest: location_snapshot` — the location_snapshots
 // table (migration 000183 lines 343-351) is populated exclusively by
 // the asynchronous geocoding worker on its own write path, NOT by any
 // telemetry atomic flowing through the normalize.Pipeline.
 //
-// The map is therefore intentionally empty. The writer is authored
-// anyway per phase-42a prompt 0017 Decision #3 so the router
-// constructor in 0050's MQTT cutover can wire one writer per
-// Destination const without a "no writer for destination
+// The map is therefore intentionally empty. The writer exists so the
+// router constructor can wire one writer per Destination const without a
+// "no writer for destination
 // location_snapshot" panic the moment a future routing.yaml entry
 // adds a location_snapshot route.
 //
@@ -51,9 +50,8 @@ import (
 // the intended check.
 var locationColumnByField = map[string]string{}
 
-// locationColumnFor is the columnFor callback supplied to snapshotWriter
-// per phase-42a prompt 0012 Decision #2 (inherited by 0017). Closes
-// over locationColumnByField; with the map empty today, ok=false is
+// locationColumnFor is the columnFor callback supplied to snapshotWriter.
+// It closes over locationColumnByField; with the map empty today, ok=false is
 // returned for every field — the snapshot helper then errors out
 // loudly per its drop-loud contract (snapshot_base.go's columnFor
 // godoc). This is the desired behaviour: until routing.yaml declares
@@ -67,8 +65,7 @@ func locationColumnFor(field string) (string, bool) {
 }
 
 // NewLocationWriter constructs the production location snapshot writer.
-// Returns the router.Writer for destination location_snapshot
-// (constructor signature is locked by phase-42a prompt 0017 Decision #1).
+// Returns the router.Writer for destination location_snapshot.
 //
 // Composes the unexported snapshotWriter from snapshot_base.go: the
 // table is "location_snapshots" (matches migration 000183 lines 343-351)

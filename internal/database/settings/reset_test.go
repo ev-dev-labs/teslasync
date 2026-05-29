@@ -1,6 +1,6 @@
 package settings
 
-// Phase-46 / Prompt 50 — settings_reset orchestrator unit tests.
+// settings_reset orchestrator unit tests.
 //
 // The DELETE statements themselves require a live PostgreSQL pool, so
 // SQL coverage lives in the API handler tests (which use an in-memory

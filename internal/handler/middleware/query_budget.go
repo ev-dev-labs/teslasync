@@ -1,6 +1,6 @@
 package middleware
 
-// Phase-45 / Prompt 5 — Per-route query budget enforcement.
+// Per-route query budget enforcement.
 //
 // The middleware attaches a per-request query counter to the request
 // context. The database tracer increments it on every Query/QueryRow.
@@ -21,9 +21,8 @@ import (
 	// internal/database/query_budget.go. Mirrored in
 	// internal/arch/rules.go AllowedExceptions and
 	// tools/archmetrics/main.go baseline. The proper fix is to extract
-	// the counter primitive to internal/platform/dbobserver/ in
-	// Phase A5; until then, depguard's `handler` rule is suppressed
-	// via the directive below.
+	// the counter primitive to internal/platform/dbobserver/; until then,
+	// depguard's `handler` rule is suppressed via the directive below.
 	"github.com/ev-dev-labs/teslasync/internal/database" //nolint:depguard // ADR-A3: see comment above
 )
 

@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// Phase-43a / Prompt 0005 — pure-Go tests for the vampire_drain repo.
+// Pure-Go tests for the vampire_drain repo.
 //
 // These tests exercise computeDrainEvents (the per-window drain math),
 // computeStats (the aggregation and percentile math), percentileCont
@@ -15,10 +15,8 @@ import (
 //
 // The repo's actual SQL execution requires a live PostgreSQL instance
 // + mig 000186 + 000187 applied; the codebase has no pgxmock /
-// testcontainers harness, and the prompt's escape hatch explicitly
-// accepts pure-Go test coverage in that case (see the
-// vehicle_states_repo_test.go and mileage_repo_test.go precedents
-// from Phase-43a / Prompts 0003 + 0004).
+// testcontainers harness, so these tests keep coverage focused on the
+// pure computation paths.
 
 // ---------- helpers ----------
 
@@ -46,7 +44,7 @@ func approxEqualVD(a, b, tol float64) bool {
 // SQL CTE which we cannot exercise without a DB; we exercise the
 // post-CTE projection here to lock the math itself.
 //
-// Per the prompt's worked example:
+// Worked example:
 //
 //	W1: 09:00 -> 17:55 = 8h55m, drain 85->83 = 2%, rate ≈ 5.38/day
 //	W2: 19:00 -> 06:55 = 11h55m, drain 82->78 = 4%, rate ≈ 8.06/day

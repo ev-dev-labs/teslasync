@@ -72,7 +72,6 @@ func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*Pro
 			continue
 		}
 
-		// Fetch all data for this vehicle (paginated)
 		var allDrives []*drivemodel.Drive
 		offset := 0
 		for {
@@ -101,8 +100,6 @@ func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*Pro
 			}
 		}
 
-		// Battery health trend populated below via cagg_battery_daily.
-
 		var dist float64
 		var driveCount int
 		for _, d := range allDrives {
@@ -121,7 +118,7 @@ func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*Pro
 			dowDistance[dow] += distKm
 
 			if d.MaxSpeedMps != nil {
-				// convert m/s -> km/h for the speed stats output bucket
+				// Speed stats are exported in km/h.
 				allSpeedMax = append(allSpeedMax, *d.MaxSpeedMps*3.6)
 			}
 			allDriveDurations = append(allDriveDurations, float64(d.DurationS)/60.0)
@@ -216,10 +213,8 @@ func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*Pro
 		fleetDrives += driveCount
 		fleetSessions += len(allSessions)
 
-		// Battery trend from cagg_battery_daily.
-		// Phase-42 (prompt 0077, migration 000188): the legacy
-		// per-day charge-signal counter column was renamed to
-		// soc_sample_count.
+		// Battery trend reads cagg_battery_daily.soc_sample_count; the
+		// legacy per-day charge-signal counter column was renamed.
 		const btNominalCap = 75000.0
 		const btNominalRange = 531.0
 		btRows, btErr := p.db.Pool.Query(ctx,
@@ -266,7 +261,6 @@ func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*Pro
 		comparisons = []vehicleStats{}
 	}
 
-	// Build hourly patterns
 	hourlyDriving := make([]map[string]interface{}, 24)
 	hourlyCharging := make([]map[string]interface{}, 24)
 	for i := 0; i < 24; i++ {
@@ -284,7 +278,6 @@ func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*Pro
 		dowData[i] = map[string]interface{}{"day": dayNames[i], "drives": dowCounts[i], "distance": math.Round(dowDistance[i]*10) / 10, "avg_distance": math.Round(avgDist*10) / 10}
 	}
 
-	// Monthly charging trends
 	monthlyCharge := make([]map[string]interface{}, 0, len(monthlyChargeAgg))
 	for m, data := range monthlyChargeAgg {
 		sessions := data["sessions"].(int)

@@ -79,7 +79,7 @@ type App struct {
 	Encryptor   *crypto.Encryptor
 	TeslaClient *tesla.Client
 
-	// API call logging (Phase-38)
+	// API call logging
 	APILogRepo         *systemdb.APICallLogRepo
 	InboundAPILogger   api.APICallLogger
 	OutboundAPILogSink httputil.APICallSink
@@ -91,22 +91,19 @@ type App struct {
 	StateReader         *sigsvc.LogStateReader
 	LiveSignalStore     sigsvc.LiveSignalStore
 
-	// Phase-42a pipeline subscriber resources
+	// Fleet telemetry pipeline subscriber resources
 	pipelineSubscriber *mqtt.PipelineSubscriber
 
-	// Phase-44 / observability-batch / Prompt F4 — DLQ Inspector
-	// (subscribes to {TopicBase}/dlq/#; serves /system/dlq/*).
+	// DLQ inspector subscribes to {TopicBase}/dlq/# and serves /system/dlq/*.
 	DLQInspector       *mqtt.DLQInspector
 	DLQReplayAuditRepo *auditdb.DLQReplayAuditRepo
 
-	// Phase-44 / observability-batch / Prompt F8 — Dynamic
-	// feature-flag store (Redis-backed) + change audit repo.
+	// Redis-backed feature-flag store and change audit repo.
 	FlagStore              *flags.Store
 	FeatureFlagChangesRepo *auditdb.FeatureFlagChangesRepo
 
-	// Phase-45 — Operator confidence. Constructed in
-	// initObservabilityPhase45 once DB is up; passed through
-	// RouterOptions to the handler/v1 admin observability surface.
+	// Operator observability dependencies are constructed after DB startup
+	// and passed through RouterOptions to handler/v1.
 	AuditRecorder         *audit.Recorder
 	AuditLogQueryRepo     *auditdb.AuditLogQueryRepo
 	SlowQueriesRepo       *dbobs.SlowQueriesRepo
@@ -116,7 +113,7 @@ type App struct {
 	RotationTracker       *rotation.Tracker
 	SchemaSeed            schemacheck.Fingerprint
 
-	// Phase-46 SOTA observability batch.
+	// SLO, data-quality, and synthetic-check services.
 	SLOCatalog        *slo.Catalog
 	SLOTracker        *slo.Tracker
 	DataQualityScorer *dataquality.Scorer

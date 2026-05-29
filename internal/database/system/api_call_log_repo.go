@@ -75,7 +75,6 @@ func (r *APICallLogRepo) CreateBatch(ctx context.Context, batch []*teslamodel.AP
 }
 
 func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, service, startDate, endDate string) ([]*teslamodel.APICallLog, int, error) {
-	// Build dynamic query with filters
 	query := `SELECT id, ts, vehicle_id, service, http_method, endpoint, status_code, duration_ms, error_message, rate_limited, request_body, response_body FROM api_call_logs WHERE 1=1`
 	countQuery := `SELECT COUNT(*) FROM api_call_logs WHERE 1=1`
 	args := []interface{}{}
@@ -128,14 +127,12 @@ func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, 
 		argIdx++
 	}
 
-	// Get total count
 	var total int
 	err := r.db.Pool.QueryRow(ctx, countQuery, args...).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// Add ordering and pagination
 	query += ` ORDER BY ts DESC LIMIT $` + itoa(argIdx) + ` OFFSET $` + itoa(argIdx+1)
 	args = append(args, limit, offset)
 
@@ -159,7 +156,6 @@ func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, 
 func (r *APICallLogRepo) GetStats(ctx context.Context) (map[string]interface{}, error) {
 	stats := make(map[string]interface{})
 
-	// Single aggregate query for scalar stats
 	var total, errorCount, last24h int
 	var avgDuration float64
 	err := r.db.Pool.QueryRow(ctx, `
@@ -183,7 +179,7 @@ func (r *APICallLogRepo) GetStats(ctx context.Context) (map[string]interface{}, 
 	stats["avg_duration_ms"] = avgDuration
 	stats["last_24h"] = last24h
 
-	// Calls by method (still needs its own query for the grouped result)
+	// Grouped result needs its own query.
 	rows, err := r.db.Pool.Query(ctx, `SELECT http_method, COUNT(*) as count FROM api_call_logs GROUP BY http_method ORDER BY count DESC`)
 	if err != nil {
 		return nil, err
@@ -200,7 +196,6 @@ func (r *APICallLogRepo) GetStats(ctx context.Context) (map[string]interface{}, 
 	}
 	stats["by_method"] = methodCounts
 
-	// Calls by service
 	svcRows, err := r.db.Pool.Query(ctx, `SELECT service, COUNT(*) as count FROM api_call_logs GROUP BY service ORDER BY count DESC`)
 	if err != nil {
 		return nil, err

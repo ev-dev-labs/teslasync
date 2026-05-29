@@ -4,8 +4,7 @@ import "time"
 
 // Vehicle is the root entity. Every FK in the schema chains back here.
 //
-// Mirrors the post-migration `vehicles` table (see migration 000142_baseline_typed
-// and .github/prompts/db-refactor/phase-3-schema/_baseline_source/01-vehicles.sql).
+// Mirrors the `vehicles` table after migration 000142_baseline_typed.
 // ADR-001: typed-by-default — no raw_json, no JSONB carve-outs.
 type Vehicle struct {
 	ID          int64   `db:"id"           json:"id"`
@@ -20,7 +19,7 @@ type Vehicle struct {
 	// (vehicle_state.timezone, e.g. "America/Los_Angeles"). Updated on
 	// every successful vehicle_data poll. Defaults to "UTC"; the frontend
 	// treats "UTC" as "fall back to user TZ" so streaming-only vehicles
-	// that never reach the polling path render gracefully (Phase 40 / 22).
+	// that never reach the polling path render gracefully.
 	Timezone   string     `db:"timezone"     json:"timezone"`
 	EnrolledAt time.Time  `db:"enrolled_at"  json:"enrolled_at"`
 	ArchivedAt *time.Time `db:"archived_at"  json:"archived_at,omitempty"`

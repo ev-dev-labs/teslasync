@@ -1,4 +1,4 @@
-// Package database — Phase-46 / Prompt 41.
+// Package worker stores worker heartbeat snapshots.
 //
 // Worker heartbeat store. Surfaces "is the notification / export /
 // automation worker actually running?" to the operator-facing
@@ -13,9 +13,8 @@
 //   - The shared Redis client is already required by every API server
 //     deployment (signal cache, SSE pubsub, sudo follow-up). Adding a
 //     small key-per-worker doesn't grow the dependency surface.
-//   - No new migration is required — important because phase-46/41 is
-//     a pure surfacing prompt and Postgres schema changes carry their
-//     own review gate.
+//   - Avoiding schema changes keeps heartbeat surfacing independent of
+//     Postgres migration review.
 //
 // The store is intentionally tiny and behind an interface so that:
 //

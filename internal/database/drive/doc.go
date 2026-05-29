@@ -4,7 +4,7 @@
 //
 // Layer: adapter
 //
-// Carved files (Phase R4.12 — bounded-context restructure per ADR-011):
+// Files split by bounded context per ADR-011:
 //
 //   - repo.go               (was internal/database/drive_repo.go)
 //     Drive session persistence with partial-update support; calls
@@ -24,7 +24,6 @@
 // ADR-011 alias convention (e.g.
 // `drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"`).
 //
-// Helper promotion: the drivePartialAllowed allow-list map is now exported
-// as DrivePartialAllowed so its companion test (carved to
-// partial_allowed_test.go) can verify it externally.
+// DrivePartialAllowed is exported so partial_allowed_test.go can verify
+// the allow-list externally.
 package drive

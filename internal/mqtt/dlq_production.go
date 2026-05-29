@@ -1,7 +1,6 @@
 package mqtt
 
-// dlq_production.go — phase-42a/0040 production wiring helper for the
-// PipelineSubscriber's MQTT client + DLQ publisher.
+// Production wiring helper for the PipelineSubscriber MQTT client and DLQ publisher.
 //
 // Per ADR-004 #8 and the manual-ack contract documented at
 // internal/mqtt/mqtt.go:224-236, PipelineSubscriber requires a paho client
@@ -13,11 +12,6 @@ package mqtt
 //   - An ErrPayloadDrop cannot be NACKed — the broker would never redeliver,
 //     so poison pills would be silently dropped on the floor instead of
 //     captured for forensic analysis in the DLQ.
-//
-// Phase-42 prompt 0060 added the MQTTDLQPublisher type but did NOT wire it
-// into a production constructor — it was only constructible by tests. This
-// file is the production-side helper; the cutover prompt (phase-42a/0050)
-// invokes it from cmd/teslasync.
 //
 // SCOPE — what this file does NOT do:
 //   - It does NOT implement ack/nack logic. Ack/nack lives in
@@ -138,9 +132,8 @@ func productionPipelineOptions(brokerURL, clientID, username, password string) *
 // reconnect (broker dropped persistent session, paho default
 // ResumeSubs=false) re-establishes the SUBSCRIBE; without this the
 // client stays connected indefinitely with subscriptions=0 and the
-// fleet-telemetry stream silently stops flowing. See the Phase-42
-// reconnect-resubscribe contract in
-// PipelineSubscriber.OnBrokerReconnect (mqtt.go).
+// fleet-telemetry stream silently stops flowing. See the reconnect-
+// resubscribe contract in PipelineSubscriber.OnBrokerReconnect (mqtt.go).
 //
 // Note: the callback runs on a paho-internal goroutine. The PipelineSubscriber
 // MUST be safe to invoke concurrently with Start/Stop and tolerate being

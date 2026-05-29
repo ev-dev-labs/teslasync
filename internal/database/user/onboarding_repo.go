@@ -11,7 +11,7 @@ import (
 )
 
 // OnboardingRepo provides the read-only data access used by the
-// first-run onboarding gate (Phase 40 / Prompt 18).
+// first-run onboarding gate.
 //
 // It deliberately exposes a single struct that bundles the two pieces
 // of state the handler can derive from the database — the count of

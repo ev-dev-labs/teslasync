@@ -15,8 +15,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 )
 
-// ─── Channel Loader Interface ──────────────────────────
-
 // ChannelLoader loads enabled notification channels.
 // Implementations should return only enabled channels.
 type ChannelLoader interface {
@@ -26,8 +24,6 @@ type ChannelLoader interface {
 // NotifySender dispatches a single notification request.
 // The default implementation is notification.Send.
 type NotifySender func(req *notification.Request) error
-
-// ─── Failure Event ─────────────────────────────────────
 
 // FailureEvent captures the full context of an automation execution failure.
 // All fields are optional except AutomationID and AutomationName; the alerter
@@ -44,8 +40,6 @@ type FailureEvent struct {
 	AutoDisabledReason string    `json:"auto_disabled_reason,omitempty"`
 	Timestamp          time.Time `json:"timestamp"`
 }
-
-// ─── Failure Alerter ───────────────────────────────────
 
 // FailureAlerter sends failure notifications to all enabled notification
 // channels. It is separate from the notify_on_run setting — failure alerts
@@ -173,8 +167,6 @@ func (fa *FailureAlerter) Send(ctx context.Context, event FailureEvent) error {
 	return fmt.Errorf("failure alert for automation %d: %w", event.AutomationID, ctx.Err())
 }
 
-// ─── Message Formatting ────────────────────────────────
-
 func (fa *FailureAlerter) formatTitle(event FailureEvent) string {
 	if event.AutoDisabled {
 		return fmt.Sprintf("🛑 Automation Disabled: %s", event.AutomationName)
@@ -216,8 +208,6 @@ func (fa *FailureAlerter) formatMessage(event FailureEvent) string {
 
 	return b.String()
 }
-
-// ─── Notifier Adapter ──────────────────────────────────
 
 // failureAlerterNotifier adapts FailureAlerter to the Notifier interface
 // used by AutoDisableChecker. Since NotifyAutoDisabled has limited context

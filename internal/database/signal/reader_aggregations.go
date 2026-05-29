@@ -11,10 +11,9 @@ import (
 // for the average (excluding stationary readings). Power is computed from
 // AVG(PackVoltage) × AVG(PackCurrent) / 1000.
 //
-// Phase-42 schema: ts/field/float_value/int_value (the legacy
-// created_at/signal/value_num columns no longer exist). Numeric kinds in
-// signal_log can be Float64 (kind=5) or Int64 (kind=4); the COALESCE
-// resolves to whichever is populated for a given row.
+// signal_log stores numeric samples in float_value or int_value; the
+// legacy created_at/signal/value_num columns no longer exist. COALESCE
+// resolves whichever typed numeric column is populated for a row.
 func (r *SignalLogReader) DriveAggregates(ctx context.Context, vehicleID int64, from, to time.Time) (avgSpeed, maxSpeed, avgPower float64) {
 	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
 	defer cancel()
@@ -57,11 +56,9 @@ func (r *SignalLogReader) RegenEnergy(ctx context.Context, vehicleID int64, from
 	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
 	defer cancel()
 
-	// Estimate regen energy: sum of (|negative current| × avg voltage) × avg sample interval.
-	// We approximate by using AVG(|negative current|) × AVG(voltage) × duration.
-	// More accurate would be per-sample integration, but this is sufficient for drive summary.
-	//
-	// Phase-42 schema: ts/field/float_value/int_value.
+	// This approximation uses AVG(|negative current|) × AVG(voltage) × duration.
+	// Per-sample integration would be more precise, but this is sufficient for
+	// drive summaries.
 	const numCol = "COALESCE(float_value, int_value::float8)"
 	query := `SELECT
 		AVG(ABS(` + numCol + `)) FILTER (WHERE field = 'PackCurrent' AND ` + numCol + ` < 0),
@@ -98,7 +95,7 @@ func (r *SignalLogReader) RegenEnergy(ctx context.Context, vehicleID int64, from
 // window. Checks both ACChargingPower and DCChargingPower, returns whichever
 // is active (DC takes precedence when present).
 //
-// Phase-42 schema: ts/field/float_value/int_value.
+// signal_log stores numeric samples in float_value or int_value.
 func (r *SignalLogReader) ChargeAggregates(ctx context.Context, vehicleID int64, from, to time.Time) (maxPower, avgPower float64) {
 	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
 	defer cancel()
@@ -121,7 +118,7 @@ func (r *SignalLogReader) ChargeAggregates(ctx context.Context, vehicleID int64,
 		return 0, 0
 	}
 
-	// DC takes precedence when present
+	// DC takes precedence when both AC and DC samples are present.
 	if pDCMax != nil && *pDCMax > 0 {
 		maxPower = *pDCMax
 		if pDCAvg != nil {
@@ -138,41 +135,23 @@ func (r *SignalLogReader) ChargeAggregates(ctx context.Context, vehicleID int64,
 	return maxPower, avgPower
 }
 
-// IntegrateDriveDistanceMeters integrates VehicleSpeed (m/s, post-Phase-42
-// SI canonical) over the [from, to] window using the trapezoidal rule with
-// gap-skipping, returning total distance in METERS (SI canonical).
+// IntegrateDriveDistanceMeters integrates SI VehicleSpeed samples (m/s)
+// over [from, to] with the trapezoidal rule and returns meters.
 //
-// Phase-41 v3.4 commit C5 fallback. Used by completeDriveLocked when
-// neither the in-memory odometer accumulator nor the snapshot odometer
-// pair yielded a positive distance — the prod-replay scenario where a
-// drive ends with distance_m=0 even though dozens of VehicleSpeed samples
-// landed in signal_log.
+// This is a fallback for drive completion when neither the in-memory
+// odometer accumulator nor the snapshot odometer pair yields a positive
+// distance, even though VehicleSpeed samples exist in signal_log.
 //
-// PE-blocking issue B4: feeding meters into DriveRepo.Complete (which
-// historically accepts MILES via the distance_mi -> distance_m * 1609.344
-// conversion in translatePartialFieldsToSI) would 1609x overstate the
-// distance. Callers MUST route the returned meters through the SI-native
-// distance_m partial-update field (in drivePartialAllowed), NOT through
-// distance_mi.
+// Callers must write the returned value through the SI-native distance_m
+// partial-update field. Passing meters through the legacy distance_mi path
+// would multiply the distance by 1609.344.
 //
-// SQL strategy:
-//   - WITH samples AS: pull every VehicleSpeed sample in window, ordered by ts.
-//     COALESCE(float_value, int_value::float8) so int- and float-encoded
-//     samples both contribute (int_value path is rare for VehicleSpeed but
-//     mirrors DriveAggregates' robustness).
-//   - WITH pairs AS: derive prev_speed (LAG) and dt_sec (EXTRACT EPOCH from
-//     ts - LAG(ts)) per row. Postgres rejects LAG nested directly inside
-//     SUM, so the LAG calls live in the inner CTE and the outer SUM only
-//     sees plain columns.
-//   - Outer SELECT: SUM((speed + prev) / 2 * dt) FILTER (WHERE prev IS NOT
-//     NULL AND dt > 0 AND dt <= 30). The 30-second cap is the gap-skip:
-//     telemetry pauses (parked, sleep, no-sample windows) MUST NOT have
-//     distance interpolated across them — a 5-minute gap at 60 mph would
-//     fabricate 5 miles of phantom travel.
+// The SQL uses CTEs because Postgres rejects LAG nested directly inside
+// SUM. The 30-second cap skips telemetry gaps; otherwise a 5-minute gap at
+// highway speed would fabricate miles of phantom travel.
 //
-// Returns 0, nil when the window has fewer than 2 samples (no pair to
-// integrate). Returns 0, err on query failure so the caller can decide
-// to log-and-continue (drives row still commits with distance_m=0).
+// Returns 0, nil when the window has fewer than two samples. Returns 0,
+// err on query failure so the caller can log and continue with distance_m=0.
 func (r *SignalLogReader) IntegrateDriveDistanceMeters(ctx context.Context, vehicleID int64, from, to time.Time) (float64, error) {
 	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
 	defer cancel()
@@ -223,8 +202,8 @@ type BrickVoltageHistoryEntry struct {
 // BrickVoltageHistory returns hourly brick voltage aggregates from signal_log
 // for the given vehicle since the provided timestamp.
 //
-// Phase-42 schema: ts/field/float_value (BrickVoltage* signals are
-// ValueKindFloat so float_value is always populated; no COALESCE needed).
+// BrickVoltage* signals are ValueKindFloat, so float_value is always
+// populated and no COALESCE is needed.
 func (r *SignalLogReader) BrickVoltageHistory(ctx context.Context, vehicleID int64, since time.Time) ([]BrickVoltageHistoryEntry, error) {
 	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
 	defer cancel()

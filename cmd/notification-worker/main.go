@@ -86,11 +86,10 @@ func main() {
 			Msg("OpenTelemetry tracing enabled")
 	}
 
-	// ── Pyroscope continuous profiling ──────────────────────────────
-	// Phase-49 / p49-profiling. Same non-fatal pattern as tracing.Init:
-	// when the Pyroscope server is unreachable the worker continues
-	// without profile uploads. UploadRate defaults to 15s — see
-	// internal/config.ProfilingConfig and docs/runbooks/phase-49-pyroscope.md.
+	// Pyroscope profiling is non-fatal like tracing.Init: when the server is
+	// unreachable, the worker continues without profile uploads. UploadRate
+	// defaults to 15s; see internal/config.ProfilingConfig and the Pyroscope
+	// runbook.
 	profilerShutdown, err := tracing.StartProfiler(ctx, cfg, "teslasync-notification-worker")
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to initialize pyroscope profiler, continuing without it")
@@ -189,10 +188,9 @@ func main() {
 	defer mqttClient.Disconnect(1000)
 	log.Info().Msg("MQTT connected")
 
-	// Start MQTT notification consumer
-	// Phase-46 / Prompt 19 — register the quiet-hours decider so the
-	// dispatcher can defer notifications during DND windows. Replay
-	// loop below promotes deferred rows once the window ends.
+	// Register the quiet-hours decider so the dispatcher can defer notifications
+	// during DND windows. The replay loop below promotes deferred rows once the
+	// window ends.
 	quietHoursRepo := quiethoursdb.NewQuietHoursRepo(db)
 	quietHoursDecider := notification.NewRepoDecider(quietHoursRepo)
 	worker := notification.NewWorker(db).WithQuietHoursDecider(quietHoursDecider)
@@ -200,11 +198,10 @@ func main() {
 		worker.Start(ctx, mqttClient)
 	}()
 
-	// Phase-46 / Prompt 19 — DND replay loop. Walks deferred_dnd rows
-	// every 60 seconds and dispatches the ones whose window has
-	// ended. Replay goes through notification.Send directly (NOT
-	// MQTT) so we update the existing log row in place rather than
-	// creating a duplicate row.
+	// DND replay walks deferred_dnd rows every 60 seconds and dispatches the
+	// ones whose window has ended. Replay goes through notification.Send directly
+	// (not MQTT) so the existing log row is updated in place instead of creating
+	// a duplicate.
 	go func() {
 		ticker := time.NewTicker(60 * time.Second)
 		defer ticker.Stop()
@@ -476,8 +473,8 @@ func runComputedMetricTick(
 }
 
 func vehiclesForRule(rule *alertmodel.AlertRule, all []*vehiclemodel.Vehicle) []int64 {
-	// Phase-49 / Slice 0005: multi-vehicle picker. Honour the new
-	// sticky-all flag + explicit subset hydrated by the repo.
+	// Honor the sticky-all flag and the explicit vehicle subset hydrated by the
+	// repo.
 	if rule.AllVehicles {
 		out := make([]int64, 0, len(all))
 		for _, v := range all {
@@ -507,11 +504,9 @@ func dispatchComputedMetricNotification(
 	channels []*notificationmodel.NotificationChannel,
 	mqttClient pahomqtt.Client,
 ) {
-	// Phase-50 / ADR-005: route computed-metric dispatch through the
-	// shared alertmsg package so the message is rendered identically to
-	// the telemetry path. Without this, a custom msg_template on a
-	// computed-metric rule would be ignored and the IncludeTitle toggle
-	// would never reach the transports.
+	// Route computed-metric dispatch through the shared alertmsg package so it
+	// renders identically to telemetry alerts. Without this, custom msg_template
+	// and IncludeTitle settings would not reach the transports.
 	msgCtx := alertmsg.BuildContext(rule, vehicleName, nil, map[string]any{
 		"Severity":        rule.Severity,
 		"MetricValue":     result.Value,

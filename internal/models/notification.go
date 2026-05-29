@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-// Notification mirrors the post-migration `notifications` schema (Phase 3, ADR-001).
+// Notification mirrors the typed `notifications` schema.
 // Append-only delivery log: each row represents one rendered+dispatched
 // notification attempt. Status changes are tracked via DeliveryStatus and
 // Attempts (no UpdatedAt — table is effectively immutable per row).

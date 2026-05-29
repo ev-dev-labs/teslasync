@@ -10,8 +10,6 @@ import (
 // FilterExistingIDs returns the subset of `ids` that exist in the
 // geofences table. Used by the bulk handler to surface {id, "not_found"}
 // failures without round-tripping per id.
-//
-// Phase-45 / Prompt 32 — bulk-actions framework.
 func (r *GeofenceRepo) FilterExistingIDs(ctx context.Context, ids []int64) ([]int64, error) {
 	if len(ids) == 0 {
 		return nil, nil

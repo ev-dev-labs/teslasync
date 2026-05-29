@@ -1,8 +1,7 @@
 package models
 
 // CTI child rows for `automation_steps` of kind `trigger_*`. See migration
-// 000142_baseline_typed and
-// .github/prompts/db-refactor/phase-3-schema/_baseline_source/17-automation-step-children.sql.
+// 000142_baseline_typed.
 //
 // ADR-001: typed-by-default — no raw_json, no JSONB carve-outs. Each trigger
 // kind has its own child table with strongly-typed columns.
@@ -29,7 +28,7 @@ type AutomationStepTriggerSignal struct {
 // AutomationStepTriggerGeofence mirrors `automation_step_trigger_geofence`.
 //
 // Event is one of: 'enter', 'exit', 'leave', 'both', or 'dwell'.
-// PlaceID is a FK to places(id) ON DELETE RESTRICT (added in prompt 23).
+// PlaceID is a FK to places(id) ON DELETE RESTRICT.
 type AutomationStepTriggerGeofence struct {
 	StepID       int64  `db:"step_id" json:"step_id"`
 	PlaceID      int64  `db:"place_id" json:"place_id"`

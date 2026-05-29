@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 44 — Permissions catalog + role-resolution tests.
+// Permissions catalog and role-resolution tests.
 //
 // Covers the pure helpers in permissions.go:
 //   - ParseGroupsHeader: trimming, dedup, sort, empty edge cases

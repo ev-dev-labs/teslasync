@@ -1,10 +1,9 @@
-// Phase-42a/0080 — end-to-end pipeline test.
+// End-to-end pipeline tests.
 //
 // === TEST_DESIGN ===
 //
 // This file exercises the full normalize.Pipeline + router.Router +
-// SideEffectsObserver chain end-to-end in three tests, satisfying
-// Decisions #4-#6 of the Phase-42a/0080 prompt:
+// SideEffectsObserver chain end-to-end in three tests:
 //
 //	TestE2EPipeline_AllDestinationsAndObserverFire
 //	  A real Tesla Fleet-Telemetry Payload with one routed sentinel
@@ -18,8 +17,7 @@
 //	    (a) Process returns an error wrapping normalize.ErrPayloadDrop
 //	    (b) NO writers are invoked (codec.Decode fails before the
 //	        dispatch loop)
-//	    (c) NO observer callbacks are invoked (per phase-42a/0030
-//	        Decision #1 — observer NOT called when codec.Decode fails)
+//	    (c) NO observer callbacks are invoked because codec.Decode failed
 //
 //	TestE2EPipeline_ProductionWiringSmoke
 //	  Reproduces the cmd/teslasync wiring shape (12 router.Writer
@@ -50,32 +48,27 @@
 // | SettingDistanceUnit         | unit_history         | vehicle_unit_history    | unit_value              | DistanceUnit_km            |
 // | (none)                      | location_snapshot    | location_snapshots      | n/a                     | EXEMPT — 0 routes today    |
 //
-// === EXEMPTION (Decision #4 escape hatch) ===
+// === EXEMPTION: location snapshots ===
 //
 // DestLocationSnapshot has 0 routes in routing.yaml today. The
-// LocationWriter was authored in phase-42a/0017 only to satisfy the
-// router.New "writer-required-for-every-non-DestDrop-destination"
-// invariant — the location_snapshots table is populated by a
+// LocationWriter only satisfies the router.New
+// "writer-required-for-every-non-DestDrop-destination" invariant;
+// the location_snapshots table is populated by a
 // separate geocoding worker, not by the telemetry pipeline. This
-// e2e test therefore covers 11 of 12 destinations as documented in
-// the prompt's escape-hatch clause.
+// e2e test therefore covers 11 of 12 destinations under that routing
+// exemption.
 //
-// === TRADE-OFF (Decision #2 escape hatch) ===
+// === TRADE-OFF: in-memory writers ===
 //
-// pgxmock and testcontainers-postgres are NOT in go.mod (verified
-// by `Select-String go.mod -Pattern 'pgxmock|testcontainers'`
-// returning only the matching grep itself). Per the escape hatch:
-// "fall back to in-memory recording fakes for writers and ASSERT
-// the writer was called with the expected (vehicle_id, ts, field,
-// value) tuple — this drops the actual DB INSERT verification but
-// keeps the routing + observer chain exercised." The recording
-// fakes in e2e_helpers_test.go capture that tuple.
+// pgxmock and testcontainers-postgres are not dependencies here, so
+// these tests use in-memory recording fakes. That drops actual DB
+// INSERT verification but still exercises routing and observer fan-out
+// with the expected (vehicle_id, ts, field, value) tuple.
 //
-// === TRADE-OFF (Decision #6 adaptation) ===
+// === TRADE-OFF: production wiring shape ===
 //
-// Decision #6 references "a tiny test-only buildPipeline helper
-// extracted in 0050". That helper does NOT exist — phase-42a/0050
-// inlined the pipeline wiring directly inside an
+// A tiny test-only buildPipeline helper does not exist; the production
+// pipeline wiring is inlined directly inside an
 // `if mqttClient != nil && cfg.FleetTelemetry.TopicBase != ""`
 // block in cmd/teslasync/main.go (verified at L506-647). The
 // existing main_pipeline_wiring_test.go takes the source-grep
@@ -111,11 +104,11 @@ import (
 // the e2e fixture payload exercises. DestUnitHistory is included
 // because the SettingDistanceUnit atomic short-circuits to
 // histRepo.Record (the unit_history writer is a no-op per
-// phase-42a/0022) — it does not produce a writer Write call but it
+// it does not produce a writer Write call but it
 // IS exercised end-to-end by the test.
 //
 // DestLocationSnapshot is intentionally absent: 0 routes today
-// (Decision #4 escape hatch — see file-level === TEST_DESIGN ===).
+// (see file-level === TEST_DESIGN ===).
 //
 // DestDrop is also absent because it has no writer by definition
 // (the router skips the writer lookup for DestDrop entries).
@@ -142,7 +135,7 @@ var e2eRoutedDestinations = []router.Destination{
 //
 // DestUnitHistory entry has SinkKind="histrepo" because its
 // side-effect target is the unithistory.Repo, NOT a router.Writer
-// (see phase-42a/0022 — unit_history writer is a no-op).
+// (the unit_history writer is a no-op).
 var e2eFixtureSentinels = []struct {
 	Field    string
 	Dest     router.Destination
@@ -235,11 +228,11 @@ func e2eBuildSideEffects() (*SideEffectsObserver, *e2eFakes) {
 }
 
 // ---------------------------------------------------------------------------
-// Test 1 (Decision #4) — full e2e: 11 routed dests + 5 observer callbacks
+// Test 1: full e2e fan-out to routed destinations and observers
 // ---------------------------------------------------------------------------
 
 // TestE2EPipeline_AllDestinationsAndObserverFire is the headline
-// gate test for Phase-42a/0080. A real Tesla fleet-telemetry Payload
+// gate test. A real Tesla fleet-telemetry Payload
 // proto with one routed sentinel field per destination flows through
 // proto.Marshal -> normalize.Pipeline.Process and:
 //
@@ -249,7 +242,7 @@ func e2eBuildSideEffects() (*SideEffectsObserver, *e2eFakes) {
 //     for InsideTemp).
 //  2. The unit-history Repo receives exactly one Record call for
 //     SettingDistanceUnit (the unit_history router writer is a
-//     no-op per phase-42a/0022).
+//     no-op).
 //  3. Each of the 5 SideEffectsObserver callbacks (live store,
 //     FSM, sessions, alerts, SSE) is invoked exactly once with
 //     the per-payload signals map. (signal_log writes are owned
@@ -406,7 +399,7 @@ func TestE2EPipeline_AllDestinationsAndObserverFire(t *testing.T) {
 	// (9) Observer signals map content. The live-store call must
 	// carry every field the payload produced (12 atomics: 1
 	// SettingDistanceUnit + 2 LocationLatitude/Longitude + 9 plain
-	// scalars). Asserting on the full set defends Decision #8: the
+	// scalars). Asserting on the full set defends the route-coverage contract: the
 	// observer sees the post-route slice with SI substitutions
 	// applied — no field is lost between the route loop and the
 	// observer fan-out.
@@ -442,7 +435,7 @@ func TestE2EPipeline_AllDestinationsAndObserverFire(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Test 2 (Decision #5) — malformed payload isolates failure
+// Test 2: malformed payload isolates failure
 // ---------------------------------------------------------------------------
 
 // TestE2EPipeline_MalformedPayloadIsolatesFailure exercises the
@@ -450,11 +443,10 @@ func TestE2EPipeline_AllDestinationsAndObserverFire(t *testing.T) {
 //
 //	(a) Process returns an error wrapping normalize.ErrPayloadDrop.
 //	(b) NO router.Writer Write is invoked.
-//	(c) NO observer callback is invoked (per phase-42a/0030
-//	    Decision #1: observer NOT called when codec.Decode fails).
+//	(c) NO observer callback is invoked because codec.Decode failed.
 //
 // This is the contract the MQTT subscriber's poison-pill / DLQ
-// policy depends on (Phase-42a/0040): the payload must NOT cause
+// policy depends on: the payload must NOT cause
 // downstream side-effects when the bytes themselves are corrupt.
 func TestE2EPipeline_MalformedPayloadIsolatesFailure(t *testing.T) {
 	t.Parallel()
@@ -518,16 +510,16 @@ func TestE2EPipeline_MalformedPayloadIsolatesFailure(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Test 3 (Decision #6 adapted) — production wiring smoke
+// Test 3: production wiring smoke
 // ---------------------------------------------------------------------------
 
 // TestE2EPipeline_ProductionWiringSmoke replicates the
 // cmd/teslasync/main.go pipeline-wiring shape (12-key writer map,
 // router.New, teslapipeline.New, normalize.New) using the SAME
 // constructors but with in-memory recording fakes. It is the
-// adapted form of Decision #6 — a literal "import cmd/teslasync via
-// buildPipeline" is impossible because no such helper was extracted
-// in 0050 and cmd/teslasync is package main (the source-grep
+// runtime wiring check; a literal "import cmd/teslasync via
+// buildPipeline" is impossible because no such helper exists and
+// cmd/teslasync is package main (the source-grep
 // guards in main_pipeline_wiring_test.go cover the cmd/teslasync
 // side).
 //
@@ -638,7 +630,7 @@ func TestE2EPipeline_ProductionWiringSmoke(t *testing.T) {
 
 	// (h) Sanity: DestLocationSnapshot writer received NO calls
 	// (because routing.yaml has 0 location_snapshot entries today).
-	// This also serves as the canary for the Decision #4 exemption:
+	// This also serves as the canary for the location_snapshot exemption:
 	// a future routing.yaml entry that adds a `dest: location_snapshot`
 	// route will start populating this writer and the test will fail,
 	// alerting the next prompt author to extend e2eFixtureSentinels.

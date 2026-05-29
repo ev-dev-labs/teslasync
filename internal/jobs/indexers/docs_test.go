@@ -1,7 +1,5 @@
-// Phase-50 / 0020 — N6 RAG-backed app help.
-//
-// Tests for RunDocs. The off-mode + per-feature gate
-// tests are the slice's load-bearing ADR-015 §I12 evidence — they
+// Tests for RunDocs. The off-mode and per-feature gate
+// tests are load-bearing ADR-015 §I12 evidence: they
 // prove the cron is fail-closed even when the scheduler keeps
 // ticking after an admin disables AI mid-day.
 
@@ -83,10 +81,8 @@ func TestRunAIDocsIndexer_FeatureToggleOff_NoFanout(t *testing.T) {
 }
 
 // TestRunAIDocsIndexer_OnMode_NoOp is the positive control. With
-// both gates open the function returns a zeroed envelope (the
-// fan-out implementation lands in a future slice). Pinning the
-// shape today protects future slices from accidentally changing
-// the contract.
+// both gates open the function returns a zeroed envelope until fan-out is wired.
+// Pinning the shape protects the contract from accidental changes.
 func TestRunAIDocsIndexer_OnMode_NoOp(t *testing.T) {
 	t.Parallel()
 	settings := fakeDocsIndexerSettings{
@@ -100,7 +96,7 @@ func TestRunAIDocsIndexer_OnMode_NoOp(t *testing.T) {
 	if res.Skipped != 0 {
 		t.Errorf("on mode: Skipped = %d, want 0", res.Skipped)
 	}
-	// Stub slice: no indexing yet.
+	// Gate-only implementation: no indexing yet.
 	if res.Indexed != 0 || res.Failed != 0 || res.SourcesConsidered != 0 {
 		t.Errorf("on mode (stub): any non-zero work counter unexpected: %+v", res)
 	}

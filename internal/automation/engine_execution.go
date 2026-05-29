@@ -75,8 +75,6 @@ func buildTypedActionConfigs(items []any) ([]action.ActionConfig, error) {
 	return configs, nil
 }
 
-// ── History Helpers ────────────────────────────────────────────────────
-
 // recordSkipped writes a history record for a skipped execution.
 func (e *Engine) recordSkipped(ctx context.Context, a *models.AutomationFull, triggerSnapshot json.RawMessage, triggerKind string, start time.Time, reason string) {
 	durationMs := int(time.Since(start).Milliseconds())

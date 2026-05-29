@@ -7,8 +7,8 @@ package presets
 import "encoding/json"
 
 // Preset is a built-in automation template. It embeds the full automation
-// definition plus gallery metadata. Phase 36 exposes only typed CTI step
-// arrays; legacy trigger/config preset payloads are intentionally unavailable.
+// definition plus gallery metadata. Only typed CTI step arrays are exposed;
+// legacy trigger/config preset payloads are intentionally unavailable.
 type Preset struct {
 	ID          string            `json:"id"`
 	Name        string            `json:"name"`

@@ -2,8 +2,8 @@
 // +build phase47_example
 
 // example_thin_handler_test.go is a self-contained illustration of the
-// canonical thin-handler shape required by phase-47/10. It is gated
-// behind the `phase47_example` build tag so it does NOT run in normal
+// canonical thin-handler shape. It is gated behind the `phase47_example`
+// build tag so it does NOT run in normal
 // `go test ./...` invocations — its purpose is documentation, not
 // runtime coverage. To experiment locally:
 //

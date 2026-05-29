@@ -17,12 +17,11 @@ import "time"
 //   - OutsideTempAvgC   degrees Celsius (already SI)
 //
 // ADR-001: typed-by-default — no raw_json, no JSONB carve-outs.
-// Phase-48 (SI canonical mega-PR): renamed fields and dropped per-call
-// boundary conversion. Frontend converts at the display boundary using
-// useUnits()/lib/unitConversion's SI-floor formatters.
+// Field names and storage are SI-canonical; frontend display conversion
+// belongs at the useUnits()/lib/unitConversion boundary.
 //
-// Phase-42 (mig 000185 forward-only): the inside cabin temp, score, ended
-// status, created_at, and updated_at columns were dropped. The fields
+// Migration 000185 dropped the inside cabin temp, score, ended status,
+// created_at, and updated_at columns. The fields
 // remain on the struct as nullable for JSON shape stability and surface
 // nil/derived values from scanDrive.
 //

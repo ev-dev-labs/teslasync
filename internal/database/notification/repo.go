@@ -23,13 +23,13 @@ import (
 
 // deriveNotificationLogGroupKey builds the deterministic group identifier
 // used to thread repeated deliveries of the same alert rule + severity
-// into a single inbox row (Phase-46 / Prompt 27).
+// into a single inbox row.
 //
 // Returns nil — meaning "ungrouped singleton" — whenever either piece
 // of identifying information is missing. That covers:
 //
 //   - test sends and ad-hoc notifications (no alert_id).
-//   - legacy rows that pre-date the severity column (Phase-46 / Prompt 19).
+//   - legacy rows that pre-date the severity column.
 //
 // The hash input format is "<alert_id>|<severity>" with severity
 // lower-cased and whitespace-trimmed so accidental case differences
@@ -411,11 +411,10 @@ func (r *NotificationRepo) CreateLog(ctx context.Context, l *notificationmodel.N
 	} else {
 		sevArg = severity
 	}
-	// Derive the threading key off the same (alert_id, severity) tuple
-	// every dispatch path uses — keeps Phase-46 / Prompt 27 grouping
-	// intact even when callers don't know about it. Returns nil for
-	// singletons (test sends, NULL severity, etc.) which the
-	// inbox-grouping query treats as ungrouped.
+	// Derive the threading key from the same (alert_id, severity) tuple
+	// every dispatch path uses. Returns nil for singletons (test sends,
+	// NULL severity, etc.) which the inbox-grouping query treats as
+	// ungrouped.
 	var groupKeyArg any
 	if gk := deriveNotificationLogGroupKey(l.AlertID, severity); gk != nil {
 		groupKeyArg = *gk
@@ -432,7 +431,7 @@ func (r *NotificationRepo) CreateLog(ctx context.Context, l *notificationmodel.N
 // MarkLogSent flips a deferred row to status='sent' and stamps the
 // supplied delivery timestamp / latency. Used by the quiet-hours
 // replay loop in cmd/notification-worker after the original Send call
-// succeeds (Phase-46 / Prompt 19).
+// succeeds.
 func (r *NotificationRepo) MarkLogSent(ctx context.Context, id int64, sentAt time.Time, latencyMs int) error {
 	_, err := r.db.Pool.Exec(ctx,
 		`UPDATE notification_logs
@@ -447,8 +446,7 @@ func (r *NotificationRepo) MarkLogSent(ctx context.Context, id int64, sentAt tim
 }
 
 // MarkLogFailed flips a deferred row to status='failed' with the
-// supplied error message — invoked when the replay loop exhausts its
-// retries (Phase-46 / Prompt 19).
+// supplied error message when the replay loop exhausts its retries.
 func (r *NotificationRepo) MarkLogFailed(ctx context.Context, id int64, errMsg string, latencyMs int) error {
 	_, err := r.db.Pool.Exec(ctx,
 		`UPDATE notification_logs
@@ -464,9 +462,8 @@ func (r *NotificationRepo) MarkLogFailed(ctx context.Context, id int64, errMsg s
 
 // notificationLogColumns is the canonical SELECT list for notification_logs
 // rows, matching the field order used by scanNotificationLog. Centralized so
-// every read path returns the same shape (incl. read_at / archived_at added in
-// Phase 40 / Prompt 29, severity added in Phase-46 / Prompt 19, and the ack
-// columns added in Phase-46 / Prompt 20).
+// every read path returns the same shape, including read_at / archived_at,
+// severity, and the acknowledgement columns.
 //
 // IMPORTANT: any change here MUST also be applied to the aliased version used
 // by GetLogsFiltered below; both must stay in lockstep with scanNotificationLog
@@ -530,7 +527,7 @@ func (r *NotificationRepo) GetLogsByChannel(ctx context.Context, channelID int64
 // ListDeferred returns every notification_logs row currently held in the
 // 'deferred_dnd' state, oldest first. The replay loop in
 // cmd/notification-worker walks the result on every tick and tries to
-// dispatch each row whose causing window has ended (Phase-46 / Prompt 19).
+// dispatch each row whose causing window has ended.
 func (r *NotificationRepo) ListDeferred(ctx context.Context, limit int) ([]*notificationmodel.NotificationLog, error) {
 	if limit <= 0 || limit > 1000 {
 		limit = 200
@@ -572,9 +569,9 @@ type NotificationLogFilters struct {
 	Archived   *bool     // nil = both, false = inbox only, true = archived only
 	Query      string    // ILIKE %query% across title and message
 	// GroupKey, when non-empty, restricts the result to rows whose
-	// group_key column equals exactly this value. Phase-46 / Prompt 27
-	// uses it to fetch the members of a single threaded group via the
-	// existing flat-list endpoint without having to add a new route.
+	// group_key column equals exactly this value. It fetches members of a
+	// single threaded group via the existing flat-list endpoint without
+	// adding a route.
 	GroupKey string
 	Limit    int
 	Offset   int
@@ -582,9 +579,8 @@ type NotificationLogFilters struct {
 
 // notificationLogWhere holds the WHERE clauses + bind values produced
 // from a NotificationLogFilters. The same builder is used by both
-// GetLogsFiltered and ListGrouped (Phase-46 / Prompt 27) so the two
-// read paths cannot diverge on which combinations of filters are
-// supported. needsRuleJoin is true when at least one clause references
+// GetLogsFiltered and ListGrouped so the two read paths cannot diverge
+// on which combinations of filters are supported. needsRuleJoin is true when at least one clause references
 // `ar.*` and therefore requires the LEFT JOIN on alert_rules.
 type notificationLogWhere struct {
 	clauses       []string
@@ -696,10 +692,10 @@ func (r *NotificationRepo) GetLogsFiltered(ctx context.Context, f NotificationLo
 }
 
 // ListGrouped returns the inbox collapsed into threaded groups where every
-// row sharing a non-NULL group_key is bucketed together (Phase-46 /
-// Prompt 27). Rows whose group_key IS NULL are returned as singletons
-// (one bucket per row) so the response shape stays uniform — the
-// frontend always sees a flat list of groups.
+// row sharing a non-NULL group_key is bucketed together. Rows whose
+// group_key IS NULL are returned as singletons (one bucket per row) so
+// the response shape stays uniform — the frontend always sees a flat
+// list of groups.
 //
 // Pagination applies to BUCKETS, not rows: limit=10 returns 10 groups
 // regardless of how many member rows each contains. The caller fetches
@@ -877,9 +873,9 @@ func (r *NotificationRepo) BulkSetReadAll(ctx context.Context) (int64, error) {
 }
 
 // BulkSetReadByGroupKey marks every currently-unread, non-archived row
-// whose group_key matches as read (Phase-46 / Prompt 27). Used by the
-// "Mark group read" action on a threaded inbox row so the user doesn't
-// have to expand the group and enumerate each member id.
+// whose group_key matches as read. Used by the "Mark group read" action
+// on a threaded inbox row so the user doesn't have to expand the group
+// and enumerate each member id.
 //
 // Empty / invalid group_key returns (0, nil) — refusing to dispatch to
 // the database with an unbounded match (group_key=” would catch any
@@ -982,7 +978,7 @@ func (r *NotificationRepo) GetStats(ctx context.Context) (map[string]interface{}
 	return stats, nil
 }
 
-// --- Acknowledgement + audit timeline (Phase-46 / Prompt 20) ---
+// Acknowledgement and audit timeline.
 
 // GetLog returns a single notification_logs row by id, or nil if no row
 // exists. Errors other than "not found" are wrapped and returned.

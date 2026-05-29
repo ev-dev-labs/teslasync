@@ -1,9 +1,6 @@
-// Phase-50 / 0046 — S5 Feedback queue triage.
-//
-// Tests for RunFeedback. The off-mode + per-feature
-// gate tests are the slice's load-bearing ADR-015 §I12 evidence —
-// they prove the cron is fail-closed even when the scheduler keeps
-// ticking after an admin disables AI mid-day.
+// Tests for RunFeedback. The off-mode and per-feature gate tests prove
+// the cron is fail-closed even when the scheduler keeps ticking after an
+// admin disables AI mid-day.
 
 package triage
 

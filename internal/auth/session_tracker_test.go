@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 42 — session tracker middleware tests.
+// Session tracker middleware tests.
 //
 // Coverage:
 //

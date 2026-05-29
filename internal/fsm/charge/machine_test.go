@@ -172,8 +172,6 @@ func TestForceComplete(t *testing.T) {
 	}
 }
 
-// ─── Validation ──────────────────────────────────────────
-
 func TestValidation_EndBatteryLowerThanStart(t *testing.T) {
 	c := &Context{StartBattery: 80, EndBattery: 70, StartTime: time.Now().Add(-time.Hour), EndTime: time.Now()}
 	issues := Validate(c)
@@ -205,8 +203,6 @@ func TestValidation_AllGood(t *testing.T) {
 	}
 }
 
-// ─── Helpers ─────────────────────────────────────────────
-
 func newActiveFSM() *SessionFSM {
 	m := NewSessionFSM(1, "VIN001", 200)
 	m.ProcessSignals(map[string]interface{}{
@@ -223,7 +219,7 @@ func newCompletingFSM() *SessionFSM {
 
 func newDoneFSM() *SessionFSM {
 	m := newActiveFSM()
-	// Set realistic start time in the past
+	// Backdate start time so Duration is positive.
 	m.mu.Lock()
 	m.ctx.StartTime = time.Now().UTC().Add(-45 * time.Minute)
 	m.mu.Unlock()

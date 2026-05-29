@@ -13,8 +13,8 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Phase-42 SI canonical schema (migration 000182_positions_si). The
-// positions hypertable is forward-only SI:
+// The positions hypertable uses the SI-canonical schema from
+// migration 000182_positions_si:
 //   - lat / lng (DOUBLE PRECISION, decimal degrees — angular)
 //   - altitude_m (DOUBLE PRECISION, meters above WGS84 ellipsoid)
 //   - speed_mps (DOUBLE PRECISION, meters/second)
@@ -22,15 +22,15 @@ import (
 //   - gps_state (TEXT)
 //   - odometer_m, est_range_m, rated_range_m, ideal_range_m (DOUBLE PRECISION, meters)
 //
-// Phase-42 dropped these legacy columns (no replacement on this row shape):
+// The SI migration dropped these legacy columns with no replacement on this row shape:
 //   - the legacy decimal-degree pair (renamed to lat / lng)
 //   - the legacy int16 heading-degree column (now heading_deg DOUBLE)
 //   - the legacy mph speed column (now speed_mps DOUBLE)
 //   - the legacy meters-elevation column (now altitude_m DOUBLE; rename only)
 //   - the legacy free-text source column (dropped entirely; not on telemetrymodel.Position)
 //
-// telemetrymodel.Position keeps legacy field names + units (mph speed, int16 heading)
-// for JSON wire compatibility per Prompt 0073 covenant #11. Conversion happens
+// telemetrymodel.Position keeps legacy field names and units (mph speed, int16 heading)
+// for JSON wire compatibility. Conversion happens
 // at the repo boundary so the public shape consumed by the frontend is
 // preserved.
 //
@@ -146,7 +146,7 @@ func (r *PositionRepo) ListByVehicle(ctx context.Context, vehicleID int64, from,
 		setLatLng(&p, latVal, lngVal)
 		p.Heading = headingDegPtrToInt16(headingDeg)
 		p.SpeedMph = mpsPtrToMphPtrPos(speedMps)
-		// Phase-42 dropped the legacy free-text source column; surface
+		// The SI schema has no legacy free-text source column; surface it
 		// as empty so the JSON shape stays stable while the value is
 		// honestly absent.
 		p.Source = ""

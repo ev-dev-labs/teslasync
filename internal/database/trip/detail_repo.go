@@ -10,11 +10,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// ErrTripNotFound is the sentinel returned by TripsDetailRepo.GetTrip
-// when the requested trip id does not exist. The handler maps this to
-// HTTP 404 via errors.Is so that lookup-or-404 disambiguates from
-// internal errors. Mirrors the Phase-43a/0006 ErrGuardEventNotFound
-// precedent.
+// ErrTripNotFound lets handlers map missing trip details to HTTP 404
+// without conflating lookup misses with internal failures.
 var ErrTripNotFound = errors.New("trip not found")
 
 // tripsDetailPool is the minimal pgxpool surface used by
@@ -48,10 +45,8 @@ type TripsDetailRepo struct {
 	pool tripsDetailPool
 }
 
-// NewTripsDetailRepo panics on a nil pool. Mirrors Phase-43a/0007
-// SignalsCatalogRepo + Phase-42a/0010 newSnapshotWriter precedent
-// (fail-fast at construction so a misconfigured router crashes at
-// startup instead of at first request).
+// NewTripsDetailRepo fails fast on nil pools so a misconfigured router
+// crashes at startup instead of on the first request.
 func NewTripsDetailRepo(pool tripsDetailPool) *TripsDetailRepo {
 	if pool == nil {
 		panic("database: NewTripsDetailRepo requires non-nil pool")
@@ -107,11 +102,10 @@ type TripDriveSummary struct {
 // NULL because LEFT JOIN found no rows; the inner COALESCE handles
 // the per-row NULL on a nullable SI column).
 //
-// The charge aggregate uses INTERVAL OVERLAP semantics
-// (rubber-duck issue #2): a charging session counts toward the trip
-// if its [started_at, COALESCE(ended_at, started_at)] window
-// overlaps [trip.started_at, COALESCE(trip.ended_at, NOW())]. This
-// includes sessions that began before the trip but ended inside it.
+// A charging session counts toward the trip when its
+// [started_at, COALESCE(ended_at, started_at)] window overlaps
+// [trip.started_at, COALESCE(trip.ended_at, NOW())]. This includes
+// sessions that began before the trip but ended inside it.
 //
 // The query is parameterised so the only bind value is $1 = trip ID;
 // every other reference (vehicle id, time window) is read from the
@@ -174,10 +168,9 @@ ORDER BY td.position ASC
 // GetTrip returns the trip header + ordered constituent drives. If
 // no trip exists with the given id, returns ErrTripNotFound.
 //
-// Two-query implementation per Decision D5: the header query already
-// has GROUP BY/aggregates and the drives query has its own ORDER BY,
-// so a single combined CTE would pay double the network cost (the
-// driver would have to fan-out duplicate header rows for each drive).
+// Two queries avoid duplicating aggregate header rows for every drive:
+// the header query already groups totals, while the drives query owns
+// its own ORDER BY.
 func (r *TripsDetailRepo) GetTrip(ctx context.Context, tripID int64) (*TripDetail, error) {
 	row := r.pool.QueryRow(ctx, tripHeaderSelectSQL, tripID)
 

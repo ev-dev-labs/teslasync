@@ -6,7 +6,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/domain/fsm"
 )
 
-// Vehicle represents a Tesla vehicle aggregate.
 type Vehicle struct {
 	ID            string    `json:"id" db:"id"`
 	UserID        string    `json:"userId" db:"user_id"`

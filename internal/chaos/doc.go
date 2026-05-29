@@ -2,8 +2,8 @@
 //
 // Layer: tool
 //
-// Phase-49 / p49-chaos. The scenario library encodes the recovery
-// expectations TeslaSync makes of its dependencies (MQTT, Redis,
+// The scenario library encodes the recovery expectations TeslaSync makes
+// of its dependencies (MQTT, Redis,
 // Postgres, Tesla API) and exercises each via Toxiproxy so we can
 // validate them in CI / local dev without a real chaos-engineering
 // platform.

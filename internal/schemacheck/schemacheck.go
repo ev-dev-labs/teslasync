@@ -6,7 +6,7 @@
 //
 // Layer: platform
 //
-// Approach (Phase-45 / Prompt 2):
+// Approach:
 //
 //  1. CI runs a clean migration sequence against a testcontainers
 //     postgres, dumps the schema fingerprint (table+column+index

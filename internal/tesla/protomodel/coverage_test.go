@@ -28,11 +28,10 @@ var validCategories = map[string]struct{}{
 }
 
 // nonMeasurementCategories is the closed set of routing buckets that MUST
-// NOT host signals carrying a physical UnitKind. The phase-42 charter
-// (prompt 0016) phrases the rule as "unit-bearing fields cannot be in
-// metadata/config/prefs categories" — encoded here as a deny-list so the
-// test surfaces a misclassified measurement (e.g. a temperature reading
-// dropped into "metadata") with a precise per-field error message.
+// NOT host signals carrying a physical UnitKind. Unit-bearing fields cannot
+// live in metadata/config/prefs categories; this deny-list surfaces a
+// misclassified measurement (for example, a temperature reading in
+// "metadata") with a precise per-field error message.
 //
 // Setting-unit signals (IsSettingUnit=true) declare a unit dimension via
 // UnitKind without themselves being measurements; their Category is
@@ -73,9 +72,9 @@ var settingUnitFieldNames = map[string]struct{}{
 // after a vendored-proto bump.
 //
 // Field_Unknown=0 is the proto3 default sentinel and is intentionally
-// skipped per the phase-42 charter; SignalsByEnum still carries an entry
-// for it (Category="metadata") so consumers that key by enum number get a
-// non-nil result, but the assertion only ranges over real fields.
+// skipped. SignalsByEnum still carries an entry for it (Category="metadata")
+// so consumers that key by enum number get a non-nil result, but the
+// assertion only ranges over real fields.
 func TestCoverage_EveryProtoFieldHasSignalMeta(t *testing.T) {
 	if len(ftproto.Field_name) == 0 {
 		t.Fatalf("ftproto.Field_name is empty; vendored proto bindings are missing")

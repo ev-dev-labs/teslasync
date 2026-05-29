@@ -3,8 +3,8 @@
 //
 // Layer: adapter
 //
-// Phase-50 / p50-ocpp. TeslaSync's primary ingest is Tesla Fleet
-// Telemetry (vendor-locked, mTLS + protobuf). OCPP is a parallel,
+// TeslaSync's primary ingest is Tesla Fleet Telemetry (vendor-locked,
+// mTLS + protobuf). OCPP is a parallel,
 // industry-standard adapter that lets operators with mixed fleets
 // surface charging sessions from any J1.6 charger through the same
 // internal signal / charging-session pipeline.

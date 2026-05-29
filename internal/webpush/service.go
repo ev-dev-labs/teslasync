@@ -36,16 +36,14 @@ import (
 // closer to 3 KB), so anything beyond a title, body, drill-through URL,
 // and a couple of icon hints would be wasted budget.
 //
-// Phase-49 / Slice 0010 — the legacy `Icon` field is intentionally
-// removed. On Android Chrome, populating BOTH the PWA manifest icon
+// The legacy `Icon` field is intentionally absent. On Android Chrome,
+// populating BOTH the PWA manifest icon
 // (which Chrome auto-uses for the notification card's left thumbnail)
 // AND the `Notification.icon` slot causes the same image to render on
-// both sides of the notification card — the user-reported "duplicate
-// icon" bug. The PWA manifest icon owns the left slot; we leave the
-// right slot empty (matching Macy's / Yahoo style). Per-event
-// contextual icons (charging plug, padlock, etc.) are deliberately
-// out of scope for this slice — they'd require an event-kind hint on
-// the payload + a SW mapping table + a matched icon asset set.
+// both sides of the notification card. The PWA manifest icon owns the
+// left slot; we leave the right slot empty. Per-event contextual icons
+// would require an event-kind hint on the payload, a service-worker
+// mapping table, and a matched icon asset set.
 type Payload struct {
 	Title string `json:"title"`
 	Body  string `json:"body,omitempty"`
@@ -239,8 +237,6 @@ func endpointHash(endpoint string) string {
 	// the rest is the per-subscription opaque token which must not leak.
 	return endpoint[:24] + "…"
 }
-
-// ── Process-wide singleton ─────────────────────────────────────────────────
 
 var (
 	defaultService   *Service

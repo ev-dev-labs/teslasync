@@ -16,10 +16,9 @@ import (
 // renders a sensible duration when the backend is silent on the matter.
 const defaultRetryAfterSec = 60
 
-// RateLimitError is a typed error that lets handlers signal a 429 with a
-// caller-specified Retry-After window. Phase-45 / Prompt 33 — the SPA
-// reads the header to drive the <RateLimitBanner> countdown so the user
-// knows how long to wait before the next request will succeed.
+// RateLimitError lets handlers signal a 429 with a caller-specified
+// Retry-After window. The SPA reads the header to drive the
+// <RateLimitBanner> countdown so the user knows when to retry.
 type RateLimitError struct {
 	// Inner is the underlying cause; surfaced via Unwrap so callers can
 	// still use errors.Is/errors.As against the original domain error.
@@ -111,8 +110,8 @@ func MapDomainError(err error) (int, httputil.APIError) {
 		}
 	}
 
-	// Phase-45 / Prompt 33 — typed errors with HTTP-shaping metadata
-	// (Retry-After, breaker code) take precedence over the bare
+	// Typed errors with HTTP-shaping metadata (Retry-After, breaker code)
+	// take precedence over the bare
 	// domain.* sentinels so callers can attach upstream hints.
 	var ub *UpstreamBreakerError
 	if errors.As(err, &ub) {
@@ -171,9 +170,8 @@ func retryAfterFor(err error) int {
 
 // HandleError maps a domain error to an HTTP response and writes it.
 //
-// Phase-45 / Prompt 33 — when the mapped status is 429 or the error is
-// an UpstreamBreakerError, a Retry-After header is set on the response
-// so the SPA's <RateLimitBanner> can render an accurate countdown.
+// When the mapped status is 429 or the error is an UpstreamBreakerError,
+// set Retry-After so the SPA can render an accurate countdown.
 func HandleError(w http.ResponseWriter, err error) {
 	if retry := retryAfterFor(err); retry > 0 {
 		w.Header().Set("Retry-After", strconv.Itoa(retry))

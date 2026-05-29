@@ -7,9 +7,8 @@ import (
 	"time"
 )
 
-// noopStateReader is a stub used only to prove that StateReader is satisfiable
-// — it is the cheapest possible implementation, returning empty values. The
-// real LogStateReader lives in Prompt 04.
+// noopStateReader is the smallest implementation needed to prove that
+// StateReader is satisfiable.
 type noopStateReader struct{}
 
 func (noopStateReader) State(ctx context.Context, vehicleID int64, at time.Time) (State, error) {

@@ -5,15 +5,10 @@ import (
 	"testing"
 )
 
-// Phase-43a / Prompt 0004 — pure-Go tests for the mileage repo.
-//
-// These tests pin the SQL-shape constants (column names + filters +
-// GROUP BY + ORDER BY) so a regression on the SI-canonical drives
-// schema is caught at compile-test time rather than at runtime in
-// production. Live SQL execution against PostgreSQL requires
-// mig 000185 applied; the codebase has no pgxmock / testcontainers
-// harness, and the prompt's escape hatch explicitly accepts pure-Go
-// test coverage in that case.
+// These pure-Go tests pin mileage SQL constants (column names, filters,
+// GROUP BY, and ORDER BY) so regressions against the SI-canonical drives
+// schema fail before production. Live PostgreSQL execution requires
+// migration 000185; this package has no pgxmock/testcontainers harness.
 
 // TestMonthlySelectSQL_Shape pins critical SQL fragments. A typo on
 // the SI-canonical column names (distance_m, energy_used_wh) would
@@ -41,12 +36,11 @@ func TestMonthlySelectSQL_Shape(t *testing.T) {
 		}
 	}
 	mustNotContain := []string{
-		// Phase-42 / mig 000185 dropped these legacy column names.
-		// Re-introducing them would fail at runtime against the new
-		// schema. Decision-#7-aligned regression guard.
+		// Migration 000185 dropped these legacy column names. Re-introducing
+		// them would fail at runtime against the current schema.
 		"distance_km",
 		"energy_used_kwh",
-		// daily_mileage was dropped by Phase-42 prompt 0077.
+		// daily_mileage was dropped with the legacy daily-mileage table.
 		"daily_mileage",
 		// Decision #1 mandates ASC.
 		"ORDER BY bucket DESC",
@@ -126,10 +120,9 @@ func TestNewMileageRepo_NilPoolPanics(t *testing.T) {
 	_ = NewMileageRepo(nil)
 }
 
-// TestDailySelectSQL_Shape pins the per-day query for /mileage/daily
-// (Phase-43a / Prompt 0009 — fix/misc-fixes). A typo on the
-// SI-canonical column names (distance_m, end_odometer_m) would
-// otherwise only surface at runtime against production data.
+// TestDailySelectSQL_Shape pins the per-day query for /mileage/daily. A
+// typo in SI-canonical column names (distance_m, end_odometer_m) would
+// otherwise surface only at runtime against production data.
 func TestDailySelectSQL_Shape(t *testing.T) {
 	t.Parallel()
 	mustContain := []string{
@@ -153,12 +146,12 @@ func TestDailySelectSQL_Shape(t *testing.T) {
 		}
 	}
 	mustNotContain := []string{
-		// Phase-42 / mig 000185 dropped the legacy unit-suffixed columns.
-		// These would be a drift signal (Phase-48 SI canonical contract).
+		// Migration 000185 dropped the legacy display-unit columns. Their
+		// reappearance would signal drift from the SI-canonical schema.
 		"distance_km",
 		"end_odometer_mi",
 		"distance_mi",
-		// daily_mileage was dropped by Phase-42 prompt 0077.
+		// daily_mileage was dropped with the legacy daily-mileage table.
 		"daily_mileage",
 		// /mileage/daily must return ASC ordering (matches monthly + stats).
 		"ORDER BY day DESC",

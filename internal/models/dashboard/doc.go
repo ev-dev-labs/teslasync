@@ -12,11 +12,8 @@
 // internal/adapter/*, internal/handler/*, internal/app/*, internal/port/*,
 // or internal/api.
 //
-// Per ADR-011 this package was carved out of the formerly-flat
-// internal/models in phase-R5.15 (via `git mv` of dashboard_layout.go,
-// chart_annotation.go, saved_view.go, pinned.go). Recommended caller
-// alias when importing alongside other models subpackages
-// (per ADR-011 §3):
+// Per ADR-011, use this import alias when importing alongside other model
+// subpackages:
 //
 //	dashboardmodel "github.com/ev-dev-labs/teslasync/internal/models/dashboard"
 package dashboard

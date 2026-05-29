@@ -1,4 +1,4 @@
-// Phase-50 / 0064 — ML3 Charging-curve fingerprint clustering statistical model.
+// Charging-curve fingerprint clustering trainer tests.
 //
 // clustering_test.go pins the deterministic statistical trainer's
 // contract:

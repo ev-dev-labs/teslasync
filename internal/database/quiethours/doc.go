@@ -4,13 +4,12 @@
 //
 // Layer: adapter
 //
-// Carved out of internal/database during Phase R restructure (R4.25):
-//   - repo.go        (QuietHoursRepo: ListByUser/ListEnabled/Get/Insert/
-//     Update/Delete with HH:MM + IANA timezone + weekday
-//     bitmask + severity-bypass validation)
-//   - assertion.go   (compile-time check vs the parent's
-//     SettingsSerializerQuietHoursRepo interface,
-//     relocated here per Lesson 30/34)
+// This package owns quiet-hours persistence details:
+//   - repo.go      handles ListByUser/ListEnabled/Get/Insert/Update/Delete
+//     with HH:MM, IANA timezone, weekday bitmask, and severity-bypass
+//     validation.
+//   - assertion.go checks conformance to the parent package's
+//     SettingsSerializerQuietHoursRepo interface.
 //
 // The QuietHoursInput payload type stays in the parent package
 // (internal/database/quiet_hours_input.go) because it is part of the

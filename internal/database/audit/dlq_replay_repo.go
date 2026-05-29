@@ -1,8 +1,4 @@
-// Package database — DLQ replay audit repo.
-//
-// Phase-44 / observability-batch / Prompt F4.
-//
-// Persists every DLQ replay attempt to dlq_replay_audit (migration
+// Package audit persists every DLQ replay attempt to dlq_replay_audit (migration
 // 000211). The DLQ inspector's in-memory ring buffer is volatile —
 // entries rotate out and the ring is empty after restart. Audit rows
 // survive both events so a post-incident forensic trail of

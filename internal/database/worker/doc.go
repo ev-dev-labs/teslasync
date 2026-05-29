@@ -3,7 +3,7 @@
 //
 // Layer: adapter
 //
-// Carved files (Phase R4.17 — bounded-context restructure per ADR-011):
+// Bounded-context files per ADR-011:
 //
 //   - status_repo.go        (was internal/database/worker_status_repo.go)
 //     WorkerStatusStore port + Redis + in-memory implementations for

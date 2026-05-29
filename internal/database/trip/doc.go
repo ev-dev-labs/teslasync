@@ -5,7 +5,7 @@
 //
 // Layer: adapter
 //
-// Carved files (Phase R4.13 — bounded-context restructure per ADR-011):
+// Bounded-context files per ADR-011:
 //
 //   - repo.go                   (was internal/database/trip_repo.go)
 //     Trip rollup persistence + monthly-trip generation from Drive rows.

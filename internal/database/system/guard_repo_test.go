@@ -5,15 +5,11 @@ import (
 	"testing"
 )
 
-// Phase-43a / Prompt 0006 — SQL-shape tests for guard_repo.
-//
-// These tests pin the critical fragments of the four SQL constants so a
-// typo on column name, table name, or filter predicate is caught at
-// compile-test time rather than at runtime in production. They follow
-// the same pattern as vampire_drain_repo_test.go and mileage_repo_test.go
-// — the codebase has no pgxmock / testcontainers harness, and the
-// Phase-43a precedent explicitly accepts pure-Go SQL-shape tests in
-// that case.
+// These tests pin critical SQL fragments so a column, table, or filter
+// typo is caught at test time rather than at runtime in production. They
+// follow the same pure-Go SQL-shape pattern as vampire_drain_repo_test.go
+// and mileage_repo_test.go because the codebase has no pgxmock or
+// testcontainers harness.
 
 func TestGuardListEventsSQL_Shape(t *testing.T) {
 	t.Parallel()
@@ -49,9 +45,8 @@ func TestGuardAcknowledgeSQL_Shape(t *testing.T) {
 	mustContain := []string{
 		// Operation + table.
 		"UPDATE security_events",
-		// Decision #3 verbatim: SET acknowledged_at = now()
-		// (overwrites — re-acknowledgement updates the timestamp,
-		// not COALESCE-preserves it).
+		// Re-acknowledgement updates acknowledged_at instead of preserving
+		// the first acknowledgement timestamp.
 		"SET acknowledged_at = now()",
 		"acknowledged_by = $3",
 		// Bind order + cross-vehicle defence.
@@ -118,10 +113,9 @@ func TestGuardVehicleExistsSQL_Shape(t *testing.T) {
 // new token wouldn't match the off-list.
 //
 // The constants are intentionally untyped strings here (not imports
-// from internal/tesla/protomodel) — the repo memory + Phase-42a/0030
-// observer pattern documents that GuardRepo should not depend on the
-// protomodel package directly. This test acts as the manual sync
-// point between the two packages.
+// from internal/tesla/protomodel) because GuardRepo should not depend
+// on the protomodel package directly. This test is the manual sync point
+// between the two packages.
 func TestSentryModeTokens_KnownValues(t *testing.T) {
 	t.Parallel()
 	// These strings MUST match

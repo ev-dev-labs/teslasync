@@ -11,11 +11,11 @@
 // or internal/api.
 //
 // Per ADR-011 this package was carved out of the formerly-flat
-// internal/models in phase-R5.9 (extracted from models.go). Recommended
-// caller alias when importing alongside other models subpackages
-// (per ADR-011 §3): `notificationmodel "internal/models/notification"`.
+// internal/models. Recommended caller alias when importing alongside
+// other models subpackages (per ADR-011 §3):
+// `notificationmodel "internal/models/notification"`.
 //
-// Note: NotificationLogEvent (acknowledgement audit timeline) already
-// lives in internal/models/alert per phase-R5.1 — the rows reference
-// alert_rules and ship with the alert subsystem.
+// Note: NotificationLogEvent (acknowledgement audit timeline) lives in
+// internal/models/alert because its rows reference alert_rules and ship
+// with the alert subsystem.
 package notification

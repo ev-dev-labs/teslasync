@@ -9,10 +9,8 @@
 // internal/adapter/*, internal/handler/*, internal/app/*, internal/port/*,
 // or internal/api.
 //
-// Per ADR-011 this package was moved out of the formerly-flat
-// internal/models in phase-R5.13 (via `git mv` of charging.go).
-// Recommended caller alias when importing alongside other models
-// subpackages (per ADR-011 §3):
+// ADR-011 §3 recommends this caller alias when importing alongside other
+// model subpackages:
 //
 //	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 package charging

@@ -5,14 +5,13 @@
 //
 // Layer: adapter
 //
-// Carved out of internal/database during Phase R restructure (R4.24):
+// Split from internal/database into focused files:
 //   - repo.go        (GeofenceRepo, Create/Update/Delete/GetAll/...,
 //     FindByCoordinates with haversine distance check)
 //   - repo_bulk.go   (BulkDelete, FilterExistingIDs for import workflows)
 //   - assertion.go   (compile-time check vs the parent's
 //     SettingsSerializerGeofenceRepo interface; relocated
-//     here per Lesson 30/34 so the parent never imports
-//     a child subpkg)
+//     here so the parent never imports a child subpkg)
 //
 // Callsites alias this package as `geofencedb` per ADR-011.
 package geofence

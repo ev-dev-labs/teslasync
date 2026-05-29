@@ -40,7 +40,6 @@ var oppositeCommands = map[string]string{
 	"guest_mode_off":    "guest_mode_on",
 }
 
-// actionEntry represents a single typed command action.
 type actionEntry struct {
 	Type        string
 	CommandName string
@@ -198,8 +197,6 @@ func geofenceEventsOverlap(aEvents, bEvents []string) bool {
 	return false
 }
 
-// ── Typed helpers ─────────────────────────────────────
-
 func typedTriggerSummary(triggers []any) triggerSummary {
 	if len(triggers) == 0 {
 		return triggerSummary{}
@@ -260,7 +257,6 @@ func extractCommands(actions []actionEntry) []string {
 	return cmds
 }
 
-// commandPair records two conflicting commands.
 type commandPair struct {
 	ours   string
 	theirs string

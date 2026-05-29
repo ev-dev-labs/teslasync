@@ -1,5 +1,3 @@
-// Phase-50 / 0035 — A2 Inbox auto-categorization.
-//
 // Tests for RunAlertInbox. The off-mode + per-feature
 // gate tests are the slice's load-bearing ADR-015 §I12 evidence —
 // they prove the cron is fail-closed even when the scheduler keeps
@@ -85,9 +83,8 @@ func TestRunAIAlertInboxCategorizer_FeatureToggleOff_NoFanout(t *testing.T) {
 
 // TestRunAIAlertInboxCategorizer_OnMode_NoOp is the positive
 // control. With both gates open the function returns a zeroed
-// envelope (the fan-out implementation lands in a future slice).
-// Pinning the shape today protects future slices from accidentally
-// changing the contract.
+// envelope while fan-out is not yet wired. Pinning the shape protects
+// future changes from accidentally changing the contract.
 func TestRunAIAlertInboxCategorizer_OnMode_NoOp(t *testing.T) {
 	t.Parallel()
 	settings := fakeAlertInboxCategorizerSettings{

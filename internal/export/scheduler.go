@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 65 — Scheduled / recurring export driver.
+// Package export contains the scheduled recurring export driver.
 //
 // The Scheduler is a side-car to the existing MQTT-backed export
 // Worker. Every tick (default 60 s) it asks the repo for rows where
@@ -9,8 +9,7 @@
 //  2. Hands it straight to *Processor.Process — the same code path
 //     that one-shot HTTP submissions use.
 //  3. Dispatches the produced bytes via Delivery.kind (download is
-//     stored on the row; email/webhook log + reserve a hook for
-//     future Phase-46 prompts).
+//     stored on the row; email/webhook delivery can be wired here).
 //  4. Records last_run_at / last_status / last_error and recomputes
 //     next_run_at via cron.
 //
@@ -304,7 +303,7 @@ func (noopDelivery) Deliver(_ context.Context, _ exportdb.ScheduledExportRow, _ 
 
 // LogDelivery is a development-friendly delivery that emits a log
 // line per dispatched payload. Intended as the default wiring while
-// real email + webhook drivers are scaffolded by future prompts.
+// real email and webhook drivers are wired.
 type LogDelivery struct{}
 
 // Deliver records the schedule + size and returns nil. Production

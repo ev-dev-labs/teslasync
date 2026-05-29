@@ -1,6 +1,4 @@
-// Package worker — Phase-46 / Prompt 41.
-//
-// Tiny periodic heartbeat writer that every long-running worker
+// Package worker provides the periodic heartbeat writer that every long-running worker
 // process (notification, export, automation) is expected to start in
 // its main(). The heartbeater records process liveness via the
 // shared [workerdb.WorkerStatusStore] so the API server's

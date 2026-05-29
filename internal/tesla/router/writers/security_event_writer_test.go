@@ -16,9 +16,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla/router"
 )
 
-// secEventRecorder is the in-file secEventDB implementation referenced
-// by phase-42a prompt 0018. It mirrors the recorder pattern from
-// snapshot_base_test.go but adds QueryRow because the security event
+// secEventRecorder is the in-file secEventDB implementation. It mirrors
+// the recorder pattern from snapshot_base_test.go but adds QueryRow because the security event
 // writer's slow-path disambiguation issues a follow-up SELECT EXISTS
 // on top of the primary INSERT (see security_event_writer.go's Write
 // godoc).
@@ -96,8 +95,8 @@ func newSecurityEventTestWriter(t *testing.T, rec *secEventRecorder) *securityEv
 }
 
 // TestSecurityEventWriter_TypeMapMatchesRoutingYAML is the reflective
-// coverage gate from phase-42a prompt 0018 Decision #5. It walks
-// router.LoadMap() (which parses the embedded routing.yaml), filters
+// coverage gate for security_event routing. It walks router.LoadMap()
+// (which parses the embedded routing.yaml), filters
 // to entries with Destination == DestSecurityEvent, and asserts the
 // securityEventTypeByField map in security_event_writer.go covers the
 // exact same field set as routing.yaml — same fields, no extras, no
@@ -112,9 +111,9 @@ func newSecurityEventTestWriter(t *testing.T, rec *secEventRecorder) *securityEv
 //     entry is dead code; the test fails with "extra field".
 //
 //   - routing.yaml declares a `column:` for a security_event entry,
-//     which violates Decision #4's contract that security_event entries
-//     have no column declaration (event_type is derived from the
-//     field name token, not from a routing.yaml column).
+//     which violates the contract that security_event entries have no
+//     column declaration (event_type is derived from the field name
+//     token, not from a routing.yaml column).
 func TestSecurityEventWriter_TypeMapMatchesRoutingYAML(t *testing.T) {
 	m, err := router.LoadMap()
 	if err != nil {
@@ -160,8 +159,7 @@ func TestSecurityEventWriter_TypeMapMatchesRoutingYAML(t *testing.T) {
 }
 
 // TestSecurityEventWriter_HappyPath_PerRoute exercises every routed
-// field today with its expected codec value type per phase-42a prompt
-// 0018 Decision #5. The case asserts that the SQL contains the
+// field today with its expected codec value type. The case asserts that the SQL contains the
 // security_events INSERT pattern + VIN-resolving SELECT + NOT EXISTS
 // duplicate guard, that the bound args are (vin, ts, event_type,
 // to_state) in order, that exactly one Exec call was made, and that
@@ -246,9 +244,9 @@ func TestSecurityEventWriter_HappyPath_PerRoute(t *testing.T) {
 	}
 }
 
-// TestSecurityEventWriter_IdempotentDuplicate covers phase-42a prompt
-// 0018 Decision #3: a re-delivered (vehicle_id, ts, event_type) MUST
-// be treated as a no-op success outcome, NOT a writer failure. The
+// TestSecurityEventWriter_IdempotentDuplicate covers the idempotency
+// contract: a re-delivered (vehicle_id, ts, event_type) MUST be treated
+// as a no-op success outcome, NOT a writer failure. The
 // router's writer_failures_total counter MUST NOT increment on this
 // path.
 //
@@ -328,9 +326,9 @@ func TestSecurityEventWriter_UnknownVehicle(t *testing.T) {
 	}
 }
 
-// TestSecurityEventWriter_UnknownFieldReturnsError covers Decision #5:
-// a Field that is NOT routed to security_event must produce a "no
-// event_type mapping" error and MUST NOT touch the DB.
+// TestSecurityEventWriter_UnknownFieldReturnsError covers the unrouted-field
+// contract: a Field that is NOT routed to security_event must produce a
+// "no event_type mapping" error and MUST NOT touch the DB.
 //
 // VehicleSpeed is a deliberate choice — it IS a routed field
 // (dest: drive_telemetry per routing.yaml) so the test also implicitly
@@ -518,9 +516,8 @@ func TestSecurityEventWriter_TimestampNormalisation(t *testing.T) {
 }
 
 // TestNewSecurityEventWriter_NilPoolPanics locks the constructor's
-// fail-fast contract from phase-42a prompt 0018 Decision #1. A nil
-// pool is a wiring bug and panics so the failure surfaces at process
-// start, not at the first payload.
+// fail-fast contract. A nil pool is a wiring bug and panics so the
+// failure surfaces at process start, not at the first payload.
 func TestNewSecurityEventWriter_NilPoolPanics(t *testing.T) {
 	defer func() {
 		r := recover()

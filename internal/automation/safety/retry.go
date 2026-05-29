@@ -17,8 +17,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
-// ─── Error Classification ──────────────────────────────
-
 // ErrorClass categorizes action errors for retry decisions.
 type ErrorClass int
 
@@ -55,8 +53,7 @@ func ClassifyError(err error) ErrorClass {
 		return ErrorPermanent
 	}
 
-	// ── 1. Permanent sentinels ──────────────────────────
-	// Auth / permissions — token refresh is a separate concern, not action retry.
+	// Token refresh is a separate concern, not action retry.
 	if errors.Is(err, domain.ErrUnauthorized) || errors.Is(err, domain.ErrForbidden) {
 		return ErrorPermanent
 	}
@@ -69,7 +66,6 @@ func ClassifyError(err error) ErrorClass {
 		return ErrorPermanent
 	}
 
-	// ── 2. Retryable sentinels ──────────────────────────
 	if errors.Is(err, tesla.ErrVehicleAsleep) {
 		return ErrorRetryable
 	}
@@ -80,8 +76,7 @@ func ClassifyError(err error) ErrorClass {
 		return ErrorRetryable
 	}
 
-	// ── 3. Context errors ───────────────────────────────
-	// Deadline exceeded is retryable (the vehicle/API was too slow).
+	// Deadline exceeded is retryable because the vehicle/API may recover.
 	if errors.Is(err, context.DeadlineExceeded) {
 		return ErrorRetryable
 	}
@@ -90,16 +85,14 @@ func ClassifyError(err error) ErrorClass {
 		return ErrorPermanent
 	}
 
-	// ── 4. Net errors (typed) ───────────────────────────
 	var netErr net.Error
 	if errors.As(err, &netErr) {
 		return ErrorRetryable
 	}
 
-	// ── 5. Narrow substring fallback ────────────────────
 	msg := strings.ToLower(err.Error())
 
-	// Retryable patterns — transient infrastructure.
+	// Retryable patterns are transient infrastructure failures.
 	retryablePatterns := []string{
 		"connection refused",
 		"connection reset",
@@ -135,8 +128,6 @@ func ClassifyError(err error) ErrorClass {
 	// recoverable failures. The max-retry cap in the FSM bounds total attempts.
 	return ErrorRetryable
 }
-
-// ─── Retry Policy ──────────────────────────────────────
 
 // Default retry backoff parameters.
 const (
@@ -294,7 +285,6 @@ func (rp *RetryPolicy) ComputeDelay(attempt int) time.Duration {
 		delay = float64(rp.maxDelay)
 	}
 
-	// Apply jitter: delay × (1 + uniform(-jitter, +jitter))
 	if rp.jitter > 0 {
 		jitterRange := delay * rp.jitter
 		offset := (rp.randFunc()*2 - 1) * jitterRange // [-jitterRange, +jitterRange]

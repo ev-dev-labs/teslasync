@@ -8,17 +8,14 @@ import (
 	exportmodel "github.com/ev-dev-labs/teslasync/internal/models/export"
 )
 
-// ExportJobRepo provides data access for the export_jobs table.
 type ExportJobRepo struct {
 	db *database.DB
 }
 
-// NewExportJobRepo creates a new ExportJobRepo.
 func NewExportJobRepo(db *database.DB) *ExportJobRepo {
 	return &ExportJobRepo{db: db}
 }
 
-// Create inserts a new export job.
 func (r *ExportJobRepo) Create(ctx context.Context, job *exportmodel.ExportJob) error {
 	_, err := r.db.Pool.Exec(ctx, `
 		INSERT INTO export_jobs (id, type, format, status, vehicle_id, start_date, end_date, created_at, updated_at)
@@ -27,7 +24,6 @@ func (r *ExportJobRepo) Create(ctx context.Context, job *exportmodel.ExportJob) 
 	return err
 }
 
-// GetByID retrieves a job by ID (without file data).
 func (r *ExportJobRepo) GetByID(ctx context.Context, id string) (*exportmodel.ExportJob, error) {
 	var job exportmodel.ExportJob
 	err := r.db.Pool.QueryRow(ctx, `
@@ -45,7 +41,6 @@ func (r *ExportJobRepo) GetByID(ctx context.Context, id string) (*exportmodel.Ex
 	return &job, nil
 }
 
-// GetFileData retrieves the raw file data for a completed export job.
 func (r *ExportJobRepo) GetFileData(ctx context.Context, id string) ([]byte, string, error) {
 	var data []byte
 	var fileName string
@@ -55,7 +50,6 @@ func (r *ExportJobRepo) GetFileData(ctx context.Context, id string) ([]byte, str
 	return data, fileName, err
 }
 
-// List returns recent export jobs ordered by creation date (without file data).
 func (r *ExportJobRepo) List(ctx context.Context, limit, offset int) ([]exportmodel.ExportJobSummary, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT id, type, format, status, vehicle_id, file_name, file_size, record_count,
@@ -102,7 +96,6 @@ func (r *ExportJobRepo) UpdateStatusAtomic(ctx context.Context, id string, fromS
 	return tag.RowsAffected() == 1, nil
 }
 
-// UpdateStatus updates the status of a job.
 func (r *ExportJobRepo) UpdateStatus(ctx context.Context, id string, status string) error {
 	_, err := r.db.Pool.Exec(ctx, `
 		UPDATE export_jobs SET status = $2, updated_at = $3 WHERE id = $1`,

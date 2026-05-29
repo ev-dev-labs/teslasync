@@ -4,8 +4,7 @@
 //
 // Layer: platform
 //
-// Phase-49 / p49-backup-verify. Kept as a standalone package (not a
-// Processor method) so:
+// Kept as a standalone package rather than a Processor method so:
 //
 //  1. The external scheduler (cron / k8s CronJob / cmd/backup-verify)
 //     can run it without dragging the live API server's hot path into

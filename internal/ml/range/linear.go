@@ -1,4 +1,4 @@
-// Phase-50 / 0063 — ML2 Range-prediction model.
+// Range-prediction heuristic baseline.
 //
 // linear.go ships the canonical heuristic Wh/km baseline used by:
 //
@@ -13,14 +13,11 @@
 //
 // Why this map lives here AND in internal/api:
 //
-//	The Phase-50 / 0063 slice's allowed-files list explicitly admits
-//	`internal/ml/**` for ML-tier code AND forbids touching the
-//	non-AI baseline at internal/api/range_projection_handler.go (and
-//	its sibling _compute.go) beyond what this slice strictly requires.
-//	Moving the canonical formula out of api would change the
-//	deterministic handler's import surface (api would import
-//	internal/ml/range), which is a wider architectural change than
-//	this slice should make. The two-copy approach is contained: the
+//	The deterministic API baseline intentionally remains in
+//	internal/api/range_projection_handler.go and its sibling _compute.go.
+//	Moving that formula into this package would make the API layer import
+//	internal/ml/range, which is a wider architectural change than this
+//	model requires. The two-copy approach is contained: the
 //	parity test at
 //	internal/api/ai_ml_range_fallback_parity_test.go pins the two
 //	formulas at representative bucket points, so a future divergence

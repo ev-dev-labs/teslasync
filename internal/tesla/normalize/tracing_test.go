@@ -27,8 +27,7 @@ func installNormalizeRecorder(t *testing.T) *tracetest.SpanRecorder {
 	return rec
 }
 
-// TestPipelineProcess_EmitsParentAndChildSpans is the Phase-44 prompt 0015
-// contract test:
+// TestPipelineProcess_EmitsParentAndChildSpans verifies the tracing contract:
 //   - normalize.process is the parent span
 //   - normalize.parse / normalize.route / normalize.write are children
 //   - the parent carries signal.count + vehicle_id + normalize.duration_us
@@ -141,9 +140,9 @@ func spanNames(spans []sdktrace.ReadOnlySpan) []string {
 	return out
 }
 
-// BenchmarkProcessAtomics_SpanOverhead is the Phase-44 prompt 0015
-// budget check. The prompt requires that span creation overhead is
-// < 10% of base processing time on a 1000-signal batch. We measure it
+// BenchmarkProcessAtomics_SpanOverhead tracks the span overhead budget.
+// Span creation should stay under 10% of base processing time on a
+// 1000-signal batch. We measure it
 // by running the same batch with a no-op tracer provider (which still
 // goes through otel.Tracer / Start / End but produces no spans of
 // note) AND with the recording SDK provider. The recording case

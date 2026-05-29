@@ -1,5 +1,3 @@
-// Phase-50 / 0004 — F3 ai_call_log repo tests.
-//
 // Pure-Go validators run unconditionally. The SQL-touching coverage
 // requires a live DB and runs only when DATABASE_URL or
 // TESLASYNC_TEST_DSN points at a reachable PostgreSQL+TimescaleDB

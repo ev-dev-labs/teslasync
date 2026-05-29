@@ -1,7 +1,7 @@
-// Phase-50 / 0021 — D1 Natural-language drive search and replay.
+// Natural-language drive search and replay indexer tests.
 //
 // Tests for RunDrive. The off-mode + per-feature gate
-// tests are the slice's load-bearing ADR-015 §I12 evidence — they
+// tests are load-bearing ADR-015 §I12 evidence — they
 // prove the cron is fail-closed even when the scheduler keeps
 // ticking after an admin disables AI mid-day.
 
@@ -84,8 +84,8 @@ func TestRunAIDriveIndexer_FeatureToggleOff_NoFanout(t *testing.T) {
 
 // TestRunAIDriveIndexer_OnMode_NoOp is the positive control.
 // With both gates open the function returns a zeroed envelope
-// (the fan-out implementation lands in a future slice). Pinning
-// the shape today protects future slices from accidentally
+// (the fan-out implementation is not wired yet). Pinning
+// the shape protects future changes from accidentally
 // changing the contract.
 func TestRunAIDriveIndexer_OnMode_NoOp(t *testing.T) {
 	t.Parallel()

@@ -1,25 +1,22 @@
-// Package database — MileageRepo backs the restored /mileage/monthly +
-// /mileage/stats endpoints.
+// Package drive backs the /mileage/monthly and /mileage/stats endpoints.
 //
-// Phase-43a / Prompt 0004. Phase-42 prompt 0077 deleted the legacy
-// daily_mileage table along with the /mileage handler family; this repo
-// re-derives the same product surface from the SI-canonical drives table
-// (mig 000185), grouping per `date_trunc('month', started_at)` for the
-// monthly endpoint and using FILTER aggregates for the stats endpoint.
+// The legacy daily_mileage table no longer exists, so this repo re-derives
+// the same product surface from the SI-canonical drives table (migration
+// 000185), grouping per `date_trunc('month', started_at)` for the monthly
+// endpoint and using FILTER aggregates for the stats endpoint.
 //
-// Schema reality vs prompt:
+// Schema reality:
 //
 //	mig 000185 stores drives with SI-canonical column names:
 //	  drives.distance_m       DOUBLE PRECISION  (meters, NOT distance_km)
 //	  drives.energy_used_wh   DOUBLE PRECISION  (Watt-hours, NOT energy_used_kwh)
 //
-// Per the prompt's escape hatch, this repo uses the actual column names
-// and converts to km / kWh in the SELECT list. Decision #5 holds —
+// This repo uses the actual column names and converts to km / kWh in
+// the SELECT list. Energy availability is explicit:
 // energy_used_wh exists, so total_wh_consumed and avg_efficiency_wh_per_km
 // are populated. Frontend hooks (MileageStats / MonthlyStat in
 // web/src/types/analytics.ts) currently use legacy camelCase fields from
-// the deleted handler; updating those types is out-of-scope for this
-// prompt's allowed-files boundary.
+// the deleted handler; aligning those types belongs to the frontend boundary.
 package drive
 
 import (
@@ -55,9 +52,6 @@ type MileageMonthlyRow struct {
 // drives table — a drive that ended before the telemetry plant captured
 // a final odometer reading still contributes to drive_count and total_km
 // but its odometer share is dropped (we never fabricate a zero value).
-//
-// Phase-43a / Prompt 0009 (fix/misc-fixes — restores the per-day endpoint
-// that MileagePage.tsx has been 404ing against since Phase-42 / 0077).
 type MileageDailyRow struct {
 	Day           time.Time
 	DriveCount    int
@@ -83,8 +77,7 @@ type MileageStats struct {
 
 // mileagePool is the minimal pgxpool subset MileageRepo needs.
 // Declared locally so tests can supply a fake without dragging in
-// pgxmock (the codebase does not vendor pgxmock — see repo memories
-// from earlier Phase-42a / Phase-43a prompts).
+// pgxmock (the codebase does not vendor pgxmock).
 type mileagePool interface {
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
@@ -165,13 +158,13 @@ WHERE vehicle_id = $1
 const mileageVehicleExistsSQL = `SELECT EXISTS (SELECT 1 FROM vehicles WHERE id = $1)`
 
 // dailySelectSQL pins the per-day buckets used by /mileage/daily.
-// Phase-43a / Prompt 0009 (fix/misc-fixes). Same SI-canonical column
-// names as monthlySelectSQL — distance_m is meters, end_odometer_m is
-// meters. Conversion to kilometres happens in the SELECT list so the
+// It uses the same SI-canonical column names as monthlySelectSQL:
+// distance_m is meters, and end_odometer_m is meters. Conversion to
+// kilometres happens in the SELECT list so the
 // handler response stays consistent with /mileage/monthly's _km surface.
 //
-// NULL distance rows are skipped (Decision #7e from Prompt 0004 still
-// holds for the entire mileage family). end_odometer_m may still be
+// NULL distance rows are skipped across the mileage family.
+// end_odometer_m may still be
 // NULL on rows that DO have a non-zero distance_m — in that case MAX()
 // over the bucket returns NULL and we surface it as JSON null via the
 // repo's *float64 column instead of fabricating a zero.

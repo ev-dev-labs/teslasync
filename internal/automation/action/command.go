@@ -156,7 +156,7 @@ func (e *CommandExecutor) Execute(ctx context.Context, vehicleID *int64, raw jso
 }
 
 // ExecuteTyped runs an action_command CTI child without decoding legacy action
-// wrappers. CommandParams remains the sole schema-on-read JSON carve-out.
+// wrappers. CommandParams remains the sole schema-on-read JSON exception.
 func (e *CommandExecutor) ExecuteTyped(ctx context.Context, vehicleID *int64, payload any) (json.RawMessage, error) {
 	action, ok := payload.(*models.AutomationAction)
 	if !ok {

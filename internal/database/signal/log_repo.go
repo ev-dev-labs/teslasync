@@ -68,7 +68,6 @@ func (r *SignalLogRepo) WriteBatch(ctx context.Context, vehicleID int64, signals
 		if value == nil {
 			continue
 		}
-		// Skip invalid markers
 		if m, isMap := value.(map[string]interface{}); isMap {
 			if inv, has := m["invalid"]; has {
 				if b, isBool := inv.(bool); isBool && b {
@@ -101,7 +100,7 @@ func (r *SignalLogRepo) WriteBatch(ctx context.Context, vehicleID int64, signals
 				continue
 			}
 		case map[string]interface{}:
-			// Location and other map values — skip in signal_log (handled by specific fields)
+			// Compound values are flattened into specific signal fields elsewhere.
 			continue
 		default:
 			s := func() string { return "" }()
@@ -208,14 +207,12 @@ func (r *SignalLogRepo) GetStats(ctx context.Context, vehicleID int64) (int64, *
 		return 0, nil, nil, nil
 	}
 
-	// Get oldest
 	var oldest SignalLogEntry
 	opts := options.FindOne().SetSort(bson.D{{Key: "timestamp", Value: 1}})
 	if err := r.coll.FindOne(ctx, filter, opts).Decode(&oldest); err != nil {
 		return count, nil, nil, nil
 	}
 
-	// Get newest
 	var newest SignalLogEntry
 	opts = options.FindOne().SetSort(bson.D{{Key: "timestamp", Value: -1}})
 	if err := r.coll.FindOne(ctx, filter, opts).Decode(&newest); err != nil {

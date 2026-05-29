@@ -1,5 +1,3 @@
-// Phase-50 / 0051 — M3 software-update-changelog-summarizer.
-//
 // Tests for RunUpdateNotes. The off-mode + per-feature
 // gate tests are the slice's load-bearing ADR-015 §I12 evidence —
 // they prove the cron is fail-closed even when the scheduler keeps
@@ -85,10 +83,9 @@ func TestRunAIUpdateNotesIndexer_FeatureToggleOff_NoFanout(t *testing.T) {
 }
 
 // TestRunAIUpdateNotesIndexer_OnMode_NoOp is the positive control.
-// With both gates open the function returns a zeroed envelope (the
-// fan-out implementation lands in a future slice). Pinning the
-// shape today protects future slices from accidentally changing
-// the contract.
+// With both gates open, the function returns a zeroed envelope
+// until fan-out is wired. Pinning the shape protects future changes
+// from accidentally changing the contract.
 func TestRunAIUpdateNotesIndexer_OnMode_NoOp(t *testing.T) {
 	t.Parallel()
 	settings := fakeUpdateNotesIndexerSettings{
@@ -102,7 +99,7 @@ func TestRunAIUpdateNotesIndexer_OnMode_NoOp(t *testing.T) {
 	if res.Skipped != 0 {
 		t.Errorf("on mode: Skipped = %d, want 0", res.Skipped)
 	}
-	// Stub slice: no indexing yet.
+	// No indexing until fan-out is wired.
 	if res.Indexed != 0 || res.Failed != 0 || res.VersionsConsidered != 0 {
 		t.Errorf("on mode (stub): any non-zero work counter unexpected: %+v", res)
 	}

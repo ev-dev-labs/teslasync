@@ -117,7 +117,7 @@ func contains(s, substr string) bool {
 }
 
 // ---------------------------------------------------------------------------
-// Sink tests (Prompt 12)
+// Sink tests
 // ---------------------------------------------------------------------------
 
 // fakeSink is the test double used to verify LoggedTransport's interaction

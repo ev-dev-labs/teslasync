@@ -21,8 +21,8 @@
 // tesla_bootstrap_skipped_total metric that surfaces "unprotected
 // vehicle" alerts to operators. The actual REST call is hidden behind
 // the VehicleDataClient interface so this package never imports
-// net/http or hard-codes Tesla's URL path — the production wiring (a
-// future prompt) implements the adapter that wraps internal/tesla.Client.
+// net/http or hard-codes Tesla's URL path. Production wiring provides
+// the adapter that wraps internal/tesla.Client.
 //
 // File split:
 //
@@ -51,8 +51,8 @@ import (
 // VehicleDataClient is the narrow surface Bootstrapper needs from
 // internal/tesla.Client. It is an interface so the test suite can
 // substitute a recording fake without spinning up an HTTP server, and
-// so the production wiring (a separate prompt — phase-42-0060+) can
-// adapt internal/tesla.Client without re-touching this package.
+// so production wiring can adapt internal/tesla.Client without
+// re-touching this package.
 //
 // The interface is intentionally NOT *tesla.Client even though the
 // prompt's struct sketch named that type literally: the existing
@@ -61,8 +61,7 @@ import (
 // silently throws away the data this package needs. The adapter that
 // satisfies VehicleDataClient is responsible for decoding gui_settings
 // out of the raw REST response — most likely by adding a GuiSettings
-// field to VehicleDataResponse in a future migration that this prompt
-// is not allowed to touch (allowed-files allowlist is bootstrap-only).
+// field to VehicleDataResponse when that response shape is migrated.
 //
 // Error contract — implementations MUST return ONE of:
 //
@@ -118,10 +117,8 @@ var ErrUnauthorized = errors.New("bootstrap: unauthorized — caller should re-a
 var ErrBadGuiSettings = errors.New("bootstrap: unrecognised gui_settings unit value")
 
 // defaultBackoffs is the sleep-between-attempts schedule. Length+1 ==
-// max attempts. The prompt phrases this as "max 3 attempts: 1s, 5s,
-// 30s" — the two backoff slots consume 1s and 5s; 30s is consumed
-// by defaultPerAttemptTimeout below as the per-call hard cap. All
-// three numeric values are honoured.
+// max attempts. The two backoff slots consume 1s and 5s; the 30s
+// budget is defaultPerAttemptTimeout below as the per-call hard cap.
 var defaultBackoffs = []time.Duration{
 	1 * time.Second,
 	5 * time.Second,
@@ -133,30 +130,28 @@ var defaultBackoffs = []time.Duration{
 const defaultPerAttemptTimeout = 30 * time.Second
 
 // effectiveFromBuffer is subtracted from the snapshot timestamp to
-// produce the effective_from we Record. The prompt phrases this as
-// "the response's now() minus a small buffer" — 1s is small enough
-// that a normal ingest cadence still treats this row as active for
+// produce the effective_from recorded in unit_history. One second is
+// small enough that a normal ingest cadence still treats this row as
+// active for
 // any subsequent telemetry, yet large enough that millisecond-level
 // clock skew between the API server and the database does not flip
 // the inequality in unit_history.At's "effective_from <= t" filter.
 const effectiveFromBuffer = 1 * time.Second
 
 // bootstrapSkippedTotal counts Seed calls that exhausted their retry
-// budget and returned nil (per the prompt: "ONLY THEN return nil so a
-// startup race doesn't block the server"). Operators alert on this
-// metric because the affected vehicle is now UNPROTECTED — its first
+// budget and returned nil so a startup race does not block the server.
+// Operators alert on this metric because the affected vehicle is now
+// unprotected: its first
 // telemetry samples will hit ErrNoUnitContext in units.ToSI and be
-// dropped (Decision 9e in ADR-004). The runbook (Prompt 0090) covers
-// alert thresholds.
+// dropped (Decision 9e in ADR-004).
 //
 // Fully qualified Prometheus name: tesla_bootstrap_skipped_total
 //
 // Cardinality note: vehicle_id is an unbounded label across a fleet,
-// which is normally a Prometheus anti-pattern. The prompt requires it
-// because per-vehicle remediation is the operator's response to a
-// non-zero rate — a count without the vehicle_id label would be
-// useless. For typical self-hosted installs (1–100 vehicles) the
-// cardinality is trivial.
+// normally a Prometheus anti-pattern. Here it is needed because
+// remediation is per vehicle; a count without vehicle_id would be
+// unactionable. For typical self-hosted installs (1–100 vehicles),
+// the cardinality is trivial.
 var bootstrapSkippedTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 	Namespace: "tesla",
 	Subsystem: "bootstrap",

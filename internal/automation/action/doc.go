@@ -1,4 +1,4 @@
-// Package action executes automation actions (notify, command, webhook). implements the user-defined automation engine.
+// Package action executes user-defined automation actions (notify, command, webhook).
 //
 // Layer: platform
 package action

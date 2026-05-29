@@ -158,9 +158,8 @@ func (p *Processor) processAccount(ctx context.Context, req *JobRequest) (*Proce
 // of the snapshot's columns and the allowlist (case-sensitive). Order in
 // the output follows the allowlist's order. When no requested column is
 // present in this snapshot, the resulting CSV is empty (header + no rows).
-// allowedColumns nil/empty preserves byte-for-byte parity with the
-// pre-Phase-46/62 caller — sorted alphabetic column order, every column
-// emitted.
+// allowedColumns nil/empty preserves the legacy default: sorted
+// alphabetic column order with every column emitted.
 func snapshotToCSV(snap *exportdb.ExportTableSnapshot, startDate, endDate *time.Time, allowedColumns []string) ([]byte, error) {
 	if snap == nil {
 		return nil, fmt.Errorf("snapshotToCSV: nil snapshot")
@@ -196,10 +195,8 @@ func snapshotToCSV(snap *exportdb.ExportTableSnapshot, startDate, endDate *time.
 		return nil, err
 	}
 
-	// pickTimestampKey scans the resolved column set for date filtering;
-	// when the user has filtered out the timestamp column entirely, scan
-	// the full snapshot so we still honour the date range against the
-	// underlying row data.
+	// If the requested output omits the timestamp column, still apply the
+	// date range against the full snapshot so filtering remains meaningful.
 	tsKey := pickTimestampKey(cols)
 	if tsKey == "" {
 		tsKey = pickTimestampKey(snap.Columns)

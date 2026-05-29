@@ -69,7 +69,7 @@ func TestRetryExhaustsAttempts(t *testing.T) {
 
 func TestRetryRespectsContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	cancel() // Cancel immediately
+	cancel()
 
 	err := Retry(ctx, "test", RetryConfig{
 		MaxAttempts: 10,
@@ -105,7 +105,6 @@ func TestSafeGoDoesNotPanic(t *testing.T) {
 	})
 	select {
 	case <-done:
-		// OK
 	case <-time.After(time.Second):
 		t.Error("SafeGo() function never executed")
 	}

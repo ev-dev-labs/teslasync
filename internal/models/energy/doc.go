@@ -8,11 +8,9 @@
 // internal/adapter/*, internal/handler/*, internal/app/*, internal/port/*,
 // or internal/api.
 //
-// Per ADR-011 this package was carved out of the formerly-flat
-// internal/models in phase-R5.5 (extracted from models.go). Recommended
-// caller alias when importing alongside other models subpackages
-// (per ADR-011 §3): `energymodel "internal/models/energy"`.
+// Per ADR-011, use `energymodel` as the caller alias when importing alongside
+// other model subpackages.
 //
-// All numeric fields are SI canonical (Wh / m / Wh-per-m) per ADR-008
-// and Phase-48; conversion to user units happens at the React render boundary.
+// All numeric fields are SI canonical (Wh / m / Wh-per-m); conversion to user
+// units happens at the React render boundary.
 package energy

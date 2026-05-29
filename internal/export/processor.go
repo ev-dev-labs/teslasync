@@ -212,10 +212,8 @@ func (p *Processor) processDrives(ctx context.Context, req *JobRequest) (*Proces
 	}, nil
 }
 
-// csvCellForDrive renders a single drive cell as the CSV string the
-// pre-Phase-46/62 writer would have produced. Keep the formatting in
-// lockstep with the legacy column-by-column cw.Write call so default
-// (no-Columns) output is byte-for-byte identical.
+// csvCellForDrive keeps default CSV output byte-for-byte compatible with
+// the historical column-by-column writer.
 func csvCellForDrive(d driveRow, col string) string {
 	switch col {
 	case "id":

@@ -16,12 +16,11 @@ import (
 // per-CTI notification channel child tables.
 //
 // It complements (does NOT replace) [NotificationRepo], which still owns
-// the cross-kind generic CRUD path. The Phase-46 / Prompt 37 webhook UI
-// needs a typed read on the webhook-specific subset of fields without
-// the round-trip through the [NotificationRepo.GetChannel] generic
-// `Config map[string]string` shape, so this repo stays narrow:
-// "give me the webhook config for this id, or tell me it's not a
-// webhook channel".
+// the cross-kind generic CRUD path. The webhook UI needs a typed read of
+// webhook-specific fields without round-tripping through the generic
+// [NotificationRepo.GetChannel] `Config map[string]string` shape, so
+// this repo stays narrow: "give me the webhook config for this id, or
+// tell me it's not a webhook channel".
 type NotificationChannelRepo struct {
 	db *database.DB
 }
@@ -36,11 +35,10 @@ func NewNotificationChannelRepo(db *database.DB) *NotificationChannelRepo {
 // joined with its CTI child row in `notification_channel_webhook`.
 //
 // `Secret` is sourced from `notification_channel_webhook.bearer_token`.
-// Phase-46 / Prompt 37 repurposes that column as the HMAC SHA-256 signing
-// secret in the new webhook delivery path; the legacy
-// [internal/api/notification_handler.sendWebhook] path doesn't read the
-// column at all, so the semantic claim is non-breaking. A future
-// migration could rename the column to `signing_secret` for clarity.
+// The webhook delivery path treats that column as the HMAC SHA-256
+// signing secret; the legacy [internal/api/notification_handler.sendWebhook]
+// path does not read the column, so this semantic reuse is non-breaking.
+// A future migration could rename the column to `signing_secret` for clarity.
 type WebhookConfig struct {
 	ChannelID  int64
 	Name       string

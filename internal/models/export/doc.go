@@ -9,8 +9,6 @@
 // internal/adapter/*, internal/handler/*, internal/app/*, internal/port/*,
 // or internal/api.
 //
-// Per ADR-011 this package was carved out of the formerly-flat
-// internal/models in phase-R5.6 (extracted from models.go). Recommended
-// caller alias when importing alongside other models subpackages
-// (per ADR-011 §3): `exportmodel "internal/models/export"`.
+// Per ADR-011, use the alias `exportmodel` when importing this package
+// alongside other internal/models subpackages.
 package export

@@ -12,7 +12,7 @@ import (
 )
 
 // SystemMode enumerates the operator-controlled service modes that
-// drive the top-of-app banner. Phase-46 / Prompt 04.
+// drive the top-of-app banner.
 //
 // "ok" is the default; "degraded" indicates partial functionality (e.g.
 // an upstream is flapping) and "maintenance" indicates an operator-led

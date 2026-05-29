@@ -8,28 +8,25 @@ import (
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 )
 
-// TestAlertRuleColumnsIncludesMaxFiresCap pins the slice 0003 contract:
+// TestAlertRuleColumnsIncludesMaxFiresCap pins the schema contract:
 // max_fires_per_resolution must appear in BOTH the SELECT column list
 // and the canonical scan order, otherwise a Create/Update would silently
 // drop the value or scan it into the wrong destination.
 //
-// SQL-shape tests are the codebase's accepted way of pinning critical
-// schema contracts without a containerised DB (see guard_repo_test.go,
-// vampire_drain_repo_test.go, mileage_repo_test.go for the same pattern).
-// Phase-49 / Slice 0003 / Decision D5.
+// SQL-shape tests pin critical schema contracts without a containerised DB;
+// see guard_repo_test.go, vampire_drain_repo_test.go, and mileage_repo_test.go
+// for the same pattern.
 func TestAlertRuleColumnsIncludesMaxFiresCap(t *testing.T) {
 	if !strings.Contains(alertRuleColumns, "max_fires_per_resolution") {
 		t.Fatalf("alertRuleColumns must include max_fires_per_resolution; got: %q", alertRuleColumns)
 	}
 }
 
-// TestAlertRuleColumnsIncludesAllVehicles pins the slice 0005 contract:
-// the all_vehicles column added in migration 000195 must appear in BOTH
-// the SELECT column list and the canonical scan order. Without this,
-// every Create/Update silently writes the column DEFAULT (TRUE) and
-// scanning a row with all_vehicles=FALSE would land into the next
-// destination pointer, corrupting reads.
-// Phase-49 / Slice 0005.
+// TestAlertRuleColumnsIncludesAllVehicles pins the schema contract: the
+// all_vehicles column added in migration 000195 must appear in BOTH the SELECT
+// column list and the canonical scan order. Without this, every Create/Update
+// silently writes the column DEFAULT (TRUE), and scanning all_vehicles=FALSE
+// would shift into the next destination pointer.
 func TestAlertRuleColumnsIncludesAllVehicles(t *testing.T) {
 	if !strings.Contains(alertRuleColumns, "all_vehicles") {
 		t.Fatalf("alertRuleColumns must include all_vehicles; got: %q", alertRuleColumns)
@@ -37,9 +34,9 @@ func TestAlertRuleColumnsIncludesAllVehicles(t *testing.T) {
 }
 
 // TestValidateVehicleSelection pins the multi-select invariants Create
-// and Update enforce before any SQL touches the row. Catches both
-// "all_vehicles + explicit subset" conflict (R8 / Decision D9) and the
-// "explicit subset but empty list" footgun. Phase-49 / Slice 0005.
+// and Update enforce before any SQL touches the row. It catches both the
+// "all_vehicles + explicit subset" conflict and the "explicit subset but empty
+// list" footgun.
 func TestValidateVehicleSelection(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -71,11 +68,10 @@ func TestValidateVehicleSelection(t *testing.T) {
 	}
 }
 
-// TestLegacyVehicleIDFor pins the rolling-deploy contract (Decision D7):
-// the deprecated vehicle_id column is mirrored from the resolved
-// (AllVehicles, VehicleIDs) pair on every write. A downgraded API
-// binary that still reads the legacy column must see a sensible value.
-// Phase-49 / Slice 0005.
+// TestLegacyVehicleIDFor pins the rolling-deploy contract: the deprecated
+// vehicle_id column is mirrored from the resolved (AllVehicles, VehicleIDs)
+// pair on every write. A downgraded API binary that still reads the legacy
+// column must see a sensible value.
 func TestLegacyVehicleIDFor(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -113,10 +109,9 @@ func TestLegacyVehicleIDFor(t *testing.T) {
 }
 
 // TestDedupAndSortVehicleIDs pins the normalisation pass: empty input
-// returns a non-nil empty slice (so JSON encodes `[]`, not `null` —
-// rubber-duck non-blocking finding R3); duplicates are removed; output
-// is sorted ascending so equality comparison and JSON output are
-// deterministic. Phase-49 / Slice 0005.
+// returns a non-nil empty slice so JSON encodes `[]`, not `null`; duplicates
+// are removed; output is sorted ascending so equality comparison and JSON
+// output are deterministic.
 func TestDedupAndSortVehicleIDs(t *testing.T) {
 	tests := []struct {
 		name string
@@ -148,10 +143,10 @@ func TestDedupAndSortVehicleIDs(t *testing.T) {
 	}
 }
 
-// TestAlertRulesEquivalentMultiVehicle pins the settings-export
-// round-trip contract: two rules with the same (AllVehicles, VehicleIDs
-// modulo order) compare equal so the import path correctly classifies
-// them as "skipped" rather than "updated". Phase-49 / Slice 0005.
+// TestAlertRulesEquivalentMultiVehicle pins the settings-export round-trip
+// contract: two rules with the same (AllVehicles, VehicleIDs modulo order)
+// compare equal so the import path correctly classifies them as "skipped"
+// rather than "updated".
 func TestAlertRulesEquivalentMultiVehicle(t *testing.T) {
 	mk := func(all bool, ids []int64) *modelsAlertRuleStub {
 		return &modelsAlertRuleStub{AllVehicles: all, VehicleIDs: ids}

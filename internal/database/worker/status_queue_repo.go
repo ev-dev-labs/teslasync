@@ -1,6 +1,5 @@
-// Package database — Phase-46 / Prompt 41.
-//
-// Per-worker queue counters and recent-job listings consumed by
+// Package database provides per-worker queue counters and recent-job
+// listings consumed by
 // /system/queues. The aggregator queries the existing job tables —
 // notification_logs, export_jobs, automation_history — without
 // requiring schema changes.

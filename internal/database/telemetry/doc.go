@@ -3,7 +3,7 @@
 //
 // Layer: adapter
 //
-// Carved files (Phase R4.18 — bounded-context restructure per ADR-011):
+// Bounded-context repositories:
 //
 //   - raw_repo.go         (was internal/database/raw_telemetry_repo.go)
 //     MongoDB-backed RawTelemetryRepo for high-volume signal capture

@@ -302,12 +302,10 @@ func TestHybridLiveSignalStoreWarmHydratesL1FromRedis(t *testing.T) {
 }
 
 func TestHybridLiveSignalStoreWarmRestampsLegacyScalarsToEnvelopes(t *testing.T) {
-	// W1 (R1, R6): Warm rewrites legacy scalar Redis values as envelope
-	// JSON with a synthetic time.Now() timestamp. Values round-trip
-	// through decodeLegacySignalValue → encodeTimestampedSignalValue
-	// without type coercion (number stays float64, bool stays bool).
-	// Pre-Prompt 06 behavior: hydrateMissingValues skipped zero-Timestamp
-	// entries and the cache had no restamp path; this test would fail.
+	// Warm rewrites legacy scalar Redis values as envelope JSON with a
+	// synthetic time.Now() timestamp. Values round-trip through
+	// decodeLegacySignalValue -> encodeTimestampedSignalValue without type
+	// coercion (number stays float64, bool stays bool).
 	ctx := context.Background()
 	local := New()
 	redisClient := newFakeRedisSignalClient()
@@ -696,11 +694,8 @@ func waitForRedisSignalValue(t *testing.T, redisCache *RedisSignalCache, vehicle
 	return nil
 }
 
-// --- Merge contract tests (phase-38-02) -------------------------------------
-// These tests cover the per-signal merge rule introduced when GetAll/GetSignal
-// stopped silently dropping legacy and stale Redis values. See
-// .github/prompts/db-refactor/logs/phase-38-01-live-store-merge-tests.log
-// for the full contract (R1-R8).
+// Merge contract tests cover the per-signal merge rule introduced when
+// GetAll/GetSignal stopped silently dropping legacy and stale Redis values.
 
 func TestHybridLiveSignalStoreGetAllReturnsL2OnlyAndL1OnlySignalsTogether(t *testing.T) {
 	ctx := context.Background()

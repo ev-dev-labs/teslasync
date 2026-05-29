@@ -7,13 +7,9 @@ import (
 	"time"
 )
 
-// Phase-43a / Prompt 0003 — pure-Go tests for the vehicle_states repo.
-//
-// These tests exercise computeStateSummary (the dwell-time algorithm) and
-// the SQL-shape constants. The repo's actual SQL execution requires a
-// live PostgreSQL instance + mig 000187 applied; the codebase has no
-// pgxmock / testcontainers harness, and the prompt's escape hatch
-// explicitly accepts pure-Go test coverage in that case.
+// These pure-Go tests cover computeStateSummary and the SQL-shape
+// constants. Actual SQL execution requires PostgreSQL with migration
+// 000187 applied, and this package has no pgxmock or testcontainers harness.
 
 func vsPtrStr(s string) *string { return &s }
 
@@ -66,10 +62,8 @@ func TestComputeStateSummary_Empty(t *testing.T) {
 	}
 }
 
-// TestComputeStateSummary_WorkedExample is the 3-transition example from
-// the prompt's design notes. windowEnd=12:00, windowStart=now-7d. The
-// dwell math is exact (no float imprecision) because durations are
-// whole minutes/days.
+// TestComputeStateSummary_WorkedExample uses whole-minute durations so
+// the dwell math is exact and not affected by floating-point rounding.
 func TestComputeStateSummary_WorkedExample(t *testing.T) {
 	t.Parallel()
 	end := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
@@ -126,7 +120,7 @@ func TestComputeStateSummary_WorkedExample(t *testing.T) {
 		}
 	}
 
-	// Decision #8(c) — percentages sum to 100 ± 0.01.
+	// Percentages should sum to 100 within display tolerance.
 	pctSum := 0.0
 	for _, r := range rows {
 		pctSum += r.Percentage
@@ -333,7 +327,7 @@ func TestTimelineSelectSQL_Shape(t *testing.T) {
 	}
 	mustNotContain := []string{
 		"fsm_type", // dropped by mig 000187 — would fail at runtime
-		"DESC",     // Decision #1 mandates ASC
+		"DESC",     // timeline order must remain ASC
 	}
 	for _, frag := range mustNotContain {
 		if strings.Contains(timelineSelectSQL, frag) {

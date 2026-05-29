@@ -7,8 +7,6 @@ import (
 	"testing"
 )
 
-// ─── Mock Notifier ─────────────────────────────────────
-
 type mockNotifier struct {
 	mu    sync.Mutex
 	calls []notifyCall
@@ -42,8 +40,6 @@ func (m *mockNotifier) lastCall() (notifyCall, bool) {
 	}
 	return m.calls[len(m.calls)-1], true
 }
-
-// ─── Check (Pure Logic) Tests ──────────────────────────
 
 func TestCheck_BelowThreshold(t *testing.T) {
 	c := NewAutoDisableChecker(newMockDisabler())
@@ -135,8 +131,6 @@ func TestCheck_ThresholdOne_DisablesOnFirst(t *testing.T) {
 	}
 }
 
-// ─── RecordOutcome Success Tests ───────────────────────
-
 func TestRecordOutcome_Success(t *testing.T) {
 	c := NewAutoDisableChecker(newMockDisabler())
 
@@ -169,8 +163,6 @@ func TestRecordOutcome_SuccessIgnoresConsecutiveFailures(t *testing.T) {
 		t.Errorf("ConsecutiveFailures = %d, want 0 on success", result.ConsecutiveFailures)
 	}
 }
-
-// ─── RecordOutcome Failure Tests ───────────────────────
 
 func TestRecordOutcome_FailureBelowThreshold(t *testing.T) {
 	disabler := newMockDisabler()
@@ -252,8 +244,6 @@ func TestRecordOutcome_FailureAboveThreshold_Disables(t *testing.T) {
 	}
 }
 
-// ─── Error Handling Tests ──────────────────────────────
-
 func TestRecordOutcome_DisablerError_ReturnsError(t *testing.T) {
 	disabler := newMockDisabler()
 	disabler.err = fmt.Errorf("database connection refused")
@@ -303,8 +293,6 @@ func TestRecordOutcome_NoNotifier_StillDisables(t *testing.T) {
 	}
 }
 
-// ─── Threshold Getter ──────────────────────────────────
-
 func TestThreshold_Default(t *testing.T) {
 	c := NewAutoDisableChecker(newMockDisabler())
 	if c.Threshold() != DefaultDisableThreshold {
@@ -318,8 +306,6 @@ func TestThreshold_Custom(t *testing.T) {
 		t.Errorf("custom threshold = %d, want 10", c.Threshold())
 	}
 }
-
-// ─── Integration Scenario Tests ────────────────────────
 
 func TestScenario_GradualDegradation(t *testing.T) {
 	disabler := newMockDisabler()
@@ -428,8 +414,6 @@ func TestScenario_DisablerCalledOnce_NotOnSubsequentChecks(t *testing.T) {
 	}
 }
 
-// ─── Concurrent Safety ─────────────────────────────────
-
 func TestRecordOutcome_ConcurrentSafe(t *testing.T) {
 	disabler := newMockDisabler()
 	c := NewAutoDisableChecker(disabler, WithThreshold(3))
@@ -448,8 +432,6 @@ func TestRecordOutcome_ConcurrentSafe(t *testing.T) {
 	wg.Wait()
 	// No panic or data race = success. Run with -race to verify.
 }
-
-// ─── Default Constant Tests ────────────────────────────
 
 func TestDefaultDisableThreshold(t *testing.T) {
 	if DefaultDisableThreshold != 5 {

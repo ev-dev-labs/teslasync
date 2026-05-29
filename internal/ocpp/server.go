@@ -157,5 +157,4 @@ func truncate(s string, n int) string {
 	return s[:n] + "…"
 }
 
-// Ensure compile-time we haven't dropped the errors import.
 var _ = errors.New

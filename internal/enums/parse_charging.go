@@ -11,8 +11,8 @@ import "strings"
 // strings.Contains is preserved here (rather than a strict ==) for
 // resilience against the historical Tesla Fleet API JSON poll path
 // that emitted long-form values like "ChargeStateCharging" before the
-// post-phase-42 cutover. After ADR-004 closes the legacy poll path
-// these can collapse to ==.
+// telemetry-pipeline cutover. After ADR-004 closes the legacy poll
+// path, these can collapse to ==.
 
 // IsCharging reports whether the canonical charge-state short form
 // indicates an active charging session.

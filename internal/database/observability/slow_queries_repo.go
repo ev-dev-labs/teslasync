@@ -1,6 +1,6 @@
 package observability
 
-// Phase-45 / Prompt 3 — Slow query collector.
+// Slow query collection reads pg_stat_statements and snapshots.
 //
 // SlowQueriesRepo wraps two paths into pg_stat_statements + the
 // historical slow_query_snapshot table (mig 000212). The live path

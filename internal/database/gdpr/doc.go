@@ -1,6 +1,6 @@
-// Package gdpr holds persistence for GDPR data-subject-export artifacts
-// (Phase-45 prompt 8). Stores only manifests (path/checksum/size) — never
-// the export bytes themselves; the export worker streams JSONL/gzip to
+// Package gdpr holds persistence for GDPR data-subject-export artifacts. It
+// stores only manifests (path/checksum/size), never the export bytes themselves;
+// the export worker streams JSONL/gzip to
 // disk or S3 and inserts an [Artifact] row when done.
 //
 // Layer: adapter

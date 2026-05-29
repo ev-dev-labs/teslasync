@@ -13,8 +13,8 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// PinnedRepo is the data-access layer for the `pinned_items` table
-// introduced by migration 000162 (Phase 40 / Prompt 48).
+// PinnedRepo is the data-access layer for the `pinned_items` table introduced
+// by migration 000162.
 //
 // Today the install is single-user, so the repo accepts a `*int64` user
 // scope (NULL meaning "every pin") rather than enforcing a non-zero user

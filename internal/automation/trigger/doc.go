@@ -1,4 +1,4 @@
-// Package trigger produces automation trigger events from telemetry/state changes. implements the user-defined automation engine.
+// Package trigger produces automation trigger events from telemetry and state changes.
 //
 // Layer: platform
 package trigger

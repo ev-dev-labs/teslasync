@@ -46,14 +46,10 @@ func (f *fakeStateReader) State(_ context.Context, vehicleID int64, at time.Time
 	return out, nil
 }
 
-// newSvc builds a VehicleService wired only with the bits the fallback path
-// touches: the SignalStateReader. The other fields (db, stateProvider) are
-// intentionally nil so the test never reaches a real database;
-// BuildStateFromSignalStore must guard each call. This also doubles as a
-// guard for ADR-001 — if the implementation secretly tried to read a
-// snapshot table through positionRepo/vehicleRepo it would nil-pointer-panic
-// here. (Phase-42 prompt 0077: the legacy securityRepo + stateRepo fields
-// are gone; the equivalent guard now applies to stateProvider.)
+// newSvc builds a VehicleService wired only with the SignalStateReader used
+// by the fallback path. The other fields stay nil so any hidden snapshot-table
+// read through positionRepo, vehicleRepo, or stateProvider would panic and fail
+// the ADR-001 guard.
 func newSvc(reader SignalStateReader) *VehicleService {
 	svc := &VehicleService{}
 	if reader != nil {
@@ -390,8 +386,7 @@ func TestBuildStateFromSignalStore_FieldToSignalNameMapping(t *testing.T) {
 // settingsRepo, etc. would nil-pointer-panic. ADR-001 anchor: only signal_log,
 // no snapshot table reads.
 //
-// Phase-42 (prompt 0077): the legacy securityRepo/stateRepo guard is now
-// stateProvider (nil-safe per its receiver guard).
+// stateProvider stays nil here and must remain guarded by its receiver checks.
 func TestBuildStateFromSignalStore_DoesNotReadSnapshotTables(t *testing.T) {
 	const vehicleID int64 = 7
 	store := newStore(t, vehicleID, map[string]interface{}{
@@ -423,12 +418,11 @@ func TestBuildStateFromSignalStore_DoesNotReadSnapshotTables(t *testing.T) {
 	}
 }
 
-// TestBuildStateFromSignalStore_AcceptsPhase42CodecNumericTypes is the
-// regression for the dashboard-blank bug discovered during the panel-by-panel
-// UI audit: Phase-42 codec stores Float5 fields as float32 and Int3/Int4
-// fields as int32, but the projection layer was narrowing to float64 only,
-// silently dropping every codec value. After the canonical signal.Float64
-// rollout EVERY numeric kind the codec emits MUST land in VehicleState.
+// TestBuildStateFromSignalStore_AcceptsCodecNumericTypes is the regression
+// for the dashboard-blank bug: the codec stores Float5 fields as float32 and
+// Int3/Int4 fields as int32, but the projection layer was narrowing to
+// float64 only and silently dropping those values. Every numeric kind the
+// codec emits must land in VehicleState through signal.Float64.
 //
 // If this test fails after a future codec change, the answer is to extend
 // internal/signal/coerce.go (and re-run this test), NOT to add a new

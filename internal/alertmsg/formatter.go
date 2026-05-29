@@ -5,7 +5,7 @@
 // (cmd/notification-worker) so every dispatch path produces identical
 // output for the same (rule, signals, vehicle) tuple.
 //
-// Design contract (Phase-50 / ADR-005):
+// Design contract (ADR-005):
 //
 //   - The rendered TITLE is canonical: it is always non-empty, is always
 //     persisted in notification_logs.title, is always broadcast over SSE
@@ -234,10 +234,9 @@ func RenderBody(rule *alertmodel.AlertRule, ctx Context) string {
 	return RenderDefaultBody(rule, ctx)
 }
 
-// RenderDefaultBody implements the B′ default formatter agreed in the
-// architect critique (Phase-50). The wording depends on rule.Kind and
-// rule.Op so the body adds *new* information instead of restating the
-// title:
+// RenderDefaultBody implements the op-aware default formatter. The wording
+// depends on rule.Kind and rule.Op so the body adds *new* information
+// instead of restating the title:
 //
 //   - signal, op =/!=/changed (text/bool)   -> "" (title is the message)
 //   - signal, op <,<=,>,>=                  -> "<Signal> <value> · threshold <op> <threshold>"
@@ -248,9 +247,8 @@ func RenderBody(rule *alertmodel.AlertRule, ctx Context) string {
 // The "<unit>" suffix is intentionally omitted from this first cut
 // because the unit-history layer stores everything in SI base units and
 // we don't yet have the per-user display preference plumbed through to
-// the rendering path. Phase-51 work-item: add UnitKind-aware display
-// formatting. The current output is still strictly better than the
-// pre-Phase-50 "Drive Started: D" wording.
+// the rendering path. Future work: add UnitKind-aware display formatting.
+// The current output is still better than the old "Drive Started: D" wording.
 func RenderDefaultBody(rule *alertmodel.AlertRule, ctx Context) string {
 	if rule == nil {
 		return ""
@@ -265,11 +263,9 @@ func defaultSignalBody(rule *alertmodel.AlertRule, ctx Context) string {
 	signal := friendlySignal(rule.SignalName)
 	val, hasVal := ctx[rule.SignalName]
 
-	// State-change-style rules against text/bool signals: title IS the
-	// message; echoing the raw value (`R`, `true`) is noise. Returning
-	// empty is the architect-blessed B″ outcome. The dispatch layer
-	// falls back to a sensible value if it ever needs a non-empty body
-	// (IncludeTitle=false path).
+	// State-change-style text/bool rules use the title as the message;
+	// echoing the raw value (`R`, `true`) is noise. The dispatch layer
+	// falls back if it needs a non-empty body (IncludeTitle=false path).
 	if rule.Op == "=" || rule.Op == "!=" || rule.Op == "changed" {
 		if rule.ValueText != nil || rule.ValueBool != nil {
 			return ""

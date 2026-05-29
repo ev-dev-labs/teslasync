@@ -19,7 +19,6 @@ type Service struct {
 	engine     *fsm.Engine[*trip.Trip]
 }
 
-// New creates a new trip service.
 func New(
 	repo repository.TripRepository,
 	fsmHistory repository.FSMHistoryRepository,
@@ -41,7 +40,6 @@ func (s *Service) SetTracer(t fsm.Tracer) {
 	s.engine.SetTracer(t)
 }
 
-// Create starts a new trip.
 func (s *Service) Create(ctx context.Context, t *trip.Trip) error {
 	if err := t.Validate(); err != nil {
 		return fmt.Errorf("trip validation: %w", err)
@@ -50,7 +48,6 @@ func (s *Service) Create(ctx context.Context, t *trip.Trip) error {
 	t.CreatedAt = time.Now()
 	t.StartedAt = time.Now()
 
-	// Reverse geocode start address
 	if s.geocoding != nil && t.StartAddress == "" {
 		addr, err := s.geocoding.ReverseGeocode(ctx, t.StartLatitude, t.StartLongitude)
 		if err == nil {
@@ -61,12 +58,10 @@ func (s *Service) Create(ctx context.Context, t *trip.Trip) error {
 	return s.repo.Save(ctx, t)
 }
 
-// GetByID returns a trip by ID.
 func (s *Service) GetByID(ctx context.Context, id string) (*trip.Trip, error) {
 	return s.repo.GetByID(ctx, id)
 }
 
-// GetByVehicleID returns all trips for a vehicle.
 func (s *Service) GetByVehicleID(ctx context.Context, vehicleID string) ([]trip.Trip, error) {
 	return s.repo.GetByVehicleID(ctx, vehicleID)
 }

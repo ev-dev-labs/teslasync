@@ -101,7 +101,7 @@ func (r *SoftwareUpdateRepo) GetLatestVersion(ctx context.Context, vehicleID int
 }
 
 // softwareUpdateInsertIfChangedSQL is the atomic upsert that replaces the
-// pre-Phase-43a "SELECT latest then INSERT if different" pattern. The
+// old "SELECT latest then INSERT if different" pattern. The
 // ON CONFLICT clause depends on the UNIQUE INDEX on (vehicle_id, version)
 // added by migration 000197 — without that index the ON CONFLICT target
 // has no constraint to bind to and PostgreSQL raises an error at execute
@@ -143,7 +143,7 @@ RETURNING id`
 // Race-safety: this method is called by trackVehicleConfig in a goroutine
 // per telemetry payload. Pre-fix the implementation was a non-atomic
 // SELECT-then-INSERT that produced one duplicate row per concurrent
-// payload under MQTT firehose load (production observed up to 50 rows of
+// payload under MQTT firehose load (observed up to 50 rows of
 // the same version for a single vehicle). The atomic upsert below relies
 // on the UNIQUE INDEX added in migration 000197 to serialise concurrent
 // inserts at the database — N concurrent calls now produce exactly 1 row

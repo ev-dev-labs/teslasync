@@ -1,8 +1,6 @@
 // Package database — IngestXRayRepo backs the per-vehicle ingest
 // X-Ray admin endpoint (/system/ingest-xray/{vehicleID}).
 //
-// Phase-44 / observability-batch / Prompt F6.
-//
 // The X-Ray answers operator questions of the form: "Is vehicle 123
 // actively streaming? When did it last send X? Which fields am I
 // receiving and at what rate?" without forcing the operator to write
@@ -10,7 +8,7 @@
 //
 // All queries are scoped to signal_log only — no JOIN against
 // vehicles. The handler's URL-bound vehicle_id is the source of
-// truth, mirroring the catalog/observations pattern (Phase-43a / 0007).
+// truth, mirroring the catalog/observations pattern.
 //
 // Why a dedicated repo (vs reusing SignalsCatalogRepo): catalog is
 // fleet-wide spineless aggregation that returns 200+ rows; X-Ray is

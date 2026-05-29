@@ -91,9 +91,9 @@ func isNotPopulated(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "has not been populated")
 }
 
-// Phase-42 (prompt 0077, migration 000188): cagg_fleet_stats stores SI
-// canonical energy in Wh and distance in meters. Keep those units at this
-// boundary so the API/FE display layer owns presentation conversion.
+// Migration 000188 made cagg_fleet_stats canonical SI: energy in Wh and
+// distance in meters. Keep those units at this boundary so the API/FE
+// display layer owns presentation conversion.
 
 func (r *EnergyStatsRepo) GetDailyBreakdown(ctx context.Context, vehicleID int64, days int) ([]*energymodel.EnergyStatsRow, error) {
 	query := `SELECT

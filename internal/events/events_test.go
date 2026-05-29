@@ -26,7 +26,6 @@ func TestNewBusNilClient(t *testing.T) {
 		t.Fatal("NewBus(nil) should return a non-nil bus")
 	}
 
-	// Publish should not panic with nil client
 	bus.Publish(Event{
 		Type:      VehicleUpdated,
 		VehicleID: 1,
@@ -41,8 +40,6 @@ func TestEventTimestampAutoFill(t *testing.T) {
 	evt := Event{Type: DriveStarted}
 	before := time.Now()
 	bus.Publish(evt)
-	// Can't easily check the modified event since Publish takes a copy,
-	// but at least verify it doesn't panic
 	_ = before
 }
 
@@ -54,6 +51,5 @@ func TestTopicPrefix(t *testing.T) {
 
 func TestSubscribeNilClient(t *testing.T) {
 	bus := NewBus(nil)
-	// Should not panic
 	bus.Subscribe(VehicleUpdated, func(evt Event) {})
 }

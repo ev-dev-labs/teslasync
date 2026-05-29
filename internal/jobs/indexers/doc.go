@@ -6,7 +6,7 @@
 // to off-mode users.
 //
 // Layer: app
-// indexer follows the canonical RAG indexer shape:
+// Indexers follow the canonical RAG shape:
 //
 //	type <Topic>SettingsReader interface {
 //	    AIMode(ctx context.Context) (string, error)
@@ -32,8 +32,7 @@
 // When the package is the sole jobs/ import at a callsite the
 // alias is not required — `indexers.RunDrive(...)` reads cleanly.
 //
-// ADR-015 §I12 contract preserved verbatim across the Phase R6
-// carve: every Run* function still re-checks ai_mode + the
+// ADR-015 §I12 contract: every Run* function re-checks ai_mode + the
 // per-feature toggle at execution time AND returns
 // {Skipped: 1}, nil for the off path without touching the
 // database, the LLM, the vector store, or any external service.

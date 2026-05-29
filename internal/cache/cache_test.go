@@ -19,7 +19,6 @@ func TestMemoryCache(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Set and Get
 	store.Set(ctx, "key1", "value1", 5*time.Second)
 	var result string
 	if !store.Get(ctx, "key1", &result) {
@@ -29,12 +28,10 @@ func TestMemoryCache(t *testing.T) {
 		t.Errorf("Get() = %q, want 'value1'", result)
 	}
 
-	// Get missing key
 	if store.Get(ctx, "nonexistent", &result) {
 		t.Error("Get() should return false for missing key")
 	}
 
-	// Delete
 	store.Delete(ctx, "key1")
 	if store.Get(ctx, "key1", &result) {
 		t.Error("Get() should return false after Delete()")

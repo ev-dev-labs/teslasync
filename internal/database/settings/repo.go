@@ -380,10 +380,9 @@ func (r *SettingsRepo) Upsert(ctx context.Context, s *systemmodel.Settings) erro
 	if err != nil {
 		return fmt.Errorf("settings upsert ai_provider_config marshal: %w", err)
 	}
-	// Phase-50 / 0003 / F2 — archived per-feature opt-in map. The
-	// settings handler is responsible for writing this on a mode→off
-	// flip; the repo just persists whatever it receives so a typed
-	// round-trip stays a no-op.
+	// Archived per-feature opt-in map. The settings handler writes this
+	// on a mode→off flip; the repo persists whatever it receives so a
+	// typed round-trip stays a no-op.
 	aiArchivedJSON, err := marshalJSONOrEmpty(s.AIFeaturesArchived)
 	if err != nil {
 		return fmt.Errorf("settings upsert ai_features_archived marshal: %w", err)

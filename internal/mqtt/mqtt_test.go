@@ -117,7 +117,7 @@ func TestNilClientSafety(t *testing.T) {
 }
 
 // =============================================================================
-// Phase-42 PipelineSubscriber tests (per-field MQTT cutover)
+// PipelineSubscriber tests for per-field MQTT ingest
 // =============================================================================
 
 // fakePipeline is a recording stub of the Pipeline interface. It returns the

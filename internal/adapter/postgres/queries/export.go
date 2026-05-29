@@ -1,6 +1,5 @@
 package queries
 
-// Export job SQL queries.
 const (
 	GetExportJobByID = `
 		SELECT id, user_id, format, vehicle_id, date_from, date_to,

@@ -1,11 +1,9 @@
 package gdpr
 
-// Phase-45 / Prompt 8 — GDPR data-subject export artifacts.
-//
-// ArtifactRepo is the manifest store for external-storage exports.
-// NEVER stores bytes — only a path/checksum/size. The export-worker
-// streams JSONL/gzip directly to disk or S3 and inserts a row here
-// when done.
+// ArtifactRepo is the manifest store for external-storage exports. It
+// never stores payload bytes, only path, checksum, and size. The
+// export-worker streams JSONL/gzip directly to disk or S3 and inserts a
+// row here when done.
 
 import (
 	"context"

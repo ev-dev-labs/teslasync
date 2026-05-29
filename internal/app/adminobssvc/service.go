@@ -1,5 +1,5 @@
-// Package adminobssvc orchestrates the read-only Phase-45 admin
-// observability surface: schema drift, slow queries, per-vehicle
+// Package adminobssvc orchestrates the read-only admin observability
+// surface: schema drift, slow queries, per-vehicle
 // cost, disk forecast, and secret rotation status.
 //
 // All five features share a tracker/repo dependency owned by App and

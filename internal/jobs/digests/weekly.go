@@ -1,22 +1,12 @@
 package digests
 
-// Phase-50 / 0012 — U2 Weekly digest narration.
+// RunWeekly backs the `ai_digest_weekly` background job registered for
+// digest narration.
 //
-// ai_digest_weekly.go is the cross-cutting cron stub that the
-// digest-narration slice registers as its background-job surface
-// (`ai_digest_weekly` in the features registry's PushKinds list).
-//
-// The stub is fail-closed by design: every tick re-reads the
-// settings table and refuses to do anything when ai_mode is off OR
-// the per-feature toggle is off (ADR-015 §I12 #3 — "background
-// dispatcher gate trips before execution"). The real fan-out
-// implementation will land alongside the push-delivery slice; this
-// file ships the gate + telemetry envelope so the off-mode invariant
-// is provable today.
-//
-// The function is exported so a future scheduler (cmd/scheduler or
-// the existing internal/worker pool) can install it on a once-per-
-// week cron without further plumbing changes.
+// The job is fail-closed: every tick re-reads settings and refuses to run
+// when ai_mode or the per-feature toggle is off (ADR-015 §I12 #3). The
+// current implementation ships the gate and telemetry envelope before the
+// fan-out implementation so the off-mode invariant is provable.
 
 import (
 	"context"
@@ -42,11 +32,9 @@ type WeeklySettingsReader interface {
 	AIFeatureEnabled(ctx context.Context, featureID string) (bool, error)
 }
 
-// WeeklyResult reports the outcome of one tick. The fields
-// are all int because the real fan-out implementation will tally
-// per-vehicle narrations + push deliveries here; today the values
-// stay zero (the stub is a no-op when off, and a no-op-with-log
-// when on — narration generation lands in a future slice).
+// WeeklyResult reports the outcome of one tick. The fields are int so
+// the fan-out implementation can tally per-vehicle narrations and push
+// deliveries without changing the envelope.
 type WeeklyResult struct {
 	// Skipped is 1 when the tick early-returned because ai_mode was
 	// off OR the per-feature toggle was off. Reported separately
@@ -54,23 +42,19 @@ type WeeklyResult struct {
 	// degraded settings table from an idle week.
 	Skipped int
 
-	// VehiclesConsidered is the number of vehicles the tick fanned
-	// out a narration request for. Always 0 in this slice (the
-	// fan-out implementation lands in a future slice); the field
-	// is in the envelope so callers can pin the shape today.
+	// VehiclesConsidered is the number of vehicles the tick fanned out a
+	// narration request for. It stays in the envelope even before fan-out
+	// is implemented so callers can pin the response shape.
 	VehiclesConsidered int
 
-	// Narrated is the number of vehicles whose narration was
-	// successfully produced. Always 0 in this slice.
+	// Narrated is the number of vehicles whose narration was successfully produced.
 	Narrated int
 
 	// Failed is the number of vehicles whose narration failed.
-	// Always 0 in this slice.
 	Failed int
 }
 
-// RunWeekly is the once-per-week cron entry for the
-// digest-narration slice's background fan-out.
+// RunWeekly is the once-per-week cron entry for digest-narration fan-out.
 //
 // Re-checks ai_mode + the per-feature toggle at execution time per
 // ADR-015 §I12 #3 — the scheduler may have started this loop while
@@ -83,9 +67,8 @@ type WeeklyResult struct {
 // fan-out). Fail-closed semantics: a degraded settings table must
 // not silently leak narrations to off-mode users.
 //
-// The current implementation is deliberately a no-op gate. The
-// per-vehicle narration loop, the push-fanout, and the telemetry
-// counters land in the push-delivery slice. Today's contract:
+// The current implementation is a no-op gate until per-vehicle narration,
+// push fan-out, and telemetry counters are implemented. Current contract:
 //
 //   - off mode (any kind) → Skipped=1, no LLM calls, no DB writes;
 //   - on mode             → Skipped=0, no LLM calls (yet), no DB writes;
@@ -132,11 +115,8 @@ func RunWeekly(
 		return WeeklyResult{Skipped: 1}, nil
 	}
 
-	// On-mode path. The fan-out implementation (per-vehicle
-	// narration + push delivery) lands in a future slice; today
-	// the function returns a zeroed envelope so callers can pin
-	// the shape and the off-mode test (TestRunAIDigestWeekly_*)
-	// has a positive control to assert against.
+	// The on-mode path returns a zeroed envelope until fan-out is implemented,
+	// giving callers a stable shape and tests a positive control.
 	log.Debug().
 		Str("job", "ai_digest_weekly").
 		Msg("ai_mode + feature on; fan-out implementation pending future slice")

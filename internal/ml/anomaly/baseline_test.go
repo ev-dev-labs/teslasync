@@ -1,6 +1,4 @@
-// Phase-50 / 0062 — ML1 Learned per-vehicle anomaly baselines.
-//
-// baseline_test.go covers:
+// Tests for the deterministic per-vehicle anomaly baseline trainer cover:
 //
 //  1. The trainer's wiring contract (nil source ⇒ ErrNoSource;
 //     vehicle_id <= 0 ⇒ empty; days clamped to MaxDays).

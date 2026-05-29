@@ -1,10 +1,7 @@
 package triage
 
-// Phase-50 / 0035 — A2 Inbox auto-categorization.
-//
-// ai_alert_inbox_categorizer.go is the cross-cutting cron stub
-// that the inbox-auto-categorization slice registers as its
-// background-job surface (`ai_alert_inbox_categorizer` in the
+// ai_alert_inbox_categorizer.go provides the cron surface for the
+// inbox-auto-categorization feature (`ai_alert_inbox_categorizer` in the
 // features registry's JobNames list).
 //
 // The stub is fail-closed by design: every tick re-reads the
@@ -15,11 +12,10 @@ package triage
 // histogram over the user's most recent notification_log window,
 // and emit an `ai_alert_category_suggested` push notification when
 // a previously-rare category crosses a threshold so the inbox
-// page can surface "you have 5 new tire-related alerts since
-// yesterday" without the user opening the AI panel) will land
-// alongside a future push fan-out slice; this file ships the
-// gate + telemetry envelope so the off-mode invariant is
-// provable today.
+// page can surface "you have 5 new tire-related alerts since yesterday"
+// without the user opening the AI panel) will land with the push fan-out
+// implementation; this file ships the gate and telemetry envelope so the
+// off-mode invariant is provable today.
 //
 // The function is exported so a future scheduler (cmd/scheduler
 // or the existing internal/worker pool) can install it on a
@@ -67,12 +63,9 @@ type AlertInboxSettingsReader interface {
 	AIFeatureEnabled(ctx context.Context, featureID string) (bool, error)
 }
 
-// AlertInboxResult reports the outcome of one tick.
-// The fields are all int because the real fan-out implementation
-// will tally per-user category-suggestion counts here; today the
-// values stay zero (the stub is a no-op when off, and a
-// no-op-with-log when on — the actual fan-out lands in a future
-// slice).
+// AlertInboxResult reports the outcome of one tick. The fields are ints
+// because the fan-out implementation will tally per-user category suggestions;
+// today they stay zero because this gate emits no pushes.
 type AlertInboxResult struct {
 	// Skipped is 1 when the tick early-returned because ai_mode
 	// was off OR the per-feature toggle was off. Reported
@@ -80,25 +73,22 @@ type AlertInboxResult struct {
 	// distinguish a degraded settings table from an idle hour.
 	Skipped int
 
-	// UsersConsidered is the number of user_subject rows the
-	// tick fanned out a category-recompute for. Always 0 in
-	// this slice (the fan-out implementation lands in a future
-	// slice); the field is in the envelope so callers can pin
-	// the shape today.
+	// UsersConsidered is the number of user_subject rows the tick fanned out
+	// a category recompute for. It stays 0 until fan-out is implemented,
+	// but remains in the envelope so callers can pin the shape today.
 	UsersConsidered int
 
-	// PushesEmitted is the number of `ai_alert_category_suggested`
-	// pushes the tick wrote to the push queue. Always 0 in this
-	// slice.
+	// PushesEmitted is the number of `ai_alert_category_suggested` pushes
+	// the tick wrote to the push queue. It stays 0 until fan-out is implemented.
 	PushesEmitted int
 
-	// Failed is the number of users whose recompute failed.
-	// Always 0 in this slice.
+	// Failed is the number of users whose recompute failed. It stays 0
+	// until fan-out is implemented.
 	Failed int
 }
 
 // RunAlertInbox is the once-per-hour cron entry for
-// the inbox-auto-categorization slice's background fan-out.
+// inbox-auto-categorization background fan-out.
 //
 // Re-checks ai_mode + the per-feature toggle at execution time
 // per ADR-015 §I12 #3 — the scheduler may have started this loop
@@ -113,9 +103,8 @@ type AlertInboxResult struct {
 // must not silently leak push notifications to off-mode users.
 //
 // The current implementation is deliberately a no-op gate. The
-// per-user recompute loop, the histogram-diff logic, and the
-// push-queue plumbing land in a future fan-out slice. Today's
-// contract:
+// per-user recompute loop, histogram diff, and push-queue plumbing are
+// deferred. Today's contract:
 //
 //   - off mode (any kind) → Skipped=1, no DB writes, no pushes;
 //   - on mode             → Skipped=0, no DB writes (yet), no pushes;
@@ -162,12 +151,9 @@ func RunAlertInbox(
 		return AlertInboxResult{Skipped: 1}, nil
 	}
 
-	// On-mode path. The fan-out implementation (per-user
-	// category recompute + histogram-diff + push emission)
-	// lands in a future slice; today the function returns a
-	// zeroed envelope so callers can pin the shape and the
-	// off-mode test (TestRunAIAlertInboxCategorizer_*) has a
-	// positive control to assert against.
+	// In on mode, return a zeroed envelope until per-user recompute,
+	// histogram diff, and push emission are implemented. This gives callers
+	// a stable shape and gives the off-mode tests a positive control.
 	log.Debug().
 		Str("job", "ai_alert_inbox_categorizer").
 		Msg("ai_mode + feature on; fan-out implementation pending future slice")

@@ -9,13 +9,11 @@ import (
 )
 
 // chargingTelemetryColumnByField is the static field→column map for
-// destination charging_telemetry. Built at file-edit time from
-// routing.yaml entries with `dest: charging_telemetry` (12 routes —
-// see the AUDIT_EVIDENCE section of phase-42a/0019's log for the
-// verbatim extraction).
+// destination charging_telemetry. It mirrors routing.yaml entries with
+// `dest: charging_telemetry`.
 //
-// Per phase-42a prompt 0019 Decision #2 the charging_telemetry writer
-// composes the shared snapshotWriter helper from snapshot_base.go.
+// The charging_telemetry writer composes the shared snapshotWriter helper
+// from snapshot_base.go.
 // The (vehicle_id, ts) PK upsert pattern works for the per-tick
 // time-series table exactly as it does for the *_snapshots tables:
 // two atomics for the same tick (e.g. ACChargingPower +
@@ -23,10 +21,9 @@ import (
 // with both columns set, matching the table's ~1 Hz sampling
 // contract documented at migration 000184_charging_si.up.sql:111-112.
 //
-// Per Decision #3 the writer NEVER touches the session_id column.
+// The writer never touches the session_id column.
 // migrations/000184_charging_si.up.sql:84 declares session_id
-// nullable; the session tracker (a side-effect observer landing in
-// phase-42a/0030) backfills it via a separate UPDATE after session
+// nullable; the session tracker backfills it via a separate UPDATE after session
 // boundaries are detected. snapshotWriter's INSERT statement at
 // internal/tesla/router/writers/snapshot_base.go:158 names only
 // (vehicle_id, ts, <col>) so session_id is naturally omitted from
@@ -35,7 +32,7 @@ import (
 // per-column re-deliveries because the upsert SET clause references
 // only the routed column.
 //
-// Per Decision #3 the writer also never touches the five other
+// The writer also never touches the five other
 // columns reserved on the table (charger_actual_current_a,
 // charger_pilot_current_a, battery_heater_power_w, charge_request,
 // and charge_state — see migration 000184 lines 90-96) because no
@@ -45,7 +42,7 @@ import (
 // test (see chargingTelemetryWriter_test.go) catches drift at CI
 // time.
 //
-// Per Decision #4 this map is a static var, NOT a runtime read of
+// This map is a static var, not a runtime read of
 // routing.yaml: the routing layer's loader already validated every
 // entry at process start, the per-payload hot path must not re-parse
 // a 1000-line YAML file, and a compile-time declaration here lets
@@ -75,8 +72,8 @@ var chargingTelemetryColumnByField = map[string]string{
 }
 
 // chargingTelemetryColumnFor is the columnFor callback supplied to
-// snapshotWriter per phase-42a prompt 0019 Decision #2. Closes over
-// chargingTelemetryColumnByField so the snapshot helper has a single
+// snapshotWriter. It closes over chargingTelemetryColumnByField so the
+// snapshot helper has a single
 // source-of-truth lookup; ok=false is returned for any field NOT
 // routed here (the snapshot helper then errors out loudly per its
 // drop-loud contract — see snapshot_base.go's columnFor godoc).
@@ -87,8 +84,7 @@ func chargingTelemetryColumnFor(field string) (string, bool) {
 
 // NewChargingTelemetryWriter constructs the production charging
 // telemetry writer. Returns the router.Writer for destination
-// charging_telemetry (constructor signature is locked by phase-42a
-// prompt 0019 Decision #1).
+// charging_telemetry.
 //
 // Composes the unexported snapshotWriter from snapshot_base.go: the
 // table is "charging_telemetry" (matches migration 000184) and the
@@ -99,8 +95,7 @@ func chargingTelemetryColumnFor(field string) (string, bool) {
 //
 // charging_telemetry is the per-tick time-series table — NOT the
 // session-aggregate charging_sessions table. session_id is left NULL
-// at insert time and backfilled by the session tracker observer
-// (phase-42a/0030).
+// at insert time and backfilled by the session tracker observer.
 //
 // A nil pool is a wiring bug and panics at process start so the
 // failure is surfaced before any payload is processed. Same panic

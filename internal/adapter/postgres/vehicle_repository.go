@@ -18,7 +18,6 @@ type vehicleRepository struct {
 	pool *pgxpool.Pool
 }
 
-// NewVehicleRepository creates a new PostgreSQL-backed vehicle repository.
 func NewVehicleRepository(pool *pgxpool.Pool) repository.VehicleRepository {
 	return &vehicleRepository{pool: pool}
 }

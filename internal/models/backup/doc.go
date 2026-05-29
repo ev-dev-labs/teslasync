@@ -8,8 +8,6 @@
 // internal/adapter/*, internal/handler/*, internal/app/*, internal/port/*,
 // or internal/api.
 //
-// Per ADR-011 this package was carved out of the formerly-flat
-// internal/models in phase-R5.3 (extracted from models.go). Recommended
-// caller alias when importing alongside other models subpackages
-// (per ADR-011 §3): `backupmodel "internal/models/backup"`.
+// ADR-011 §3 recommends the caller alias `backupmodel` when importing
+// alongside other model subpackages.
 package backup

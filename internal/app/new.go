@@ -76,12 +76,9 @@ const appBackgroundTracerName = "internal/app/background"
 
 func appBackgroundTracer() oteltrace.Tracer { return otel.Tracer(appBackgroundTracerName) }
 
-// New constructs the App in the SAME order as the legacy
-// cmd/teslasync/main.go body (lines 78-889 prior to phase-47/04). Each
-// init* method is a verbatim relocation of the corresponding source
-// region; no behavioural change. Closers are registered immediately
-// after a resource is constructed so the LIFO unwind in [App.Close]
-// matches the original `defer` ordering.
+// New constructs the App in startup order. Closers are registered
+// immediately after each resource is constructed so the LIFO unwind in
+// [App.Close] matches the original defer ordering.
 //
 // Returns (a, ErrMigrateOnly) when MIGRATE_ONLY=true so that
 // callers can run a.Close on already-opened resources (database,
@@ -238,8 +235,7 @@ func (a *App) initCache() {
 	})
 }
 
-// initFlagStore wires the dynamic feature-flag store + change audit
-// repo. Phase-44 / observability-batch / Prompt F8.
+// initFlagStore wires the dynamic feature-flag store and change audit repo.
 //
 // The store gracefully degrades to in-process cache + defaults when
 // Redis is disabled (a.Cache.Underlying() returns nil). The audit repo
@@ -271,8 +267,8 @@ func (a *App) initEventBus() {
 	}
 }
 
-// initObservabilityPhase45 wires the Phase-45 operator-confidence
-// subsystems: hash-chained audit recorder, schema-fingerprint seed,
+// initObservabilityPhase45 wires the operator-confidence subsystems:
+// hash-chained audit recorder, schema-fingerprint seed,
 // slow-query / disk-forecast / per-vehicle-cost / GDPR-artifact repos,
 // and secret rotation tracker. All are best-effort — when a backing
 // dependency is missing (DB not up, pg_stat_statements absent,
@@ -328,7 +324,7 @@ func (a *App) initObservabilityPhase45(ctx context.Context) {
 		Msg("phase-45 operator confidence initialised")
 }
 
-// initObservabilityPhase46 wires the Phase-46 SOTA observability batch:
+// initObservabilityPhase46 wires observability subsystems:
 //
 //	SLO catalog + tracker — slo/catalog.yaml + Prometheus-backed
 //	  live tier evaluation. Catalog load failure surfaces 503 on
@@ -416,8 +412,8 @@ func buildSyntheticProbes(raw string) []synthetic.Probe {
 	return probes
 }
 
-// initHomeAssistantPublisher wires the Phase-47 HomeAssistant MQTT
-// discovery publisher when HOMEASSISTANT_ENABLED=true and the MQTT
+// initHomeAssistantPublisher wires the HomeAssistant MQTT discovery
+// publisher when HOMEASSISTANT_ENABLED=true and the MQTT
 // client is available. The publisher reasserts the full per-vehicle
 // entity catalog on PublishInterval (default 1h); HA's discovery
 // listener caches retained config topics so the interval primarily
@@ -650,8 +646,8 @@ func (a *App) initStateReader() {
 // signal_history flush + cleanup loops, recovers active sessions,
 // hydrates AlertEvaluator prevSignals, starts the FSM reconcile loop,
 // optionally wires the MongoDB raw-telemetry capture, and starts the
-// phase-42a/0050 MQTT PipelineSubscriber + 12 writers + side-effects
-// observer. Returns an error only for fatal misconfigurations
+// MQTT PipelineSubscriber, its writers, and side-effects observer.
+// Returns an error only for fatal misconfigurations
 // (invalid LIVE_SIGNAL_STORE_MODE, router.New writer-coverage failure,
 // MQTT pipeline construction failure when MQTT is configured).
 func (a *App) initTelemetryHandler(ctx context.Context) error {
@@ -746,8 +742,8 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 
 	alertEvaluator := a.TelemetryHandler.AlertEvaluator()
 	if alertEvaluator != nil {
-		// Phase-49 / Slice 0002: rebuild the in-memory latch cache from
-		// alert_rule_state so once-mode rules don't re-fire on pod restart
+		// Rebuild the in-memory latch cache from alert_rule_state so
+		// once-mode rules don't re-fire on pod restart
 		// while their condition is still true. Idempotent + best-effort —
 		// repo errors are logged inside HydrateFromDB and do not abort boot.
 		alertEvaluator.RuleEngine().HydrateFromDB(ctx)
@@ -800,7 +796,7 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 	return nil
 }
 
-// initPipelineSubscriber wires the phase-42a/0050 hard-cutover stack:
+// initPipelineSubscriber wires the telemetry ingest stack:
 // 12 writers → router.New → unit-history cache+repo → SideEffectsObserver
 // + SoftwareUpdateObserver → normalize.Pipeline → MQTT PipelineSubscriber.
 // Any missing writer or invalid routing rule fails the process at startup;
@@ -1006,8 +1002,8 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *vehicledb
 		Dur("stale_timeout", a.Cfg.FleetTelemetry.StaleTimeout).
 		Msg("phase-42a: fleet-telemetry PipelineSubscriber active")
 
-	// Phase-44 / observability-batch / Prompt F4 — DLQ Inspector.
-	// Subscribes to {dlqTopic}/# on the SAME paho client the pipeline
+	// Subscribes the DLQ inspector to {dlqTopic}/# on the SAME paho client
+	// the pipeline
 	// already uses, keeping connection count + DLQ topic semantics
 	// single-sourced. Inspector failures degrade /system/dlq* to 503
 	// but MUST NOT halt the pipeline — best-effort observability.

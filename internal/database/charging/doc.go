@@ -3,7 +3,7 @@
 //
 // Layer: adapter
 //
-// Carved files (Phase R4.11 — bounded-context restructure per ADR-011):
+// Files:
 //
 //   - repo.go      (was internal/database/charging_repo.go)
 //     ChargingSession persistence + partial-update support; calls

@@ -7,7 +7,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// responseWriter wraps http.ResponseWriter to capture the status code.
+// responseWriter records the status code so completion logs can classify the request.
 type responseWriter struct {
 	http.ResponseWriter
 	statusCode int

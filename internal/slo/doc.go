@@ -2,8 +2,8 @@
 //
 // Layer: platform
 //
-// Phase-46 / p46-slo. The codegen toolkit at cmd/slogen renders
-// Prometheus recording rules, multi-window multi-burn-rate alerts,
+// The codegen toolkit at cmd/slogen renders Prometheus recording rules,
+// multi-window multi-burn-rate alerts,
 // and Grafana dashboards from slo/catalog.yaml at build time. This
 // package consumes the same catalogue at runtime so the SPA can show
 // a live SLO board inside TeslaSync — same source of truth, same SLI

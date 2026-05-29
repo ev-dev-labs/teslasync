@@ -6,10 +6,8 @@ import (
 )
 
 // TestTripHeaderSelectSQL_Shape pins the structural invariants of the
-// header SQL. Catches accidental drift from the Decision D3 (overlap)
-// + D4 (COALESCE) + D5 (single round-trip) requirements without
-// needing a live Postgres. Mirrors the SQL-shape pinning approach
-// used in Phase-43a/0007's signals_catalog_repo_test.go.
+// header SQL. Catches accidental drift from the overlap, COALESCE,
+// and single-round-trip requirements without needing a live Postgres.
 func TestTripHeaderSelectSQL_Shape(t *testing.T) {
 	t.Parallel()
 
@@ -56,8 +54,8 @@ func TestTripHeaderSelectSQL_Shape(t *testing.T) {
 	}
 }
 
-// TestTripDrivesSelectSQL_Shape pins ordering + JOIN direction for
-// the drives-list query (Decision D5).
+// TestTripDrivesSelectSQL_Shape pins ordering and JOIN direction for
+// the drives-list query.
 func TestTripDrivesSelectSQL_Shape(t *testing.T) {
 	t.Parallel()
 
@@ -90,7 +88,7 @@ func TestTripDrivesSelectSQL_Shape(t *testing.T) {
 }
 
 // TestNewTripsDetailRepo_NilPoolPanics asserts the fail-fast
-// constructor contract (Phase-42a/0010 + Phase-43a/0007 precedent).
+// constructor contract.
 func TestNewTripsDetailRepo_NilPoolPanics(t *testing.T) {
 	t.Parallel()
 

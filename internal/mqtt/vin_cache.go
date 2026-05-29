@@ -189,14 +189,12 @@ func (c *VINCache) Close() {
 // memoised in either the positive or the negative cache so a repeat
 // lookup is O(1).
 //
-// Phase-10 tracing: emits an `mqtt.vin_resolve` child span under the
-// caller's mqtt.consume parent. The span attributes carry result =
-// hit | miss_known | miss_unknown | miss_error and vehicle_id (0 for
-// negative cache / errors) so an operator can see exactly why a given
-// MQTT message was acked/dropped from the trace tree alone, without
-// needing to correlate the structured log line. VIN itself is NOT
-// added as a span attribute (PII); the upstream mqtt.consume span
-// already carries vin_prefix via redactVIN.
+// Resolve emits an `mqtt.vin_resolve` child span under the caller's
+// mqtt.consume parent. Attributes record result = hit | miss_known |
+// miss_unknown | miss_error and vehicle_id (0 for negative cache/errors)
+// so operators can explain ack/drop decisions from the trace tree without
+// correlating logs. VIN itself is NOT added as a span attribute (PII); the
+// upstream mqtt.consume span already carries vin_prefix via redactVIN.
 func (c *VINCache) Resolve(ctx context.Context, vin string) (id int64, err error) {
 	ctx, span := otel.Tracer(vinCacheTracerName).Start(
 		ctx,
@@ -262,9 +260,8 @@ func (c *VINCache) Resolve(ctx context.Context, vin string) (id int64, err error
 	return resolved, nil
 }
 
-// vinCacheTracerName is the OpenTelemetry tracer name for VIN cache
-// spans. Kept as a package constant so the Phase-10 trace-coverage
-// audit can grep for it.
+// vinCacheTracerName is a package constant so the trace-coverage audit can
+// grep for VIN-cache spans.
 const vinCacheTracerName = "mqtt"
 
 // VINByID returns the cached VIN for a vehicleID, or ("", false) if no

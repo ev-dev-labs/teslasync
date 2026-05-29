@@ -11,8 +11,6 @@ import (
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 )
 
-// ─── Config Parsing Tests ───────────────────────────────
-
 func TestDecodeLocationSpec_Valid(t *testing.T) {
 	raw := json.RawMessage(`{
 		"type": "location",
@@ -72,8 +70,6 @@ func TestDecodeLocationSpec_InvalidCases(t *testing.T) {
 	}
 }
 
-// ─── Spherical Distance Tests ───────────────────────────
-
 func TestSphericalDistance_SamePoint(t *testing.T) {
 	d := sphericalDistance(37.7749, -122.4194, 37.7749, -122.4194)
 	if d > 1 { // sub-meter tolerance for floating-point rounding
@@ -99,8 +95,6 @@ func TestSphericalDistance_Antipodal(t *testing.T) {
 	}
 }
 
-// ─── Evaluate Tests ─────────────────────────────────────
-
 func makeGeofence(id int64, name string, lat, lon, radius float64) *systemmodel.Geofence {
 	// Build a simple square polygon around the center point
 	// Approximate square whose farthest vertex is radius meters from center.
@@ -122,7 +116,6 @@ func makeGeofence(id int64, name string, lat, lon, radius float64) *systemmodel.
 
 func TestEvaluateLocation_Inside(t *testing.T) {
 	cfg := &LocationConfig{GeofenceID: 1, Operator: "inside"}
-	// Vehicle at geofence center
 	state := &vehiclemodel.VehicleState{Latitude: 37.7749, Longitude: -122.4194}
 	geofence := makeGeofence(1, "Home", 37.7749, -122.4194, 500)
 
@@ -140,7 +133,6 @@ func TestEvaluateLocation_Inside(t *testing.T) {
 
 func TestEvaluateLocation_Outside(t *testing.T) {
 	cfg := &LocationConfig{GeofenceID: 1, Operator: "outside"}
-	// Vehicle is ~559km from geofence center
 	state := &vehiclemodel.VehicleState{Latitude: 34.0522, Longitude: -118.2437}
 	geofence := makeGeofence(1, "Home", 37.7749, -122.4194, 500)
 
@@ -188,7 +180,6 @@ func TestEvaluateLocation_ExactlyOnBoundary(t *testing.T) {
 	offsetLat := 100.0 / 111320.0
 	geofence := makeGeofence(1, "Office", centerLat, centerLon, 100)
 
-	// Vehicle on boundary — should be inside (<=)
 	state := &vehiclemodel.VehicleState{Latitude: centerLat + offsetLat, Longitude: centerLon}
 	cfg := &LocationConfig{GeofenceID: 1, Operator: "inside"}
 
@@ -256,8 +247,6 @@ func TestEvaluateLocation_NearBoundary(t *testing.T) {
 	}
 }
 
-// ─── Error Handling Tests ───────────────────────────────
-
 func TestEvaluateLocation_NilState(t *testing.T) {
 	cfg := &LocationConfig{GeofenceID: 1, Operator: "inside"}
 	geofence := makeGeofence(1, "Home", 37.7749, -122.4194, 500)
@@ -288,8 +277,6 @@ func TestEvaluateLocation_GeofenceIDMismatch(t *testing.T) {
 		t.Fatal("expected error for geofence ID mismatch")
 	}
 }
-
-// ─── Snapshot Tests ─────────────────────────────────────
 
 func TestEvaluateLocation_SnapshotContent(t *testing.T) {
 	cfg := &LocationConfig{GeofenceID: 3, Operator: "inside"}
@@ -355,12 +342,9 @@ func TestEvaluateLocation_SnapshotOutside(t *testing.T) {
 	}
 }
 
-// ─── Reason String Tests ────────────────────────────────
-
 func TestEvaluateLocation_ReasonStrings(t *testing.T) {
 	geofence := makeGeofence(1, "Home", 37.7749, -122.4194, 500)
 
-	// Met case: vehicle inside, operator=inside
 	cfg := &LocationConfig{GeofenceID: 1, Operator: "inside"}
 	state := &vehiclemodel.VehicleState{Latitude: 37.7749, Longitude: -122.4194}
 	result, _, _ := EvaluateLocation(cfg, state, geofence)
@@ -371,7 +355,6 @@ func TestEvaluateLocation_ReasonStrings(t *testing.T) {
 		t.Error("expected met=true for vehicle at center")
 	}
 
-	// Not-met case: vehicle far away, operator=inside
 	farState := &vehiclemodel.VehicleState{Latitude: 34.0522, Longitude: -118.2437}
 	result, _, _ = EvaluateLocation(cfg, farState, geofence)
 	if result.Reason == "" {
@@ -394,7 +377,6 @@ func TestEvaluateLocation_EmptyGeofenceName(t *testing.T) {
 	if !result.Met {
 		t.Fatal("expected met=true")
 	}
-	// Should use fallback name
 	if result.Reason == "" {
 		t.Error("expected non-empty reason with fallback name")
 	}

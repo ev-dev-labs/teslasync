@@ -11,13 +11,11 @@ import (
 )
 
 // driveTelemetryColumnByField is the static field→column map for
-// destination drive_telemetry. Built at file-edit time from
-// routing.yaml entries with `dest: drive_telemetry` (11 routes — see
-// the AUDIT_EVIDENCE section of phase-42a/0020's log for the verbatim
-// extraction).
+// destination drive_telemetry. It mirrors routing.yaml entries with
+// `dest: drive_telemetry`.
 //
-// Per phase-42a prompt 0020 Decision #2 the drive_telemetry writer
-// composes the shared snapshotWriter helper from snapshot_base.go.
+// The drive_telemetry writer composes the shared snapshotWriter helper
+// from snapshot_base.go.
 // The (vehicle_id, ts) PK upsert pattern works for the per-tick
 // time-series table exactly as it does for the *_snapshots tables:
 // two atomics for the same tick (e.g. VehicleSpeed + Gear at the same
@@ -25,11 +23,10 @@ import (
 // the table's ~1 Hz sampling contract documented at migration
 // 000190_drive_telemetry_si.up.sql:45.
 //
-// Per Decision #3 the writer NEVER touches the drive_id column.
+// The writer NEVER touches the drive_id column.
 // migrations/000190_drive_telemetry_si.up.sql:22 declares drive_id
-// nullable; the session tracker (a side-effect observer landing in
-// phase-42a/0030) backfills it via a separate UPDATE after drive
-// boundaries are detected. snapshotWriter's INSERT statement at
+// nullable; the session tracker backfills it via a separate UPDATE
+// after drive boundaries are detected. snapshotWriter's INSERT statement at
 // internal/tesla/router/writers/snapshot_base.go:158 names only
 // (vehicle_id, ts, <col>) so drive_id is naturally omitted from
 // both the INSERT column list and the ON CONFLICT DO UPDATE SET
@@ -37,7 +34,7 @@ import (
 // per-column re-deliveries because the upsert SET clause references
 // only the routed column.
 //
-// Per Decision #4 this map is a static var, NOT a runtime read of
+// This map is a static var, NOT a runtime read of
 // routing.yaml: the routing layer's loader already validated every
 // entry at process start, the per-payload hot path must not re-parse
 // a 1000-line YAML file, and a compile-time declaration here lets
@@ -114,8 +111,8 @@ var driveTelemetryEnumFields = map[string]struct{}{
 }
 
 // driveTelemetryColumnFor is the columnFor callback supplied to
-// snapshotWriter per phase-42a prompt 0020 Decision #2. Closes over
-// driveTelemetryColumnByField so the snapshot helper has a single
+// snapshotWriter. It closes over driveTelemetryColumnByField so the
+// snapshot helper has a single
 // source-of-truth lookup; ok=false is returned for any field NOT
 // routed here (the snapshot helper then errors out loudly per its
 // drop-loud contract — see snapshot_base.go's columnFor godoc).
@@ -125,9 +122,9 @@ func driveTelemetryColumnFor(field string) (string, bool) {
 }
 
 // driveTelemetryWriter is the router.Writer for destination
-// drive_telemetry. Composes snapshotWriter for all 11 routed columns
-// per phase-42a prompt 0020 Decision #2; the lone enum-typed field
-// (Gear) is pre-converted to a string via fmt.Stringer before
+// drive_telemetry. It composes snapshotWriter for all 11 routed columns;
+// the lone enum-typed field (Gear) is pre-converted to a string via
+// fmt.Stringer before
 // delegation so snapshotWriter's bindSnapshotValue (which accepts
 // only float64/int64/bool/string) has a bindable value.
 //
@@ -164,9 +161,8 @@ var _ router.Writer = (*driveTelemetryWriter)(nil)
 //     (delegated through driveTelemetryColumnFor). Same loud-drop
 //     semantics as every other snapshot family writer.
 //
-// Per phase-42a prompt 0020 Decision #3 the writer never names the
-// drive_id column on insert. drive_id is backfilled by the session
-// tracker observer in 0030 via a separate UPDATE; if the writer
+// The writer never names the drive_id column on insert. drive_id is
+// backfilled by the session tracker via a separate UPDATE; if the writer
 // accidentally included drive_id in the column list it would either
 // (a) write SQL NULL on insert, OR (b) overwrite a previously-set
 // drive_id on re-delivery via the ON CONFLICT DO UPDATE SET clause —
@@ -234,9 +230,7 @@ func coerceProtoEnumToText(v any) (string, error) {
 }
 
 // NewDriveTelemetryWriter constructs the production drive telemetry
-// writer. Returns the router.Writer for destination drive_telemetry
-// (constructor signature is locked by phase-42a prompt 0020
-// Decision #1).
+// writer for destination drive_telemetry.
 //
 // Composes the unexported snapshotWriter from snapshot_base.go: the
 // table is "drive_telemetry" (matches migration 000190) and the
@@ -247,7 +241,7 @@ func coerceProtoEnumToText(v any) (string, error) {
 //
 // drive_telemetry is the per-tick time-series table — NOT the
 // session-aggregate drives table. drive_id is left NULL at insert
-// time and backfilled by the session tracker observer (phase-42a/0030).
+// time and backfilled by the session tracker observer.
 //
 // A nil pool is a wiring bug and panics at process start so the
 // failure is surfaced before any payload is processed. Same panic

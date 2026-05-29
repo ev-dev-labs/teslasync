@@ -82,13 +82,11 @@ func TestNewEmptyKey(t *testing.T) {
 }
 
 func TestEncryptIfEnabled(t *testing.T) {
-	// nil encryptor — returns plaintext
 	result := EncryptIfEnabled(nil, "plaintext")
 	if result != "plaintext" {
 		t.Errorf("EncryptIfEnabled(nil) = %q, want plaintext", result)
 	}
 
-	// with encryptor — returns encrypted
 	enc, _ := New("key")
 	result = EncryptIfEnabled(enc, "plaintext")
 	if result == "plaintext" {
@@ -97,13 +95,11 @@ func TestEncryptIfEnabled(t *testing.T) {
 }
 
 func TestDecryptIfEnabled(t *testing.T) {
-	// nil encryptor — returns as-is
 	result := DecryptIfEnabled(nil, "anything")
 	if result != "anything" {
 		t.Errorf("DecryptIfEnabled(nil) = %q, want 'anything'", result)
 	}
 
-	// with encryptor + valid ciphertext
 	enc, _ := New("key")
 	ct, _ := enc.Encrypt("secret")
 	result = DecryptIfEnabled(enc, ct)
@@ -111,7 +107,6 @@ func TestDecryptIfEnabled(t *testing.T) {
 		t.Errorf("DecryptIfEnabled(enc, ct) = %q, want 'secret'", result)
 	}
 
-	// with encryptor + unencrypted legacy data — returns as-is
 	result = DecryptIfEnabled(enc, "plain-legacy-token")
 	if result != "plain-legacy-token" {
 		t.Errorf("DecryptIfEnabled(enc, legacy) = %q, want 'plain-legacy-token'", result)
@@ -119,14 +114,12 @@ func TestDecryptIfEnabled(t *testing.T) {
 }
 
 func TestNewFromEnv(t *testing.T) {
-	// No env var — returns nil
 	os.Unsetenv("ENCRYPTION_KEY")
 	enc := NewFromEnv()
 	if enc != nil {
 		t.Error("NewFromEnv() with no env var should return nil")
 	}
 
-	// With env var — returns encryptor
 	os.Setenv("ENCRYPTION_KEY", "test-key")
 	defer os.Unsetenv("ENCRYPTION_KEY")
 	enc = NewFromEnv()

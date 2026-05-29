@@ -11,9 +11,8 @@ import (
 // export_jobs table. Used by the bulk-export handler to surface
 // {id, "not_found"} failures without round-tripping per id.
 //
-// Phase-45 / Prompt 32 — bulk-actions framework. Export-job ids are UUID
-// strings rather than int64s, so a separate helper exists rather than
-// reusing FilterExistingIDs.
+// Export-job IDs are UUID strings rather than int64s, so this helper stays
+// separate from FilterExistingIDs.
 func (r *ExportJobRepo) FilterExistingStringIDs(ctx context.Context, ids []string) ([]string, error) {
 	if len(ids) == 0 {
 		return nil, nil

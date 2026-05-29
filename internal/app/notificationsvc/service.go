@@ -19,7 +19,6 @@ type Service struct {
 	engine     *fsm.Engine[*notification.Notification]
 }
 
-// New creates a new notification service.
 func New(
 	repo repository.NotificationRepository,
 	fsmHistory repository.FSMHistoryRepository,
@@ -41,14 +40,12 @@ func (s *Service) SetTracer(t fsm.Tracer) {
 	s.engine.SetTracer(t)
 }
 
-// Create queues a new notification.
 func (s *Service) Create(ctx context.Context, n *notification.Notification) error {
 	n.FSMState = notification.StatePending
 	n.CreatedAt = time.Now()
 	return s.repo.Save(ctx, n)
 }
 
-// GetPending returns pending notifications.
 func (s *Service) GetPending(ctx context.Context, limit int) ([]notification.Notification, error) {
 	return s.repo.GetPending(ctx, limit)
 }
@@ -60,12 +57,10 @@ func (s *Service) Send(ctx context.Context, id string) error {
 		return fmt.Errorf("loading notification: %w", err)
 	}
 
-	// Transition to sending
 	if err := s.handleEvent(ctx, n, notification.EventSend); err != nil {
 		return err
 	}
 
-	// Attempt to send
 	var sendErr error
 	switch n.Channel {
 	case "push":

@@ -13,8 +13,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Phase-46 / Prompt 08 — user feedback / report-bug persistence.
-//
 // Stores rows captured by the SPA <FeedbackModal> POST /api/v1/feedback
 // and surfaced through the admin GET/PATCH /api/v1/admin/feedback queue.
 // All length / value validation lives here so the public ingest handler

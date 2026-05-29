@@ -14,10 +14,9 @@ import (
 )
 
 // securityEventTypeByField is the static field→event_type token map for
-// destination security_event. Built at file-edit time from routing.yaml
-// entries with `dest: security_event` (3 routes today: Locked, SentryMode,
-// ValetModeEnabled — see the AUDIT_EVIDENCE section of phase-42a/0018's
-// log for the verbatim extraction).
+// destination security_event. It mirrors routing.yaml entries with
+// `dest: security_event` (3 routes today: Locked, SentryMode,
+// ValetModeEnabled).
 //
 // The token values are the snake_case canonical names referenced by the
 // security_events.event_type COMMENT (migration 000183 line 217:
@@ -26,8 +25,8 @@ import (
 // rather than computed via runtime camelCase→snake_case so the reviewer
 // can see exactly which token each field becomes; no surprises.
 //
-// Per phase-42a prompt 0018 Decision #4 the routing.yaml entries do
-// NOT carry a `column:` declaration for these routes — security_event
+// The routing.yaml entries do NOT carry a `column:` declaration for
+// these routes — security_event
 // is an event-table destination not a hot-table column-routed one,
 // so e.Column is empty for all three entries. The reflective coverage
 // test in security_event_writer_test.go asserts this and ensures the
@@ -67,8 +66,7 @@ func securityEventTypeFor(field string) (string, bool) {
 // Production wiring passes a *pgxpool.Pool. The package's tests pass a
 // recording fake declared inline in security_event_writer_test.go (the
 // shared recorder in snapshot_base_test.go does NOT implement QueryRow,
-// and per the prompt's allowed-files list this file is not allowed to
-// modify it).
+// and this file cannot modify it).
 type secEventDB interface {
 	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
@@ -83,16 +81,15 @@ var _ secEventDB = (*pgxpool.Pool)(nil)
 // destination security_event.
 //
 // The statement is a single INSERT...SELECT...WHERE NOT EXISTS that
-// resolves the VIN→numeric vehicle_id INSIDE the INSERT (per the VIN
-// RESOLUTION CONTRACT inherited from phase-42a prompt 0010 commit
-// a53135018) AND skips the row if a row with the same
+// resolves the VIN→numeric vehicle_id INSIDE the INSERT and skips the
+// row if a row with the same
 // (vehicle_id, ts, event_type) already exists.
 //
 // The combination handles all three flavours of repeated delivery:
 //
 //   - Identical re-delivery of the same payload (MQTT QoS-1 redelivery
 //     after a broker hiccup): RowsAffected==0, the writer treats it as
-//     idempotent skip per Decision #3.
+//     an idempotent skip.
 //
 //   - Two distinct event_types at the same instant (e.g. AirbagDeployed
 //     and CrashState changing in the same payload): each routes to a
@@ -104,22 +101,16 @@ var _ secEventDB = (*pgxpool.Pool)(nil)
 //     because the SELECT yields zero rows. Disambiguated from the
 //     duplicate-skip case by the slow-path SELECT in Write below.
 //
-// Reconciliation note for the reviewer: phase-42a prompt 0018
-// Decision #2 says "No `ON CONFLICT` clause" and Decision #3 says
-// "Two-statement transaction" with EXISTS-then-INSERT. This SQL is
-// neither — it is a single statement that fuses the EXISTS check
-// into the INSERT's SELECT WHERE NOT EXISTS. The fusion is the form
-// recommended by the VIN RESOLUTION CONTRACT, satisfies the spirit
-// of "EXISTS check before insert AND skip if present" (single
-// atomic operation, no race window between check and insert), and
-// avoids a redundant transaction round-trip. The contradiction
-// between Decision #2/#3 and the VIN RESOLUTION CONTRACT is
-// captured in the AUDIT_EVIDENCE section of phase-42a-0018's log.
+// Reconciliation note for reviewers: this SQL is a single statement
+// that fuses the existence check into the INSERT's SELECT WHERE NOT
+// EXISTS. That preserves "check before insert and skip if present"
+// semantics as one atomic operation with no race window, while avoiding
+// a redundant transaction round-trip.
 //
 // $1 = VIN (string), $2 = ts (time.Time), $3 = event_type (string),
 // $4 = to_state (string).
 //
-// from_state is NOT computable from a single atomic per Decision #4;
+// from_state is NOT computable from a single atomic;
 // downstream consumers reconstruct transitions by walking the
 // per-(vehicle_id, event_type) ordered series. details (JSONB) is
 // also left NULL today; a future routing extension that wants to
@@ -138,7 +129,7 @@ SELECT v.id, $2, $3, $4 FROM vehicles v WHERE v.vin = $1
 // lets Write distinguish the "idempotent dup skip" outcome (success)
 // from the "vehicle not registered" outcome (error).
 //
-// Per the VIN RESOLUTION CONTRACT this query is on the slow path only:
+// This query is on the slow path only:
 // the steady-state hot path (RowsAffected==1) never executes it. A
 // payload from a legitimate vehicle in steady-state telemetry costs
 // exactly one Exec; only first-event-after-dup or unknown-VIN payloads
@@ -146,8 +137,8 @@ SELECT v.id, $2, $3, $4 FROM vehicles v WHERE v.vin = $1
 const securityEventVehicleExistsSQL = `SELECT EXISTS(SELECT 1 FROM vehicles WHERE vin = $1)`
 
 // securityEventWriter is the bespoke router.Writer for destination
-// security_event. Per phase-42a prompt 0018 Decision #2 it is NOT
-// composed from snapshotWriter — security_events is an append-only
+// security_event. It is NOT composed from snapshotWriter because
+// security_events is an append-only
 // event-table not a per-(vehicle_id, ts) hot-snapshot, and its PK
 // includes event_type so the snapshot helper's per-column upsert
 // pattern under (vehicle_id, ts) does not apply.
@@ -165,9 +156,7 @@ type securityEventWriter struct {
 var _ router.Writer = (*securityEventWriter)(nil)
 
 // NewSecurityEventWriter constructs the production security event
-// writer. Returns the router.Writer for destination security_event
-// (constructor signature is locked by phase-42a prompt 0018
-// Decision #1).
+// writer for destination security_event.
 //
 // A nil pool is a wiring bug and panics at process start so the
 // failure is surfaced before any payload is processed. Same panic
@@ -206,7 +195,7 @@ func NewSecurityEventWriter(pool *pgxpool.Pool) router.Writer {
 //  5. RowsAffected==0 means the SELECT yielded zero rows — either the
 //     VIN is unregistered OR a duplicate row already exists. Issue
 //     securityEventVehicleExistsSQL on the slow path to disambiguate:
-//     - vehicle exists → idempotent dup skip per Decision #3, return nil
+//     - vehicle exists → idempotent duplicate skip, return nil
 //     - vehicle does NOT exist → "vehicle not registered" error
 //
 // Failure modes (per ADR-004 #8 these are surfaced to the router
@@ -292,7 +281,7 @@ func (w *securityEventWriter) Write(ctx context.Context, atom codec.Atomic, dst 
 		return err
 	}
 	// Vehicle exists but RowsAffected==0 → duplicate event. Per
-	// Decision #3 the writer is idempotent: re-delivery of the same
+	// The writer is idempotent: re-delivery of the same
 	// (vehicle_id, ts, event_type) is a no-op success outcome, NOT a
 	// failure, so the router's writer_failures_total counter does NOT
 	// increment.

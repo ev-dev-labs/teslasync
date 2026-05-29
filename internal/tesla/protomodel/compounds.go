@@ -3,8 +3,8 @@
 // these typed structs at the ingest boundary.
 //
 // This file is HAND-WRITTEN. The generated datum_decoder_gen.go references
-// these types by name; the codec layer (internal/tesla/codec, prompt 0020)
-// flattens them into atomic per-child signals before the routing layer sees
+// these types by name; the codec layer (internal/tesla/codec) flattens them
+// into atomic per-child signals before the routing layer sees
 // anything. Downstream consumers never observe nested map shapes (per ADR-004).
 //
 // Naming convention:
@@ -80,8 +80,8 @@ type Time struct {
 // from the proto Doors message: DoorState uses FrontTrunk/RearTrunk while
 // proto Doors uses TrunkFront/TrunkRear. This struct mirrors the wire JSON.
 //
-// Parsing of the JSON string into this struct happens in the codec package
-// (Prompt 0020); this file only declares the contract.
+// Parsing of the JSON string into this struct happens in the codec package;
+// this file only declares the contract.
 type DoorState struct {
 	DriverFront    bool
 	DriverRear     bool

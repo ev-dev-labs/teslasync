@@ -1,11 +1,7 @@
-// Package database — Phase-46 / Prompt 32.
-//
-// AuditRepo wraps the small set of audit_logs writes that need a
-// repository abstraction. The legacy `insertAuditLog` helper in
-// `internal/api/audit.go` covers the bulk of mutation auditing; this
-// repo is dedicated to the new "masked-value reveal" event so the
-// surface stays narrow and the next prompt that registers the
-// reveal route does not have to reach back into a sprawling helper.
+// Package audit contains focused writers for audit_logs events that need
+// repository-level contracts. The legacy `insertAuditLog` helper in
+// `internal/api/audit.go` covers broad mutation auditing; this repo keeps
+// masked-value reveal and impersonation events narrow and typed.
 //
 // Why a repo and not a free function:
 //
@@ -17,7 +13,7 @@
 //     frontend's audit-recognition logic; a dedicated method makes
 //     the constants the only source of truth.
 //   - Tests can swap the writer behind an interface without having
-//     to fake the entire audit.go pile.
+//     to mock the broader audit.go helper surface.
 package audit
 
 import (
@@ -38,10 +34,8 @@ import (
 const AuditRevealAction = "masked_reveal"
 
 // AuditImpersonationStartAction is the canonical `action` string
-// written when an admin begins an impersonation session. Phase-46 /
-// Prompt 46. The dashboard filter "every impersonation event in the
-// last 30 days" is the headline use case — keep this constant stable
-// across the prompt's lifetime even if the human-facing label
+// written when an admin begins an impersonation session. Dashboard
+// filters depend on this stable token even if the human-facing label
 // changes.
 const AuditImpersonationStartAction = "impersonation.start"
 
@@ -271,10 +265,8 @@ func (r *AuditRepo) writeImpersonationEvent(ctx context.Context, action string, 
 
 // ListDistinctActiveSubjects returns the set of subjects that have at
 // least one non-revoked auth_sessions row, sorted alphabetically for
-// stable rendering. Phase-46 / Prompt 46 — used by the impersonation
-// candidates endpoint as a stand-in for the future
-// `auth_subjects` table (prompt 57). When prompt 57 lands, swap this
-// query to read from `auth_subjects` directly.
+// stable rendering. Used by the impersonation candidates endpoint until
+// it can read directly from `auth_subjects`.
 //
 // The query intentionally does NOT exclude the actor — that filtering
 // is the handler's job because the handler also has to enforce

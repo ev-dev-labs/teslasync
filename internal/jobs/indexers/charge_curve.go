@@ -1,11 +1,10 @@
 package indexers
 
-// Phase-50 / 0028 — C3 Charging-curve fingerprint clustering.
+// Charging-curve fingerprint clustering background job.
 //
-// ai_charge_curve_indexer.go is the cross-cutting cron stub that the
-// charging-curve-fingerprint-clustering slice registers as its
-// background-job surface (`ai_charge_curve_indexer` in the features
-// registry's JobNames list).
+// ai_charge_curve_indexer is registered as the
+// charging-curve-fingerprint-clustering background-job surface in the
+// features registry's JobNames list.
 //
 // The stub is fail-closed by design: every tick re-reads the
 // settings table and refuses to do anything when ai_mode is off
@@ -64,10 +63,8 @@ type ChargeCurveSettingsReader interface {
 }
 
 // ChargeCurveResult reports the outcome of one tick. The
-// fields are all int because the real fan-out implementation will
-// tally per-source re-embed counts here; today the values stay
-// zero (the stub is a no-op when off, and a no-op-with-log when
-// on — the actual indexing lands in a future slice).
+// fields are int counters reserved for the fan-out implementation;
+// the current gate-only implementation leaves them at zero.
 type ChargeCurveResult struct {
 	// Skipped is 1 when the tick early-returned because ai_mode
 	// was off OR the per-feature toggle was off. Reported
@@ -77,22 +74,21 @@ type ChargeCurveResult struct {
 
 	// SourcesConsidered is the number of source rows (across
 	// charge_curve / charge_session) the tick fanned out a
-	// re-embed request for. Always 0 in this slice (the fan-out
-	// implementation lands in a future slice); the field is in
-	// the envelope so callers can pin the shape today.
+	// re-embed request for. Always 0 until fan-out is wired; the field is in
+	// the envelope so callers can pin the shape.
 	SourcesConsidered int
 
 	// Indexed is the number of sources whose re-embed succeeded.
-	// Always 0 in this slice.
+	// Always 0 until the fan-out implementation is wired.
 	Indexed int
 
 	// Failed is the number of sources whose re-embed failed.
-	// Always 0 in this slice.
+	// Always 0 until the fan-out implementation is wired.
 	Failed int
 }
 
 // RunChargeCurve is the once-per-day cron entry for the
-// charging-curve-fingerprint-clustering slice's background fan-out.
+// charging-curve-fingerprint-clustering background fan-out.
 //
 // Re-checks ai_mode + the per-feature toggle at execution time
 // per ADR-015 §I12 #3 — the scheduler may have started this loop
@@ -108,7 +104,7 @@ type ChargeCurveResult struct {
 //
 // The current implementation is deliberately a no-op gate. The
 // per-source re-embed loop, the chunking + cleanup logic, and
-// the telemetry counters land in a future indexer-fan-out slice.
+// the telemetry counters belong in the indexer fan-out implementation.
 // Today's contract:
 //
 //   - off mode (any kind) → Skipped=1, no embed calls, no DB writes;
@@ -156,10 +152,9 @@ func RunChargeCurve(
 		return ChargeCurveResult{Skipped: 1}, nil
 	}
 
-	// On-mode path. The fan-out implementation (per-source
-	// re-embed + chunking + cleanup) lands in a future slice;
-	// today the function returns a zeroed envelope so callers
-	// can pin the shape and the off-mode test
+	// With both gates open, return the zeroed envelope until
+	// per-source re-embed, chunking, and cleanup are wired. This lets callers
+	// pin the shape and gives the off-mode test
 	// (TestRunAIChargeCurveIndexer_*) has a positive control to
 	// assert against.
 	log.Debug().

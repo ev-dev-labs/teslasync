@@ -16,8 +16,9 @@ type WebhookRepo interface {
 	SetAutoDisabled(ctx context.Context, id int64, reason string) error
 }
 
-// WebhookTrigger keeps the public receiver route stable. Phase 36 has no typed
-// webhook CTI kind, so requests cannot create or execute automations.
+// WebhookTrigger keeps the public receiver route stable. The typed
+// automation runtime has no webhook CTI kind, so requests cannot execute
+// automations yet.
 type WebhookTrigger struct {
 	repo   WebhookRepo
 	engine AutomationEngine
@@ -42,7 +43,6 @@ func (t *WebhookTrigger) HandleWebhook(ctx context.Context, token string, payloa
 		return fmt.Errorf("webhook token is required")
 	}
 
-	// Look up automation by webhook_token.
 	automation, err := t.repo.GetByWebhookToken(ctx, token)
 	if err != nil {
 		return fmt.Errorf("lookup automation by webhook token: %w", err)

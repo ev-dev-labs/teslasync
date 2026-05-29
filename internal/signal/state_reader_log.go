@@ -1,11 +1,8 @@
 // Package signal owns state-read semantics over signal_log. See ADR-002.
 //
-// state_reader_log.go is the signal_log-backed implementation of the
-// StateReader interface declared in state_reader.go. This file provides
-// LogStateReader, State() (Prompt 05), SignalAt() (Prompt 06), and
-// Timeline() in both chart mode (Prompt 07) and list/collapse mode
-// (Prompt 08). The interface assertion at the bottom forces every method
-// on StateReader to exist on this type so the package compiles.
+// state_reader_log.go is the signal_log-backed StateReader implementation.
+// The interface assertion below keeps State, SignalAt, and Timeline aligned
+// with the public contract.
 package signal
 
 import (
@@ -25,8 +22,8 @@ import (
 )
 
 // signalLogTracerName is the OpenTelemetry tracer name for signal_log
-// read spans (State / SignalAt / Timeline). The Phase-10 trace-coverage
-// audit greps for this exact constant.
+// read spans (State / SignalAt / Timeline). The trace-coverage audit greps
+// for this exact constant.
 const signalLogTracerName = "signal"
 
 // pgxQuerier is the narrow query seam consumed by LogStateReader. *pgxpool.Pool
@@ -98,7 +95,7 @@ func NewLogStateReader(pool *pgxpool.Pool, log zerolog.Logger) *LogStateReader {
 
 // Compile-time assertion that LogStateReader satisfies the StateReader
 // contract declared in state_reader.go. This forces SignalAt and Timeline to
-// exist on the type even before Prompts 06/07/08 implement them.
+// exist on the type.
 var _ StateReader = (*LogStateReader)(nil)
 
 // State returns the latest value of every signal emitted at-or-before `at`
@@ -137,8 +134,8 @@ var _ StateReader = (*LogStateReader)(nil)
 // (string, bool, int64, float64, time.Time) — callers do val.(float64)
 // etc. and receive the correct Go type, matching the typed-value contract
 // Store.GetFloat/GetBool/GetString already provide on the L1 hot path.
-// Location compounds are flattened by the codec (prompt 0063) into
-// Latitude/Longitude atomics before they reach signal_log; the cold path
+// Location compounds are flattened by the codec into Latitude/Longitude
+// atomics before they reach signal_log; the cold path
 // never sees a compound row. See ADR-002 + ADR-004.
 func (r *LogStateReader) State(ctx context.Context, vehicleID int64, at time.Time) (s State, err error) {
 	ctx, span := otel.Tracer(signalLogTracerName).Start(
@@ -251,8 +248,8 @@ ORDER BY field, ts DESC`
 // time_value. SignalAt selects value_kind plus all five typed columns and
 // decodes them via decodeSignalLogRow into the typed Go primitive
 // (string, bool, int64, float64, time.Time). Location is flattened by
-// the codec (prompt 0063) into Latitude/Longitude atomics before reaching
-// signal_log, so callers asking for "Location" via SignalAt will see no
+// the codec into Latitude/Longitude atomics before reaching signal_log, so
+// callers asking for "Location" via SignalAt will see no
 // row; they must request "Latitude"/"Longitude" individually.
 func (r *LogStateReader) SignalAt(ctx context.Context, vehicleID int64, signal string, at time.Time) (val SignalValue, err error) {
 	ctx, span := otel.Tracer(signalLogTracerName).Start(
@@ -418,8 +415,8 @@ LIMIT 1`
 // migration 000186): str_value, bool_value, int_value, float_value,
 // time_value. Both the seed query and the window query select value_kind
 // plus all five typed columns and decode each row via decodeSignalLogRow.
-// Location compounds are flattened by the codec (prompt 0063) into
-// Latitude/Longitude atomics before signal_log writes; the cold path
+// Location compounds are flattened by the codec into Latitude/Longitude
+// atomics before signal_log writes; the cold path
 // never observes a Location compound row.
 func (r *LogStateReader) Timeline(ctx context.Context, vehicleID int64, fields []FieldMapping, from, to time.Time, opts TimelineOptions) (rowsOut []TimelineRow, err error) {
 	ctx, span := otel.Tracer(signalLogTracerName).Start(
@@ -550,9 +547,9 @@ ORDER BY field, ts DESC`
 		return nil, fmt.Errorf("timeline seed %s..%s for vehicle %d: %w", from.Format(time.RFC3339), to.Format(time.RFC3339), vehicleID, seedErr)
 	}
 
-	// Location compounds are flattened by the codec (prompt 0063) into
-	// Latitude/Longitude atomics; signal_log never stores compound rows
-	// post-phase-42. Callers that want lat/lng should map them as
+	// Location compounds are flattened by the codec into Latitude/Longitude
+	// atomics; signal_log never stores compound rows. Callers that want lat/lng
+	// should map them as
 	// individual signals in `fields`.
 
 	// Window query: every emission in (from, to] for the requested

@@ -76,7 +76,7 @@ func main() {
 			Msg("OpenTelemetry tracing enabled")
 	}
 
-	// Pyroscope continuous profiling — non-fatal (Phase-49 / p49-profiling).
+	// Pyroscope continuous profiling is optional and non-fatal.
 	profilerShutdown, err := tracing.StartProfiler(ctx, cfg, "teslasync-automation-worker")
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to initialize pyroscope profiler, continuing without it")

@@ -1,9 +1,7 @@
-// Package database — GuardRepo backs the restored /vehicles/{id}/guard*
-// endpoints (Phase-43a / Prompt 0006). Phase-42 prompt 0077 deleted the
-// legacy guard_events table along with the /guard handler family;
-// this repo re-derives the same product surface from security_events
-// (mig 000183, augmented in mig 000189 with id + acknowledgement
-// columns).
+// Package system backs the /vehicles/{id}/guard* endpoints.
+// The legacy guard_events table no longer exists, so this repo derives
+// the guard surface from security_events (mig 000183, augmented in
+// mig 000189 with id and acknowledgement columns).
 //
 // Data model
 //
@@ -13,10 +11,9 @@
 //	/guard/events/{event_id}/acknowledge can address a single row.
 //
 //	`sentry_mode_active` is computed from the latest security_events
-//	row with event_type='sentry_mode' for the vehicle. The escape hatch
-//	in the prompt explicitly authorises this when SentryMode is routed
-//	to security_event (which it is — see internal/tesla/router/routing.yaml
-//	line 799). The to_state column carries the proto-enum String(),
+//	row with event_type='sentry_mode' for the vehicle. SentryMode is routed
+//	to security_event (see internal/tesla/router/routing.yaml line 799).
+//	The to_state column carries the proto-enum String(),
 //	e.g. "SentryModeStateOff", "SentryModeStateArmed", etc. (see
 //	internal/tesla/protomodel/enum_parsers_gen.go:1753-1771). Anything
 //	other than Off/Unknown counts as active — Idle, Armed, Aware,
@@ -55,7 +52,7 @@ type GuardEvent struct {
 	AcknowledgedBy *string        `json:"acknowledged_by"`
 }
 
-// GuardStatus is the /vehicles/{id}/guard response shape per Decision #1.
+// GuardStatus is the /vehicles/{id}/guard response shape.
 //
 // LastState + LastStateAt are nullable to disambiguate "vehicle has
 // never reported sentry state" from "Sentry is currently off". The
@@ -70,8 +67,7 @@ type GuardStatus struct {
 }
 
 // guardPool is the minimal pgxpool subset GuardRepo needs. Declared
-// locally so handler tests can supply a fake without dragging in
-// pgxmock (the codebase does not vendor pgxmock — see repo memories).
+// locally so handler tests can supply a fake without pgxmock.
 type guardPool interface {
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
@@ -82,9 +78,8 @@ type GuardRepo struct {
 	pool guardPool
 }
 
-// NewGuardRepo binds the repo to a pgx pool. Mirrors the snapshot-writer
-// fail-fast precedent — a nil pool at construction is a wiring bug, not
-// a runtime condition.
+// NewGuardRepo binds the repo to a pgx pool. A nil pool at construction
+// is a wiring bug, not a runtime condition.
 func NewGuardRepo(pool *pgxpool.Pool) *GuardRepo {
 	if pool == nil {
 		panic("database.NewGuardRepo: pool must not be nil")
@@ -178,8 +173,7 @@ func (r *GuardRepo) Status(ctx context.Context, vehicleID int64, now time.Time) 
 		}
 	}
 
-	// 24h event count. windowStart cuts both sides so the value is
-	// monotonically the same for a fixed `now`.
+	// Use one window boundary so a fixed `now` yields a stable count.
 	windowStart := now.Add(-24 * time.Hour)
 	var count int
 	if err := r.pool.QueryRow(ctx, guardEventCount24hSQL, vehicleID, windowStart).Scan(&count); err != nil {
@@ -228,11 +222,6 @@ func (r *GuardRepo) Events(ctx context.Context, vehicleID int64, limit int) ([]G
 	return out, nil
 }
 
-// guardAcknowledgeSQL implements Decision #3 verbatim:
-//
-//	UPDATE ... SET acknowledged_at = now(), acknowledged_by = $3
-//	WHERE id = $1 AND vehicle_id = $2
-//
 // The vehicle_id filter prevents cross-vehicle acknowledgement
 // attempts: a request for vehicle 7 trying to ack event-id-belonging-
 // to-vehicle-3 returns RowsAffected==0 and is reported as 404 by the
@@ -241,10 +230,8 @@ func (r *GuardRepo) Events(ctx context.Context, vehicleID int64, limit int) ([]G
 // RETURNING fetches the updated row in the same round-trip so the
 // handler can echo the new state back without a follow-up SELECT.
 //
-// Re-acknowledgement overwrites acknowledged_at/_by (the prompt's
-// literal SQL is `SET acknowledged_at = now()`, not COALESCE). This
-// preserves an audit trail of who most recently acknowledged in
-// systems with multiple operators.
+// Re-acknowledgement overwrites acknowledged_at/_by so systems with
+// multiple operators retain the most recent acknowledgement actor.
 const guardAcknowledgeSQL = `
 UPDATE security_events
 SET acknowledged_at = now(),

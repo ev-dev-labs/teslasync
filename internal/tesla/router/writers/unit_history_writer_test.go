@@ -28,9 +28,9 @@ func withCapturedLogger(t *testing.T) *bytes.Buffer {
 	return &buf
 }
 
-// TestNewUnitHistoryWriter_ReturnsNonNil locks phase-42a prompt 0022
-// Decision #4(a): the constructor takes no arguments and returns a
-// usable router.Writer. The compile-time assertion in
+// TestNewUnitHistoryWriter_ReturnsNonNil verifies that the constructor
+// takes no arguments and returns a usable router.Writer. The compile-time
+// assertion in
 // unit_history_writer.go (var _ router.Writer = (*unitHistoryWriter)(nil))
 // guarantees interface conformance; this test guards against a future
 // refactor that nil-returns the writer (which would fail at the first
@@ -42,17 +42,16 @@ func TestNewUnitHistoryWriter_ReturnsNonNil(t *testing.T) {
 	}
 }
 
-// TestUnitHistoryWriter_WriteReturnsNilForEverySettingUnit locks
-// phase-42a prompt 0022 Decision #2: the no-op writer never returns an
-// error. Returning an error would propagate to
+// TestUnitHistoryWriter_WriteReturnsNilForEverySettingUnit verifies that
+// the no-op writer never returns an error. Returning an error would propagate to
 // tesla_router_writer_failures_total (see router.go line 168) and
-// trigger operator alerts on every Setting*Unit regression — see the
-// Decision #3 rationale in unit_history_writer.go.
+// trigger operator alerts on every Setting*Unit regression; see the
+// rationale in unit_history_writer.go.
 //
 // Iterates all four canonical Setting*Unit fields (matching the four
 // `dest: unit_history` entries in routing.yaml lines 830-837) so a
-// future Decision #2 reversal is caught here rather than via a
-// production alert storm.
+// future contract reversal is caught here rather than via a production
+// alert storm.
 func TestUnitHistoryWriter_WriteReturnsNilForEverySettingUnit(t *testing.T) {
 	_ = withCapturedLogger(t) // suppress noisy WARN output during the loop
 	w := NewUnitHistoryWriter()
@@ -82,9 +81,9 @@ func TestUnitHistoryWriter_WriteReturnsNilForEverySettingUnit(t *testing.T) {
 	}
 }
 
-// TestUnitHistoryWriter_WriteLogsWarnWithFieldName locks phase-42a
-// prompt 0022 Decision #4(c): every Write invocation emits a
-// WARN-level structured log entry with the offending Field name in
+// TestUnitHistoryWriter_WriteLogsWarnWithFieldName verifies that every
+// Write invocation emits a WARN-level structured log entry with the
+// offending Field name in
 // the message body so operators can pinpoint which Setting*Unit
 // short-circuit regressed.
 //
@@ -92,7 +91,7 @@ func TestUnitHistoryWriter_WriteReturnsNilForEverySettingUnit(t *testing.T) {
 //
 //   - the captured output is non-empty (the log line was actually
 //     emitted, not silently dropped by an upstream level filter);
-//   - the entry's level is "warn" (Decision #3);
+//   - the entry's level is "warn";
 //   - the structured "field" key carries the canonical field name
 //     (operators page-search by signal name);
 //   - the message body mentions the field-bearing diagnostic

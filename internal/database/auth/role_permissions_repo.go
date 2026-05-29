@@ -1,6 +1,4 @@
-// Phase-46 / Prompt 44 — RolePermissions repository.
-//
-// Persists the (role_id, permission_id, allowed) bindings backing the
+// Package auth persists the (role_id, permission_id, allowed) bindings backing the
 // RBAC matrix admin page. Storage is sparse: a missing row means
 // "no opinion" and the application code resolves to an implicit deny.
 //

@@ -54,7 +54,7 @@ import (
 // ErrPayloadDrop wraps codec.Decode failures (malformed bytes). Per
 // ADR-004 #8 the MQTT subscriber is expected to treat this as a
 // poison-pill candidate and apply the bounded-redelivery + DLQ
-// policy declared in Prompt 0060. Per-atomic failures are NOT
+// policy. Per-atomic failures are NOT
 // surfaced under this sentinel — they are observable only via the
 // values_processed metric and the router's writer_failures metric,
 // and they MUST NOT cause the MQTT subscriber to redeliver the
@@ -66,7 +66,7 @@ var ErrPayloadDrop = errors.New("normalize: payload-level failure (codec or unre
 // wiring; the test suite supplies a recording fake so per-atomic
 // dispatch can be exercised without populating routing.yaml in
 // lock-step (the empty-routing.yaml-on-purpose contract from
-// Prompt 0025 means a real *router.Router rejects every Route call
+// An empty routing.yaml means a real *router.Router rejects every Route call
 // with ErrNoRoute, which is correct production behaviour but useless
 // for testing the dispatch loop itself).
 //
@@ -112,11 +112,10 @@ type Pipeline struct {
 
 	// observers is the registered AtomicsObserver list invoked once
 	// per successful payload AFTER the route loop in processAtomics
-	// has drained every atomic. Per ADR-004 #11 (added in
-	// Phase-42a/0000) this is the architectural seam for the legacy
-	// cross-cutting effects (live store, history append, FSM
-	// dispatch, sessions+alerts, SSE fanout) that do not belong
-	// inside a per-destination router.Writer. Production wiring
+	// has drained every atomic. Per ADR-004 #11, this is the seam for
+	// cross-cutting effects (live store, history append, FSM dispatch,
+	// sessions+alerts, SSE fanout) that do not belong inside a
+	// per-destination router.Writer. Production wiring
 	// registers exactly one observer (tesla_pipeline.SideEffectsObserver);
 	// test wiring may register multiple to assert ordering or
 	// isolation.
@@ -141,12 +140,8 @@ type Pipeline struct {
 // is total: misuse panics. This matches the bootstrap.New + router.New
 // contracts in the same family of packages.
 //
-// The variadic observers tail keeps the constructor source-compatible
-// with the pre-Phase-42a/0030 callers (4 live call sites in the
-// normalize_test.go test fixture all pass through unchanged); per
-// the Phase-42a/0030 prompt's escape-hatch evaluation the count
-// stays well under the 5-site threshold that would have triggered
-// a separate NewWithObservers shim.
+// The variadic observers tail keeps existing test fixtures and production
+// call sites source-compatible without a separate NewWithObservers shim.
 func New(histRepo unithistory.Repo, r Routable, log zerolog.Logger, observers ...AtomicsObserver) *Pipeline {
 	if histRepo == nil {
 		panic("normalize: New: histRepo must be non-nil")
@@ -192,7 +187,7 @@ func New(histRepo unithistory.Repo, r Routable, log zerolog.Logger, observers ..
 //   - ErrPayloadDrop (wrapped via fmt.Errorf %w) if codec.Decode failed
 //     (malformed bytes). The MQTT subscriber treats this as a
 //     poison-pill candidate and applies the bounded-redelivery + DLQ
-//     policy from Prompt 0060.
+//     policy.
 //
 //   - any other error is reserved for unrecoverable infrastructure
 //     failures (e.g. context cancelled mid-batch). Caller should NOT
@@ -219,8 +214,8 @@ func (p *Pipeline) Process(ctx context.Context, payload []byte, vehicleIntID int
 	return nil
 }
 
-// ProcessAtomics is the SECOND public ingest entry, added in
-// Phase-42a/0060 to unify the HTTP webhook path with the MQTT path.
+// ProcessAtomics is the SECOND public ingest entry, used by the HTTP webhook
+// path and the MQTT per-field path.
 // It accepts pre-decoded []codec.Atomic — the JSON-decoded webhook
 // values are already past the codec.Decode boundary by the time the
 // HTTP handler has them in hand, so re-encoding to proto bytes just

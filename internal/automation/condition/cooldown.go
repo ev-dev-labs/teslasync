@@ -6,8 +6,7 @@ import (
 	"time"
 )
 
-// CooldownConfig represents the parsed condition config for cooldown conditions.
-// It prevents an automation from firing again within N minutes of its last execution.
+// CooldownConfig prevents an automation from firing again within N minutes of its last execution.
 type CooldownConfig struct {
 	Type    string `json:"type"`    // must be "cooldown"
 	Minutes int    `json:"minutes"` // minimum minutes between executions
@@ -22,7 +21,6 @@ type cooldownSnapshot struct {
 	Reason          string     `json:"reason"`
 }
 
-// DecodeCooldownSpec unmarshals and validates a cooldown condition config.
 func DecodeCooldownSpec(raw json.RawMessage) (*CooldownConfig, error) {
 	if len(raw) == 0 {
 		return nil, fmt.Errorf("condition config is empty")

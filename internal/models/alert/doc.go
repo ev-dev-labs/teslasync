@@ -10,7 +10,7 @@
 // helpers) are allowed.
 //
 // Per ADR-011 this package was carved out of the formerly-flat
-// internal/models in phase-R5.1. Recommended caller alias when
+// internal/models package. Recommended caller alias when
 // importing alongside other models subpackages (per ADR-011 §3):
 // `alertmodel "internal/models/alert"`.
 package alert

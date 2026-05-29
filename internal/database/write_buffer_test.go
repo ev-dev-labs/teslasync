@@ -26,7 +26,6 @@ func TestWriteBuffer_Enqueue_DropsOldest(t *testing.T) {
 	noop := func(ctx context.Context, item int) error { return nil }
 	buf := NewWriteBuffer("test", 10, noop)
 
-	// Fill to capacity
 	for i := 0; i < 10; i++ {
 		buf.Enqueue(i)
 	}
@@ -34,19 +33,16 @@ func TestWriteBuffer_Enqueue_DropsOldest(t *testing.T) {
 		t.Fatalf("Len() = %d after fill, want 10", got)
 	}
 
-	// Enqueue one more — should drop oldest 10% (1 item)
 	buf.Enqueue(99)
 	if got := buf.Len(); got != 10 {
 		t.Fatalf("Len() = %d after overflow, want 10", got)
 	}
 
-	// Verify oldest was dropped
 	stats := buf.Stats()
 	if stats.Dropped != 1 {
 		t.Fatalf("dropped = %d, want 1", stats.Dropped)
 	}
 
-	// Verify the buffer contains items 1-9 + 99 (item 0 was dropped)
 	buf.mu.Lock()
 	if buf.items[0] != 1 {
 		t.Errorf("first item = %d, want 1 (item 0 should have been dropped)", buf.items[0])
@@ -61,12 +57,10 @@ func TestWriteBuffer_DropsOldest_LargeBuffer(t *testing.T) {
 	noop := func(ctx context.Context, item int) error { return nil }
 	buf := NewWriteBuffer("test", 100, noop)
 
-	// Fill to capacity
 	for i := 0; i < 100; i++ {
 		buf.Enqueue(i)
 	}
 
-	// Enqueue one more — should drop oldest 10% (10 items)
 	buf.Enqueue(999)
 	if got := buf.Len(); got != 91 {
 		t.Fatalf("Len() = %d after overflow, want 91", got)
@@ -135,7 +129,6 @@ func TestWriteBuffer_Drain_RequeuesOnFailure(t *testing.T) {
 
 	buf.Flush(context.Background())
 
-	// Item 20 should be re-queued, 10 and 30 inserted
 	if got := buf.Len(); got != 1 {
 		t.Fatalf("Len() after drain = %d, want 1 (failed item re-queued)", got)
 	}
@@ -161,19 +154,16 @@ func TestWriteBuffer_Drain_ShortCircuitsOnPersistentFailure(t *testing.T) {
 
 	buf.Flush(context.Background())
 
-	// Should short-circuit after 3 consecutive failures
 	if attempts != 3 {
 		t.Fatalf("attempts = %d, want 3 (short-circuit after 3 consecutive failures)", attempts)
 	}
 
-	// All 50 items should be re-queued
 	if got := buf.Len(); got != 50 {
 		t.Fatalf("Len() after short-circuit = %d, want 50", got)
 	}
 }
 
 func TestWriteBuffer_Drain_NoShortCircuitAfterSuccess(t *testing.T) {
-	// If the first item succeeds but later items fail, no short-circuit should occur
 	insertFn := func(ctx context.Context, item int) error {
 		if item >= 5 {
 			return errors.New("db error")

@@ -14,8 +14,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// Phase-46 / Prompt 19 — repository for notification_quiet_hours.
-//
 // All inputs are validated before they reach Postgres so the API handler
 // can map sentinel errors to the right HTTP status without string-matching.
 

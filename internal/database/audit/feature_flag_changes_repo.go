@@ -1,8 +1,4 @@
-// Package database — feature_flag_changes audit repo.
-//
-// Phase-44 / observability-batch / Prompt F8.
-//
-// Persists every write to the dynamic feature-flag store
+// Package audit persists every write to the dynamic feature-flag store
 // (internal/flags) — both `set` and `delete` — to feature_flag_changes
 // (migration 000211). Read paths are NOT audited (they're hot-path
 // in-process lookups served from a local cache).

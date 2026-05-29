@@ -15,12 +15,9 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla/router"
 )
 
-// recorder is the in-file pgxPool implementation referenced by the
-// phase-42a prompt 0010 escape hatch ("if pgxmock is not vendored,
-// write the test against a tiny in-file recorder type that
-// implements just the Exec method the helper calls"). It records
-// every Exec invocation and lets each test override the returned
-// CommandTag's RowsAffected and / or the error.
+// recorder is the in-file pgxPool implementation used instead of
+// pgxmock. It records every Exec invocation and lets each test override
+// the returned CommandTag's RowsAffected and / or the error.
 type recorder struct {
 	calls []recordedCall
 	err   error // returned from Exec verbatim
@@ -123,9 +120,8 @@ func TestNewSnapshotWriter_Validation(t *testing.T) {
 	}
 }
 
-// TestWrite_TypeMatrix covers the four LOCKED scalar types from
-// phase-42a prompt 0010 decision #4 (float64, int64, bool, string).
-// Each case asserts the SQL shape AND that the bound $3 argument is
+// TestWrite_TypeMatrix covers the four locked scalar types: float64,
+// int64, bool, and string. Each case asserts the SQL shape AND that the bound $3 argument is
 // the bare value (no coercion applied by the helper).
 func TestWrite_TypeMatrix(t *testing.T) {
 	const (
@@ -170,16 +166,15 @@ func TestWrite_TypeMatrix(t *testing.T) {
 	}
 }
 
-// TestWrite_NumericKindCoercion pins Phase-42 / Rule 12 contract:
+// TestWrite_NumericKindCoercion pins the numeric coercion contract:
 // numeric values from the codec (int, int8, int16, int32, int64,
 // uint variants, and float32) are coerced to float64 via the
 // canonical signal.Float64 converter before SQL binding. The codec
 // emits Float5 fields as float32 and Int3/Int4 as int32 (per the
 // proto schema's `int32 int_value` / `float float_value`); without
 // this coercion every snapshot write for those fields silently fails
-// with "unsupported value type" — which is exactly the bug that
-// Phase-42a prompt 0010 missed and the panel-by-panel UI audit
-// caught for /vehicles/state (commit 30bd16a1).
+// with "unsupported value type" — the regression previously caught in
+// /vehicles/state (commit 30bd16a1).
 func TestWrite_NumericKindCoercion(t *testing.T) {
 	const (
 		vin       = "5YJ3E1EA0KF000001"

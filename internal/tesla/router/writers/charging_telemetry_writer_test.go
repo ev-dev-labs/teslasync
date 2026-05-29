@@ -28,13 +28,10 @@ func newChargingTelemetryTestWriter(t *testing.T, rec *recorder) *snapshotWriter
 	return w
 }
 
-// TestChargingTelemetryWriter_ColumnMapMatchesRoutingYAML is the
-// reflective coverage gate from phase-42a prompt 0019 Decision #5. It
-// walks router.LoadMap() (which parses the embedded routing.yaml),
-// filters to entries with Destination == DestChargingTelemetry, and
-// asserts the chargingTelemetryColumnByField map in
-// charging_telemetry_writer.go matches the routing layer
-// entry-for-entry — same field set, same column for each field.
+// TestChargingTelemetryWriter_ColumnMapMatchesRoutingYAML compares
+// routing.yaml with chargingTelemetryColumnByField. The writer map must
+// match the routing layer exactly: same field set, same column for each
+// charging_telemetry route.
 //
 // This catches three classes of drift at CI time:
 //
@@ -97,9 +94,8 @@ func TestChargingTelemetryWriter_ColumnMapMatchesRoutingYAML(t *testing.T) {
 }
 
 // TestChargingTelemetryWriter_TypeMatrix exercises one positive write
-// per kind from phase-42a prompt 0019 Decision #6: float64, int64,
-// bool, text. We pick representative routed fields so the map lookup
-// AND the snapshotWriter SQL composition are both covered:
+// per scalar kind: float64, int64, bool, and text. Representative routed
+// fields cover both map lookup and snapshotWriter SQL composition:
 //
 //   - float64 → ACChargingPower → ac_charging_power_w (DOUBLE PRECISION column)
 //   - int64   → ChargerPhases   → charger_phases (INTEGER column)
@@ -161,14 +157,12 @@ func TestChargingTelemetryWriter_TypeMatrix(t *testing.T) {
 	}
 }
 
-// TestChargingTelemetryWriter_SessionIDNotTouched locks phase-42a
-// prompt 0019 Decision #3: the writer NEVER references the session_id
-// column on insert. session_id is backfilled by the session tracker
-// observer in 0030 via a separate UPDATE; if the writer accidentally
-// included session_id in the column list it would either (a) write
-// SQL NULL on insert, OR (b) overwrite a previously-set session_id on
-// re-delivery via the ON CONFLICT DO UPDATE SET clause — both are
-// silent corruptions of the FK relationship into charging_sessions.
+// TestChargingTelemetryWriter_SessionIDNotTouched protects the
+// session_id ownership boundary. The writer never inserts or updates
+// session_id; the session tracker backfills it later with a separate
+// UPDATE. Touching it here would either insert SQL NULL or overwrite an
+// existing session_id during redelivery, silently corrupting the
+// charging_sessions FK relationship.
 //
 // We assert against the rendered SQL string for every routed field
 // (not just one representative) because a future bug could affect
@@ -225,10 +219,9 @@ func TestChargingTelemetryWriter_SessionIDNotTouched(t *testing.T) {
 	}
 }
 
-// TestChargingTelemetryWriter_UnknownFieldReturnsError covers
-// phase-42a prompt 0019 Decision #6: a Field that is NOT routed to
-// charging_telemetry must produce a "no column mapping" error and
-// MUST NOT touch the DB.
+// TestChargingTelemetryWriter_UnknownFieldReturnsError covers fields
+// that are not routed to charging_telemetry: they must return a
+// "no column mapping" error without touching the DB.
 //
 // VehicleSpeed is a deliberate choice — it IS a routed field
 // (dest: drive_telemetry per routing.yaml) so the test also
@@ -263,10 +256,9 @@ func TestChargingTelemetryWriter_UnknownFieldReturnsError(t *testing.T) {
 	}
 }
 
-// TestNewChargingTelemetryWriter_NilPoolPanics locks the
-// constructor's fail-fast contract from phase-42a prompt 0019
-// Decision #1. A nil pool is a wiring bug and panics so the failure
-// surfaces at process start, not at the first payload.
+// TestNewChargingTelemetryWriter_NilPoolPanics locks the constructor's
+// fail-fast contract. A nil pool is a wiring bug and panics so the
+// failure surfaces at process start, not at the first payload.
 func TestNewChargingTelemetryWriter_NilPoolPanics(t *testing.T) {
 	defer func() {
 		r := recover()

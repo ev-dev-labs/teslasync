@@ -11,12 +11,11 @@ import (
 
 // SignalHistoryRow represents a single signal value at a point in time.
 //
-// Phase-42 / per-field MQTT cutover: this struct is now READ-ONLY — the
-// legacy buffered Append + FlushLoop write path was deleted because the
-// Phase-42a router writer (`internal/tesla/router/writers/signal_log_writer.go`)
-// is the canonical signal_log writer and used the new schema (vehicle_id,
+// This struct is read-only. The legacy buffered Append + FlushLoop write
+// path was deleted because `internal/tesla/router/writers/signal_log_writer.go`
+// is the canonical signal_log writer and uses the current schema (vehicle_id,
 // ts, field, value_kind, str_value, bool_value, int_value, float_value,
-// time_value). The old write path used pre-Phase-42 column names
+// time_value). The old write path used obsolete column names
 // (`signal`, `value_num`, `value_str`, `value_bool`, `value_jsonb`,
 // `created_at`) and never succeeded after the schema migration; rows
 // were re-cycled through a Redis backlog that produced continuous
@@ -36,9 +35,9 @@ type SignalHistoryRow struct {
 
 // SignalHistoryWriter is the read-only accessor for the signal_log
 // hypertable. The legacy buffered write path (Append + FlushLoop +
-// Redis backlog) was removed as part of the Phase-42 / per-field MQTT
-// cutover — see `internal/tesla/router/writers/signal_log_writer.go`
-// for the canonical writer.
+// Redis backlog) was removed; see
+// `internal/tesla/router/writers/signal_log_writer.go` for the canonical
+// writer.
 type SignalHistoryWriter struct {
 	db *database.DB
 }
@@ -52,7 +51,7 @@ func NewSignalHistoryWriter(db *database.DB) *SignalHistoryWriter {
 
 // Cleanup deletes rows older than the retention period.
 //
-// Phase-42 schema: signal_log uses `ts` (TIMESTAMPTZ) as the row timestamp;
+// signal_log uses `ts` (TIMESTAMPTZ) as the row timestamp;
 // the legacy `created_at` column no longer exists.
 func (w *SignalHistoryWriter) Cleanup(ctx context.Context, retentionDays int) {
 	result, err := w.db.Pool.Exec(ctx,
@@ -68,7 +67,7 @@ func (w *SignalHistoryWriter) Cleanup(ctx context.Context, retentionDays int) {
 // GetHistory returns time-series data for a single signal within a date range.
 // Results are ordered by ts ASC for chart rendering.
 //
-// Phase-42 schema: SELECT ts/field/str_value/bool_value/COALESCE(float_value,
+// Current schema selects ts/field/str_value/bool_value/COALESCE(float_value,
 // int_value::float8); the legacy created_at/signal/value_num/value_str/
 // value_bool columns no longer exist.
 func (w *SignalHistoryWriter) GetHistory(ctx context.Context, vehicleID int64, signalName string, from, to time.Time, limit int) ([]SignalHistoryRow, error) {
@@ -98,7 +97,7 @@ func (w *SignalHistoryWriter) GetHistory(ctx context.Context, vehicleID int64, s
 
 // GetGlobalStats returns total signal count and date range for a vehicle.
 //
-// Phase-42 schema: signal_log uses `ts` as the row timestamp.
+// signal_log uses `ts` as the row timestamp.
 func (w *SignalHistoryWriter) GetGlobalStats(ctx context.Context, vehicleID int64) (int64, *time.Time, *time.Time, error) {
 	var count int64
 	var oldest, newest *time.Time
@@ -119,7 +118,7 @@ type SignalHistoryEntry struct {
 
 // Query returns signal history rows with pagination.
 //
-// Phase-42 schema: ts/field/str_value/bool_value/COALESCE(float_value,
+// Current schema projects ts/field/str_value/bool_value/COALESCE(float_value,
 // int_value::float8).
 func (w *SignalHistoryWriter) Query(ctx context.Context, vehicleID int64, signals []string, from, to time.Time, page, perPage int) ([]SignalHistoryEntry, int64, error) {
 	if perPage <= 0 {
@@ -165,7 +164,7 @@ func (w *SignalHistoryWriter) Query(ctx context.Context, vehicleID int64, signal
 
 // AvailableSignals returns distinct signal names for a vehicle.
 //
-// Phase-42 schema: signal_log column is `field`, not `signal`.
+// signal_log column is `field`, not `signal`.
 func (w *SignalHistoryWriter) AvailableSignals(ctx context.Context, vehicleID int64) ([]string, error) {
 	rows, err := w.db.Pool.Query(ctx,
 		"SELECT DISTINCT field FROM signal_log WHERE vehicle_id = $1 ORDER BY field",

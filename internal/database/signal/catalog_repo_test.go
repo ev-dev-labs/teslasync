@@ -6,17 +6,11 @@ import (
 	"time"
 )
 
-// Phase-43a / Prompt 0007 — pure-Go tests for the signals_catalog repo.
-//
-// These tests pin SQL shape (column names, GROUP BY clause, ORDER BY,
-// dynamic WHERE assembly), the value-decoder dispatch, and the
-// construction-time fail-fast. The repo's actual SQL execution requires
-// a live PostgreSQL instance + signal_log hypertable from mig 000186;
-// the codebase has no pgxmock / testcontainers harness (see repo
-// memories from earlier phase-43a prompts) and the prompt's escape
-// hatch accepts pure-Go test coverage in that case.
-
-// ---------- catalogAggregateSelectSQL shape ----------
+// These pure-Go tests pin SQL shape (column names, GROUP BY clause,
+// ORDER BY, dynamic WHERE assembly), value-decoder dispatch, and
+// construction-time fail-fast. Actual SQL execution requires a live
+// PostgreSQL instance with the signal_log hypertable from migration
+// 000186, and the codebase has no pgxmock or testcontainers harness.
 
 // TestCatalogAggregateSelectSQL_Shape pins critical SQL fragments so a
 // columnname/typo regression is caught at test time rather than at
@@ -87,8 +81,6 @@ func TestObservationsSelectColumns_Shape(t *testing.T) {
 		}
 	}
 }
-
-// ---------- buildObservationsWhere ----------
 
 // TestBuildObservationsWhere_NoFilters confirms the empty-filter case
 // still produces valid SQL (`WHERE 1=1`) so the assembled COUNT and
@@ -200,8 +192,6 @@ func TestBuildObservationsWhere_PartialFilters_Renumbering(t *testing.T) {
 	}
 }
 
-// ---------- decodeObservationValue ----------
-
 // TestDecodeObservationValue_AllKinds covers every value_kind branch.
 // The mapping mirrors mig 000186 lines 79-89; a future renaming must
 // be paired with a corresponding update here.
@@ -271,8 +261,6 @@ func TestDecodeObservationValue_NilColumnsForKindReturnNil(t *testing.T) {
 		})
 	}
 }
-
-// ---------- construction-time fail-fast ----------
 
 // TestNewSignalsCatalogRepo_NilPoolPanics defends the construction-
 // time fail-fast: a nil pool is a wiring bug, not a runtime condition.

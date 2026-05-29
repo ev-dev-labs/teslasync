@@ -17,8 +17,8 @@ import (
 )
 
 // main is intentionally a thin shell. All dependency-injection wiring
-// lives in internal/app (extracted in phase-47/04). Returning through
-// run() instead of calling os.Exit directly preserves the deferred
+// lives in internal/app. Returning through run() instead of calling os.Exit
+// directly preserves the deferred
 // app.Close call so resources release even on error paths.
 func main() { os.Exit(run()) }
 

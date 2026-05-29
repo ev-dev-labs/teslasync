@@ -16,11 +16,10 @@ import (
 //	fsm_transitions(id, vehicle_id, ts, fsm_name, from_state, to_state,
 //	                 trigger, details JSONB)
 //
-// One row per state transition per FSM per vehicle. The legacy
-// pre-Phase-42 column name `fsm_type` was retired by 000187 (which
-// dropped and recreated the table); the canonical column name is
-// `fsm_name`. There is NO compatibility layer — callers pass the
-// canonical name directly.
+// One row per state transition per FSM per vehicle. The old column
+// name `fsm_type` was retired by migration 000187, which dropped and
+// recreated the table; the canonical column name is `fsm_name`. There
+// is NO compatibility layer — callers pass the canonical name directly.
 type FSMTransitionRepo struct {
 	db *database.DB
 }

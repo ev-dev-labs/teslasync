@@ -1,14 +1,13 @@
 package settings
 
-// Phase-46 / Prompt 50 — Per-section + global settings reset.
+// Per-section and global settings reset.
 //
-// Lets the user nuke a single section (alert rules, geofences,
+// Lets the user reset a single section (alert rules, geofences,
 // quiet-hours windows, notification channels, dashboard layouts,
 // automations, or the typed settings rows that back GeneralSettings /
 // AppearanceSettings) or the whole user-discoverable preference
-// surface in one transaction. Per-vehicle settings (Phase-46 / Prompt
-// 43) are NOT touched here; the per-vehicle "reset overrides" flow
-// has its own endpoint.
+// surface in one transaction. Per-vehicle settings are NOT touched
+// here; the per-vehicle "reset overrides" flow has its own endpoint.
 //
 // Section taxonomy
 // ----------------
@@ -34,8 +33,8 @@ package settings
 //                             scoped to the request's userID. The
 //                             only per-user table in the catalog.
 //
-// Deny-list (Phase-46 / Prompt 50 Blocked Path)
-// ---------------------------------------------
+// Deny-list
+// ---------
 // Sections whose backing data is shared with non-user state, lives
 // somewhere we can't touch (browser localStorage), or simply has no
 // table at all are refused with a 400 + machine-readable reason. The
@@ -43,8 +42,8 @@ package settings
 // follow instead.
 //
 //   - tariffs       → no `tariffs` table; charge_cost_tariff_id is a
-//                     per-vehicle setting (Phase-46 / Prompt 43). The
-//                     vehicle settings page exposes a per-row reset.
+//                     per-vehicle setting. The vehicle settings page
+//                     exposes a per-row reset.
 //   - sound_prefs   → notification sound prefs live in browser
 //                     localStorage; reset via the browser's site-data
 //                     controls.

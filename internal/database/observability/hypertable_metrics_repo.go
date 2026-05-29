@@ -1,6 +1,6 @@
 package observability
 
-// Phase-45 / Prompt 6 — Disk-usage forecaster.
+// Disk-usage forecaster.
 //
 // HypertableMetricsRepo reads chunks_detailed_size and projects when
 // each hypertable will hit a configurable disk quota. The projection

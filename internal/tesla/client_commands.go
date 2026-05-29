@@ -179,7 +179,6 @@ func (c *Client) SendCommand(ctx context.Context, vin string, command string, pa
 		return fmt.Errorf("unknown command: %s", command)
 	}
 
-	// Merge default params with user-provided params
 	merged := make(map[string]interface{})
 	for k, v := range def.params {
 		merged[k] = v
@@ -272,7 +271,6 @@ func (c *Client) doProxyRequest(ctx context.Context, path string, body io.Reader
 		return fmt.Errorf("proxy command failed: HTTP %d: %s", resp.StatusCode, string(respBody))
 	}
 
-	// Check Tesla response for result
 	var result struct {
 		Response struct {
 			Result bool   `json:"result"`

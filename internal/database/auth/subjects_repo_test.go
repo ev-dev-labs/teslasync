@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 57 — AuthSubjectsRepo unit tests.
+// AuthSubjectsRepo unit tests cover pure-Go validation and guard paths.
 //
 // The repo's queries themselves require a live PostgreSQL connection
 // so the SQL-touching coverage lives in the API handler integration

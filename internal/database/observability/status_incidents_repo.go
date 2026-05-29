@@ -1,4 +1,4 @@
-// Phase-2 / Status API — operator-managed incidents.
+// Operator-managed status incidents.
 //
 // Backs /api/v1/status/incidents (the System Status page's Active
 // incidents block + post-mortem timeline). Self-hosted operator's

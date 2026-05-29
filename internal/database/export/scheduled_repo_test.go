@@ -1,11 +1,7 @@
-// Phase-46 / Prompt 65 — ScheduledExportRepo unit tests + migration smoke.
-//
-// SQL-touching coverage requires a live PostgreSQL pool; the gate's
-// `TestMigrations_ScheduledExports_UpDown` runs against $DATABASE_URL
-// when set and skips cleanly otherwise (mirrors the rest of the
-// internal/database test suite). The pure-Go validators are exercised
-// without a pool here so a CI environment without DB access still
-// proves the input boundary contracts hold.
+// ScheduledExportRepo coverage is split by dependency. SQL-touching tests
+// require a live PostgreSQL pool and run against $DATABASE_URL when set,
+// skipping cleanly otherwise. Pure-Go validators run without a pool so CI
+// environments without DB access still prove the input boundary contracts.
 package export
 
 import (

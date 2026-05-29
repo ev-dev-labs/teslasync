@@ -57,7 +57,6 @@ func (r *TokenRepo) Get(ctx context.Context) (*authmodel.Token, error) {
 	return t, nil
 }
 
-// Delete removes the stored token.
 func (r *TokenRepo) Delete(ctx context.Context) error {
 	_, err := r.db.Pool.Exec(ctx, "DELETE FROM tokens WHERE id = 1")
 	return err

@@ -48,9 +48,8 @@ var migrationsToScan = []string{
 	"000184_charging_si.up.sql",
 	"000185_drives_si.up.sql",
 	"000190_drive_telemetry_si.up.sql",
-	// Wave-3 schema migration: renames a climate_snapshots column from
-	// DOUBLE PRECISION → TEXT. Captured by the ALTER TABLE handler in
-	// parseSchema below.
+	// This migration renames a climate_snapshots column from DOUBLE PRECISION
+	// to TEXT; parseSchema handles it through ALTER TABLE parsing.
 	"000210_climate_overheat_limit_text.up.sql",
 }
 
@@ -268,18 +267,17 @@ type finding struct {
 }
 
 var alreadyFixed = map[string]bool{
-	// Wave 1 (deployed)
+	// Seatbelt fields are already handled by codec coercion.
 	"DriverSeatBelt":    true,
 	"PassengerSeatBelt": true,
 	"GpsState":          true,
 	"RearSeatHeaters":   true,
-	// Wave 2 (codec-audit-findings rubber-duck session)
+	// Codec coercion handles these HVAC enum fields.
 	"HvacAutoMode":  true,
 	"HvacPower":     true,
 	"HvacFanStatus": true,
-	// Wave 3 (cabin-overheat-migration-design rubber-duck session)
-	// — schema migrated DOUBLE PRECISION→TEXT in 000210, codec
-	// canonicalises the proto enum label.
+	// Migration 000210 changed this column from DOUBLE PRECISION to TEXT;
+	// the codec canonicalises the proto enum label.
 	"CabinOverheatProtectionTemperatureLimit": true,
 }
 
@@ -301,9 +299,9 @@ var falsePositives = map[string]string{
 // a known-issue tracker line — when the migration ships, remove the
 // entry here.
 //
-// Empty after wave 3 (cabin-overheat-migration-design): migration 000210
-// converted the last known DOUBLE PRECISION-vs-Enum column to TEXT and
-// the codec now canonicalises the label.
+// Empty because migration 000210 converted the last known
+// DOUBLE PRECISION-vs-Enum column to TEXT and the codec now canonicalises
+// the label.
 var deferredKnown = map[string]string{}
 
 func main() {

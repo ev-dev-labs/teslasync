@@ -30,8 +30,8 @@ import (
 )
 
 // mqttTracerName is the OpenTelemetry tracer name for spans produced by this
-// package. Phase-44 prompt 0014 contract: the receive-boundary span is named
-// "mqtt.consume" and seeds context for downstream normalize/router spans.
+// package. The receive-boundary span is named "mqtt.consume" and seeds
+// context for downstream normalize/router spans.
 const mqttTracerName = "mqtt"
 
 // Client wraps MQTT publishing.
@@ -206,7 +206,7 @@ func randomSuffix(n int) string {
 }
 
 // =============================================================================
-// Phase-42 PipelineSubscriber: raw Tesla payload bytes -> normalize.Pipeline.
+// Tesla Fleet Telemetry subscriber: MQTT payloads -> normalize.Pipeline.
 // =============================================================================
 //
 // This subscriber implements ADR-004 #2: every Tesla Fleet Telemetry payload
@@ -214,25 +214,22 @@ func randomSuffix(n int) string {
 // a dumb bytes-and-acks pipe; it MUST NOT decode, parse, flatten, or otherwise
 // inspect payload content. Decode/flatten lives in internal/tesla/codec, unit
 // conversion in internal/tesla/units, dispatch in internal/tesla/router, and
-// orchestration in internal/tesla/normalize. The forbidden-import gate in
-// prompt 0060 enforces that no legacy decode package re-enters this file.
+// orchestration in internal/tesla/normalize. Forbidden-import checks prevent
+// legacy decode packages from re-entering this file.
 //
 // Why a new subscriber alongside the legacy NewSubscriber in subscriber.go:
 // The legacy subscriber consumes per-field JSON values on
-// {topicBase}/{VIN}/v/{fieldName}. Phase-42 fleet-telemetry produces full
+// {topicBase}/{VIN}/v/{fieldName}. The fleet-telemetry path produces full
 // proto-encoded payloads that the codec layer flattens internally. Mixing the
 // two formats inside one subscriber would entangle decode logic in the MQTT
-// layer; instead we publish proto bytes on a distinct topic
-// ({topicBase}/payload/{VIN}) and subscribe to it with this PipelineSubscriber.
-// The legacy subscriber will be deleted in a follow-up phase-42 prompt once
-// every fleet-telemetry deployment publishes proto payloads.
+// layer; instead proto bytes use a distinct topic ({topicBase}/payload/{VIN})
+// and this PipelineSubscriber subscribes to it.
 //
 // === DLQ governance (LOCKED) ============================================
 //
 // The DLQ for poison-pill MQTT payloads is owned by the operations on-call
-// rotation, NOT the ingest engineering team. This block locks in the policy
-// referenced by ADR-004 #8 and enforced by phase-42 prompt 0060; any change
-// requires an ADR amendment.
+// rotation, NOT the ingest engineering team. This policy is referenced by
+// ADR-004 #8; any change requires an ADR amendment.
 //
 //	Retention.
 //	  MQTT-topic DLQ: broker retention 7 days (configured in mosquitto.conf
@@ -256,8 +253,8 @@ func randomSuffix(n int) string {
 //	  automatically per the retention rule above.
 //
 //	Replay tooling.
-//	  Out of scope for phase-42 — DLQ is forensic-only. Re-ingest of
-//	  dropped payloads is a future ADR. Operators MUST NOT re-publish DLQ
+//	  DLQ is forensic-only. Re-ingest of dropped payloads requires a future
+//	  ADR. Operators MUST NOT re-publish DLQ
 //	  payloads to the live ingest topic; doing so reintroduces the same
 //	  malformed bytes that triggered the redelivery loop.
 //
@@ -288,8 +285,8 @@ func randomSuffix(n int) string {
 // poison-pill candidates runs INSIDE the subscriber, not inside the
 // pipeline.
 //
-// The pre-Phase-49 Process(ctx, []byte, vehicleID) entry was removed when
-// the api cut over to the per-field MQTT topic shape (Tesla's MQTT
+// The Process(ctx, []byte, vehicleID) entry was removed when the API cut over
+// to the per-field MQTT topic shape (Tesla's MQTT
 // publisher emits one signal per topic via JSON, not protobuf batches);
 // the only remaining ingest entry on this interface is ProcessAtomics so
 // the codec.DecodeJSONField → ProcessAtomics handoff is the SINGLE path
@@ -516,8 +513,8 @@ type PipelineSubscriberConfig struct {
 
 	// StreamingRecorder, when non-nil, receives a callback for every
 	// successfully decoded MQTT batch (after pipeline dispatch returns
-	// nil). It powers the /telemetry status MQTT Inspector — pre-Phase-42
-	// only the HTTP TelemetryIngest path updated streaming state, so the
+	// nil). It powers the /telemetry status MQTT Inspector. Before the
+	// per-field MQTT path, only HTTP TelemetryIngest updated streaming state, so the
 	// Inspector silently zeroed out once the per-field MQTT cutover
 	// became the production path. Implementations MUST be safe for
 	// concurrent calls (paho dispatches messages on multiple goroutines).
@@ -550,7 +547,7 @@ func (c *PipelineSubscriberConfig) withDefaults() {
 	c.TopicBase = strings.TrimSuffix(c.TopicBase, "/")
 }
 
-// PipelineSubscriber is the phase-42 fleet-telemetry consumer. It owns
+// PipelineSubscriber is the fleet-telemetry consumer. It owns
 // connection lifecycle (Start/Stop), topic parsing, manual ack semantics,
 // poison-pill detection, and DLQ routing. It does NOT decode payloads;
 // payload bytes are forwarded verbatim to Pipeline.Process per ADR-004 #2.
@@ -755,8 +752,8 @@ type mqttPayload struct {
 }
 
 func (s *PipelineSubscriber) onPipelineMessage(_ pahomqtt.Client, msg pahomqtt.Message) {
-	// Phase-44 prompt 0014: open the receive-boundary span. The ctx returned
-	// here MUST be threaded through handlePayload → pipeline.Process so all
+	// Open the receive-boundary span. The ctx returned here MUST be threaded
+	// through handlePayload → pipeline.Process so all
 	// normalize / router / writer spans become children of mqtt.consume.
 	ctx, span := otel.Tracer(mqttTracerName).Start(
 		s.ctx,
@@ -769,8 +766,8 @@ func (s *PipelineSubscriber) onPipelineMessage(_ pahomqtt.Client, msg pahomqtt.M
 		),
 	)
 	defer span.End()
-	// Phase-44 prompt 0022: track consumer backlog. Inc when message enters
-	// the handler, Dec via defer when it leaves (success, drop, panic, or
+	// Track consumer backlog. Increment when a message enters the handler,
+	// decrement via defer when it leaves (success, drop, panic, or
 	// non-ack error). The gauge is the leading indicator of saturation.
 	metrics.IncMQTTConsumerBacklog()
 	defer metrics.DecMQTTConsumerBacklog()
@@ -798,16 +795,16 @@ func (s *PipelineSubscriber) onPipelineMessage(_ pahomqtt.Client, msg pahomqtt.M
 // exported as a method on the unexported mqttPayload (file-private) so unit
 // tests in the same package can drive the handler without paho.
 //
-// Decision tree (LOCKED by phase-42 prompt 0060 honesty covenant; updated
-// for the per-field MQTT cutover that delivers one signal per topic):
+// Decision tree for the per-field MQTT cutover that delivers one signal per
+// topic:
 //
 //  1. Parse VIN AND field from topic. If parse fails, ack-and-drop
 //     (malformed topic publishes are not poison pills, they are deployment
 //     misconfiguration).
 //  2. Resolve VIN -> vehicleID. ErrUnknownVIN: ack-and-drop. Other resolver
 //     errors: do NOT ack, increment normalize_failures_total{vin_resolver_error},
-//     let MQTT redeliver. (rubber-duck-#5 fix: a transient DB outage during
-//     VIN lookup MUST NOT lose data.)
+//     let MQTT redeliver. A transient DB outage during VIN lookup MUST NOT
+//     lose data.
 //  3. codec.DecodeJSONField(field, body, vin, receivedAt). Three outcomes:
 //     a. (nil, nil)        Producer flagged Value.invalid (body=null) OR
 //     field is unknown to SignalsByName. Counter
@@ -820,7 +817,7 @@ func (s *PipelineSubscriber) onPipelineMessage(_ pahomqtt.Client, msg pahomqtt.M
 //     c. (nil, err)        errors.Is(err, errPayloadDrop). Increment
 //     tracker. If count >= MaxRedeliveries publish
 //     to DLQ; if DLQ.Publish succeeds ack, else do
-//     NOT ack (rubber-duck-#3 fix). If count <
+//     NOT ack. If count <
 //     MaxRedeliveries do NOT ack, let MQTT redeliver.
 //  4. Defensive: pipeline.ProcessAtomics may itself return an error for
 //     unrecoverable infra failures (e.g. context cancelled mid-batch). We
@@ -911,8 +908,8 @@ func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload)
 		return
 	}
 
-	// Phase-48 inspector fix: notify the optional StreamingHealthRecorder
-	// AFTER the pipeline accepted the batch so /telemetry status only
+	// Notify the optional StreamingHealthRecorder AFTER the pipeline accepted
+	// the batch so /telemetry status only
 	// counts signals that actually persisted. The hot-path guard keeps
 	// the nil check off the panic-recovery slow path.
 	if recorder := s.cfg.StreamingRecorder; recorder != nil {
@@ -924,8 +921,8 @@ func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload)
 	msg.Ack()
 }
 
-// handlePipelineError applies the ADR-004 #8 / phase-42 prompt 0060
-// classification to a non-nil pipeline error and decides ack vs no-ack vs
+// handlePipelineError applies the ADR-004 #8 classification to a non-nil
+// pipeline error and decides ack vs no-ack vs
 // DLQ. Split out from handlePayload so the decision tree stays readable.
 func (s *PipelineSubscriber) handlePipelineError(
 	ctx context.Context,
@@ -1021,11 +1018,10 @@ func (s *PipelineSubscriber) dlqPublishAndMaybeAck(
 	msg.Ack()
 }
 
-// parsePipelineTopic extracts the VIN AND signal field name from a topic
-// of form `{topicBase}/{VIN}/v/{field}`. Returns ok=false on any other
-// shape — including the legacy `{topicBase}/payload/{VIN}` proto-batch
-// shape, which the per-field cutover (Phase-49) intentionally rejects so
-// a stray retained message from the bridge era cannot smuggle bytes past
+// parsePipelineTopic extracts the VIN AND signal field name from a topic of
+// form `{topicBase}/{VIN}/v/{field}`. Returns ok=false on any other shape —
+// including the legacy `{topicBase}/payload/{VIN}` proto-batch shape — so a
+// stray retained message from the bridge era cannot smuggle bytes past
 // the JSON decoder.
 //
 // Field is whatever segment 4 contains; the codec layer is the

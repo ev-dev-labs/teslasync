@@ -39,9 +39,8 @@ var jsonCoercionTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 //
 // Adding a field here is a deliberate decision: it weakens the strict
 // schema contract for that one field in exchange for tolerance to a
-// known wire-shape drift. Per the principal-architect review
-// (rubber-duck session "codec-rewrite-review") this is preferable to
-// either (a) changing classifyExplicit globally — which would break
+// known wire-shape drift. This is preferable to either (a) changing
+// classifyExplicit globally — which would break
 // the proto-batch path on legacy firmware — or (b) widening DB schema
 // to absorb the drift everywhere — which would lose useful type
 // semantics on the BOOLEAN columns.
@@ -50,22 +49,17 @@ var canonicalizeFieldsJSON = map[string]bool{
 	"PassengerSeatBelt": true,
 	"GpsState":          true,
 	"RearSeatHeaters":   true,
-	// Phase signals-rewrite codec hotfix wave 2 (rubber-duck session
-	// "codec-audit-findings"): same Enum→BOOLEAN / Float→TEXT pattern
-	// caught by tmp/audit_signal_types/main.go before production drop.
+	// Same Enum→BOOLEAN / Float→TEXT pattern caught by
+	// tmp/audit_signal_types/main.go before production drop.
 	"HvacAutoMode":  true,
 	"HvacPower":     true,
 	"HvacFanStatus": true,
-	// Phase signals-rewrite codec hotfix wave 3 (rubber-duck session
-	// "cabin-overheat-migration-design"). Paired with migration
-	// 000210_climate_overheat_limit_text.up.sql which converts the DB
-	// column from DOUBLE PRECISION (Celsius) to TEXT (enum label).
-	// Before wave 3 this field was the sole DEFERRED entry from the
-	// wave-2 audit because the codec could not honestly map the
-	// proto enum {Unknown, Low, Medium, High} to Celsius without
-	// asserting precision Tesla does not publish; the migration lets
-	// the column hold the label directly so we no longer need to
-	// invent values.
+	// Paired with migration 000210_climate_overheat_limit_text.up.sql,
+	// which converts the DB column from DOUBLE PRECISION (Celsius) to
+	// TEXT (enum label). The codec cannot honestly map the proto enum
+	// {Unknown, Low, Medium, High} to Celsius without asserting precision
+	// Tesla does not publish; the migration lets the column hold the
+	// label directly so we no longer need to invent values.
 	"CabinOverheatProtectionTemperatureLimit": true,
 }
 
@@ -90,8 +84,7 @@ var canonicalizeFieldsProto = canonicalizeFieldsJSON
 //     (FloatValue), float64 (DoubleValue), int32 (IntValue), or int64
 //     (LongValue).
 //
-// Per-field coercion table (architect-blessed, see rubber-duck session
-// "codec-rewrite-review"):
+// Per-field coercion table:
 //
 //	DriverSeatBelt / PassengerSeatBelt (DB column: BOOLEAN)
 //	  bool                                          -> bool (passthrough)
@@ -238,11 +231,8 @@ func coerceRearSeatHeaters(v any) (any, bool, error) {
 // mode RIGHT NOW?". `On` is yes; `Override` is no — the user has
 // taken manual control over the auto-selected setpoint, so the
 // auto-mode controller is no longer driving the cabin. `Unknown` has
-// no boolean representation (we will not silently downgrade to false
-// because that mis-records an actually-unknown state as a confirmed
-// "off"). The principal-architect review (rubber-duck session
-// "codec-audit-findings") corrected the original "Override → true"
-// proposal — see the architect's blocking note on that mapping.
+// no boolean representation; silently downgrading to false would
+// mis-record an actually-unknown state as confirmed "off".
 func coerceHvacAutoMode(v any) (any, bool, error) {
 	switch t := v.(type) {
 	case bool:
@@ -291,7 +281,7 @@ func coerceHvacPower(v any) (any, bool, error) {
 // hvac_fan_status column. classifyExplicit declares this field as
 // Float but the column is TEXT — same pattern as RearSeatHeaters,
 // caught by tmp/audit_signal_types/main.go. Bool is intentionally
-// NOT supported here (per architect review): there is no observed
+// NOT supported here: there is no observed
 // Tesla wire shape that emits bool for HvacFanStatus, so adding a
 // bool→string path would weaken the schema for no benefit.
 func coerceHvacFanStatus(v any) (any, bool, error) {
@@ -317,8 +307,7 @@ func coerceHvacFanStatus(v any) (any, bool, error) {
 // Low} into the TEXT cabin_overheat_protection_temperature_limit column
 // (renamed from `..._c DOUBLE PRECISION` by migration 000210).
 //
-// Architect ruling (rubber-duck session
-// "cabin-overheat-migration-design"):
+// Mapping rules:
 //
 //   - string passthrough: trim the "ClimateOverheatProtectionTempLimit"
 //     proto enum prefix so the stored value is the bare label

@@ -9,9 +9,8 @@
 // or internal/api.
 //
 // Per ADR-011 this package was moved out of the formerly-flat
-// internal/models in phase-R5.16 (via `git mv` of security.go).
-// Recommended caller alias when importing alongside other models
-// subpackages (per ADR-011 §3):
+// internal/models. Recommended caller alias when importing alongside
+// other models subpackages (per ADR-011 §3):
 //
 //	securitymodel "github.com/ev-dev-labs/teslasync/internal/models/security"
 package security

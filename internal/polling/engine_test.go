@@ -7,8 +7,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
-// ---------- Evaluator tests ----------
-
 func TestDriveEvaluator_Driving(t *testing.T) {
 	speed := 65
 	ctx := &EvalContext{
@@ -148,8 +146,6 @@ func TestSentryEvaluator_Active(t *testing.T) {
 	}
 }
 
-// ---------- Engine tests ----------
-
 func TestEngine_FirstPoll(t *testing.T) {
 	engine := NewPollEngine(DefaultEngineConfig())
 	shouldPoll, _ := engine.ShouldPoll("VIN123")
@@ -261,7 +257,7 @@ func TestEngine_Assess_IdleToActive_Reset(t *testing.T) {
 		ClimateState: tesla.ClimateState{},
 	}
 
-	// Build up some idle backoff
+	// Seed idle backoff so the active transition can prove it resets.
 	engine.Assess("VIN123", idleData)
 	engine.mu.Lock()
 	engine.vehicles["VIN123"].NextPollAfter = time.Time{}
@@ -348,13 +344,11 @@ func TestEngine_FleetTelemetry_MoreAggressiveBackoff(t *testing.T) {
 	}
 
 	d1 := engine.Assess("VIN123", data)
-	// With FT, idle base is 2× = 10min
+	// Fleet Telemetry doubles the idle base interval to 10 minutes.
 	if d1.NextInterval != 10*time.Minute {
 		t.Errorf("FT idle: expected 10m (2× base), got %v", d1.NextInterval)
 	}
 }
-
-// ---------- Cost Tracker tests ----------
 
 func TestCostTracker_RecordAndSnapshot(t *testing.T) {
 	ct := NewCostTracker(0.00222, 10.0)
@@ -385,8 +379,6 @@ func TestCostTracker_RecordAndSnapshot(t *testing.T) {
 		t.Errorf("expected 50%% savings, got %.1f%%", snap.SavingsPercent)
 	}
 }
-
-// ---------- Activity Level tests ----------
 
 func TestActivityLevel_String(t *testing.T) {
 	tests := map[ActivityLevel]string{

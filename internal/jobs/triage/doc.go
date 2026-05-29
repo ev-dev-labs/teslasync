@@ -1,6 +1,5 @@
 // Package triage hosts the AI-attributed triage cron jobs:
-// alert-inbox auto-categorization (Phase-50/0035) and
-// feedback-queue re-embedding (Phase-50/0046). Both are
+// alert-inbox auto-categorization and feedback-queue re-embedding. Both are
 // fail-closed gates that re-check ai_mode + the per-feature
 // toggle on every tick per ADR-015 §I12 #3 — a degraded
 // settings table must NOT silently leak push notifications or
@@ -11,7 +10,7 @@
 // internal/database (for the SettingsRepo type its inputs
 // satisfy structurally via the narrow SettingsReader interfaces).
 //
-// Bounded-context subpkg per ADR-011 §2 — alias suffix is
+// Bounded-context subpackage per ADR-011 §2 — alias suffix is
 // `triagejobs` when imported at composition roots that already
 // import other internal/jobs/* subpackages:
 //
@@ -24,8 +23,7 @@
 // alias is not required — `triage.RunAlertInbox(...)` reads
 // cleanly.
 //
-// ADR-015 §I12 contract preserved verbatim across the Phase R6
-// carve: every Run* function still re-checks ai_mode + the
+// ADR-015 §I12 contract: every Run* function re-checks ai_mode + the
 // per-feature toggle at execution time AND returns
 // {Skipped: 1}, nil for the off path without touching the
 // database, the LLM, or any external service. The off-mode

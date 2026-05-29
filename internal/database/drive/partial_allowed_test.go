@@ -7,11 +7,9 @@ import (
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 )
 
-// TestDrivePartialAllowed_Valid verifies the partial-update allow-list
-// has only well-formed SQL column identifiers. Carved from
-// internal/database/helpers_test.go in Phase R4.12 alongside the
-// drive_repo.go → drive/repo.go carve so the test follows the
-// (now-exported) drivePartialAllowed map.
+// TestDrivePartialAllowed_Valid verifies the partial-update allow-list has
+// only well-formed SQL column identifiers. The test lives with the exported
+// DrivePartialAllowed map so future allow-list changes are checked locally.
 func TestDrivePartialAllowed_Valid(t *testing.T) {
 	if len(drivedb.DrivePartialAllowed) == 0 {
 		t.Fatal("drivePartialAllowed is empty")

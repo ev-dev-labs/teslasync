@@ -4,12 +4,11 @@
 // Setting*Unit fields whose absence would otherwise cause the ingest
 // pipeline to fail-closed-drop unit-bearing values per ADR-004 #9.
 //
-// This binary is the operator surface for phase-42 Decision 5 (resubscribe
-// = yes, all vehicles after every deploy that touches subscription state).
-// It MUST refuse to run unless TESLASYNC_OPERATOR_TOKEN is set in the
-// environment — that is the operator-credential gate (phase-42 prompt
-// 0090 covenant; the token's value is not validated, presence is enough
-// to make accidental invocation by CI/dev shell history impossible).
+// This binary is the operator surface for resubscribing all vehicles after
+// deploys that touch Fleet Telemetry subscription state. It MUST refuse to
+// run unless TESLASYNC_OPERATOR_TOKEN is set; the token value is not
+// validated, because presence is enough to prevent accidental CI or shell
+// history invocation.
 //
 // Audit trail: a structured zerolog "event=resubscribe.start" line is
 // emitted before the first push and an "event=resubscribe.end" line at

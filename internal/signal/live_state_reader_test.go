@@ -9,10 +9,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-// stubLiveSignalStore is a minimal LiveSignalStore implementation for tests
-// of the LiveStateReader composition. It records the read preference each
-// call uses so a test can assert that LiveStateReader hits the distributed
-// path (not local) per the rubber-duck guidance.
+// stubLiveSignalStore records each read preference so tests can assert that
+// LiveStateReader uses the distributed path rather than local-only reads.
 type stubLiveSignalStore struct {
 	values         map[string]*signal.Value
 	getAllErr      error

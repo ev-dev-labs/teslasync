@@ -22,11 +22,10 @@ func NewAlertRuleRepo(db *database.DB) *AlertRuleRepo {
 }
 
 // alertRuleColumns is the canonical SELECT column list, kept in sync with
-// scanAlertRule below. Add new columns here AND in scanAlertRule when extending
-// the schema (migration 000158_alert_rule_kinds added kind/metric_*; migration
-// 000194 added max_fires_per_resolution; migration 000195 added all_vehicles;
-// migration 000196 added escalation_after_min/escalation_severity; migration
-// 000200 / Phase-50 added msg_template + include_title).
+// scanAlertRule below. Add new columns here and in scanAlertRule when extending
+// the schema. Recent additions include kind/metric_*, max_fires_per_resolution,
+// all_vehicles, escalation_after_min/escalation_severity, msg_template, and
+// include_title.
 const alertRuleColumns = `id, name, description, enabled, vehicle_id, all_vehicles,
 	signal_name, op,
 	value_num, value_text, value_bool, value_min, value_max,
@@ -51,11 +50,10 @@ func scanAlertRule(row interface{ Scan(dest ...any) error }, ar *alertmodel.Aler
 	)
 }
 
-// hydrateRuleVehicles populates `VehicleIDs` on every rule by issuing a
-// single junction-table query keyed on the supplied rule IDs. Always
-// initialises VehicleIDs to a non-nil slice so JSON encoding emits `[]`
-// instead of `null` (Phase-49 / Slice 0005 / Decision D8 + R3 from
-// rubber-duck critique). Safe to call with an empty rules slice.
+// hydrateRuleVehicles populates `VehicleIDs` on every rule with one
+// junction-table query. It always initialises VehicleIDs to a non-nil slice so
+// JSON encoding emits `[]` instead of `null`. Safe to call with an empty rules
+// slice.
 func (r *AlertRuleRepo) hydrateRuleVehicles(ctx context.Context, q pgxQuerier, rules []*alertmodel.AlertRule) error {
 	if len(rules) == 0 {
 		return nil
@@ -108,9 +106,8 @@ type pgxQuerier interface {
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 }
 
-// validateVehicleSelection enforces the multi-select invariants used by
-// both Create and Update before any SQL touches the row. Phase-49 /
-// Slice 0005 / Decision D9.
+// validateVehicleSelection enforces the multi-select invariant before any SQL
+// touches the row.
 func validateVehicleSelection(allVehicles bool, vehicleIDs []int64) error {
 	if allVehicles && len(vehicleIDs) > 0 {
 		return ErrInvalidVehicleSelection
@@ -138,14 +135,12 @@ func (errInvalidVehicleSelection) Error() string {
 }
 
 // legacyVehicleIDFor returns the value to write into the deprecated
-// `alert_rules.vehicle_id` column. Per Phase-49 / Slice 0005 / Decision
-// D7, the legacy column is kept in sync for one release so a downgraded
-// API binary still sees a sensible value during a rolling deploy:
+// `alert_rules.vehicle_id` column. The legacy column stays in sync so a
+// downgraded API binary still sees a sensible value during a rolling deploy:
 //   - AllVehicles=TRUE              -> NULL
 //   - AllVehicles=FALSE, len 1      -> that vehicle ID
-//   - AllVehicles=FALSE, len > 1    -> MIN(vehicleIDs); other vehicles
-//     are not visible to the old binary
-//     until the deploy completes.
+//   - AllVehicles=FALSE, len > 1    -> MIN(vehicleIDs); other vehicles are not
+//     visible to the old binary until the deploy completes.
 func legacyVehicleIDFor(allVehicles bool, vehicleIDs []int64) *int64 {
 	if allVehicles || len(vehicleIDs) == 0 {
 		return nil
@@ -235,12 +230,10 @@ func (r *AlertRuleRepo) GetEnabledByKind(ctx context.Context, kind string) ([]*a
 	return rules, nil
 }
 
-// Update writes the rule and atomically replaces its junction rows in a
-// single transaction. The caller-supplied `rule.AllVehicles` and
-// `rule.VehicleIDs` are validated and normalised; `rule.VehicleID`
-// (deprecated legacy column) is always overwritten with
-// `legacyVehicleIDFor(...)` to keep both spellings in sync per Decision
-// D7. Phase-49 / Slice 0005.
+// Update writes the rule and atomically replaces its junction rows in a single
+// transaction. The caller-supplied `rule.AllVehicles` and `rule.VehicleIDs` are
+// validated and normalised; the deprecated `rule.VehicleID` column is always
+// overwritten with `legacyVehicleIDFor(...)` to keep both spellings in sync.
 func (r *AlertRuleRepo) Update(ctx context.Context, id int64, rule *alertmodel.AlertRule) error {
 	vehicleIDs := dedupAndSortVehicleIDs(rule.VehicleIDs)
 	if err := validateVehicleSelection(rule.AllVehicles, vehicleIDs); err != nil {
@@ -319,8 +312,7 @@ func (r *AlertRuleRepo) GetByID(ctx context.Context, id int64) (*alertmodel.Aler
 }
 
 // Create inserts the rule and its junction rows in a single transaction.
-// Same validation + legacy-column-mirroring contract as Update.
-// Phase-49 / Slice 0005.
+// It uses the same validation and legacy-column mirroring contract as Update.
 func (r *AlertRuleRepo) Create(ctx context.Context, rule *alertmodel.AlertRule) error {
 	if rule.Kind == "" {
 		rule.Kind = alertmodel.AlertRuleKindSignal
@@ -444,11 +436,10 @@ func (r *AlertRuleRepo) SetSnooze(ctx context.Context, id int64, until *time.Tim
 }
 
 // RuleAppliesToDB is the database-resident counterpart to
-// `(*alertmodel.AlertRule).AppliesTo` for callers that don't already have
-// the rule loaded in memory (settings export validators, admin tooling).
-// Returns true when the rule has all_vehicles=TRUE OR an explicit
-// (rule_id, vehicle_id) row exists in the junction table. Phase-49 /
-// Slice 0005 / Decision D4.
+// `(*alertmodel.AlertRule).AppliesTo` for callers that don't already have the
+// rule loaded in memory (settings export validators, admin tooling). Returns
+// true when the rule has all_vehicles=TRUE or an explicit (rule_id, vehicle_id)
+// row exists in the junction table.
 func (r *AlertRuleRepo) RuleAppliesToDB(ctx context.Context, ruleID, vehicleID int64) (bool, error) {
 	var matches bool
 	err := r.db.Pool.QueryRow(ctx,

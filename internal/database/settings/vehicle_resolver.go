@@ -1,25 +1,18 @@
-// Phase-46 / Prompt 43 — hierarchical resolver for per-vehicle settings.
+// Package settings resolves the effective per-vehicle setting value for
+// every supported key, layered as:
 //
-// `Resolver.Resolve` returns the EFFECTIVE value for every supported
-// key, layered in this order:
-//
-//  1. vehicle_settings override (this prompt's table)
+//  1. vehicle_settings override
 //  2. install-global SettingsRepo value
 //  3. hard-coded default (DefaultsForKey below)
 //
-// The vehicles base table is consulted only for the `nickname` key
-// because vehicles.display_name is a per-row attribute, not a
-// setting; we surface it as the "vehicle" source so the SPA pill
-// can render it differently from the install-global "user" source.
+// The vehicles base table is consulted only for `nickname` because
+// vehicles.display_name is a per-row attribute, not a setting; it is exposed
+// as the "vehicle" source so the SPA can render it distinctly.
 //
-// SCOPE LIMITS
-// ------------
-// SettingsRepo.Get reads a single install-global row today; the
-// resolver therefore returns the same "user" value for every
-// authenticated principal. A future prompt-57 (subject-aware
-// settings) will replace this layer with a subject-keyed read; the
-// API contract here is forward-compatible because the source pill
-// names the LAYER, not the principal that produced it.
+// SettingsRepo.Get reads a single install-global row today, so the resolver
+// returns the same "user" value for every authenticated principal. The API
+// stays compatible with future subject-aware settings because the source pill
+// names the layer, not the principal that produced it.
 package settings
 
 import (
@@ -155,7 +148,7 @@ func (r *VehicleSettingsResolver) resolveOne(
 	def VehicleSettingDef,
 	overrides map[string]VehicleSettingRow,
 ) (EffectiveSetting, error) {
-	// Layer 1 — vehicle_settings override.
+	// Vehicle-specific overrides always win.
 	if row, ok := overrides[def.Key]; ok {
 		return EffectiveSetting{
 			Key:    def.Key,
@@ -164,7 +157,7 @@ func (r *VehicleSettingsResolver) resolveOne(
 		}, nil
 	}
 
-	// Layer 2/3 — per-key fallback chain.
+	// Fallback order depends on the key: nickname uses vehicles, units use user settings.
 	switch def.Key {
 	case "nickname":
 		if r.vehicles != nil {
@@ -210,7 +203,7 @@ func (r *VehicleSettingsResolver) resolveOne(
 		}
 	}
 
-	// Layer 3 (or 2 for keys without a user-level layer) — default.
+	// All supported keys have a hard-coded default as the final fallback.
 	defValue, defSource, ok := DefaultsForKey(def.Key)
 	if !ok {
 		// Should be unreachable — the canonical loop only

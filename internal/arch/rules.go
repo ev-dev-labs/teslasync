@@ -11,23 +11,19 @@ type ForbiddenEdge struct {
 	Reason string // human-readable; printed on test failure
 }
 
-// ForbiddenEdges is the canonical list. Phase-47 seeded it with the 5
-// edges established by the Principal Architect critique; phase-47 prompts
-// 06, 09, and 10 appended additional rules. Phase-A3.1 (chore/repo-
-// reorganization) broadens handler/v1-scoped rules to handler/... and
-// adds the missing Clean Architecture edges (app→handler, app→api,
-// handler→infra-direct, models→outward, adapter→app, cmd→api).
+// ForbiddenEdges is the canonical list of import-graph boundaries. The
+// current rules cover Clean Architecture edges including app→handler,
+// app→api, handler→infra-direct, models→outward, adapter→app, and
+// cmd→api.
 //
 // The DAG mirrored here MUST match tools/archmetrics/main.go forbiddenEdges
 // — the two systems are deliberately redundant (arch_test enforces against
 // HEAD with explicit reasons, archmetrics ratchets against baseline.json).
 var ForbiddenEdges = []ForbiddenEdge{
 	// ----------------------------------------------------------------------
-	// Phase-A3.1: generalised cmd/* rule (subsumes phase-47/05 worker-
-	// specific entries). The composition root for the HTTP API lives in
-	// internal/app since phase-47/56de7194; cmd binaries must not bypass
-	// it. Workers depend on internal/apilog and internal/notification/
-	// computed for their cross-cutting needs.
+	// cmd binaries must not bypass the internal/app composition root for
+	// HTTP API wiring. Workers depend on internal/apilog and
+	// internal/notification/computed for their cross-cutting needs.
 	// ----------------------------------------------------------------------
 	{
 		Source: "cmd/...",
@@ -36,11 +32,9 @@ var ForbiddenEdges = []ForbiddenEdge{
 	},
 
 	// ----------------------------------------------------------------------
-	// Phase-47/09: domain layer is pure. Also enforced (more strictly) by
-	// TestDomainPurity (ADR-006), which rejects ANY non-stdlib non-domain
-	// import; these edges stay in ForbiddenEdges so violations surface with
-	// the layering reason in TestForbiddenEdges output as well.
-	// Phase-A3.1 adds the missing outward edges (models/port/handler/api/app).
+	// Domain packages are pure. TestDomainPurity (ADR-006) enforces this
+	// more strictly by rejecting any non-stdlib, non-domain import. These
+	// edges stay here so TestForbiddenEdges reports the layering reason too.
 	// ----------------------------------------------------------------------
 	{
 		Source: "internal/domain/...",
@@ -79,8 +73,8 @@ var ForbiddenEdges = []ForbiddenEdge{
 	},
 
 	// ----------------------------------------------------------------------
-	// Phase-47/09: ports never depend on adapters, persistence, transport,
-	// app, or platform. Ports are interface contracts in pure-domain terms.
+	// Ports never depend on adapters, persistence, transport, app, or
+	// platform. Ports are interface contracts in pure-domain terms.
 	// ----------------------------------------------------------------------
 	{
 		Source: "internal/port/...",
@@ -109,8 +103,7 @@ var ForbiddenEdges = []ForbiddenEdge{
 	},
 
 	// ----------------------------------------------------------------------
-	// Phase-47/09: adapters never depend on transport or use cases.
-	// Phase-A3.1 adds the missing adapter → app rule.
+	// Adapters never depend on transport or use cases.
 	// ----------------------------------------------------------------------
 	{
 		Source: "internal/adapter/...",
@@ -129,10 +122,9 @@ var ForbiddenEdges = []ForbiddenEdge{
 	},
 
 	// ----------------------------------------------------------------------
-	// Phase-A3.1: use cases (internal/app/*svc) must not depend on HTTP
-	// transport or the legacy router. The composition root (internal/app
-	// top-level — see internal/app/{app,new,run,lifecycle,adapters}.go)
-	// is the explicit carve-out and is exempted via AllowedExceptions.
+	// Use cases (internal/app/*svc) must not depend on HTTP transport or
+	// the legacy router. The internal/app top-level composition root is the
+	// explicit carve-out and is exempted via AllowedExceptions.
 	// ----------------------------------------------------------------------
 	{
 		Source: "internal/app/...",
@@ -146,7 +138,6 @@ var ForbiddenEdges = []ForbiddenEdge{
 	},
 
 	// ----------------------------------------------------------------------
-	// Phase-47/10 (handler thinness) BROADENED to handler/... in phase-A3.1.
 	// Handlers in any handler subdir must stay thin: no direct database/
 	// adapter/models/api access, no infra-SDK reach-through. internal/api
 	// itself is exempt from these rules — it IS the legacy frozen package;
@@ -179,8 +170,8 @@ var ForbiddenEdges = []ForbiddenEdge{
 		Target: "internal/api",
 		Reason: "internal/api is FROZEN per ADR-009; handlers must not import it (phase-47/10; broadened to handler/... in phase-A3.1)",
 	},
-	// Phase-A3.1: handlers must not reach into infra/vendor SDKs.
-	// Everything routes through internal/app/*svc + ports.
+	// Handlers must not reach into infra/vendor SDKs; everything routes
+	// through internal/app/*svc and ports.
 	{
 		Source: "internal/handler/...",
 		Target: "internal/tesla/...",
@@ -203,13 +194,11 @@ var ForbiddenEdges = []ForbiddenEdge{
 	},
 
 	// ----------------------------------------------------------------------
-	// Phase-A3.1: models (DTOs) are leaves. Per ADR-006 they MUST NOT depend
-	// on any other layer. Independently enforced (more strictly) by
-	// TestModelsImportsRestricted; mirrored here for layering reason output.
-	// ----------------------------------------------------------------------
-	// Phase-R5.0 (2026-05-28): Source widened from "internal/models" to
-	// "internal/models/..." so each new bounded-context subpackage
-	// (models/alert, models/charging, etc) inherits the DTO-leaf contract.
+	// Models (DTOs) are leaves. Per ADR-006 they must not depend on any
+	// other layer. TestModelsImportsRestricted enforces this more strictly;
+	// these edges mirror it for layering reason output. The source covers
+	// internal/models/... so each bounded-context subpackage inherits the
+	// DTO-leaf contract.
 	{
 		Source: "internal/models/...",
 		Target: "internal/database",
@@ -238,30 +227,26 @@ var ForbiddenEdges = []ForbiddenEdge{
 }
 
 // Exception records edges that are forbidden by rule but grandfathered
-// for now. Each entry MUST cite the prompt that will remove it.
+// for now. Each entry must explain when it can be removed.
 type Exception struct {
 	Source string
 	Target string
-	Until  string // prompt that removes the exception, e.g. "phase-47/05"
+	Until  string // condition or milestone that removes the exception
 }
 
-// AllowedExceptions lists currently-tolerated forbidden edges. Each entry
-// MUST be removed by the cited prompt; arch_test will start failing again
-// at that point unless the underlying violation is fixed.
+// AllowedExceptions lists currently tolerated forbidden edges. Each entry
+// must be removed when its stated condition is met; arch_test will start
+// failing again unless the underlying violation is fixed.
 //
-// Phase-47/05 cleared the worker→internal/api exceptions: the workers now
-// depend on internal/apilog and internal/notification/computed (extracted
-// in that prompt) instead of the HTTP handler package.
-//
-// Phase-A3.1 adds three carve-outs that mirror the composition-root
-// exception in tools/archmetrics/main.go forbiddenEdges (ExceptFrom):
+// These carve-outs mirror the composition-root exceptions in
+// tools/archmetrics/main.go forbiddenEdges (ExceptFrom):
 //   - internal/app top-level is the ONLY legitimate wiring layer for
 //     internal/api (HTTP transport) — it owns the router lifecycle.
 //   - internal/handler/middleware exposes a per-request pgx query counter
 //     that must be attached to context. The counter primitive lives in
 //     internal/database/query_budget.go (an observability cross-cut). The
 //     proper fix is to extract that primitive to internal/platform/
-//     dbobserver/ in Phase A5 (audit) or a dedicated platform reshape.
+//     dbobserver/ during a platform reshape.
 var AllowedExceptions = []Exception{
 	{
 		Source: "internal/app",
@@ -275,25 +260,15 @@ var AllowedExceptions = []Exception{
 	},
 }
 
-// AdvisorySources marks rules whose violations log a WARNING but DO NOT
-// fail the test. Prompts that promote a rule to fail-level remove the
-// matching entry from this set.
-//
-// Phase-47/09 cleared "internal/domain/...": both domain→adapter and
-// domain→database edges in ForbiddenEdges are now FAIL-level.
-// Domain purity is independently enforced (more strictly) by
-// TestDomainPurity (ADR-006).
-//
-// Phase-47/10 cleared "internal/handler/v1": handler→database is now
-// FAIL-level. Handler thinness is independently enforced (more
-// strictly, with extra deny-list targets) by TestHandlerV1Thinness.
+// AdvisorySources marks rules whose violations log a warning but do not
+// fail the test. Empty means every configured rule is fail-level.
+// Domain purity and handler thinness are also enforced by focused tests.
 var AdvisorySources = map[string]bool{}
 
 // FrozenPackages lists package paths where new .go files (excluding
-// _test.go files for existing source files) are not allowed. Phase-47/06
-// declares the first entry per ADR-009: internal/api is frozen against
-// new files because internal/handler/v1 is now the canonical home for
-// new HTTP handlers.
+// _test.go files for existing source files) are not allowed. ADR-009
+// freezes internal/api because internal/handler/v1 is the canonical home
+// for new HTTP handlers.
 //
 // arch_test compares the live file list against
 // tools/archmetrics/baseline.json and fails if any production .go file
@@ -327,11 +302,10 @@ var ModelsForbiddenImports = []string{
 	"internal/port",
 }
 
-// AllowedPlatformSubpackages is the closed set of permitted
-// directories directly under internal/platform/. Per ADR-007
-// (phase-47/08), adding a new one requires an ADR amendment AND
-// updating this list in the same commit. arch_test
-// (TestPlatformSubpackagesGated) enforces.
+// AllowedPlatformSubpackages is the closed set of permitted directories
+// directly under internal/platform/. Per ADR-007, adding a new one
+// requires an ADR amendment and updating this list in the same commit.
+// arch_test (TestPlatformSubpackagesGated) enforces this.
 var AllowedPlatformSubpackages = []string{
 	"buildinfo",
 	"cache",
@@ -342,8 +316,8 @@ var AllowedPlatformSubpackages = []string{
 }
 
 // AdapterForbiddenImports lists internal/* package prefixes that
-// internal/adapter/* packages may NOT import. Per the phase-47/09
-// hexagonal contract, adapters MUST NOT depend on transport
+// internal/adapter/* packages may NOT import. Per the hexagonal
+// contract, adapters MUST NOT depend on transport
 // (internal/api, internal/handler/*) or use cases (internal/app/*).
 // Adapters MAY import stdlib, internal/port/* (the interfaces they
 // implement), internal/domain/* (entity types), internal/models (DB
@@ -356,8 +330,8 @@ var AdapterForbiddenImports = []string{
 }
 
 // PortAllowedInternalImports lists the internal/* package prefixes
-// that an internal/port/* package may import. Per the phase-47/09
-// hexagonal contract, ports declare interfaces and MAY import only
+// that an internal/port/* package may import. Per the hexagonal
+// contract, ports declare interfaces and MAY import only
 // stdlib, the parent internal/port package, sibling internal/port/*
 // packages, and internal/domain/* (entity types appearing in port
 // signatures). Anything else is forbidden.
@@ -367,8 +341,8 @@ var PortAllowedInternalImports = []string{
 }
 
 // HandlerV1ForbiddenImports lists internal/* package prefixes that
-// files in internal/handler/v1 may NOT import. Per the phase-47/10
-// thinness contract, handlers MUST NOT touch persistence
+// files in internal/handler/v1 may NOT import. Per the thin-handler
+// contract, handlers MUST NOT touch persistence
 // (internal/database, internal/platform/database), adapters
 // (internal/adapter/*), persistence DTOs (internal/models), or the
 // FROZEN HTTP package (internal/api). Handlers depend on

@@ -6,7 +6,7 @@ import "time"
 // telemetry for debugging. ADR-001/ADR-005 eliminated the `signals` JSONB
 // blob — typed columns now hold each signal. This struct is retained for
 // metadata-only use (vin/source/count/timestamp) until the raw_telemetry repo
-// is removed in its own prompt.
+// is removed.
 type RawTelemetrySignal struct {
 	VIN         string    `json:"vin" bson:"vin"`
 	Source      string    `json:"source" bson:"source"`

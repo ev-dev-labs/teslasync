@@ -3,8 +3,7 @@
 //
 // Layer: platform
 //
-// Phase-46 / p46-dq-lineage. Surfaced via
-// /admin/observability/data-quality so operators can spot a degraded
+// Surfaced via /admin/observability/data-quality so operators can spot a degraded
 // signal field BEFORE downstream consumers (charts, FSM, alerts)
 // notice it.
 //

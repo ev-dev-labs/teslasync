@@ -3,7 +3,7 @@ package dashboard
 import "time"
 
 // SavedView mirrors a row in the `saved_views` table introduced by
-// migration 000164 (Phase 40 / Prompt 50). It is the durable form of a
+// migration 000164. It is the durable form of a
 // "named URL querystring" — the user gives a memorable name to a filter
 // combination on a list page and recalls it later from the
 // SavedViewMenu component.

@@ -11,8 +11,6 @@ import (
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 )
 
-// --- Mock ActionExecutor ---
-
 type mockActionExecutor struct {
 	output json.RawMessage
 	err    error
@@ -56,8 +54,6 @@ func (m *perCallExecutor) Execute(_ context.Context, vehicleID *int64, config js
 	return output, err
 }
 
-// --- ParseActions Tests ---
-
 func TestParseActions_ValidArray(t *testing.T) {
 	raw := json.RawMessage(`[
 		{"type":"command","command":"wake_up"},
@@ -81,7 +77,6 @@ func TestParseActions_ValidArray(t *testing.T) {
 	if configs[2].Type != "command" {
 		t.Errorf("configs[2].Type = %q, want %q", configs[2].Type, "command")
 	}
-	// Raw should contain the full JSON object.
 	if !strings.Contains(string(configs[0].Raw), "wake_up") {
 		t.Errorf("configs[0].Raw should contain 'wake_up': %s", configs[0].Raw)
 	}

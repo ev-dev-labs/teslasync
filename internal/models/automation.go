@@ -19,8 +19,8 @@ const (
 	AutomationStepKindActionCallAutomation = "action_call_automation"
 )
 
-// Automation mirrors the post-migration `automations` table (see migration
-// 000142_baseline_typed and .github/prompts/db-refactor/phase-3-schema/_baseline_source/14-automations.sql).
+// Automation mirrors the post-migration `automations` table; see migration
+// 000142_baseline_typed.
 //
 // ADR-001: typed-by-default — no raw_json, no JSONB carve-outs. Trigger,
 // conditions, and actions are modeled via the CTI child tables rooted at
@@ -57,7 +57,7 @@ type AutomationSummary struct {
 // AutomationStep mirrors the post-migration `automation_steps` discriminator
 // row (see migration 000142_baseline_typed). Per ADR-004 the kind-specific
 // payload lives in a CTI child table selected by Kind; that payload is loaded
-// separately by the step-children loader (Phase-5 prompts 49-51).
+// separately by the step-children loader.
 type AutomationStep struct {
 	ID           int64  `db:"id"            json:"id"`
 	AutomationID int64  `db:"automation_id" json:"automation_id"`
@@ -77,10 +77,9 @@ type StepOrdering struct {
 // attached separately by the step-children loader (ADR-004).
 //
 // Triggers, Conditions, and Actions hold the CTI child rows loaded by the
-// step-children loader (Phase 5 prompts 49-51). Each slice element is one of
-// the typed child structs (e.g. AutomationStepTriggerSignal); []any is used
-// because the four trigger / four condition / four action child types share no
-// common interface.
+// step-children loader. Each slice element is one of the typed child structs
+// (e.g. AutomationStepTriggerSignal); []any is used because the trigger,
+// condition, and action child types share no common interface.
 type AutomationFull struct {
 	Automation
 	Steps      []AutomationStep `json:"steps"`
@@ -89,8 +88,6 @@ type AutomationFull struct {
 	Actions    []any            `json:"actions,omitempty"`
 }
 
-// AutoDisabled derives whether this automation has been auto-disabled
-// (e.g. via repeated failures). Per ADR-012 sub-decision (ii), this
-// is derived from run history, not a stored field.
-// For now, returns false until the run-history table is implemented.
+// AutoDisabled derives whether this automation has been auto-disabled from run
+// history rather than a stored field. Until run history exists, it is false.
 func (af *AutomationFull) AutoDisabled() bool { return false }

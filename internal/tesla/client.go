@@ -40,9 +40,8 @@ type Client struct {
 	logCallback func(method, url string, statusCode int, reqBody, respBody []byte, durationMs int, err error)
 }
 
-// NewClient creates a new Tesla API client configured with the given credentials
-// and a circuit breaker that opens after 5 consecutive failures, preventing
-// cascading calls to an unhealthy Tesla API.
+// NewClient creates a Tesla API client with rate limiting and a circuit
+// breaker to prevent cascading calls to an unhealthy Tesla API.
 func NewClient(cfg config.TeslaConfig) *Client {
 	cbSettings := gobreaker.Settings{
 		Name:        "tesla-api",
@@ -233,7 +232,6 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body io.Rea
 	url := c.baseURL + path
 	start := time.Now()
 
-	// Read request body for logging if present
 	var reqBodyBytes []byte
 	if body != nil {
 		reqBodyBytes, _ = io.ReadAll(body)
@@ -282,7 +280,6 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body io.Rea
 	durationMs := int(time.Since(start).Milliseconds())
 
 	if cbErr != nil {
-		// Log failed requests too
 		errStatus := 0
 		var errRespBody []byte
 		if result != nil {
@@ -302,7 +299,6 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body io.Rea
 
 	resp := result.(*apiResponse)
 
-	// Log successful requests
 	if c.logCallback != nil {
 		c.logCallback(method, url, resp.StatusCode, reqBodyBytes, resp.Body, durationMs, nil)
 	}

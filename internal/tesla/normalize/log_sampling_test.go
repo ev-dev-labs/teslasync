@@ -9,7 +9,7 @@ import (
 )
 
 // TestWithHotPathSampling_DropsAfterBurst exercises the contract
-// documented in docs/runbooks/phase-44-log-sampling.md: the first
+// documented in the log-sampling runbook: the first
 // `hotPathLogSamplerBurst` events fire unconditionally, then sampling
 // kicks in. We assert the dropped/emitted ratio rather than a specific
 // post-burst event count because BasicSampler's behaviour is timing

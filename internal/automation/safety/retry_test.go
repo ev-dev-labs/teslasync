@@ -12,8 +12,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
-// ─── Error Classification Tests ─────────────────────────
-
 func TestClassifyError_Nil(t *testing.T) {
 	if got := ClassifyError(nil); got != ErrorPermanent {
 		t.Errorf("ClassifyError(nil) = %s, want permanent", got)
@@ -181,8 +179,6 @@ func TestClassifyError_SentinelPrecedenceOverString(t *testing.T) {
 	}
 }
 
-// ─── ErrorClass String Tests ────────────────────────────
-
 func TestErrorClass_String(t *testing.T) {
 	tests := []struct {
 		class ErrorClass
@@ -198,8 +194,6 @@ func TestErrorClass_String(t *testing.T) {
 		}
 	}
 }
-
-// ─── Backoff Delay Tests ────────────────────────────────
 
 func TestComputeDelay_DefaultSchedule(t *testing.T) {
 	rp := NewRetryPolicy(WithJitter(0)) // disable jitter for exact values
@@ -303,8 +297,6 @@ func TestComputeDelay_ZeroAttempt(t *testing.T) {
 		t.Errorf("ComputeDelay(0) = %v, want %v (base delay)", got, DefaultBaseDelay)
 	}
 }
-
-// ─── Evaluate Tests ─────────────────────────────────────
 
 func TestEvaluate_RetryableError_WithinBudget(t *testing.T) {
 	rp := NewRetryPolicy(WithJitter(0))
@@ -412,8 +404,6 @@ func TestEvaluate_NilError_Permanent(t *testing.T) {
 	}
 }
 
-// ─── Default Configuration Tests ────────────────────────
-
 func TestNewRetryPolicy_Defaults(t *testing.T) {
 	rp := NewRetryPolicy()
 
@@ -452,8 +442,6 @@ func TestNewRetryPolicy_WithOptions(t *testing.T) {
 		t.Errorf("jitter = %v, want 0.1", rp.jitter)
 	}
 }
-
-// ─── Integration-Style Scenario Tests ───────────────────
 
 func TestScenario_VehicleAsleep_RetriesWithBackoff(t *testing.T) {
 	rp := NewRetryPolicy(WithJitter(0))

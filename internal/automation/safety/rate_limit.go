@@ -12,7 +12,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// Recommended default rate limits per Phase 36 typed trigger kind.
+// Recommended default rate limits per typed trigger kind.
 // These are advisory constants for callers that need a safe starting point;
 // enforcement is driven by run history, not retired trigger JSON payloads.
 const (
@@ -114,8 +114,7 @@ func (rl *RateLimiter) Check(ctx context.Context, automationID int64, maxPerHour
 }
 
 // DefaultLimit returns the recommended default hourly rate limit for a typed
-// automation trigger kind. Unknown or legacy trigger families are unavailable
-// in the Phase 36 runtime contract and return 0.
+// automation trigger kind. Unknown or legacy trigger families return 0.
 func DefaultLimit(triggerType string) int {
 	switch triggerType {
 	case models.AutomationStepKindTriggerSchedule:

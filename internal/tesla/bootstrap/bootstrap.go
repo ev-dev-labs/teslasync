@@ -34,7 +34,7 @@ type Bootstrapper struct {
 
 	// histRepo is the unit_history persistence layer. Bootstrapper
 	// is one of two writers (the other is the normalize pipeline,
-	// prompt 0028). Both writers funnel through Repo.Record's
+	// normalize pipeline). Both writers funnel through Repo.Record's
 	// ON CONFLICT DO NOTHING contract so a Seed-then-telemetry race
 	// (or a double Seed) writes one row at most.
 	histRepo unithistory.Repo
@@ -146,11 +146,6 @@ func contextAwareSleep(ctx context.Context, d time.Duration) error {
 // once, courtesy of unithistory.Repo.Record's
 // ON CONFLICT (vehicle_id, unit_kind, effective_from, unit_value,
 // source) DO NOTHING contract.
-//
-// References the four unit kinds explicitly so the gate's grep for
-// KindDistance / KindTemperature / KindPressure / KindCharge sees
-// them in this file (the loop below also references them via
-// kindOrder for actual semantics).
 func (b *Bootstrapper) Seed(ctx context.Context, vehicleID int64) error {
 	if vehicleID == 0 {
 		return fmt.Errorf("bootstrap: Seed: vehicle_id is zero")
@@ -158,8 +153,8 @@ func (b *Bootstrapper) Seed(ctx context.Context, vehicleID int64) error {
 
 	gui, fetchedAt, err := b.fetchWithRetry(ctx, vehicleID)
 	if err != nil {
-		// Auth errors propagate so the caller can re-auth — no metric
-		// bump, this is not a "skipped" outcome but a terminal one.
+		// Auth errors propagate so the caller can re-auth; this is a
+		// terminal failure, not a skipped-bootstrap outcome.
 		if errors.Is(err, ErrUnauthorized) {
 			return err
 		}

@@ -15,9 +15,8 @@
 //
 // This binary intentionally has no CI gate; exit code is always 0.
 // Output is a tabular report grouped by mismatch class, used during
-// signal-catalog reviews and Phase-42/43 telemetry pipeline audits.
+// signal-catalog reviews and telemetry pipeline audits.
 //
-// Moved here from `tmp/audit_signal_types/` in the
-// chore/repo-reorganization branch (Phase A1) to satisfy ADR-007 and
-// the `internal/arch.TestEveryInternalPackageHasDocGoWithLayer` rule.
+// Kept under cmd/ to satisfy ADR-007 and
+// internal/arch.TestEveryInternalPackageHasDocGoWithLayer.
 package main

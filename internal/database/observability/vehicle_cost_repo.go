@@ -1,9 +1,7 @@
 package observability
 
-// Phase-45 / Prompt 4 — Per-vehicle cost telemetry.
-//
-// VehicleCost extends the Phase-44 ingest X-Ray repo with three
-// fleet-cost dimensions: per-vehicle signal_log row count + bytes
+// Per-vehicle cost telemetry summarizes three fleet-cost dimensions:
+// per-vehicle signal_log row count + bytes
 // (storage footprint), per-vehicle 24h ingest rate (network/cpu
 // pressure), and per-vehicle DLQ failure count (poison-pill noise).
 //
@@ -45,8 +43,8 @@ type VehicleCostReport struct {
 
 // VehicleCostReport returns the per-vehicle cost summary plus the
 // fleet totals. The byte estimate is row count × 96 bytes/row (a
-// conservative average for signal_log post-Phase-42 normalisation
-// based on `pg_stat_user_tables.n_tup_ins` × avg row size). It is an
+// conservative average for normalized signal_log rows based on
+// `pg_stat_user_tables.n_tup_ins` × avg row size). It is an
 // estimate not a measurement to avoid a per-call `pg_total_relation_size`
 // scan; the admin UI labels it accordingly.
 func (r *IngestXRayRepo) VehicleCostReport(ctx context.Context, since time.Time, limit int) (*VehicleCostReport, error) {
@@ -94,10 +92,9 @@ SELECT a.vehicle_id,
 
 	rows, err := r.pool.Query(ctx, sql, since, limit)
 	if err != nil {
-		// signal_log_failures was created post-Phase-42; older
-		// installations might not have it. Surface as the empty
-		// report rather than a 500 — the admin still wants the
-		// row-count column.
+		// Older installations might not have signal_log_failures.
+		// Surface the report without DLQ counts rather than failing
+		// the row-count view.
 		if isMissingRelationError(err) {
 			return r.vehicleCostReportNoDLQ(ctx, since, limit)
 		}

@@ -75,9 +75,9 @@ func (r *AlertRuleStateRepo) LoadAll(ctx context.Context) ([]*AlertRuleState, er
 	return out, rows.Err()
 }
 
-// alertRuleStateMarkFiredSQL is the race-safe upsert per Risk R1 of the
-// Phase-49 / Slice 0002 design. The WHERE clause on ON CONFLICT DO UPDATE
-// suppresses concurrent fires of the same once-mode rule across pods.
+// alertRuleStateMarkFiredSQL is the race-safe upsert for alert firing state.
+// The WHERE clause on ON CONFLICT DO UPDATE suppresses concurrent fires of the
+// same once-mode rule across pods.
 // The full statement runs atomically and returns AT MOST one row:
 //
 //   - First-ever fire: INSERT path → row returned with inserted=true.
