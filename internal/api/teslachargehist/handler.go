@@ -1,4 +1,4 @@
-package api
+package teslachargehist
 
 import (
 	"encoding/json"
@@ -6,10 +6,11 @@ import (
 	"net/http"
 	"time"
 
-	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
-
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	tesladb "github.com/ev-dev-labs/teslasync/internal/database/tesla"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
@@ -32,19 +33,19 @@ func NewTeslaChargingHistoryHandler(tc *tesla.Client, db *database.DB) *TeslaCha
 // List returns stored charging history from DB with pagination and server-side summary.
 func (h *TeslaChargingHistoryHandler) List(w http.ResponseWriter, r *http.Request) {
 	vin := r.URL.Query().Get("vin")
-	limit, offset := pagination(r)
+	limit, offset := apiparams.Pagination(r)
 
 	entries, err := h.repo.GetAll(r.Context(), vin, limit, offset)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list tesla charging history")
-		writeError(w, http.StatusInternalServerError, "failed to list charging history")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list charging history")
 		return
 	}
 
 	summary, err := h.repo.GetSummary(r.Context(), vin)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get tesla charging history summary")
-		writeError(w, http.StatusInternalServerError, "failed to get charging history summary")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get charging history summary")
 		return
 	}
 
@@ -52,7 +53,7 @@ func (h *TeslaChargingHistoryHandler) List(w http.ResponseWriter, r *http.Reques
 		entries = []*teslamodel.TeslaChargingHistoryEntry{}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"entries": entries,
 		"summary": summary,
 	})
@@ -82,19 +83,19 @@ func (h *TeslaChargingHistoryHandler) Refresh(w http.ResponseWriter, r *http.Req
 		body, status, err := h.teslaClient.GetChargingHistory(r.Context(), vin, startTime, endTime, pageNo, pageSize)
 		if err != nil {
 			log.Error().Err(err).Int("page", pageNo).Msg("tesla charging history API error")
-			writeError(w, http.StatusBadGateway, "failed to fetch charging history from Tesla")
+			httpx.WriteError(w, http.StatusBadGateway, "failed to fetch charging history from Tesla")
 			return
 		}
 		if status < 200 || status >= 300 {
 			log.Error().Int("status", status).Str("body", string(body)).Msg("tesla charging history non-2xx response")
-			writeError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
+			httpx.WriteError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
 			return
 		}
 
 		var resp teslaChargingHistoryResponse
 		if err := json.Unmarshal(body, &resp); err != nil {
 			log.Error().Err(err).Msg("failed to parse tesla charging history response")
-			writeError(w, http.StatusInternalServerError, "failed to parse Tesla response")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to parse Tesla response")
 			return
 		}
 
@@ -116,25 +117,25 @@ func (h *TeslaChargingHistoryHandler) Refresh(w http.ResponseWriter, r *http.Req
 	upserted, err := h.repo.UpsertBatch(r.Context(), allEntries)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to upsert tesla charging history")
-		writeError(w, http.StatusInternalServerError, "failed to save charging history")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to save charging history")
 		return
 	}
 
 	log.Info().Int("fetched", len(allEntries)).Int("upserted", upserted).Msg("tesla charging history refresh complete")
 
 	// Return fresh data
-	limit, offset := pagination(r)
+	limit, offset := apiparams.Pagination(r)
 	entries, err := h.repo.GetAll(r.Context(), vin, limit, offset)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list tesla charging history after refresh")
-		writeError(w, http.StatusInternalServerError, "failed to list charging history")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list charging history")
 		return
 	}
 
 	summary, err := h.repo.GetSummary(r.Context(), vin)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get summary after refresh")
-		writeError(w, http.StatusInternalServerError, "failed to get charging history summary")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get charging history summary")
 		return
 	}
 
@@ -142,7 +143,7 @@ func (h *TeslaChargingHistoryHandler) Refresh(w http.ResponseWriter, r *http.Req
 		entries = []*teslamodel.TeslaChargingHistoryEntry{}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"entries":  entries,
 		"summary":  summary,
 		"upserted": upserted,
@@ -153,24 +154,24 @@ func (h *TeslaChargingHistoryHandler) Refresh(w http.ResponseWriter, r *http.Req
 func (h *TeslaChargingHistoryHandler) Invoice(w http.ResponseWriter, r *http.Request) {
 	contentID := chi.URLParam(r, "contentID")
 	if contentID == "" {
-		writeError(w, http.StatusBadRequest, "content_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "content_id is required")
 		return
 	}
 
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
+		httpx.WriteError(w, http.StatusUnauthorized, "not authenticated with Tesla")
 		return
 	}
 
 	body, status, err := h.teslaClient.GetChargingInvoice(r.Context(), contentID)
 	if err != nil {
 		log.Error().Err(err).Str("content_id", contentID).Msg("failed to fetch invoice from Tesla")
-		writeError(w, http.StatusBadGateway, "failed to fetch invoice from Tesla")
+		httpx.WriteError(w, http.StatusBadGateway, "failed to fetch invoice from Tesla")
 		return
 	}
 	if status != http.StatusOK {
 		log.Warn().Int("status", status).Str("content_id", contentID).Msg("tesla invoice API non-200 response")
-		writeError(w, status, "Tesla API error")
+		httpx.WriteError(w, status, "Tesla API error")
 		return
 	}
 
