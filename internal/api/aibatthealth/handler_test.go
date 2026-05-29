@@ -16,7 +16,7 @@
 // duplicating that here would require a live database + signal
 // store fixture.
 
-package api
+package aibatthealth
 
 import (
 	"bytes"
@@ -25,12 +25,32 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/predict"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestBatteryHealthNarrativeAIOffShowsChartOnly is the
 // load-bearing off-mode contract proof for slice 0027. It mounts
@@ -130,23 +150,23 @@ func TestBatteryHealthNarrativeAIOffShowsChartOnly(t *testing.T) {
 	}
 }
 
-// TestAIBatteryHealthHandler_PanicsOnNilWiring asserts the handler
+// TestHandler_PanicsOnNilWiring asserts the handler
 // constructor refuses zero-valued dependencies. A wiring bug at
 // boot must surface as a panic, not as a nil-deref on first
 // request.
-func TestAIBatteryHealthHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIBatteryHealthHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIBatteryHealthHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -154,11 +174,11 @@ func TestAIBatteryHealthHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIBatteryHealthHandler_RejectsBadBody asserts the handler
+// TestHandler_RejectsBadBody asserts the handler
 // validates the JSON body BEFORE opening the SSE stream — a
 // missing, unparseable, or out-of-range body must surface as a JSON
 // 400, not a half-opened stream that confuses the frontend.
-func TestAIBatteryHealthHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -188,9 +208,9 @@ func TestAIBatteryHealthHandler_RejectsBadBody(t *testing.T) {
 	}
 }
 
-// TestAIBatteryHealthHandler_AcceptsCanonicalBody proves the parser
+// TestHandler_AcceptsCanonicalBody proves the parser
 // does NOT bounce the happy-path shapes.
-func TestAIBatteryHealthHandler_AcceptsCanonicalBody(t *testing.T) {
+func TestHandler_AcceptsCanonicalBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -259,6 +279,18 @@ func TestAIBatteryHealthForecaster_SatisfiesInterface(t *testing.T) {
 	}
 }
 
-// Unused import guard: keep context imported so the file compiles
-// when a future test variant needs ctx wiring.
-var _ = context.Background
+type fakeStateReader struct{}
+
+func (f *fakeStateReader) State(context.Context, int64, time.Time) (signal.State, error) {
+	return signal.State{}, nil
+}
+
+func (f *fakeStateReader) SignalAt(context.Context, int64, string, time.Time) (signal.SignalValue, error) {
+	return nil, nil
+}
+
+func (f *fakeStateReader) Timeline(context.Context, int64, []signal.FieldMapping, time.Time, time.Time, signal.TimelineOptions) ([]signal.TimelineRow, error) {
+	return nil, nil
+}
+
+var _ signal.StateReader = (*fakeStateReader)(nil)

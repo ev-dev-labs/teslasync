@@ -22,6 +22,7 @@ import (
 	aianomaly "github.com/ev-dev-labs/teslasync/internal/api/aianomaly"
 	aiautomation "github.com/ev-dev-labs/teslasync/internal/api/aiautomation"
 	aiautotripname "github.com/ev-dev-labs/teslasync/internal/api/aiautotripname"
+	aibatthealth "github.com/ev-dev-labs/teslasync/internal/api/aibatthealth"
 	aichargcurve "github.com/ev-dev-labs/teslasync/internal/api/aichargcurve"
 	aichargdiag "github.com/ev-dev-labs/teslasync/internal/api/aichargdiag"
 	aichatbot "github.com/ev-dev-labs/teslasync/internal/api/aichatbot"
@@ -1267,13 +1268,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// on /battery (BatteryHealthPage) remain the canonical
 	// baseline.
 	predict.RegisterBatteryHealthForecastNarrativeTools(aiToolRegistry, predict.BatteryHealthForecastNarrativeSources{
-		Forecaster: NewAIBatteryHealthForecaster(db, stateReader, signalLogReader),
+		Forecaster: aibatthealth.NewAIBatteryHealthForecaster(db, stateReader, signalLogReader),
 	})
 	// battery-health-forecast-narrative handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiBatteryHealthHandler := NewAIBatteryHealthHandler(
+	aiBatteryHealthHandler := aibatthealth.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		batteryhealthforecastnarrative.New(),

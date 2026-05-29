@@ -1,4 +1,4 @@
-package api
+package aibatthealth
 
 // Phase-50 / 0027 — C2 Battery health forecast narrative.
 //
@@ -50,6 +50,8 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -61,36 +63,37 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/predict"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-// aiBatteryHealthMaxIterations bounds the dispatcher's tool-loop.
+// maxIterations bounds the dispatcher's tool-loop.
 // The strategy is at most query_battery_health_forecast → answer
 // (with optional retries). A hard ceiling of 8 is generous, matching
 // aiSmartChargeScheduleMaxIterations / aiTripPlannerLLMAgentMaxIterations.
-const aiBatteryHealthMaxIterations = 8
+const maxIterations = 8
 
-// aiBatteryHealthNarrateRequest is the JSON body shape this handler
+// narrateRequest is the JSON body shape this handler
 // accepts. The minimal shape mirrors the
 // /api/v1/analytics/battery-degradation query-string contract —
 // vehicle_id is the only required field — kept as a JSON body so
 // the SPA can post from the same form state the digest narrator
 // uses.
-type aiBatteryHealthNarrateRequest struct {
+type narrateRequest struct {
 	VehicleID int64 `json:"vehicle_id"`
 }
 
-// AIBatteryHealthHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/battery/health/narrate.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired once at
 // boot.
-type AIBatteryHealthHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -98,7 +101,7 @@ type AIBatteryHealthHandler struct {
 	maxIters   int
 }
 
-// NewAIBatteryHealthHandler constructs the handler. All non-pointer
+// NewHandler constructs the handler. All non-pointer
 // arguments are required; the constructor panics on a nil so the
 // wiring bug surfaces at boot, not at first request.
 //
@@ -110,26 +113,26 @@ type AIBatteryHealthHandler struct {
 //
 // strat:      the battery-health-forecast-narrative Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAIBatteryHealthHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIBatteryHealthHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIBatteryHealthHandler: nil provider.Registry")
+		panic("aibatthealth: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIBatteryHealthHandler: nil tools.Registry")
+		panic("aibatthealth: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIBatteryHealthHandler: nil strategy.Strategy")
+		panic("aibatthealth: NewHandler: nil strategy.Strategy")
 	}
-	return &AIBatteryHealthHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiBatteryHealthMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
@@ -138,21 +141,21 @@ func NewAIBatteryHealthHandler(
 // parsing without constructing a full handler with stub deps. The
 // function writes a 400 on failure and returns the (req, ok) pair
 // so the caller can early-return.
-func parseBatteryHealthNarrateBody(w http.ResponseWriter, r *http.Request) (*aiBatteryHealthNarrateRequest, bool) {
+func parseBatteryHealthNarrateBody(w http.ResponseWriter, r *http.Request) (*narrateRequest, bool) {
 	if r.Body == nil {
-		writeError(w, http.StatusBadRequest, "request body is required")
+		httpx.WriteError(w, http.StatusBadRequest, "request body is required")
 		return nil, false
 	}
 	defer r.Body.Close()
-	var req aiBatteryHealthNarrateRequest
+	var req narrateRequest
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
 		return nil, false
 	}
 	if req.VehicleID <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id must be > 0")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be > 0")
 		return nil, false
 	}
 	return &req, true
@@ -163,7 +166,7 @@ func parseBatteryHealthNarrateBody(w http.ResponseWriter, r *http.Request) (*aiB
 // dispatcher's deferred WriteDone. Every error path either writes a
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AIBatteryHealthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the JSON body.
 	body, ok := parseBatteryHealthNarrateBody(w, r)
 	if !ok {
@@ -176,7 +179,7 @@ func (h *AIBatteryHealthHandler) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	// stream — emit JSON 502 so the frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), batteryhealthforecastnarrative.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai battery-health-forecast-narrative: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -189,7 +192,7 @@ func (h *AIBatteryHealthHandler) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(batteryhealthforecastnarrative.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai battery-health-forecast-narrative: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -234,8 +237,15 @@ func (h *AIBatteryHealthHandler) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-// Compile-time assertion: AIBatteryHealthHandler satisfies http.Handler.
-var _ http.Handler = (*AIBatteryHealthHandler)(nil)
+// Compile-time assertion: Handler satisfies http.Handler.
+var _ http.Handler = (*Handler)(nil)
+
+// denyAllConfirm is the dispatcher's user-confirm hook. Battery-health narration
+// declares only a read-only tool, so this is defence-in-depth against future
+// strategy edits accidentally adding a mutating tool.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
 
 // ---------------------------------------------------------------------
 // Production wiring for the tool interface declared by
@@ -270,9 +280,9 @@ type AIBatteryHealthForecaster struct {
 func NewAIBatteryHealthForecaster(db *database.DB, state signal.StateReader, slr *signaldb.SignalLogReader) *AIBatteryHealthForecaster {
 	switch {
 	case state == nil:
-		panic("api: NewAIBatteryHealthForecaster: nil signal.StateReader")
+		panic("aibatthealth: NewAIBatteryHealthForecaster: nil signal.StateReader")
 	case slr == nil:
-		panic("api: NewAIBatteryHealthForecaster: nil *signaldb.SignalLogReader")
+		panic("aibatthealth: NewAIBatteryHealthForecaster: nil *signaldb.SignalLogReader")
 	}
 	return &AIBatteryHealthForecaster{db: db, state: state, signalLogReader: slr}
 }
@@ -410,8 +420,7 @@ func (a *AIBatteryHealthForecaster) ForecastBatteryHealth(ctx context.Context, v
 	// inside predictDegradation, so a zero-valued receiver is
 	// safe; we still construct one to make the call site read
 	// idiomatically.
-	bdh := &BatteryDegradationHandler{}
-	regression := bdh.predictDegradation(snapshots)
+	regression := predictDegradation(snapshots)
 
 	// Stress level — exact same buckets the canonical handler
 	// uses (Predict L211-222).
@@ -502,3 +511,349 @@ func (a *AIBatteryHealthForecaster) ForecastBatteryHealth(ctx context.Context, v
 
 // Compile-time assertion: AIBatteryHealthForecaster satisfies predict.BatteryHealthForecaster.
 var _ predict.BatteryHealthForecaster = (*AIBatteryHealthForecaster)(nil)
+
+type batterySnapshotData struct {
+	ID             int64     `json:"id"`
+	HealthScore    float64   `json:"health_score"`
+	CapacityWh     float64   `json:"capacity_wh"`
+	DegradationPct float64   `json:"degradation_pct"`
+	EstRangeKm     float64   `json:"est_range_km"`
+	CycleCount     int       `json:"cycle_count"`
+	AvgCellTempC   float64   `json:"avg_cell_temp_c"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+type degradationPrediction struct {
+	SlopePerYear     float64 `json:"slope_per_year"`
+	YearsTo80Pct     float64 `json:"years_to_80_pct"`
+	PredictedDate    string  `json:"predicted_date"`
+	HasEnoughData    bool    `json:"has_enough_data"`
+	ProjectionPoints []struct {
+		Month  string  `json:"month"`
+		Health float64 `json:"health"`
+	} `json:"projection_points"`
+}
+
+type predictiveProjection struct {
+	Date           string  `json:"date"`
+	HealthPct      float64 `json:"health_pct"`
+	ConfidenceLow  float64 `json:"confidence_low"`
+	ConfidenceHigh float64 `json:"confidence_high"`
+}
+
+type riskFactor struct {
+	Name   string `json:"name"`
+	Score  int    `json:"score"`
+	Label  string `json:"label"`
+	Detail string `json:"detail"`
+}
+
+type regressionResult struct {
+	Prediction   degradationPrediction
+	Projections  []predictiveProjection
+	RatePerMonth float64
+}
+
+func predictDegradation(snapshots []batterySnapshotData) regressionResult {
+	res := regressionResult{}
+	pred := &res.Prediction
+
+	if len(snapshots) < 3 {
+		res.Projections = []predictiveProjection{}
+		return res
+	}
+
+	pred.HasEnoughData = true
+	firstTime := snapshots[0].CreatedAt
+	n := float64(len(snapshots))
+	var sumX, sumY, sumXY, sumX2 float64
+
+	for _, s := range snapshots {
+		x := s.CreatedAt.Sub(firstTime).Hours() / (24 * 365.25)
+		y := s.HealthScore
+		sumX += x
+		sumY += y
+		sumXY += x * y
+		sumX2 += x * x
+	}
+
+	xBar := sumX / n
+	yBar := sumY / n
+	ssx := sumX2 - n*xBar*xBar
+	if math.Abs(ssx) < 1e-10 {
+		res.Projections = []predictiveProjection{}
+		return res
+	}
+
+	slope := (sumXY - n*xBar*yBar) / ssx
+	intercept := yBar - slope*xBar
+	pred.SlopePerYear = math.Round(slope*100) / 100
+	res.RatePerMonth = math.Abs(slope) / 12
+
+	var sse float64
+	for _, s := range snapshots {
+		x := s.CreatedAt.Sub(firstTime).Hours() / (24 * 365.25)
+		residual := s.HealthScore - (intercept + slope*x)
+		sse += residual * residual
+	}
+	se := 0.0
+	if n > 2 {
+		se = math.Sqrt(sse / (n - 2))
+	}
+
+	tValue := 2.0
+	if n > 30 {
+		tValue = 1.96
+	}
+
+	if slope < 0 {
+		yearsTo80 := (80 - intercept) / slope
+		currentYears := time.Since(firstTime).Hours() / (24 * 365.25)
+		remainingYears := yearsTo80 - currentYears
+		if remainingYears > 0 {
+			pred.YearsTo80Pct = math.Round(remainingYears*10) / 10
+			predictedTime := time.Now().AddDate(0, int(remainingYears*12), 0)
+			pred.PredictedDate = predictedTime.Format("2006-01")
+		}
+	}
+
+	currentYears := time.Since(firstTime).Hours() / (24 * 365.25)
+	type projPoint struct {
+		Month  string  `json:"month"`
+		Health float64 `json:"health"`
+	}
+	var oldProjections []projPoint
+	var enhancedProjections []predictiveProjection
+
+	for i := 0; i <= 36; i++ {
+		futureYears := currentYears + float64(i)/12.0
+		health := intercept + slope*futureYears
+		if health < 0 {
+			health = 0
+		}
+		if health > 100 {
+			health = 100
+		}
+		month := time.Now().AddDate(0, i, 0).Format("2006-01")
+		oldProjections = append(oldProjections, projPoint{
+			Month:  month,
+			Health: math.Round(health*10) / 10,
+		})
+
+		xDev := futureYears - xBar
+		piWidth := 0.0
+		if ssx > 1e-10 && n > 2 {
+			piWidth = tValue * se * math.Sqrt(1+1/n+(xDev*xDev)/ssx)
+		}
+		low := math.Max(0, health-piWidth)
+		high := math.Min(100, health+piWidth)
+		enhancedProjections = append(enhancedProjections, predictiveProjection{
+			Date:           month,
+			HealthPct:      math.Round(health*10) / 10,
+			ConfidenceLow:  math.Round(low*10) / 10,
+			ConfidenceHigh: math.Round(high*10) / 10,
+		})
+	}
+
+	pred.ProjectionPoints = make([]struct {
+		Month  string  `json:"month"`
+		Health float64 `json:"health"`
+	}, len(oldProjections))
+	for i, p := range oldProjections {
+		pred.ProjectionPoints[i].Month = p.Month
+		pred.ProjectionPoints[i].Health = p.Health
+	}
+
+	res.Projections = enhancedProjections
+	return res
+}
+
+func computeRiskFactors(fastChargePct, highSocPct, avgCellTemp, cyclesPerMonth, deepDischargePct float64) []riskFactor {
+	factors := make([]riskFactor, 0, 5)
+
+	fastScore := int(math.Min(100, fastChargePct*1.4))
+	factors = append(factors, riskFactor{
+		Name:   "fast_charge_ratio",
+		Score:  fastScore,
+		Label:  riskLabel(fastScore),
+		Detail: fmt.Sprintf("%.0f%% of sessions are DC fast charge", fastChargePct),
+	})
+
+	socScore := int(math.Min(100, highSocPct*1.3))
+	factors = append(factors, riskFactor{
+		Name:   "high_soc_charging",
+		Score:  socScore,
+		Label:  riskLabel(socScore),
+		Detail: fmt.Sprintf("%.0f%% of sessions charge above 90%%", highSocPct),
+	})
+
+	tempScore := 10
+	switch {
+	case avgCellTemp > 45:
+		tempScore = 90
+	case avgCellTemp > 40:
+		tempScore = 70
+	case avgCellTemp > 35:
+		tempScore = 50
+	case avgCellTemp > 30:
+		tempScore = 25
+	}
+	factors = append(factors, riskFactor{
+		Name:   "temperature_exposure",
+		Score:  tempScore,
+		Label:  riskLabel(tempScore),
+		Detail: fmt.Sprintf("Average cell temperature: %.1f\u00b0C", avgCellTemp),
+	})
+
+	cycleScore := 15
+	switch {
+	case cyclesPerMonth > 40:
+		cycleScore = 80
+	case cyclesPerMonth > 30:
+		cycleScore = 55
+	case cyclesPerMonth > 20:
+		cycleScore = 35
+	}
+	factors = append(factors, riskFactor{
+		Name:   "cycle_count_rate",
+		Score:  cycleScore,
+		Label:  riskLabel(cycleScore),
+		Detail: fmt.Sprintf("%.0f cycles/month vs ~25 typical", cyclesPerMonth),
+	})
+
+	deepScore := int(math.Min(100, deepDischargePct*4))
+	factors = append(factors, riskFactor{
+		Name:   "deep_discharge_frequency",
+		Score:  deepScore,
+		Label:  riskLabel(deepScore),
+		Detail: fmt.Sprintf("%.0f%% of sessions start below 10%% SOC", deepDischargePct),
+	})
+
+	return factors
+}
+
+func riskLabel(score int) string {
+	switch {
+	case score <= 25:
+		return "Low"
+	case score <= 50:
+		return "Moderate"
+	case score <= 75:
+		return "Elevated"
+	default:
+		return "High"
+	}
+}
+
+func synthesizeBatterySnapshots(entries []signaldb.SignalTraceEntry, nominalCapacity float64) []batterySnapshotData {
+	if len(entries) == 0 {
+		return nil
+	}
+
+	type group struct {
+		ts              time.Time
+		batteryLevel    *float64
+		energyRemain    *float64
+		estBatteryRange *float64
+	}
+	groupMap := make(map[int64]*group)
+	var orderedKeys []int64
+
+	for _, e := range entries {
+		key := e.Timestamp.Unix()
+		g, ok := groupMap[key]
+		if !ok {
+			g = &group{ts: e.Timestamp}
+			groupMap[key] = g
+			orderedKeys = append(orderedKeys, key)
+		}
+		if e.ValueNum == nil {
+			continue
+		}
+		switch e.Signal {
+		case "BatteryLevel":
+			v := *e.ValueNum
+			g.batteryLevel = &v
+		case "EnergyRemaining":
+			v := *e.ValueNum
+			g.energyRemain = &v
+		case "EstBatteryRange":
+			v := *e.ValueNum
+			g.estBatteryRange = &v
+		}
+	}
+
+	sort.Slice(orderedKeys, func(i, j int) bool { return orderedKeys[i] < orderedKeys[j] })
+
+	var result []batterySnapshotData
+	var idCounter int64
+	for _, key := range orderedKeys {
+		g := groupMap[key]
+		idCounter++
+
+		capacityWh := nominalCapacity
+		healthScore := 100.0
+		if g.energyRemain != nil && *g.energyRemain > 0 {
+			capacityWh = *g.energyRemain
+			healthScore = (capacityWh / nominalCapacity) * 100
+			if healthScore > 100 {
+				healthScore = 100
+			}
+		}
+
+		estRangeKm := 0.0
+		if g.estBatteryRange != nil {
+			estRangeKm = *g.estBatteryRange
+		}
+
+		result = append(result, batterySnapshotData{
+			ID:             idCounter,
+			HealthScore:    healthScore,
+			CapacityWh:     capacityWh,
+			DegradationPct: 100 - healthScore,
+			EstRangeKm:     estRangeKm,
+			CreatedAt:      g.ts,
+		})
+	}
+	return result
+}
+
+func toFloatOk(v interface{}) (float64, bool) {
+	return signal.Float64(v)
+}
+
+func lookupVehicleCapacityWh(ctx context.Context, db *database.DB, vehicleID int64) (float64, string) {
+	var vin string
+	var model *string
+	err := db.Pool.QueryRow(ctx,
+		`SELECT vin, model FROM vehicles WHERE id = $1`, vehicleID,
+	).Scan(&vin, &model)
+	if err != nil {
+		return 75000.0, "default"
+	}
+	m := ""
+	if model != nil {
+		m = *model
+	}
+	return estimateBatteryCapacityWh(vin, m)
+}
+
+func estimateBatteryCapacityWh(vin string, model string) (float64, string) {
+	if len(vin) >= 8 {
+		switch vin[7] {
+		case 'E', 'F':
+			return 60000.0, "vin_estimate"
+		case 'K', 'L', 'M':
+			return 75000.0, "vin_estimate"
+		case 'S', 'A':
+			return 100000.0, "vin_estimate"
+		case 'P':
+			return 100000.0, "vin_estimate"
+		}
+	}
+	m := strings.ToLower(model)
+	if strings.Contains(m, "model s") || strings.Contains(m, "model x") {
+		return 100000.0, "model_estimate"
+	}
+	return 75000.0, "default"
+}
