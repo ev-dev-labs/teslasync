@@ -81,6 +81,7 @@ import (
 	apishare "github.com/ev-dev-labs/teslasync/internal/api/share"
 	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
 	apisigcat "github.com/ev-dev-labs/teslasync/internal/api/signalscatalog"
+	apisleep "github.com/ev-dev-labs/teslasync/internal/api/sleep"
 	apislo "github.com/ev-dev-labs/teslasync/internal/api/slo"
 	apisoftupd "github.com/ev-dev-labs/teslasync/internal/api/softwareupdate"
 	apisynthetic "github.com/ev-dev-labs/teslasync/internal/api/synthetic"
@@ -752,7 +753,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	userPreferenceHandler := NewUserPreferenceHandler(stateReader, liveStateReader)
 	softwareUpdateHandler := apisoftupd.NewHandler(db)
 	tcoHandler := apitco.NewHandler(db)
-	sleepHandler := NewSleepHandler(db)
+	sleepHandler := apisleep.NewSleepHandler(db)
 	// Phase-42 (prompt 0077): VampireDrainHandler deleted (vampire_drain_events).
 	visitedLocationHandler := apivisloc.NewHandler(db)
 	// Phase-42 (prompt 0077): legacy mileage handler deleted (daily_mileage); TCO derives
