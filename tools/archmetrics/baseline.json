@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-29T08:00:19Z",
+  "generated_at": "2026-05-29T08:06:40Z",
   "go_version": "go1.26.1",
-  "commit_sha": "6cdea3eeaac660367ccfb14ee255addbe9bb01ff",
+  "commit_sha": "d28c62b95a4568f248349dd1c4b7b05fb48def0b",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 45,
-      "test_files": 31,
-      "loc": 21226,
+      "go_files": 44,
+      "test_files": 30,
+      "loc": 20647,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2769,6 +2769,7 @@
         "internal/api/status",
         "internal/api/synthetic",
         "internal/api/sysauthmode",
+        "internal/api/system",
         "internal/api/tco",
         "internal/api/tempimpact",
         "internal/api/teslachargehist",
@@ -2945,8 +2946,6 @@
         "state_reader_test.go",
         "sudo_middleware.go",
         "sudo_middleware_test.go",
-        "system_handler.go",
-        "system_handler_test.go",
         "telemetry_alerts.go",
         "telemetry_handler.go",
         "telemetry_handler_capture.go",
@@ -6358,6 +6357,26 @@
       ]
     },
     {
+      "path": "internal/api/system",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 588,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/config",
+        "internal/database",
+        "internal/platform/httputil",
+        "internal/resilience"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
+      ]
+    },
+    {
       "path": "internal/api/tco",
       "go_files": 3,
       "test_files": 1,
@@ -6958,13 +6977,14 @@
       "path": "internal/app",
       "go_files": 6,
       "test_files": 1,
-      "loc": 1849,
+      "loc": 1850,
       "has_doc_go": true,
       "layer": "app",
       "imports": [
         "internal/adapter/gasprices",
         "internal/api",
         "internal/api/openapi",
+        "internal/api/system",
         "internal/apilog",
         "internal/audit",
         "internal/cache",
@@ -10672,7 +10692,6 @@
       "safe.go",
       "sse_handler.go",
       "sudo_middleware.go",
-      "system_handler.go",
       "telemetry_alerts.go",
       "telemetry_handler.go",
       "telemetry_handler_capture.go",
@@ -11356,6 +11375,10 @@
       "handler.go"
     ],
     "internal/api/sysauthmode": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/system": [
       "doc.go",
       "handler.go"
     ],
@@ -12599,10 +12622,11 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 45,
-      "flat_parent_test_files": 31,
+      "flat_parent_go_files": 44,
+      "flat_parent_test_files": 30,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
+        "system",
         "openapi",
         "devtools",
         "analytics",
@@ -12639,7 +12663,6 @@
         "webvitals"
       ],
       "missing_subpkgs": [
-        "system",
         "health",
         "sse",
         "observability",

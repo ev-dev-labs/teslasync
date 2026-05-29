@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-29T08:00:20Z, Go go1.26.1, commit 6cdea3eeaac660367ccfb14ee255addbe9bb01ff_
+_Generated 2026-05-29T08:06:41Z, Go go1.26.1, commit d28c62b95a4568f248349dd1c4b7b05fb48def0b_
 
 ## Summary
 
-- Packages: 475
+- Packages: 476
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 383193
+- Total non-blank LOC under cmd/+internal/+tools/: 383203
 
 ## cmd/* main.go LOC
 
@@ -170,7 +170,7 @@ _Generated 2026-05-29T08:00:20Z, Go go1.26.1, commit 6cdea3eeaac660367ccfb14ee25
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 45 | 31 | 21226 | yes | handler |
+| internal/api | 44 | 30 | 20647 | yes | handler |
 | internal/api/adminfeedback | 2 | 1 | 680 | yes | handler |
 | internal/api/adminlogstream | 2 | 1 | 688 | yes | handler |
 | internal/api/adminmaintenance | 2 | 1 | 604 | yes | handler |
@@ -326,6 +326,7 @@ _Generated 2026-05-29T08:00:20Z, Go go1.26.1, commit 6cdea3eeaac660367ccfb14ee25
 | internal/api/status | 3 | 1 | 830 | yes | handler |
 | internal/api/synthetic | 2 | 0 | 40 | yes | handler |
 | internal/api/sysauthmode | 2 | 1 | 339 | yes | handler |
+| internal/api/system | 2 | 1 | 588 | yes | handler |
 | internal/api/tco | 3 | 1 | 506 | yes | handler |
 | internal/api/tempimpact | 2 | 0 | 240 | yes | handler |
 | internal/api/teslachargehist | 2 | 0 | 269 | yes | handler |
@@ -358,7 +359,7 @@ _Generated 2026-05-29T08:00:20Z, Go go1.26.1, commit 6cdea3eeaac660367ccfb14ee25
 | internal/api/weeklydigest | 2 | 0 | 92 | yes | handler |
 | internal/api/yearreview | 2 | 0 | 455 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
-| internal/app | 6 | 1 | 1849 | yes | app |
+| internal/app | 6 | 1 | 1850 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 169 | yes | app |
 | internal/app/auditviewersvc | 3 | 0 | 77 | yes | app |
 | internal/app/chargingsvc | 2 | 1 | 301 | yes | app |
@@ -531,7 +532,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
 | `internal/database` | R4 | 143 | 12 / 9 | 22 | 17 | 5 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
-| `internal/api` | R2 (waves R2a-R2e) | 434 | 45 / 31 | 59 | 34 | 25 |
+| `internal/api` | R2 (waves R2a-R2e) | 434 | 44 / 30 | 59 | 35 | 24 |
 
 ### `internal/models` detail
 
@@ -639,6 +640,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 > 55 subpkgs + 4 shared infra from R1 audit. Largest cluster. Extracted in 5 waves (R2a-R2e). R2.0 prep extracts httpx/apiparams/apitest/middleware first. ai/ has 14 sub-subpkgs (see cluster-map.md).
 
 **Existing subpackages on disk:**
+- `internal/api/system`
 - `internal/api/openapi`
 - `internal/api/devtools`
 - `internal/api/analytics`
@@ -675,7 +677,6 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/api/webvitals`
 
 **Planned but not yet on disk:**
-- `internal/api/system`
 - `internal/api/health`
 - `internal/api/sse`
 - `internal/api/observability`
