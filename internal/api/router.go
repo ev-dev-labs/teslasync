@@ -186,6 +186,7 @@ import (
 	apiwhrx "github.com/ev-dev-labs/teslasync/internal/api/webhookreceiver"
 	apivitals "github.com/ev-dev-labs/teslasync/internal/api/webvitals"
 	apiweekly "github.com/ev-dev-labs/teslasync/internal/api/weeklydigest"
+	"github.com/ev-dev-labs/teslasync/internal/api/yearreview"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	aidb "github.com/ev-dev-labs/teslasync/internal/database/ai"
@@ -1214,8 +1215,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 	lifetimeHandler := apilifetime.NewHandler(db, eventHub)
-	yearReviewHandler := NewYearReviewHandler(db)
 	chargePlannerHandler := chargeplanner.NewHandler(db, teslaClient, cfg, stateReader)
+	chargePlannerHandler := NewChargePlannerHandler(db, teslaClient, cfg, stateReader)
+	yearReviewHandler := NewYearReviewHandler(db)
+	yearReviewHandler := yearreview.NewHandler(db)
 	energyFlowHandler := apienergyflow.NewEnergyFlowHandler(db, stateReader, liveStateReader)
 	weeklyDigestHandler := apiweekly.NewHandler(db)
 	teslaChargingHistoryHandler := apiteslachargehist.NewTeslaChargingHistoryHandler(teslaClient, db)

@@ -1,4 +1,4 @@
-package api
+package yearreview
 
 import (
 	"fmt"
@@ -7,19 +7,20 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 )
 
-// YearReviewHandler serves Spotify Wrapped-style annual driving reports.
-type YearReviewHandler struct {
+// Handler serves Spotify Wrapped-style annual driving reports.
+type Handler struct {
 	db *database.DB
 }
 
-// NewYearReviewHandler creates a new YearReviewHandler.
-func NewYearReviewHandler(db *database.DB) *YearReviewHandler {
-	return &YearReviewHandler{db: db}
+// NewHandler creates a new Handler.
+func NewHandler(db *database.DB) *Handler {
+	return &Handler{db: db}
 }
 
 type driveHighlight struct {
@@ -52,18 +53,18 @@ func roundYR(v float64, decimals int) float64 {
 }
 
 // GetYearReview returns a full-year aggregation for a single vehicle.
-func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Parse required vehicle_id
 	vidStr := r.URL.Query().Get("vehicle_id")
 	if vidStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
 		return
 	}
 	vehicleID, err := strconv.ParseInt(vidStr, 10, 64)
 	if err != nil || vehicleID <= 0 {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
@@ -72,7 +73,7 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 	if y := r.URL.Query().Get("year"); y != "" {
 		parsed, err := strconv.Atoi(y)
 		if err != nil || parsed < 2010 || parsed > 2100 {
-			writeError(w, http.StatusBadRequest, "invalid year")
+			httpx.WriteError(w, http.StatusBadRequest, "invalid year")
 			return
 		}
 		year = parsed
@@ -90,11 +91,11 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 	).Scan(&vDisplayName, &vModel)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			writeError(w, http.StatusNotFound, "vehicle not found")
+			httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
 			return
 		}
 		log.Error().Err(err).Msg("year-review: failed to get vehicle")
-		writeError(w, http.StatusInternalServerError, "failed to get vehicle")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get vehicle")
 		return
 	}
 
@@ -122,7 +123,7 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 	).Scan(&totalDrives, &totalDistKm, &totalDrivingMin, &fastestSpeed, &coldestTemp, &hottestTemp)
 	if err != nil {
 		log.Error().Err(err).Msg("year-review: failed to get drive stats")
-		writeError(w, http.StatusInternalServerError, "failed to compute year review")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to compute year review")
 		return
 	}
 
@@ -164,7 +165,7 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 	).Scan(&totalChargeSessions, &totalEnergyKwh, &totalChargingCost)
 	if err != nil {
 		log.Error().Err(err).Msg("year-review: failed to get charging stats")
-		writeError(w, http.StatusInternalServerError, "failed to compute year review")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to compute year review")
 		return
 	}
 
@@ -479,7 +480,7 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 		"comparisons": comparisons,
 	}
 
-	writeJSON(w, http.StatusOK, result)
+	httpx.WriteJSON(w, http.StatusOK, result)
 }
 
 func derefFloat(p *float64) float64 {
@@ -487,4 +488,11 @@ func derefFloat(p *float64) float64 {
 		return 0
 	}
 	return *p
+}
+
+func safeFloat(v float64) float64 {
+	if math.IsNaN(v) || math.IsInf(v, 0) {
+		return 0
+	}
+	return v
 }
