@@ -23,6 +23,7 @@ import (
 	apiflagsh "github.com/ev-dev-labs/teslasync/internal/api/apiflagsh"
 	apikeyh "github.com/ev-dev-labs/teslasync/internal/api/apikey"
 	"github.com/ev-dev-labs/teslasync/internal/api/apperror"
+	apiaudit "github.com/ev-dev-labs/teslasync/internal/api/audit"
 	apiauth "github.com/ev-dev-labs/teslasync/internal/api/auth"
 	apiauths "github.com/ev-dev-labs/teslasync/internal/api/authsession"
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
@@ -765,6 +766,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	regenHandler := apiregen.NewRegenHandler(db)
 	batteryDegradationHandler := NewBatteryDegradationHandler(db, stateReader, signalLogReader)
 	auditHandler := NewAuditHandler(db, cfg.Auth.ForwardAuthHeader)
+	maskedRevealHandler := apiaudit.NewMaskedRevealHandler(auditRepo, cfg.Auth.ForwardAuthHeader)
 	apiCallLogHandler := apicalllog.NewHandler(db)
 	apiKeyHandler := apikeyh.NewHandler(db, cfg.Auth.ForwardAuthHeader, apikeyh.WithAuditFunc(
 		func(r *http.Request, headerName, action, resource string, entityID *int64, detail string) {
@@ -2778,6 +2780,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// downstream handlers transparently "see what the target sees".
 		// Open mode is a passthrough.
 		r.Use(tsauth.ImpersonationMiddleware(cfg.Auth.ForwardAuthHeader, impersonationStore))
+
+		r.With(httprate.LimitByIP(60, 1*time.Minute)).Post("/audit/reveal", maskedRevealHandler.Reveal)
 
 		// Auth (stricter rate limits to prevent brute force)
 		r.Route("/auth", func(r chi.Router) {
