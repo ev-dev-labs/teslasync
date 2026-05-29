@@ -15,9 +15,10 @@
 // (`go run ./cmd/ai-eval --feature inbox-auto-categorization`);
 // duplicating that here would require a live database fixture.
 
-package api
+package aiinboxcat
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -27,6 +28,24 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestInboxCategorizationAIOffNoAutoLabels is the load-bearing
 // off-mode contract proof for slice 0035. It mounts the AI
@@ -146,23 +165,23 @@ func TestInboxCategorizationAIOffNoAutoLabels(t *testing.T) {
 	}
 }
 
-// TestAIInboxCategorizationHandler_PanicsOnNilWiring asserts
+// TestHandler_PanicsOnNilWiring asserts
 // the handler constructor refuses zero-valued dependencies. A
 // wiring bug at boot must surface as a panic, not as a nil-deref
 // on first request.
-func TestAIInboxCategorizationHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIInboxCategorizationHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIInboxCategorizationHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -170,21 +189,21 @@ func TestAIInboxCategorizationHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIInboxCategorizationSource_PanicsOnNilWiring mirrors the
+// TestSource_PanicsOnNilWiring mirrors the
 // handler nil-deps proof for the production source adapter.
-func TestAIInboxCategorizationSource_PanicsOnNilWiring(t *testing.T) {
+func TestSource_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"both nil", func() { NewAIInboxCategorizationSource(nil, nil) }},
+		{"both nil", func() { NewSource(nil, nil) }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIInboxCategorizationSource(%s) did not panic", tc.name)
+					t.Fatalf("NewSource(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -192,10 +211,10 @@ func TestAIInboxCategorizationSource_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIInboxCategorizationHandler_BodyParser_AcceptsEmpty
+// TestHandler_BodyParser_AcceptsEmpty
 // proves an empty body is allowed (every filter field is
 // optional).
-func TestAIInboxCategorizationHandler_BodyParser_AcceptsEmpty(t *testing.T) {
+func TestHandler_BodyParser_AcceptsEmpty(t *testing.T) {
 	t.Parallel()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/alerts/inbox/categorize", nil)
@@ -214,10 +233,10 @@ func TestAIInboxCategorizationHandler_BodyParser_AcceptsEmpty(t *testing.T) {
 	}
 }
 
-// TestAIInboxCategorizationHandler_BodyParser_AcceptsAllFields
+// TestHandler_BodyParser_AcceptsAllFields
 // proves a body with every supported field surfaces the values
 // to the handler.
-func TestAIInboxCategorizationHandler_BodyParser_AcceptsAllFields(t *testing.T) {
+func TestHandler_BodyParser_AcceptsAllFields(t *testing.T) {
 	t.Parallel()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/alerts/inbox/categorize",
@@ -241,9 +260,9 @@ func TestAIInboxCategorizationHandler_BodyParser_AcceptsAllFields(t *testing.T) 
 	}
 }
 
-// TestAIInboxCategorizationHandler_BodyParser_RejectsBadVehicleID
+// TestHandler_BodyParser_RejectsBadVehicleID
 // proves a body with a non-positive vehicle_id is rejected.
-func TestAIInboxCategorizationHandler_BodyParser_RejectsBadVehicleID(t *testing.T) {
+func TestHandler_BodyParser_RejectsBadVehicleID(t *testing.T) {
 	t.Parallel()
 	cases := []string{
 		`{"vehicle_id":0}`,
@@ -264,9 +283,9 @@ func TestAIInboxCategorizationHandler_BodyParser_RejectsBadVehicleID(t *testing.
 	}
 }
 
-// TestAIInboxCategorizationHandler_BodyParser_RejectsBadWindow
+// TestHandler_BodyParser_RejectsBadWindow
 // proves a window_days outside [1, 90] is rejected.
-func TestAIInboxCategorizationHandler_BodyParser_RejectsBadWindow(t *testing.T) {
+func TestHandler_BodyParser_RejectsBadWindow(t *testing.T) {
 	t.Parallel()
 	cases := []string{
 		`{"window_days":0}`,
@@ -286,9 +305,9 @@ func TestAIInboxCategorizationHandler_BodyParser_RejectsBadWindow(t *testing.T) 
 	}
 }
 
-// TestAIInboxCategorizationHandler_BodyParser_RejectsBadSeverity
+// TestHandler_BodyParser_RejectsBadSeverity
 // proves an unknown severity is rejected.
-func TestAIInboxCategorizationHandler_BodyParser_RejectsBadSeverity(t *testing.T) {
+func TestHandler_BodyParser_RejectsBadSeverity(t *testing.T) {
 	t.Parallel()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/alerts/inbox/categorize", strings.NewReader(`{"severities":["bogus"]}`))
@@ -301,9 +320,9 @@ func TestAIInboxCategorizationHandler_BodyParser_RejectsBadSeverity(t *testing.T
 	}
 }
 
-// TestAIInboxCategorizationHandler_BodyParser_RejectsBadRuleID
+// TestHandler_BodyParser_RejectsBadRuleID
 // proves a non-positive rule_id is rejected.
-func TestAIInboxCategorizationHandler_BodyParser_RejectsBadRuleID(t *testing.T) {
+func TestHandler_BodyParser_RejectsBadRuleID(t *testing.T) {
 	t.Parallel()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/alerts/inbox/categorize", strings.NewReader(`{"rule_ids":[1,0,3]}`))
@@ -313,9 +332,9 @@ func TestAIInboxCategorizationHandler_BodyParser_RejectsBadRuleID(t *testing.T) 
 	}
 }
 
-// TestAIInboxCategorizationHandler_BodyParser_RejectsBadJSON
+// TestHandler_BodyParser_RejectsBadJSON
 // proves a malformed body is rejected with a 400.
-func TestAIInboxCategorizationHandler_BodyParser_RejectsBadJSON(t *testing.T) {
+func TestHandler_BodyParser_RejectsBadJSON(t *testing.T) {
 	t.Parallel()
 	cases := []string{
 		`{not json`,

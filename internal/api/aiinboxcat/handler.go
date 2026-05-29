@@ -1,4 +1,4 @@
-package api
+package aiinboxcat
 
 // Phase-50 / 0035 — A2 Inbox auto-categorization.
 //
@@ -65,40 +65,49 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 )
 
-// aiInboxCategorizationMaxIterations bounds the dispatcher's
+// maxIterations bounds the dispatcher's
 // tool-loop. The strategy is at most draft_alert_categories ->
 // validate_alert_category(per label) -> answer (with optional
 // retries). A hard ceiling of 8 is generous and matches the
 // other A-tier propose-only handlers.
-const aiInboxCategorizationMaxIterations = 8
+const maxIterations = 8
 
-// aiInboxCategorizationDefaultWindowDays is the trailing-window
+// defaultWindowDays is the trailing-window
 // length the production InboxCategorizationSource adapter
 // projects across when reading the recent notification_logs.
 // 7 mirrors the canonical "recent" window used elsewhere in
 // Phase-50.
-const aiInboxCategorizationDefaultWindowDays = 7
+const defaultWindowDays = 7
 
-// aiInboxCategorizationMinEvents is the minimum total
+// minEvents is the minimum total
 // notification_logs row count (across the trailing window) the
 // adapter requires before it lets the narrator quote per-
 // category counts. Below this threshold has_enough_history flips
 // false and the narrator says so plainly. 10 is the minimum
 // sample for a meaningful descriptive tally — fewer notifications
 // makes any per-category breakdown statistically meaningless.
-const aiInboxCategorizationMinEvents = 10
+const minEvents = 10
 
-// aiInboxCategorizationRequest is the JSON body shape this
+func writeError(w http.ResponseWriter, status int, msg string) {
+	httpx.WriteError(w, status, msg)
+}
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// request is the JSON body shape this
 // handler accepts. Body is OPTIONAL (an empty body is accepted;
 // the handler defaults to the entire inbox over the last
-// aiInboxCategorizationDefaultWindowDays days). Mirrors how the
+// defaultWindowDays days). Mirrors how the
 // canonical NotificationFilterBar URL params already work.
-type aiInboxCategorizationRequest struct {
+type request struct {
 	// VehicleID restricts the recent window to a single
 	// vehicle. Optional — when absent the handler returns
 	// the per-category counts across every vehicle the
@@ -109,7 +118,7 @@ type aiInboxCategorizationRequest struct {
 	VehicleID *int64 `json:"vehicle_id,omitempty"`
 
 	// WindowDays is the lookback in days. Defaults to
-	// aiInboxCategorizationDefaultWindowDays when nil.
+	// defaultWindowDays when nil.
 	// Capped at 90 by the tool's input validator so a
 	// runaway request cannot scan an unbounded range.
 	WindowDays *int `json:"window_days,omitempty"`
@@ -124,14 +133,14 @@ type aiInboxCategorizationRequest struct {
 	RuleIDs []int64 `json:"rule_ids,omitempty"`
 }
 
-// AIInboxCategorizationHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/alerts/inbox/categorize.
 //
 // Stateless beyond its constructor inputs; safe for concurrent
 // use across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired once
 // at boot.
-type AIInboxCategorizationHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -139,7 +148,7 @@ type AIInboxCategorizationHandler struct {
 	maxIters   int
 }
 
-// NewAIInboxCategorizationHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on
 // a nil so the wiring bug surfaces at boot, not at first
 // request.
@@ -155,26 +164,26 @@ type AIInboxCategorizationHandler struct {
 // headerName: forward-auth header name; used to extract subject
 //
 //	for audit.
-func NewAIInboxCategorizationHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIInboxCategorizationHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIInboxCategorizationHandler: nil provider.Registry")
+		panic("aiinboxcat: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIInboxCategorizationHandler: nil tools.Registry")
+		panic("aiinboxcat: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIInboxCategorizationHandler: nil strategy.Strategy")
+		panic("aiinboxcat: NewHandler: nil strategy.Strategy")
 	}
-	return &AIInboxCategorizationHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiInboxCategorizationMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
@@ -187,8 +196,8 @@ func NewAIInboxCategorizationHandler(
 // Severity values are validated against the canonical {info,
 // warn, critical} set; vehicle_id and rule_id values must be
 // positive when provided; window_days must be in [1, 90].
-func parseInboxCategorizationBody(w http.ResponseWriter, r *http.Request) (*aiInboxCategorizationRequest, bool) {
-	req := &aiInboxCategorizationRequest{}
+func parseInboxCategorizationBody(w http.ResponseWriter, r *http.Request) (*request, bool) {
+	req := &request{}
 	if r.Body == nil {
 		return req, true
 	}
@@ -237,7 +246,7 @@ func parseInboxCategorizationBody(w http.ResponseWriter, r *http.Request) (*aiIn
 // path either writes a structured frame onto the SSE stream
 // (when the writer has been opened) or a plain JSON 4xx/5xx
 // (before it has).
-func (h *AIInboxCategorizationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate body. A malformed body fails fast
 	//    with a JSON 400 before any provider lookup.
 	body, ok := parseInboxCategorizationBody(w, r)
@@ -301,7 +310,7 @@ func (h *AIInboxCategorizationHandler) ServeHTTP(w http.ResponseWriter, r *http.
 	//    body's optional vehicle_id is mentioned only as a hint
 	//    — the typed envelope returned by draft_alert_categories
 	//    is the source of truth.
-	windowDays := aiInboxCategorizationDefaultWindowDays
+	windowDays := defaultWindowDays
 	if body.WindowDays != nil {
 		windowDays = *body.WindowDays
 	}
@@ -348,9 +357,9 @@ func (h *AIInboxCategorizationHandler) ServeHTTP(w http.ResponseWriter, r *http.
 	}
 }
 
-// Compile-time assertion: AIInboxCategorizationHandler satisfies
+// Compile-time assertion: Handler satisfies
 // http.Handler.
-var _ http.Handler = (*AIInboxCategorizationHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the InboxCategorizationSource port declared by
@@ -359,7 +368,7 @@ var _ http.Handler = (*AIInboxCategorizationHandler)(nil)
 // the AIAlertTuningSource pattern from slice 0034.
 // ---------------------------------------------------------------------
 
-// AIInboxCategorizationSource is the production
+// Source is the production
 // nl.InboxCategorizationSource. It composes the canonical
 // NotificationRepo (read) + AlertRuleRepo (read) so the AI
 // projection is grounded in the SAME notification_logs +
@@ -368,22 +377,22 @@ var _ http.Handler = (*AIInboxCategorizationHandler)(nil)
 //
 // The struct holds two narrow read interfaces; the constructor
 // panics on a nil so a wiring bug surfaces at boot.
-type AIInboxCategorizationSource struct {
+type Source struct {
 	notifications *dbnotif.NotificationRepo
 	rules         *dbalert.AlertRuleRepo
 }
 
-// NewAIInboxCategorizationSource constructs the adapter. Panics
+// NewSource constructs the adapter. Panics
 // on a nil repo so a wiring mistake surfaces at boot rather
 // than as a nil-deref on first AI request.
-func NewAIInboxCategorizationSource(notifications *dbnotif.NotificationRepo, rules *dbalert.AlertRuleRepo) *AIInboxCategorizationSource {
+func NewSource(notifications *dbnotif.NotificationRepo, rules *dbalert.AlertRuleRepo) *Source {
 	if notifications == nil {
-		panic("api: NewAIInboxCategorizationSource: nil *dbnotif.NotificationRepo")
+		panic("aiinboxcat: NewSource: nil *dbnotif.NotificationRepo")
 	}
 	if rules == nil {
-		panic("api: NewAIInboxCategorizationSource: nil *dbalert.AlertRuleRepo")
+		panic("aiinboxcat: NewSource: nil *dbalert.AlertRuleRepo")
 	}
-	return &AIInboxCategorizationSource{notifications: notifications, rules: rules}
+	return &Source{notifications: notifications, rules: rules}
 }
 
 // LoadCategoryCounts implements
@@ -400,7 +409,7 @@ func NewAIInboxCategorizationSource(notifications *dbnotif.NotificationRepo, rul
 // CategoryCount.Count across the returned slice (NOT the raw
 // notification_logs row count — rows whose alert_id is missing
 // from the rules lookup bucket into "other").
-func (a *AIInboxCategorizationSource) LoadCategoryCounts(ctx context.Context, f dbnotif.NotificationLogFilters) ([]nl.CategoryCount, int, int, error) {
+func (a *Source) LoadCategoryCounts(ctx context.Context, f dbnotif.NotificationLogFilters) ([]nl.CategoryCount, int, int, error) {
 	// Defence in depth: clamp the limit so a runaway caller
 	// cannot blow past the canonical 1000-row cap. The tool
 	// already sets Limit=1000; this is belt-and-suspenders.
@@ -463,5 +472,5 @@ func (a *AIInboxCategorizationSource) LoadCategoryCounts(ctx context.Context, f 
 		total += c.Count
 	}
 
-	return counts, total, aiInboxCategorizationMinEvents, nil
+	return counts, total, minEvents, nil
 }

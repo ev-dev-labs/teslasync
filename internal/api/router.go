@@ -37,6 +37,7 @@ import (
 	aifeedtri "github.com/ev-dev-labs/teslasync/internal/api/aifeedtri"
 	aifsmnar "github.com/ev-dev-labs/teslasync/internal/api/aifsmnar"
 	aigeofautom "github.com/ev-dev-labs/teslasync/internal/api/aigeofautom"
+	aiinboxcat "github.com/ev-dev-labs/teslasync/internal/api/aiinboxcat"
 	aiincident "github.com/ev-dev-labs/teslasync/internal/api/aiincident"
 	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
@@ -1736,18 +1737,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// `draft_alert_categories` + `validate_alert_category`
 	// are registered on the process-wide tool registry so
 	// the dispatcher can resolve the strategy's allowedTools
-	// at boot. AIInboxCategorizationSource adapts the
+	// at boot. aiinboxcat.Source adapts the
 	// canonical NotificationRepo + AlertRuleRepo so the LLM
 	// reads the SAME rows the manual InboxBody path reads —
 	// no parallel write path; the LLM never persists.
 	nl.RegisterInboxAutoCategorizationTools(aiToolRegistry, nl.InboxAutoCategorizationSources{
-		Source: NewAIInboxCategorizationSource(dbnotif.NewNotificationRepo(db), dbalert.NewAlertRuleRepo(db)),
+		Source: aiinboxcat.NewSource(dbnotif.NewNotificationRepo(db), dbalert.NewAlertRuleRepo(db)),
 	})
 	// inbox-auto-categorization handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiInboxCategorizationHandler := NewAIInboxCategorizationHandler(
+	aiInboxCategorizationHandler := aiinboxcat.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		inboxautocategorization.New(),
