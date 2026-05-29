@@ -1,11 +1,15 @@
-package api
+package sleep
 
 import (
+	"context"
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/jackc/pgx/v5"
@@ -32,7 +36,7 @@ func NewSleepHandler(db *database.DB) *SleepHandler {
 func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id required")
 		return
 	}
 
@@ -42,7 +46,7 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 	// fallback for dashboard widgets that pass a rolling-from-now window.
 	days := 30
 	var from, to time.Time
-	if s, e := parseDateRange(r); !s.IsZero() {
+	if s, e := apiparams.ParseDateRange(r); !s.IsZero() {
 		from = s
 		if !e.IsZero() {
 			to = e
@@ -87,7 +91,7 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 		 GROUP BY to_state`, vehicleID, from, to)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("sleep: failed to get fsm_transitions")
-		writeError(w, http.StatusInternalServerError, "failed to get sleep data")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get sleep data")
 		return
 	}
 	defer rows.Close()
@@ -177,7 +181,7 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 	// pairing.
 	var timeToSleepAvg float64
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"vehicle_id":                vehicleID,
 		"period_days":               days,
 		"state_distribution":        stateDistribution,
@@ -198,4 +202,44 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 		"total_events":              len(recentEvents),
 		"avg_sentry_duration_hours": sentryOnHours,
 	})
+}
+
+// lookupVehicleCapacityWh fetches VIN and model for a vehicle ID and estimates
+// battery capacity. Falls back to 75000 Wh / "default" on any lookup error.
+func lookupVehicleCapacityWh(ctx context.Context, db *database.DB, vehicleID int64) (float64, string) {
+	var vin string
+	var model *string
+	err := db.Pool.QueryRow(ctx,
+		`SELECT vin, model FROM vehicles WHERE id = $1`, vehicleID,
+	).Scan(&vin, &model)
+	if err != nil {
+		return 75000.0, "default"
+	}
+	m := ""
+	if model != nil {
+		m = *model
+	}
+	return estimateBatteryCapacityWh(vin, m)
+}
+
+// estimateBatteryCapacityWh returns the best-effort battery capacity in Wh
+// and a source string indicating how the estimate was derived.
+func estimateBatteryCapacityWh(vin string, model string) (float64, string) {
+	if len(vin) >= 8 {
+		switch vin[7] {
+		case 'E', 'F':
+			return 60000.0, "vin_estimate"
+		case 'K', 'L', 'M':
+			return 75000.0, "vin_estimate"
+		case 'S', 'A':
+			return 100000.0, "vin_estimate"
+		case 'P':
+			return 100000.0, "vin_estimate"
+		}
+	}
+	m := strings.ToLower(model)
+	if strings.Contains(m, "model s") || strings.Contains(m, "model x") {
+		return 100000.0, "model_estimate"
+	}
+	return 75000.0, "default"
 }
