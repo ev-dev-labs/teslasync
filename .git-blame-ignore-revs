@@ -417,3 +417,6 @@ d28c62b95a4568f248349dd1c4b7b05fb48def0b
 
 # R2d.176 dead charge-planner leftover removal
 444f1182853849c1889c5af331f783d7d0eb3abe
+
+# R2d.177 carve telemetry cluster into internal/api/telemetry subpackage
+8fbb4be316348db0d3b0c0c7536f72eb9996f595

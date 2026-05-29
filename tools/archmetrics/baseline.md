@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-29T08:21:02Z, Go go1.26.1, commit 444f1182853849c1889c5af331f783d7d0eb3abe_
+_Generated 2026-05-29T08:40:30Z, Go go1.26.1, commit 8fbb4be316348db0d3b0c0c7536f72eb9996f595_
 
 ## Summary
 
-- Packages: 478
+- Packages: 479
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 383059
+- Total non-blank LOC under cmd/+internal/+tools/: 383158
 
 ## cmd/* main.go LOC
 
@@ -170,7 +170,7 @@ _Generated 2026-05-29T08:21:02Z, Go go1.26.1, commit 444f1182853849c1889c5af331f
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 38 | 29 | 19463 | yes | handler |
+| internal/api | 23 | 22 | 11163 | yes | handler |
 | internal/api/adminfeedback | 2 | 1 | 680 | yes | handler |
 | internal/api/adminlogstream | 2 | 1 | 688 | yes | handler |
 | internal/api/adminmaintenance | 2 | 1 | 604 | yes | handler |
@@ -329,6 +329,7 @@ _Generated 2026-05-29T08:21:02Z, Go go1.26.1, commit 444f1182853849c1889c5af331f
 | internal/api/sysauthmode | 2 | 1 | 339 | yes | handler |
 | internal/api/system | 2 | 1 | 588 | yes | handler |
 | internal/api/tco | 3 | 1 | 506 | yes | handler |
+| internal/api/telemetry | 17 | 7 | 8397 | yes | handler |
 | internal/api/tempimpact | 2 | 0 | 240 | yes | handler |
 | internal/api/teslachargehist | 2 | 0 | 269 | yes | handler |
 | internal/api/teslachargesess | 2 | 0 | 221 | yes | handler |
@@ -361,7 +362,7 @@ _Generated 2026-05-29T08:21:02Z, Go go1.26.1, commit 444f1182853849c1889c5af331f
 | internal/api/weeklydigest | 2 | 0 | 92 | yes | handler |
 | internal/api/yearreview | 2 | 0 | 455 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
-| internal/app | 6 | 1 | 1850 | yes | app |
+| internal/app | 6 | 1 | 1852 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 169 | yes | app |
 | internal/app/auditviewersvc | 3 | 0 | 77 | yes | app |
 | internal/app/chargingsvc | 2 | 1 | 301 | yes | app |
@@ -534,7 +535,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
 | `internal/database` | R4 | 143 | 12 / 9 | 22 | 17 | 5 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
-| `internal/api` | R2 (waves R2a-R2e) | 434 | 38 / 29 | 59 | 36 | 23 |
+| `internal/api` | R2 (waves R2a-R2e) | 434 | 23 / 22 | 59 | 37 | 22 |
 
 ### `internal/models` detail
 
@@ -662,6 +663,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/api/vehicle`
 - `internal/api/charging`
 - `internal/api/trip`
+- `internal/api/telemetry`
 - `internal/api/energy`
 - `internal/api/automation`
 - `internal/api/notification`
@@ -688,7 +690,6 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/api/cost`
 - `internal/api/vehiclesys`
 - `internal/api/drive`
-- `internal/api/telemetry`
 - `internal/api/fleet`
 - `internal/api/teslaapi`
 - `internal/api/ai`
