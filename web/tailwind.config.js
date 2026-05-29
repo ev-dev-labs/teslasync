@@ -120,24 +120,24 @@ export default {
       },
       fontSize: {
         '2xs': ['0.625rem', { lineHeight: '0.875rem' }],
-        // Density-aware body text size (Phase 40 / Prompt 44).
+        // Density-aware body text size.
         // Tracks `--density-text` set by `body[data-density="..."]`.
         'd-base': ['var(--density-text)', { lineHeight: '1.5' }],
       },
       spacing: {
-        // Density-aware padding/gap tokens (Phase 40 / Prompt 44).
+        // Density-aware padding/gap tokens.
         // Tracks `--density-pad-x` / `--density-pad-y` / `--density-gap`
         // set by `body[data-density="..."]` in index.css. Use as
         // `px-d-pad-x`, `py-d-pad-y`, `gap-d-gap` so the value flows
         // through className strings (no inline styles required, keeps
-        // the audit-violations sweep clean).
+        // the style audit clean).
         'd-pad-x': 'var(--density-pad-x)',
         'd-pad-y': 'var(--density-pad-y)',
         'd-gap': 'var(--density-gap)',
         'd-row': 'var(--density-row-h)',
       },
       minHeight: {
-        // Density-aware row height (Phase 40 / Prompt 44).
+        // Density-aware row height.
         // Use `min-h-d-row` on table rows / list items so the height
         // adapts to the user's density preference.
         'd-row': 'var(--density-row-h)',
@@ -146,7 +146,7 @@ export default {
         // Same density-aware row height as a fixed-height utility.
         'd-row': 'var(--density-row-h)',
       },
-      // Phase-45 / Prompt 21 — motion duration tokens.
+      // motion duration tokens.
       // Backed by --motion-duration-* CSS vars in index.css that collapse to
       // 0ms under prefers-reduced-motion. Use `duration-fast | duration-normal
       // | duration-slow` instead of raw `duration-NNN` numeric utilities so
@@ -165,20 +165,20 @@ export default {
     },
   },
   plugins: [
-    // Phase-46 / Prompt 11 — forced-colors variant.
+    // forced-colors variant.
     //
     // Tailwind v3.4 ships a built-in `forced-colors:` variant, but we
     // register it explicitly so:
-    //   1. our intent ("the app supports Windows High Contrast / Aquatic
-    //      contrast themes") is documented in source rather than implicit
-    //      in a framework version, and
-    //   2. the `forced-colors:` token survives any future Tailwind
-    //      upgrade or downgrade without silently disappearing.
+    // 1. our intent ("the app supports Windows High Contrast / Aquatic
+    // contrast themes") is documented in source rather than implicit
+    // in a framework version, and
+    // 2. the `forced-colors:` token survives any future Tailwind
+    // upgrade or downgrade without silently disappearing.
     //
     // Use it on critical components (Button, Card, GlassPanel, Modal,
     // etc.) to map borders/backgrounds to system colors that survive
     // forced-colors mode:
-    //   className="border border-transparent forced-colors:border-[CanvasText]"
+    // className="border border-transparent forced-colors:border-[CanvasText]"
     //
     // Audit: `npm run audit:forced-colors` checks every critical
     // component file uses the variant at least once.

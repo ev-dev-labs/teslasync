@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 /**
- * Phase-45 / Prompt 34 — Tooltip text-color audit.
+ * Tooltip text-color audit.
  *
- * Flags `<Tooltip ...>` and `<HelpTooltip ...>` callsites whose `content`
+ * Flags `<Tooltip...>` and `<HelpTooltip...>` callsites whose `content`
  * prop passes JSX subtree(s) hardcoding a `text-white/N` or
  * `text-gray-{100..400}/N` colour class.
  *
  * Why: `web/src/components/ui/Tooltip.tsx` uses an INVERTED surface for
  * high contrast — `bg-gray-900 text-gray-100 dark:bg-gray-100
  * dark:text-gray-900`. A child that hardcodes `text-white/80` will:
- *   - render white-on-light-card in dark mode (invisible)
- *   - get globally remapped to dark slate text in light mode by
- *     `:root.light-mode .text-white\/N` overrides → dark-on-dark card
- *     (invisible)
+ * - render white-on-light-card in dark mode (invisible)
+ * - get globally remapped to dark slate text in light mode by
+ * `:root.light-mode.text-white\/N` overrides → dark-on-dark card
+ * (invisible)
  *
  * The body should INHERIT the tooltip's intrinsic text colour by simply
  * omitting the colour class. Decorative shades that convey meaning
@@ -21,14 +21,14 @@
  * overrides for readability.
  *
  * False-positive avoidance:
- *   - Skips files that don't import `Tooltip` from `@/components/ui` or a
- *     relative `ui/Tooltip` path, or `HelpTooltip` from
- *     `@/components/ui` / `@/components/feedback/HelpTooltip` / a relative
- *     `HelpTooltip` path. This excludes the recharts `<Tooltip>` re-export
- *     in `@/components/charts` (a different component with its own
- *     `wrapperStyle` / `contentStyle` API).
- *   - Skips test/spec files (false positives are noise; tests intentionally
- *     render hostile JSX to verify the runtime warn).
+ * - Skips files that don't import `Tooltip` from `@/components/ui` or a
+ * relative `ui/Tooltip` path, or `HelpTooltip` from
+ * `@/components/ui` / `@/components/feedback/HelpTooltip` / a relative
+ * `HelpTooltip` path. This excludes the recharts `<Tooltip>` re-export
+ * in `@/components/charts` (a different component with its own
+ * `wrapperStyle` / `contentStyle` API).
+ * - Skips test/spec files (false positives are noise; tests intentionally
+ * render hostile JSX to verify the runtime warn).
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs'

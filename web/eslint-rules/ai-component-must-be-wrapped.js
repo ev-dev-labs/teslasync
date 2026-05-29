@@ -1,18 +1,17 @@
-// Phase-50 / 0001 — F0 AI-Off Contract.
+// AI-off contract enforcement.
 //
 // Custom ESLint rule: `teslasync/ai-component-must-be-wrapped`.
 //
-// Statically enforces ADR-015's invariant that every AI surface in
+// Statically enforces the invariant that every AI surface in
 // the SPA goes through `withAiFeature(...)`. A component is in scope
 // when EITHER:
 //
-//   - Its file path matches `web/src/features/**/ai/**/*.tsx`
-//     (the "official" AI feature directory layout used by every
-//     Phase-50 slice from F1 onward).
+// - Its file path matches `web/src/features/**/ai/**/*.tsx`
+//   (the official AI feature directory layout).
 //
-//   - It has a `default export` whose name matches `/^Ai[A-Z]/`
-//     (the project naming convention for AI-prefixed components,
-//     e.g. `AiChatbotPanel`, `AiFleetSummary`).
+// - It has a `default export` whose name matches `/^Ai[A-Z]/`
+// (the project naming convention for AI-prefixed components,
+// e.g. `AiChatbotPanel`, `AiFleetSummary`).
 //
 // For each in-scope component the rule asserts that the default
 // export is the *return value* of a `withAiFeature(...)` call —
@@ -22,15 +21,15 @@
 //
 // Counter-examples that this rule REJECTS:
 //
-//   - `export default function AiChatbotPanel() { … }`     (raw)
-//   - `export default AiChatbotPanel`                       (raw)
-//   - `export default memo(AiChatbotPanel)`                 (memo only)
-//   - `export default withRouter(AiChatbotPanel)`           (wrong wrapper)
+// - `export default function AiChatbotPanel() { … }` (raw)
+// - `export default AiChatbotPanel` (raw)
+// - `export default memo(AiChatbotPanel)` (memo only)
+// - `export default withRouter(AiChatbotPanel)` (wrong wrapper)
 //
 // Counter-example that this rule ACCEPTS:
 //
-//   - `export default withAiFeature('chatbot-llm', AiChatbotPanel)`
-//   - `const Gated = withAiFeature('chatbot-llm', AiChatbotPanel); export default Gated;`
+// - `export default withAiFeature('chatbot-llm', AiChatbotPanel)`
+// - `const Gated = withAiFeature('chatbot-llm', AiChatbotPanel); export default Gated;`
 //
 // The rule is intentionally conservative: it ONLY inspects default
 // exports, because the AI feature loader (`React.lazy`) imports
@@ -108,7 +107,7 @@ const rule = {
         }
       },
 
-      // export default <expr>  — capture for end-of-program check.
+      // export default <expr> — capture for end-of-program check.
       ExportDefaultDeclaration(node) {
         defaultExportNode = node;
         const decl = node.declaration;

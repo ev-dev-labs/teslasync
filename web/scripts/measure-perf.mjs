@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * Phase 40 / Prompt 35 — Performance baseline measurement.
+ * Performance baseline measurement.
  *
  * Builds the app, serves it with `vite preview`, then drives Lighthouse
  * (via npx) against each route in ROUTES. Writes the resulting metrics
  * to web/perf-baseline.json so future PRs can diff against it.
  *
  * Usage:
- *   cd web
- *   npm run perf:baseline
+ * cd web
+ * npm run perf:baseline
  *
  * Requires Chrome / Chromium to be installed on the host. Lighthouse
  * itself is fetched via `npx -y lighthouse@latest`, so no permanent

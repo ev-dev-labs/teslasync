@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Phase-45 / Prompt 08 — Light-mode CSS-var parity audit.
+// Light-mode CSS-var parity audit.
 //
 // Lists Tailwind class literals that bypass the CSS-var token vocabulary
-// established in web/src/index.css (Phase-40 / Prompt 10). Every surface
+// established in web/src/index.css. Every surface
 // color, text color, and border in the app must resolve through a project
 // token (`var(--text-primary)`, `var(--surface-1)`, `var(--border-subtle)`,
 // etc.) so toggling `data-theme="light"` re-resolves the entire palette
@@ -65,7 +65,7 @@ const EXEMPT_FILES = [
   'index.css',
   // Recharts wrapperStyle/contentStyle objects use intentional fixed
   // contrast that does not flip with the theme; the chart palette is
-  // theme-locked by design (see "Out of scope" in phase-45/08).
+  // theme-locked by design (see "Out of scope" in).
   'components/charts/',
   // Theme primitives that map raw Tailwind tokens to CSS vars.
   'components/theme/',

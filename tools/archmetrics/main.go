@@ -10,7 +10,7 @@
 // -compare exits 1 if any metric regresses: a new file appears in a frozen
 // package, a new layering violation surfaces, or doc.go coverage drops.
 //
-// Phase-47 / Prompt 01 — pure additive; never wired into a runtime binary.
+// This tool is additive and is not wired into runtime binaries.
 package main
 
 import (
@@ -32,9 +32,8 @@ import (
 
 const modulePath = "github.com/ev-dev-labs/teslasync"
 
-// frozenPackages enumerates packages whose .go file count must NOT grow
-// between baseline and HEAD. Phase-47 prompts 06+ extend this list as
-// each canonical package is declared frozen.
+// frozenPackages enumerates packages whose .go file count must not grow
+// between baseline and HEAD. Add a package here when it is declared frozen.
 var frozenPackages = []string{
 	"internal/api",
 }
@@ -43,27 +42,22 @@ var frozenPackages = []string{
 // is "<from-glob> -> <to-glob>" where globs are evaluated as path prefixes
 // (trailing /* means "or any subpackage").
 //
-// Phase-A3.1 (chore/repo-reorganization) extends this from the original 5
-// phase-47 rules to a full Clean Architecture DAG. Pre-existing violations
-// are captured in baseline.json at the moment the rules were added; only
-// NEW (post-baseline) violations fail the gate. A future Phase-A3.3 layer
-// adds per-package file-count ratcheting on top (violations-allowlist.json)
-// so legacy packages can only shrink, never grow.
+// Baseline files capture pre-existing violations at the moment a rule is
+// added; only new violations fail the gate. Per-package ratchets in
+// violations-allowlist.json keep legacy packages shrinking instead of growing.
 var forbiddenEdges = []forbiddenEdge{
 	// ----------------------------------------------------------------------
-	// Phase-47 baseline rules — broadened in Phase-A3.1
+	// Baseline architecture rules
 	// ----------------------------------------------------------------------
 
-	// cmd binaries are entry points. The composition root for the HTTP API
-	// lives in internal/app (since phase-47/56de7194), so NO cmd should
-	// import internal/api directly. Generalises the original two
-	// notification-worker + automation-worker rules.
+	// cmd binaries are entry points. The HTTP API composition root lives
+	// in internal/app, so cmd packages must not import internal/api directly.
 	{From: "cmd", FromAny: true, To: "internal/api"},
 
 	// ----------------------------------------------------------------------
 	// Clean Architecture DAG — domain layer (entities)
 	// Domain knows nothing about adapters, persistence, transport, or even
-	// its own ports. Ports live at the consumer (svc) boundary per ADR-007.
+	// its own ports. Ports live at the consumer service boundary.
 	// ----------------------------------------------------------------------
 
 	{From: "internal/domain", FromAny: true, To: "internal/adapter", ToAny: true},
@@ -123,14 +117,13 @@ var forbiddenEdges = []forbiddenEdge{
 
 	// ----------------------------------------------------------------------
 	// Clean Architecture DAG — models (persistence + transport DTOs)
-	// Per ADR-006, internal/models is retained as a DTO leaf — it MUST NOT
-	// depend on any other layer. Handlers/adapters/svcs map to/from models.
+	// internal/models is retained as a DTO leaf: it must not depend on
+	// any other layer. Handlers, adapters, and services map to/from models.
 	// ----------------------------------------------------------------------
 
-	// Phase-R5 (2026-05-28): FromAny:true added so each new
-	// internal/models/<sub> subpackage inherits the DTO-leaf contract.
-	// Mirrors arch_test TestModelsImportsRestricted (now loads
-	// ./internal/models/...) and rules.go (Source: "internal/models/...").
+	// FromAny:true ensures each internal/models/<sub> subpackage inherits
+	// the DTO-leaf contract. Mirrors arch_test TestModelsImportsRestricted
+	// and rules.go (Source: "internal/models/...").
 	{From: "internal/models", FromAny: true, To: "internal/database"},
 	{From: "internal/models", FromAny: true, To: "internal/adapter", ToAny: true},
 	{From: "internal/models", FromAny: true, To: "internal/handler", ToAny: true},
@@ -190,37 +183,30 @@ func (e forbiddenEdge) matchesTo(pkg string) bool {
 	return false
 }
 
-// hotspotPlan declares the Phase R bounded-context restructure target for a
-// currently-flat hot-spot folder. Pure REPORT MODE: emitted in the Markdown
-// report so progress against the restructure is visible, but does NOT fail
-// the gate. The DAG flip to enforced (per-subpkg) mode happens in Phase R13
-// once the subpackages actually exist on disk.
+// hotspotPlan declares the bounded-context restructure target for a
+// currently flat hot-spot folder. It is report-only: emitted in Markdown
+// so progress is visible, but never used to fail the gate until the
+// subpackages exist on disk.
 //
-// Source of truth for the targets list is the cluster map at
-// docs/architecture/migration/cluster-map.md (populated incrementally in
-// R1/R7). Targets here are the same provisional set; this file is updated
-// whenever the cluster map is updated.
+// The target list mirrors docs/architecture/migration/cluster-map.md and
+// should be updated whenever the cluster map changes.
 //
 // Parent dir is interpreted as a glob-prefix matching every PkgMetric whose
 // Path starts with Parent + "/" (or equals Parent for the parent package
 // itself, which counts toward FileCountAtR0).
 type hotspotPlan struct {
 	Parent        string   // e.g. "internal/api"
-	Owner         string   // sub-phase that executes the split (e.g. "R2", "R5")
-	FileCountAtR0 int      // .go/.ts/.tsx file count when ADR-011 was committed
+	Owner         string   // workstream label that owns the split
+	FileCountAtR0 int      // baseline .go/.ts/.tsx file count for this plan
 	Targets       []string // intended subpackage / subdir names
-	Shared        []string // shared-helper subpackages extracted alongside (R2.0 prep, etc)
+	Shared        []string // shared-helper subpackages extracted alongside
 	Notes         string   // optional commentary
 }
 
-// plannedSubpackages is the live snapshot of the Phase R intent. Each
-// entry corresponds to one flat-folder hot-spot identified during the
-// 2026-05-28 audit (see plan.md §16.1 + §16.2).
-//
-// As Phase R progresses, the actual on-disk structure will start to
-// match these targets. The Markdown report's "Phase R progress" section
-// renders, per hot-spot, how many of the planned subpackages now exist
-// on disk and how many flat-parent files remain.
+// plannedSubpackages is the live snapshot of the restructure plan. Each
+// entry corresponds to one flat-folder hot-spot. The Markdown report
+// shows, per hot-spot, how many planned subpackages now exist on disk
+// and how many flat-parent files remain.
 var plannedSubpackages = []hotspotPlan{
 	// ----------------------------------------------------------------------
 	// Backend hot-spots
@@ -284,19 +270,19 @@ var plannedSubpackages = []hotspotPlan{
 		Owner:         "R2 (waves R2a-R2e)",
 		FileCountAtR0: 434,
 		Targets: []string{
-			// R2a — shared + system + admin-lite + SSE
+			// Shared, system, admin-lite, and SSE handlers.
 			"system", "health", "sse", "openapi", "devtools", "observability",
-			// R2b — read-only resource handlers
+			// Read-only resource handlers.
 			"analytics", "anomaly", "lifetime", "mileage", "sleep", "regen",
 			"vampiredrain", "tco", "tempimpact", "speed", "routeeff",
 			"signal", "dataquality", "fsm", "search", "diagnostic", "cost",
-			// R2c — core writes
+			// Core write handlers.
 			"vehicle", "vehiclesys", "charging", "drive", "trip",
 			"telemetry", "fleet", "energy", "teslaapi",
-			// R2d — cross-cutting
+			// Cross-cutting handlers.
 			"ai", "admin", "automation", "alert", "notification",
 			"chatbot", "feedback", "data_repair", "dashboard", "saved_views",
-			// R2e — final cleanup
+			// Final cleanup handlers.
 			"auth", "onboarding", "user", "settings", "share", "exports",
 			"ingest", "geo", "safety", "bulk", "api_call_log", "audit",
 			"maintenance", "software_update", "watch", "webhook", "webvitals",
@@ -329,21 +315,17 @@ type Snapshot struct {
 	DocGoCoverage  float64        `json:"doc_go_coverage"`
 	// FilesByPackage maps a repo-relative package path (e.g. "internal/api")
 	// to the sorted list of production .go file basenames in that package
-	// (excludes _test.go). Phase-47/06 added this map so arch_test can
-	// enforce the ADR-009 frozen-packages rule via a simple lookup rather
-	// than rescanning Packages.
+	// (excludes _test.go). arch_test uses this for the frozen-package
+	// guard without rescanning Packages.
 	FilesByPackage map[string][]string `json:"files_by_package"`
-	// PhaseRProgress is REPORT-ONLY (Phase-R/R0). For each hot-spot
-	// declared in plannedSubpackages it records the current parent-dir
-	// file count, the count of planned subpackages already created on
-	// disk, and the count of files still living at the flat parent. The
-	// compare path does NOT use this for regression detection; it is here
-	// purely so the JSON baseline carries the progress signal next to the
-	// rest of the snapshot.
+	// PhaseRProgress is report-only. For each planned hot-spot it records
+	// current parent-dir file counts, created subpackages, and files still
+	// living at the flat parent. The compare path never uses it for
+	// regression detection; it only keeps progress visible in the snapshot.
 	PhaseRProgress []HotspotProgress `json:"phase_r_progress,omitempty"`
 }
 
-// HotspotProgress is the per-hot-spot REPORT-ONLY progress row.
+// HotspotProgress is one report-only progress row for a hot-spot.
 type HotspotProgress struct {
 	Parent              string   `json:"parent"`
 	Owner               string   `json:"owner"`
@@ -489,15 +471,9 @@ func collect() Snapshot {
 	}
 }
 
-// computePhaseRProgress is REPORT-ONLY. For each hot-spot in
-// plannedSubpackages, it asks "of the planned subpackages, how many
-// exist on disk under <parent>/<target> right now?" and counts the
-// flat-parent residual file count. Phase R completion criterion (R14
-// gate) requires that for every hot-spot, FlatParentGoFiles drops to
-// the small set permitted by ADR-011 §4 (doc.go + router.go +
-// composition file(s)) and ExistingSubpkgs covers every planned
-// target. Until then this is purely informational and never fails the
-// gate.
+// computePhaseRProgress reports how many planned subpackages exist
+// under each hot-spot parent and how many files still live at the flat
+// parent. It is informational only and never fails the gate.
 func computePhaseRProgress(pkgs []PkgMetric) []HotspotProgress {
 	byPath := map[string]PkgMetric{}
 	for _, p := range pkgs {
@@ -535,9 +511,9 @@ func computePhaseRProgress(pkgs []PkgMetric) []HotspotProgress {
 }
 
 // filesByPackage builds the per-package production .go file index used
-// by arch_test's TestFrozenPackagesNoNewFiles (ADR-009, phase-47/06).
-// _test.go files are excluded so adding a new test for an existing
-// source file does not trigger the frozen-package rule.
+// by arch_test's TestFrozenPackagesNoNewFiles. _test.go files are
+// excluded so adding a new test for an existing source file does not
+// trigger the frozen-package rule.
 func filesByPackage(pkgs []PkgMetric) map[string][]string {
 	out := make(map[string][]string, len(pkgs))
 	for _, p := range pkgs {
@@ -721,14 +697,10 @@ func diff(base, cur Snapshot) []string {
 			base.DocGoCoverage*100, cur.DocGoCoverage*100))
 	}
 
-	// Phase-A3.3 legacy-shrink-only ratchet. Each entry in
-	// violations-allowlist.json caps the .go file count for a
-	// flat-parent legacy package directory; counts can only DECREASE
-	// as Phase R carves files into subpackages. A file added to a
-	// flat parent that pushes the count above the allow-listed
-	// max_files fails this gate. Silently skipped if the allowlist
-	// file is missing (so the tool stays usable in CI checkouts
-	// without it during the transitional window).
+	// Legacy-shrink-only ratchet: each violations-allowlist.json entry
+	// caps the .go file count for a flat-parent legacy package. Counts
+	// can only decrease as files move into subpackages. Missing allowlist
+	// files are skipped so the tool stays usable during rollout.
 	if al, err := loadViolationsAllowlist("tools/archmetrics/violations-allowlist.json"); err == nil {
 		curHotspots := flatParentGoCounts(cur)
 		for _, entry := range al.Packages {
@@ -777,10 +749,9 @@ func loadViolationsAllowlist(path string) (violationsAllowlist, error) {
 	return al, nil
 }
 
-// flatParentGoCounts returns the .go file count at the FLAT parent of
-// each package path (excludes _test.go and subpackages, matching the
-// semantics of PkgMetric.GoFiles and PhaseRProgress.FlatParentGoFiles
-// so the ratchet matches what is reported in the Markdown).
+// flatParentGoCounts returns the production .go file count at each flat
+// parent package, matching PkgMetric.GoFiles and the Markdown report's
+// PhaseRProgress.FlatParentGoFiles value.
 func flatParentGoCounts(s Snapshot) map[string]int {
 	out := map[string]int{}
 	for _, p := range s.Packages {

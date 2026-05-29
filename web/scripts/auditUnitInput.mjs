@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Phase-46 / Prompt 26 — UnitInput adoption audit (tripwire).
+// UnitInput adoption audit (tripwire).
 //
 // Walks `web/src/**/*.tsx` and fails when any feature page hand-rolls
 // the canonical "number with a static unit symbol" pattern instead of
@@ -7,14 +7,14 @@
 //
 // Detection — a JSX element is flagged when ALL of the following hold:
 //
-//   1. The element's tag name is one of the known input aliases:
-//      `Input`, `UiInput`, `ControlInput`, `TextField`. (These are the
-//      identifiers used in TeslaSync today; new aliases must be added
-//      to FLAGGED_TAG_NAMES.)
-//   2. The element carries a `suffix=` prop whose value is a JSX or
-//      string literal matching one of the canonical unit symbols
-//      that `<UnitInput>` knows how to render natively. The literal
-//      may include a single leading space (e.g. ` mph`).
+// 1. The element's tag name is one of the known input aliases:
+// `Input`, `UiInput`, `ControlInput`, `TextField`. (These are the
+// identifiers used in TeslaSync today; new aliases must be added
+// to FLAGGED_TAG_NAMES.)
+// 2. The element carries a `suffix=` prop whose value is a JSX or
+// string literal matching one of the canonical unit symbols
+// that `<UnitInput>` knows how to render natively. The literal
+// may include a single leading space (e.g. ` mph`).
 //
 // The set of flagged literals is intentionally conservative — it only
 // catches patterns that have a clean drop-in replacement via the
@@ -25,12 +25,12 @@
 //
 // Files allowed to keep a hand-rolled implementation:
 //
-//   - `src/components/forms/UnitInput.tsx` (the primitive itself).
+// - `src/components/forms/UnitInput.tsx` (the primitive itself).
 //
 // Per-file escape hatch — add a comment within the 10 lines preceding
 // the offending JSX:
 //
-//     // unit-input:no <reason>
+// // unit-input:no <reason>
 //
 // Run via `npm run audit:unit-input` (chained from `npm run lint`).
 

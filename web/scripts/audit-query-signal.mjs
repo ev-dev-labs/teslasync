@@ -1,21 +1,21 @@
 #!/usr/bin/env node
-// Phase-46 / Prompt 02 — useQuery / useInfiniteQuery `signal` audit.
+// useQuery / useInfiniteQuery `signal` audit.
 //
 // Scans every file under web/src/api/hooks/*.ts and uses the TypeScript
 // compiler API to find every `useQuery({ ... })` / `useInfiniteQuery({ ... })`
 // call. For each one, asserts that:
 //
-//   1. The `queryFn` is an arrow function or function expression whose
-//      first parameter destructures `signal`. TanStack Query passes
-//      `{ signal }` to the queryFn so the underlying fetch can be
-//      cancelled when the query is unmounted/cancelled.
+// 1. The `queryFn` is an arrow function or function expression whose
+// first parameter destructures `signal`. TanStack Query passes
+// `{ signal }` to the queryFn so the underlying fetch can be
+// cancelled when the query is unmounted/cancelled.
 //
-//   2. The body of the queryFn references `signal` somewhere (i.e. it
-//      is forwarded to `request(...)` or to a helper). A queryFn that
-//      destructures `signal` but never uses it would silently leak
-//      cancellation.
+// 2. The body of the queryFn references `signal` somewhere (i.e. it
+// is forwarded to `request(...)` or to a helper). A queryFn that
+// destructures `signal` but never uses it would silently leak
+// cancellation.
 //
-// This audit complements the broader Phase-46 hardening: it locks in
+// This audit complements the broader hardening: it locks in
 // the property that no domain hook can ship a queryFn that ignores
 // the cancellation contract. Run via `npm run audit:query-signal`.
 
@@ -86,7 +86,7 @@ function findQueryFnProperty(objLit) {
     ) {
       return prop
     }
-    // Shorthand or method shorthand — `queryFn() { ... }`
+    // Shorthand or method shorthand — `queryFn() {... }`
     if (ts.isMethodDeclaration(prop) && ts.isIdentifier(prop.name) && prop.name.text === 'queryFn') {
       return prop
     }

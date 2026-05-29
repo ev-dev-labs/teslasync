@@ -22,13 +22,13 @@ module.exports = {
     'react-hooks/exhaustive-deps': 'off',
     'prefer-const': 'warn',
     'i18next/no-literal-string': 'off',
-    // Phase-45 / Prompt 04 — flag hand-rolled `fixed inset-0 z-[…]` overlays
-    // that bypass the shared <Modal>'s viewport-bounds. New interactive
-    // dialogs MUST use <Modal> from @/components/ui. System overlays (tour
-    // spotlight, kiosk wallpaper, auth wall, sidebar drawer scrim, command
-    // palette) are exempt; opt them out with an inline
-    // `// eslint-disable-next-line no-restricted-syntax` and a Phase-45
-    // rationale comment so reviewers understand the exception.
+    // Flag hand-rolled `fixed inset-0 z-[…]` overlays that bypass
+    // the shared <Modal>'s viewport bounds. New interactive dialogs
+    // MUST use <Modal> from @/components/ui. System overlays (tour
+    // spotlight, kiosk wallpaper, auth wall, sidebar drawer scrim,
+    // command palette) are exempt; opt them out with an inline
+    // `// eslint-disable-next-line no-restricted-syntax` and a rationale
+    // comment so reviewers understand the exception.
     'no-restricted-syntax': [
       'warn',
       {

@@ -1,14 +1,14 @@
 #!/usr/bin/env node
-// Phase-45 / Prompt 21 — Motion duration token consistency audit.
+// Motion duration token consistency audit.
 //
 // Flags any raw `duration-NNN` Tailwind class outside the token system. The
 // token system exposes three semantic buckets via `tailwind.config.js →
 // transitionDuration`, backed by `--motion-duration-*` CSS variables in
 // index.css that collapse to 0ms under `prefers-reduced-motion: reduce`:
 //
-//   duration-fast    → 150ms  (hover, focus, micro-feedback)
-//   duration-normal  → 250ms  (entrance, exit, panel transitions)
-//   duration-slow    → 400ms  (page transitions, large layout shifts)
+// duration-fast → 150ms (hover, focus, micro-feedback)
+// duration-normal → 250ms (entrance, exit, panel transitions)
+// duration-slow → 400ms (page transitions, large layout shifts)
 //
 // Why this matters: ad-hoc Tailwind durations (`duration-200`, `duration-300`,
 // `duration-500`, …) drift between components, leaving the UI feeling
@@ -17,16 +17,16 @@
 // reduced-motion users get a consistent zero-duration experience.
 //
 // Allowed exceptions (NOT flagged because they don't match the regex):
-//   - framer-motion `transition={{ duration: 0.2 }}` (numeric seconds)
-//   - Recharts `animationDuration={300}` (numeric ms prop)
-//   - CSS keyframe `@keyframes` blocks in *.css files (this audit only scans
-//     *.ts/*.tsx)
-//   - The `tokens.ts` file itself (excluded via the ignore list)
+// - framer-motion `transition={{duration: 0.2 }}` (numeric seconds)
+// - Recharts `animationDuration={300}` (numeric ms prop)
+// - CSS keyframe `@keyframes` blocks in *.css files (this audit only scans
+// *.ts/*.tsx)
+// - The `tokens.ts` file itself (excluded via the ignore list)
 //
 // Exit codes:
-//   0 — no offenders.
-//   1 — at least one offender; offender paths and the matched class strings
-//       are printed.
+// 0 — no offenders.
+// 1 — at least one offender; offender paths and the matched class strings
+// are printed.
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';

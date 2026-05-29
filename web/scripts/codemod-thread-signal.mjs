@@ -1,18 +1,18 @@
 #!/usr/bin/env node
-// Phase-46 / Prompt 02 — one-shot codemod.
+// one-shot codemod.
 //
 // For every web/src/api/hooks/*.ts file, rewrites every
 // `useQuery({ queryFn: ... })` and `useInfiniteQuery({ queryFn: ... })`
 // arrow function to:
 //
-//   1. Accept `{ signal }` as its first parameter.
-//   2. Append `signal` (or `, { signal }`) to every `request(...)` call
-//      inside the queryFn body.
+// 1. Accept `{ signal }` as its first parameter.
+// 2. Append `signal` (or `, { signal }`) to every `request(...)` call
+// inside the queryFn body.
 //
 // This is a one-time helper; it lives in scripts/ for reproducibility
 // but is not wired into the build.
 //
-// Usage:  node scripts/codemod-thread-signal.mjs
+// Usage: node scripts/codemod-thread-signal.mjs
 
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
@@ -72,7 +72,7 @@ function paramDestructuresSignal(fn) {
 
 /**
  * Mutating rewrite using string-edit ranges. We collect a list of
- * { start, end, replacement } edits during AST traversal and apply
+ * {start, end, replacement } edits during AST traversal and apply
  * them in reverse order so earlier offsets stay valid.
  */
 function transformFile(file) {
@@ -83,9 +83,9 @@ function transformFile(file) {
   const edits = []
 
   /**
-   * Append `, { signal }` (or merge into an existing options object)
-   * to every CallExpression named `request` inside `body`.
-   */
+ * Append `, { signal }` (or merge into an existing options object)
+ * to every CallExpression named `request` inside `body`.
+ */
   function patchRequestCalls(body) {
     const visit = (node) => {
       if (ts.isCallExpression(node)) {
@@ -93,9 +93,9 @@ function transformFile(file) {
           ts.isIdentifier(node.expression) && node.expression.text === 'request'
         if (isRequestCall) {
           const args = node.arguments
-          const close = node.end - 1 // position of `)` — the call ends with )
+          const close = node.end - 1 // position of `)` — the call ends with)
           if (args.length === 1) {
-            // request<T>(`/path`)  →  request<T>(`/path`, { signal })
+            // request<T>(`/path`) → request<T>(`/path`, { signal })
             const insertAt = args[0].end
             edits.push({
               start: insertAt,

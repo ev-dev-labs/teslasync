@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Phase 40 / Prompt 38 — Route registry generator.
+ * Route registry generator.
  *
  * Parses web/src/App.tsx and emits web/src/lib/routeRegistry.ts as a typed,
  * exhaustive list of every route. The output file is committed to source
@@ -8,12 +8,12 @@
  * added, renamed, or removed in App.tsx.
  *
  * Why a generator + a committed file (not a build-time codegen)?
- *   - Routes change rarely; running this on every build would be wasteful.
- *   - A committed file shows up in PR diffs so reviewers see route changes.
- *   - Keeps the runtime bundle deterministic and tree-shakable.
+ * - Routes change rarely; running this on every build would be wasteful.
+ * - A committed file shows up in PR diffs so reviewers see route changes.
+ * - Keeps the runtime bundle deterministic and tree-shakable.
  *
  * Run from the web/ directory:
- *   node scripts/generate-route-registry.mjs
+ * node scripts/generate-route-registry.mjs
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'

@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// Phase-46 / Prompt 03 — DataTable tableId persistence audit.
+// DataTable tableId persistence audit.
 //
-// Walks src/features/ and fails if any <DataTable ...> JSX use is found
+// Walks src/features/ and fails if any <DataTable...> JSX use is found
 // without a `tableId=` attribute on the opening tag.
 //
 // Without `tableId`, the persistence layer in DataTable.tsx
 // (column visibility, column widths, column order, sort, page size)
 // short-circuits to a no-op — every reload throws away the user's
-// table layout. Phase-46 / Prompt 03 makes `tableId` mandatory across
+// table layout. makes `tableId` mandatory across
 // every production caller. This audit locks that property in.
 //
 // Run via `npm run audit:datatable-tableid` (also chained from

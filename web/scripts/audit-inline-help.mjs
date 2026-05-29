@@ -1,30 +1,30 @@
 #!/usr/bin/env node
 /**
- * Phase-46 / Prompt 68 — Inline-help (`<HelpIcon>`) coverage audit.
+ * Inline-help (`<HelpIcon>`) coverage audit.
  *
  * Asserts that the four high-confusion form surfaces — Settings,
  * AlertStudio, Automation Builder, Notification Channels — each carry
  * at least the configured minimum number of `<HelpIcon>` adoptions.
  *
  * Why this design (vs. JSX-walking each `<Label>`):
- *   The richer "every Label needs a HelpIcon sibling" check produces a
- *   long tail of false positives on toggle rows, single-select buttons,
- *   and conditional editors. The simpler per-target minimum count
- *   captures the prompt's intent ("≥ 25 fields gain inline help") and
- *   prevents regression without manual JSX parsing.
+ * The richer "every Label needs a HelpIcon sibling" check produces a
+ * long tail of false positives on toggle rows, single-select buttons,
+ * and conditional editors. The simpler per-target minimum count
+ * captures the intended target ("≥ 25 fields gain inline help") and
+ * prevents regression without manual JSX parsing.
  *
- * Each TARGETS entry is either a single .tsx file or a directory; for
- * directories we recursively scan every .tsx file (excluding tests).
+ * Each TARGETS entry is either a single.tsx file or a directory; for
+ * directories we recursively scan every.tsx file (excluding tests).
  * The audit counts occurrences of `<HelpIcon` (opening tag) plus
  * `HelpIcon` import statements — the import alone doesn't count, only
  * actual JSX usage.
  *
  * Allowlist:
- *   `web/src/lib/inlineHelpAllowlist.ts` lists i18n keys that are
- *   explicitly excused from inline help (self-evident fields like
- *   "Name", "Email"). The audit reads it for visibility only — pages
- *   that exclusively bind allowlisted fields are still required to
- *   meet the minimum count from non-allowlisted fields.
+ * `web/src/lib/inlineHelpAllowlist.ts` lists i18n keys that are
+ * explicitly excused from inline help (self-evident fields like
+ * "Name", "Email"). The audit reads it for visibility only — pages
+ * that exclusively bind allowlisted fields are still required to
+ * meet the minimum count from non-allowlisted fields.
  *
  * Run from anywhere; paths resolve from the script's own location, not
  * `process.cwd()`. Exit 0 = all targets meet their minimums and the
@@ -41,7 +41,7 @@ const SRC_ROOT = resolve(WEB_ROOT, 'src');
 
 /**
  * Per-target adoption budget. `path` is relative to `web/`; either a
- * single .tsx file or a directory we recursively scan. `min` is the
+ * single.tsx file or a directory we recursively scan. `min` is the
  * minimum number of `<HelpIcon` JSX usages the target must contain.
  */
 const TARGETS = [

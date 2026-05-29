@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Phase-46 / Prompt 25 — required-field indicator audit (tripwire).
+// required-field indicator audit (tripwire).
 //
 // Walks `web/src/**/*.tsx` and fails when a shared form primitive
 // (`<Input>`, `<Textarea>`, `<Select>`) is rendered with the `required`
@@ -14,21 +14,21 @@
 //
 // A flagged JSX element is OK when ANY of the following is true:
 //
-//   1. It has a `label=` prop (auto-pairs the shared Label).
-//   2. It has an `aria-label=` prop (visually-hidden label provided
-//      directly on the control — common inside toolbars / chips).
-//   3. It has an `aria-labelledby=` prop (label rendered elsewhere on
-//      the page and wired explicitly).
-//   4. The 10 lines immediately preceding the JSX element contain the
-//      escape-hatch comment `// required-field:no <reason>`.
+// 1. It has a `label=` prop (auto-pairs the shared Label).
+// 2. It has an `aria-label=` prop (visually-hidden label provided
+// directly on the control — common inside toolbars / chips).
+// 3. It has an `aria-labelledby=` prop (label rendered elsewhere on
+// the page and wired explicitly).
+// 4. The 10 lines immediately preceding the JSX element contain the
+// escape-hatch comment `// required-field:no <reason>`.
 //
 // Allowed files (the primitives themselves, exempt because they
 // implement the pattern):
 //
-//   - src/components/ui/Label.tsx
-//   - src/components/ui/Input.tsx
-//   - src/components/ui/Textarea.tsx
-//   - src/components/ui/Select.tsx
+// - src/components/ui/Label.tsx
+// - src/components/ui/Input.tsx
+// - src/components/ui/Textarea.tsx
+// - src/components/ui/Select.tsx
 //
 // Run via `npm run audit:required-fields` (chained from `npm run lint`).
 
@@ -51,7 +51,7 @@ const ALLOWED_FILES = new Set(
 
 // JSX tag names that are shared form primitives. Lowercase intrinsic
 // elements like `<input required>` are intentionally NOT flagged —
-// migrating those to the shared primitive is its own sweep.
+// migrating those to the shared primitive is separate work.
 const FLAGGED_TAG_NAMES = new Set(['Input', 'Textarea', 'Select']);
 
 const JUSTIFICATION = 'required-field:no';

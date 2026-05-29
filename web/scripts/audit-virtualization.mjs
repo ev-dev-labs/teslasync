@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Phase-46 / Prompt 52 — DataTable virtualization adoption audit.
+// DataTable virtualization adoption audit.
 //
 // Long-list pages MUST opt into row virtualization on their <DataTable/>
 // to keep DOM size bounded and scroll smooth. This script verifies a
@@ -8,23 +8,23 @@
 // regress the performance budget.
 //
 // Categories:
-//   • HOT_TABLE_PAGES   — pages whose DataTable rows can grow > 200.
-//                         MUST contain `virtualized` (or an exemption)
-//                         in the same JSX block, otherwise the audit
-//                         fails (exit 1).
-//   • PENDING_MIGRATION — pages that today render rows via raw
-//                         `.map()` instead of <DataTable/>. We can't
-//                         enforce virtualization on them yet, but we
-//                         emit a warning so the migration backlog
-//                         stays visible. NOT a failure.
+// • HOT_TABLE_PAGES — pages whose DataTable rows can grow > 200.
+// MUST contain `virtualized` (or an exemption)
+// in the same JSX block, otherwise the audit
+// fails (exit 1).
+// • PENDING_MIGRATION — pages that today render rows via raw
+// `.map()` instead of <DataTable/>. We can't
+// enforce virtualization on them yet, but we
+// emit a warning so the migration backlog
+// stays visible. NOT a failure.
 //
 // Recognised exemptions on a HOT_TABLE_PAGES table:
-//   1. `virtualized`                   — the prop is set (any form).
-//   2. `expandable`                    — variable-height drawer rows
-//                                        are incompatible with
-//                                        virtualization (out of scope
-//                                        per Phase-40 / Prompt 37).
-//   3. `// virtualize-audit:skip <reason>` — explicit per-file waiver.
+// 1. `virtualized` — the prop is set (any form).
+// 2. `expandable` — variable-height drawer rows
+// are incompatible with
+// virtualization (out of scope
+// per).
+// 3. `// virtualize-audit:skip <reason>` — explicit per-file waiver.
 //
 // Exit 0 when every HOT_TABLE_PAGES table satisfies one of the above;
 // exit 1 with a per-table report otherwise.
@@ -51,7 +51,7 @@ const HOT_TABLE_PAGES = [
 
 // Pages that currently render long lists via raw `.map()` over plain
 // <div>s instead of <DataTable/>. We can't enforce `virtualized` on a
-// component that doesn't exist; document the gap so the next sweep can
+// component that doesn't exist; document the gap so the future work can
 // migrate them to DataTable+virtualized.
 const PENDING_MIGRATION = [
   'features/notifications/pages/NotificationsPage.tsx',
@@ -182,7 +182,7 @@ for (const rel of HOT_TABLE_PAGES) {
     }
     if (hasProp(block, 'expandable')) {
       // expandable + virtualized is documented as incompatible
-      // (Phase-40 / Prompt 37 — variable-height rows are out of scope).
+      // because variable-height rows are out of scope.
       exemptedExpandable.push(id);
       continue;
     }

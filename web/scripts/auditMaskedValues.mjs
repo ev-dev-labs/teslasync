@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Phase-46 / Prompt 32 — masked-value adoption audit (tripwire).
+// masked-value adoption audit (tripwire).
 //
 // Walks web/src/**/*.tsx and fails when a JSX expression renders the
 // raw value of a known-sensitive field (api token, secret, refresh
@@ -8,26 +8,26 @@
 // Detection — a JSX expression `{expr}` is flagged when ALL of the
 // following hold:
 //
-//   1. `expr` is a PropertyAccessExpression whose right-hand
-//      identifier is in SENSITIVE_FIELD_NAMES, OR an Identifier whose
-//      name is in SENSITIVE_FIELD_NAMES.
-//   2. The expression is rendered as direct JSX text content (i.e.
-//      the immediate parent is a JsxElement / JsxFragment), NOT
-//      inside a JSX attribute value, NOT inside a comparison /
-//      condition, and NOT a property destructure.
-//   3. None of the JSX ancestors up to the file root is a
-//      `<MaskedValue>` element.
+// 1. `expr` is a PropertyAccessExpression whose right-hand
+// identifier is in SENSITIVE_FIELD_NAMES, OR an Identifier whose
+// name is in SENSITIVE_FIELD_NAMES.
+// 2. The expression is rendered as direct JSX text content (i.e.
+// the immediate parent is a JsxElement / JsxFragment), NOT
+// inside a JSX attribute value, NOT inside a comparison /
+// condition, and NOT a property destructure.
+// 3. None of the JSX ancestors up to the file root is a
+// `<MaskedValue>` element.
 //
 // Per-call escape hatch — add a comment within the 10 lines preceding
 // the offending JSX:
 //
-//     // masked-value:no <reason>
+// // masked-value:no <reason>
 //
 // Files allowed to keep the cleartext render:
 //
-//   - `src/components/ui/MaskedValue.tsx`         (the primitive)
-//   - `src/components/ui/__tests__/MaskedValue.test.tsx`
-//   - `src/lib/maskValue.ts` (no JSX but listed for completeness)
+// - `src/components/ui/MaskedValue.tsx` (the primitive)
+// - `src/components/ui/__tests__/MaskedValue.test.tsx`
+// - `src/lib/maskValue.ts` (no JSX but listed for completeness)
 //
 // Run via `npm run audit:masked-values` (chained from `npm run lint`).
 

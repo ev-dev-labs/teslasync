@@ -1,7 +1,6 @@
 // Command aigen generates web/src/ai/features.ts from the Go feature
 // registry (internal/ai/features.Registry). The Go registry is the
-// single source of truth for AI feature metadata (Phase-50
-// methodology principle P9, ADR-015 §I10).
+// single source of truth for AI feature metadata.
 //
 // Usage:
 //
@@ -28,9 +27,8 @@ const outputPath = "web/src/ai/features.ts"
 
 // spaWiringOutputPath is the generated TS mirror of SPAWiringTable.
 // Components consume the exported SPA_WIRING_BY_ID record to look
-// up their endpoint path by feature ID; the aivet W1-B rule treats
-// any file importing this mirror as having satisfied the
-// "endpoint must be referenced" half of the contract.
+// up their endpoint path by feature ID; aivet treats imports of this
+// mirror as satisfying the endpoint-reference contract.
 const spaWiringOutputPath = "web/src/ai/spaWiring.ts"
 
 func main() {
@@ -132,7 +130,7 @@ func generate() []byte {
 		fmt.Fprintf(&b, "export type AiFeatureId = %s;\n\n", strings.Join(quoted, " | "))
 	}
 
-	// AiFeatureMeta — minimal shape used by the Settings UI (F2).
+	// AiFeatureMeta — minimal shape used by the Settings UI.
 	// Larger surface fields (Routes, JobNames, …) are deliberately
 	// not emitted; the off-mode walker reads them server-side from
 	// the Go registry.
@@ -196,7 +194,7 @@ func generate() []byte {
 // SPA_WIRING_BY_ID[<feature-id>].endpointPath when they would
 // otherwise hand-write the path string in useAiStream's `url` field;
 // using the mirror keeps the URL in lock-step with Go and satisfies
-// the W1-B aivet rule.
+// aivet's endpoint-reference rule.
 func generateSPAWiring() []byte {
 	table := features.SPAWiringTable
 

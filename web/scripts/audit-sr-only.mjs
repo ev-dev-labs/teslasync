@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Phase-46 / Prompt 12 — sr-only audit.
+ * sr-only audit.
  *
  * Walks `web/src/**` and fails if the literal Tailwind utility
  * `sr-only` appears anywhere outside the canonical
@@ -8,16 +8,16 @@
  *
  * Why this exists
  * ---------------
- * Phase-46 / Prompt 12 retired ad-hoc `<span class="sr-only">` spans
+ * retired ad-hoc `<span class="sr-only">` spans
  * in favour of `<VisuallyHidden>` and `useAnnouncer()`. Centralising
  * the styling target lets us:
- *   - add `aria-live` / `aria-atomic` consistently via `liveRegion`
- *     (instead of every dev forgetting one of the trio of attributes),
- *   - swap the underlying CSS implementation in one place (e.g. drop
- *     to a `clip: rect(...)` polyfill if a future Tailwind version
- *     changes the shipped `.sr-only` definition), and
- *   - guarantee the audit is the only mechanism that checks for the
- *     class — no string concat tricks slipping past code review.
+ * - add `aria-live` / `aria-atomic` consistently via `liveRegion`
+ * (instead of every dev forgetting one of the trio of attributes),
+ * - swap the underlying CSS implementation in one place (e.g. drop
+ * to a `clip: rect(...)` polyfill if a future Tailwind version
+ * changes the shipped `.sr-only` definition), and
+ * - guarantee the audit is the only mechanism that checks for the
+ * class — no string concat tricks slipping past code review.
  *
  * The audit allows the negative form `not-sr-only` everywhere
  * (Tailwind exposes it explicitly to override `sr-only` while the
@@ -39,12 +39,12 @@ const ROOT = join('src');
  *
  * - `VisuallyHidden.tsx` is the canonical implementation.
  * - The matching test file asserts the exact class name lands on the
- *   rendered DOM, so it has to spell `sr-only` to make assertions.
+ * rendered DOM, so it has to spell `sr-only` to make assertions.
  * - `Checkbox.tsx` (UI primitive) layers a real `<input type="checkbox">`
- *   underneath a styled indicator. The native input MUST be `peer sr-only`
- *   so Tailwind `peer-*:` variants on the indicator can read its state
- *   while it stays in the accessibility tree. Wrapping it in
- *   `<VisuallyHidden>` would break the `peer` sibling relationship.
+ * underneath a styled indicator. The native input MUST be `peer sr-only`
+ * so Tailwind `peer-*:` variants on the indicator can read its state
+ * while it stays in the accessibility tree. Wrapping it in
+ * `<VisuallyHidden>` would break the `peer` sibling relationship.
  */
 const ALLOWED_FILES = new Set([
   toAllowKey(join('src', 'components', 'a11y', 'VisuallyHidden.tsx')),

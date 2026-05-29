@@ -4,9 +4,9 @@
 // IGNORED — so the UI shows that error message instead of the intended copy.
 //
 // Fix the offending call sites by either:
-//   1. Calling the leaf key directly: t('a.b.c.title', 'fallback')
-//   2. Adding a sibling string under a.b.c (e.g. .description) and calling
-//      t('a.b.c.description', 'fallback')
+// 1. Calling the leaf key directly: t('a.b.c.title', 'fallback')
+// 2. Adding a sibling string under a.b.c (e.g. `.description`) and calling
+// t('a.b.c.description', 'fallback')
 //
 // Exits 1 on any violation so it can run in CI / npm run lint.
 import fs from 'node:fs';
@@ -36,7 +36,7 @@ function walk(dir, acc) {
 }
 
 const files = walk(path.join(root, 'src'), []);
-// Match  t('key.path' or t("key.path" — keep keys to dotted ASCII identifiers.
+// Match t('key.path' or t("key.path" — keep keys to dotted ASCII identifiers.
 // Skip test files (they may intentionally exercise fallback behavior).
 const re = /[^a-zA-Z_]t\(\s*['"]([a-zA-Z0-9_.]+)['"]/g;
 const broken = new Map();

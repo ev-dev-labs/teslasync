@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Phase-46 / Prompt 22 — PrefetchLink adoption audit.
+// PrefetchLink adoption audit.
 //
 // Locks in the rule that the layout primitives that render in-app
 // navigation links MUST use `<PrefetchLink>` instead of any of the

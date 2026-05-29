@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Phase-45 / Prompt 18 — Skeleton-loader shape consistency audit.
+// Skeleton-loader shape consistency audit.
 //
 // Forward-looking guard: prevents future PRs from regressing to a bare
 // `<Spinner />` as a page's primary loading state. A bare spinner causes
@@ -9,22 +9,20 @@
 //
 // A page in `web/src/features/**/pages/*.tsx` is flagged when BOTH of the
 // following are true:
-//   1. It contains `isLoading` (or similar) followed on the same logical
-//      JSX line by `<Spinner` — i.e., the spinner IS the loading branch.
-//   2. It does NOT mention any Skeleton component anywhere in the file.
+// 1. It contains `isLoading` (or similar) followed on the same logical
+// JSX line by `<Spinner` — i.e., the spinner IS the loading branch.
+// 2. It does NOT mention any Skeleton component anywhere in the file.
 //
 // Pages that already render a shaped `<XxxSkeleton>` from any branch are
 // considered compliant. Inline `<Spinner>` for in-button micro-loading
 // (`mutation.isPending ? <Spinner /> : <Icon />`) is intentionally allowed
 // — those are not page-level loading states.
 //
-// Phase-45 / Prompt 18 sweeps the seven canonical detail/analytics pages
-// listed in the prompt design. This audit prevents regressions; it is
-// expected to exit 0 on a clean tree.
+// This audit prevents regressions and is expected to exit 0 on a clean tree.
 //
 // Exit codes:
-//   0 — no offenders.
-//   1 — at least one offender; their paths are printed.
+// 0 — no offenders.
+// 1 — at least one offender; their paths are printed.
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
