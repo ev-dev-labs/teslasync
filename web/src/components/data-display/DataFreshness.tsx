@@ -87,9 +87,9 @@ function formatRelativeTime(
   t: (key: string, fallback: string, opts?: Record<string, unknown>) => string,
 ): string {
   const seconds = Math.floor((Date.now() - ms) / 1000);
-  if (seconds < 5) return t('freshness.justNow', 'just now');
-  if (seconds < 60)
-    return t('freshness.seconds', '{{s}}s ago', { s: seconds });
+  // Hold a stable "just now" for the whole first minute rather than ticking
+  // 5s → 6s → 7s every second, which is visually distracting in headers.
+  if (seconds < 60) return t('freshness.justNow', 'just now');
   if (seconds < 3600)
     return t('freshness.minutes', '{{m}}m ago', {
       m: Math.floor(seconds / 60),
@@ -120,10 +120,12 @@ export function DataFreshness({
   const { formatTime } = useDateFormat();
   const [, setTick] = useState(0);
 
-  // Re-render every second to keep relative time accurate
+  // Re-render periodically to keep the relative time label accurate. The
+  // label only changes on minute boundaries now, so a 30s cadence is plenty
+  // and avoids needless per-second re-renders.
   useEffect(() => {
     if (!updatedAt) return;
-    const id = setInterval(() => setTick((n) => n + 1), 1000);
+    const id = setInterval(() => setTick((n) => n + 1), 30_000);
     return () => clearInterval(id);
   }, [updatedAt]);
 
