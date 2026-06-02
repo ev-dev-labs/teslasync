@@ -227,6 +227,10 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 	positions := timelineRowsToFlat(positionRows)
 	aliasPositionFields(positions)
 
+	// Repair degenerate stored endpoints (end == start, or missing) from the
+	// real GPS track so the Journey Details panel matches the rendered route.
+	repairDriveEndpoints(drive, telemetry, positions)
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"id":                 drive.ID,
 		"vehicle_id":         drive.VehicleID,
@@ -378,6 +382,62 @@ func aliasPositionFields(rows []map[string]interface{}) {
 			row["speed"] = v
 			delete(row, "speed_mph")
 		}
+	}
+}
+
+// firstLastLatLon scans chronologically-ordered flat rows (as produced by
+// timelineRowsToFlat) for the first and last entries carrying a usable,
+// non-zero latitude/longitude pair. Returns nil when no row has coordinates.
+func firstLastLatLon(rows []map[string]interface{}) (first, last *[2]float64) {
+	for _, row := range rows {
+		lat, latOk := toFloatOk(row["latitude"])
+		lon, lonOk := toFloatOk(row["longitude"])
+		if !latOk || !lonOk || (lat == 0 && lon == 0) {
+			continue
+		}
+		p := [2]float64{lat, lon}
+		if first == nil {
+			f := p
+			first = &f
+		}
+		l := p
+		last = &l
+	}
+	return first, last
+}
+
+// repairDriveEndpoints fills or corrects a drive's stored start/end
+// coordinates from its actual GPS track. Legacy and imported drives sometimes
+// persist end_lat/end_lng equal to the start (or leave them null) even though
+// the position/telemetry timeline holds the true endpoints — the same track
+// the route map renders. Without this, the Journey Details panel shows an
+// identical start and destination. Telemetry is preferred over the position
+// track so the repaired endpoints match the polyline the frontend draws (it
+// uses the same precedence).
+func repairDriveEndpoints(drive *drivemodel.Drive, telemetry, positions []map[string]interface{}) {
+	first, last := firstLastLatLon(telemetry)
+	if first == nil {
+		first, last = firstLastLatLon(positions)
+	}
+	if first == nil || last == nil {
+		return
+	}
+
+	startMissing := drive.StartLat == nil || drive.StartLon == nil ||
+		(*drive.StartLat == 0 && *drive.StartLon == 0)
+	if startMissing {
+		lat, lon := first[0], first[1]
+		drive.StartLat, drive.StartLon = &lat, &lon
+	}
+
+	endMissing := drive.EndLat == nil || drive.EndLon == nil ||
+		(*drive.EndLat == 0 && *drive.EndLon == 0)
+	endEqualsStart := drive.StartLat != nil && drive.StartLon != nil &&
+		drive.EndLat != nil && drive.EndLon != nil &&
+		*drive.EndLat == *drive.StartLat && *drive.EndLon == *drive.StartLon
+	if endMissing || endEqualsStart {
+		lat, lon := last[0], last[1]
+		drive.EndLat, drive.EndLon = &lat, &lon
 	}
 }
 
