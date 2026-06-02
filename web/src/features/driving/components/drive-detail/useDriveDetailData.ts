@@ -12,14 +12,7 @@ import {
 import { fmtNumber } from '@/lib/numberFormat';
 import type { LatLngExpression } from '@/components/maps';
 import type { ChartDataPoint, DriveStats, RoutePoint, SpeedSegment, SpeedHistogramBucket } from './types';
-
-// Speed-segment colour thresholds for the route map are expressed in SI
-// (m/s) so the routeSource can stay in raw SI units
-// and the colours remain meaningful for users on either mph or km/h. The
-// thresholds correspond to 100 / 60 / 30 mph (= 44.704 / 26.8224 / 13.4112 m/s).
-const SPEED_SEGMENT_HIGH_MPS = 100 * 0.44704;
-const SPEED_SEGMENT_MED_MPS = 60 * 0.44704;
-const SPEED_SEGMENT_LOW_MPS = 30 * 0.44704;
+import { SPEED_SEGMENT_LOW_MPS, SPEED_SEGMENT_MED_MPS, SPEED_SEGMENT_HIGH_MPS } from './constants';
 
 export function useDriveDetailData(id: string) {
   const { data: drive, isLoading, error } = useDrive(id);
@@ -226,14 +219,17 @@ export function useDriveDetailData(id: string) {
   /* ---- Speed histogram ---- */
   const speedHistData = useMemo<SpeedHistogramBucket[]>(() => {
     if (chartData.length === 0) return [];
+    // chartData[i].speed is already in the user's display unit (converted via
+    // convertSpeedFromSI above), so the bucket edges are plain display-unit
+    // values — not SI. The labels render in whatever unit the user picked.
     const defs = [
-      { min: 0, max: toSpeedDisplay(20) },
-      { min: toSpeedDisplay(20), max: toSpeedDisplay(40) },
-      { min: toSpeedDisplay(40), max: toSpeedDisplay(60) },
-      { min: toSpeedDisplay(60), max: toSpeedDisplay(80) },
-      { min: toSpeedDisplay(80), max: toSpeedDisplay(100) },
-      { min: toSpeedDisplay(100), max: toSpeedDisplay(120) },
-      { min: toSpeedDisplay(120), max: 9999 },
+      { min: 0, max: 20 },
+      { min: 20, max: 40 },
+      { min: 40, max: 60 },
+      { min: 60, max: 80 },
+      { min: 80, max: 100 },
+      { min: 100, max: 120 },
+      { min: 120, max: 9999 },
     ];
     const buckets = defs.map((d) => ({
       range: d.max >= 9999 ? `${fmtNumber(d.min)}+` : `${fmtNumber(d.min)}–${fmtNumber(d.max)}`,
@@ -246,7 +242,7 @@ export function useDriveDetailData(id: string) {
     return buckets
       .filter((b) => b.count > 0)
       .map((b) => ({ range: b.range, pct: chartData.length > 0 ? Math.round((b.count / chartData.length) * 100) : 0 }));
-  }, [chartData, toSpeedDisplay]);
+  }, [chartData]);
 
   return {
     drive: drive ?? null,
