@@ -33,14 +33,23 @@ func (r *GeoResult) ShortName() string {
 	return r.DisplayName
 }
 
-// NewGeocoder returns the best available geocoder based on configured API keys.
-// Priority: Google Maps → Azure Maps → Nominatim (free, always available).
+// NewGeocoder returns a geocoder that tries the configured providers in
+// priority order — Google Maps → Azure Maps → Nominatim — falling back to the
+// next whenever one errors. Nominatim is always appended last as a key-free
+// safety net, so a misconfigured Google/Azure key (e.g. REQUEST_DENIED) can no
+// longer leave drives without a resolved place name.
 func NewGeocoder(googleAPIKey, azureAPIKey string) Geocoder {
+	providers := make([]namedGeocoder, 0, 3)
 	if googleAPIKey != "" {
-		return NewGoogleClient(googleAPIKey)
+		providers = append(providers, namedGeocoder{name: "google", geo: NewGoogleClient(googleAPIKey)})
 	}
 	if azureAPIKey != "" {
-		return NewAzureClient(azureAPIKey)
+		providers = append(providers, namedGeocoder{name: "azure", geo: NewAzureClient(azureAPIKey)})
 	}
-	return NewClient("TeslaSync/1.0")
+	providers = append(providers, namedGeocoder{name: "nominatim", geo: NewClient("TeslaSync/1.0")})
+
+	if len(providers) == 1 {
+		return providers[0].geo
+	}
+	return &chainGeocoder{providers: providers}
 }
