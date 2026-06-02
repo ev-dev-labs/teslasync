@@ -222,7 +222,13 @@ export function DataFreshness({
           status === 'fetching' && !reduce && 'animate-spin',
         )}
       />
-      {!compact && <span>{relativeTime}</span>}
+      {/* Reserve a stable width so the label changing (e.g. "just now" →
+          "updating…" → "5m ago") never reflows neighbouring header items. */}
+      {!compact && (
+        <span className="inline-block min-w-[4.5rem] text-left tabular-nums">
+          {relativeTime}
+        </span>
+      )}
     </span>
   );
 }
