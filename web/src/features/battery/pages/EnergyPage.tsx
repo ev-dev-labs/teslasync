@@ -33,7 +33,7 @@ import { fmtNumber, fmtInt, fmtPercent } from '@/lib/numberFormat';
 import { CHARGER_COLORS } from '@/lib/colors';
 import { chartTokens } from '@/lib/tokens';
 import type { ChargingSession } from '@/api/types';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 
 /* ── Local: Cost Comparison Card ────────────────────────────────── */
 
@@ -132,11 +132,13 @@ function EnergyPageSkeleton() {
 export default function EnergyPage() {
   const { t } = useTranslation();
   usePageTitle(t('energy.title', 'Energy'));
-  const { unitPrefs } = useUnits();
+  const { unitPrefs, formatEnergy } = useUnits();
   const { formatCurrency } = useFormatting();
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+  const toEnergyDisplay = (wh: number) => convertEnergyFromSI(wh, unitPrefs.energy);
 
   const distanceUnit = unitPrefs.distance;
+  const energyUnit = unitPrefs.energy;
   const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
   const toEfficiencyDisplay = (whPerM: number) => unitPrefs.distance === 'mi' ? whPerM * 1609.344 : whPerM * 1000;
   const savedView = useSavedViewUrl();
@@ -261,7 +263,7 @@ export default function EnergyPage() {
       header: t('energy.table.energy', 'Energy'),
       render: (s) => (
         <span className="text-cyan-300 font-medium">
-          {fmtNumber(s.total_energy_added_wh ?? 0)} kWh
+          {formatEnergy(s.total_energy_added_wh ?? 0)}
         </span>
       ),
     },
@@ -279,7 +281,7 @@ export default function EnergyPage() {
     {
       key: 'power',
       header: t('energy.table.power', 'Power'),
-      render: (s) => <>{s.peak_power_w != null ? `${fmtNumber(s.peak_power_w)} kW` : '—'}</>,
+      render: (s) => <>{s.peak_power_w != null ? `${fmtNumber(convertPowerFromSI(s.peak_power_w, 'kW'))} kW` : '—'}</>,
     },
     {
       key: 'type',
@@ -311,7 +313,7 @@ export default function EnergyPage() {
       render: (s) => (
         <span className="text-[var(--text-muted)]">
           {typeof s.cost_decimal === 'number' && s.total_energy_added_wh > 0
-            ? formatCurrency(s.cost_decimal / s.total_energy_added_wh)
+            ? formatCurrency(s.cost_decimal / convertEnergyFromSI(s.total_energy_added_wh, 'kWh'))
             : '—'}
         </span>
       ),
@@ -359,10 +361,10 @@ export default function EnergyPage() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 items-center">
               <RadialGauge
-                value={totalEnergy}
-                max={Math.max(totalEnergy * 1.3, 100)}
+                value={toEnergyDisplay(totalEnergy)}
+                max={Math.max(toEnergyDisplay(totalEnergy) * 1.3, 100)}
                 label={t('energy.gauge.energyUsed', 'Energy Used')}
-                unit="kWh"
+                unit={energyUnit}
                 color="#00f0ff"
               />
               <RadialGauge
@@ -441,8 +443,8 @@ export default function EnergyPage() {
                 {t('energy.lifetime.periodEnergy', { days: periodDays, defaultValue: 'Last {{days}} Days' })}
               </p>
               <p className="text-2xl font-bold text-emerald-300">
-                {fmtNumber(totalEnergy)}
-                <span className="text-sm font-normal text-[var(--text-muted)] ml-1">kWh</span>
+                {fmtNumber(toEnergyDisplay(totalEnergy))}
+                <span className="text-sm font-normal text-[var(--text-muted)] ml-1">{energyUnit}</span>
               </p>
               <p className="text-[11px] text-[var(--text-muted)] mt-1">
                 {t('energy.lifetime.periodEnergyDesc', 'Energy added during selected date range')}
@@ -738,7 +740,7 @@ export default function EnergyPage() {
                             </span>
                           </div>
                           <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-cyan-300">{fmtNumber(b.energy ?? 0)} kWh</span>
+                            <span className="text-cyan-300">{fmtNumber(toEnergyDisplay(b.energy ?? 0))} {energyUnit}</span>
                             <span className="text-emerald-300"><Currency value={b.cost ?? 0} /></span>
                             <span className="text-[var(--text-muted)]">
                               <Currency value={b.energy > 0 ? b.cost / (b.energy / 1000) : 0} precision={3} />/kWh

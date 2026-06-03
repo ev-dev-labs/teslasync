@@ -9,6 +9,7 @@ import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import type { ChargingSession } from '../types';
+import { convertEnergyFromSI } from '@/lib/unitConversion';
 
 export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
@@ -26,7 +27,7 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
       (charges ?? [])
         .map((s, i) => ({
           i: String(i),
-          energy: s.total_energy_added_wh ?? 0,
+          energy: convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh'),
         }))
         .reverse(),
     [charges],

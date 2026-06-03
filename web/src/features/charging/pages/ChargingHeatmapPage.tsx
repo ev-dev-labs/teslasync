@@ -18,6 +18,7 @@ import { durationMinutes } from '../components/charging-curve/helpers';
 import { useSettings } from '@/hooks/useSettings';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { DAYS } from '@/lib/constants';
 import type { ChargingSession } from '@/api/types';
 
@@ -48,7 +49,7 @@ function buildGrid(sessions: ChargingSession[]) {
     const day = d.getDay();
     const hour = d.getHours();
     grid[day][hour].count += 1;
-    grid[day][hour].totalEnergy += s.total_energy_added_wh;
+    grid[day][hour].totalEnergy += convertEnergyFromSI(s.total_energy_added_wh, 'kWh');
     if (grid[day][hour].count > maxCount) {
       maxCount = grid[day][hour].count;
       favDay = day;
@@ -80,7 +81,7 @@ export default function ChargingHeatmapPage() {
 
   const stats = useMemo(() => {
     if (!sessions?.length) return null;
-    const totalEnergy = sessions.reduce((s, c) => s + c.total_energy_added_wh, 0);
+    const totalEnergy = sessions.reduce((s, c) => s + convertEnergyFromSI(c.total_energy_added_wh, 'kWh'), 0);
     const totalCost = sessions.reduce((s, c) => s + (c.cost_decimal ?? 0), 0);
     const totalDuration = sessions.reduce((s, c) => s + durationMinutes(c.started_at, c.ended_at), 0);
     return {

@@ -5,6 +5,7 @@ import { MapContainer, MarkerCluster } from '@/components/maps';
 import { MapTileLayer } from '@/components/maps';
 import type { TeslaChargingSession } from '@/api/hooks/useCharging';
 import { fmtNumber } from '@/lib/numberFormat';
+import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { formatDateTime } from '@/lib/dateFormat';
 
 interface Props {
@@ -49,7 +50,7 @@ export default function TeslaChargingSessionsMap({ sessions }: Props) {
           );
           const energy =
             s.total_energy_added_wh != null
-              ? `<p>${fmtNumber(s.total_energy_added_wh, 1)} kWh</p>`
+              ? `<p>${fmtNumber(convertEnergyFromSI(s.total_energy_added_wh, 'kWh'), 1)} kWh</p>`
               : '';
           const cost =
             s.total_cost != null ? `<p>${formatCurrency(s.total_cost, 2)}</p>` : '';

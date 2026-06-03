@@ -5,6 +5,7 @@ import { fmtNumber } from '@/lib/numberFormat';
 import { GlassPanel } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { isDcSession, avg, durationMinutes } from './helpers';
+import { convertEnergyFromSI } from '@/lib/unitConversion';
 import type { TimeToChargeMetrics } from './types';
 import YearlyTrendChart from './YearlyTrendChart';
 
@@ -65,7 +66,7 @@ export default function TimeToChargeSection({ sessions }: TimeToChargeSectionPro
       .filter((s) => durationMinutes(s.started_at, s.ended_at) > 0 && s.total_energy_added_wh > 0)
       .map((s) => ({
         id: s.id,
-        rate: (s.total_energy_added_wh / durationMinutes(s.started_at, s.ended_at)) * 60,
+        rate: (convertEnergyFromSI(s.total_energy_added_wh, 'kWh') / durationMinutes(s.started_at, s.ended_at)) * 60,
       }));
 
     const fastest = withRate.length

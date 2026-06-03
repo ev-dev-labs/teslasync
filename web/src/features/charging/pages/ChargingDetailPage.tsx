@@ -6,7 +6,7 @@ import { useChargingSessionDetail, useChargeTelemetry } from '@/api/hooks/useCha
 import { useVehicle, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
-import { convertTempFromSI, convertDistanceFromSI } from '@/lib/unitConversion';
+import { convertTempFromSI, convertDistanceFromSI, convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDate, formatTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtWithUnit, fmtPercent } from '@/lib/numberFormat';
@@ -50,7 +50,7 @@ function kwhPerHour(session: ChargingSession): number | null {
 function synthesizeCurve(session: ChargingSession): { soc: number; power: number }[] {
   const startSoc = session.start_soc_pct ?? 0;
   const endSoc = session.end_soc_pct ?? 100;
-  const peakPower = session.peak_power_w ?? 50;
+  const peakPower = (session.peak_power_w ?? 50_000) / 1000;
   const points: { soc: number; power: number }[] = [];
   const steps = 20;
   for (let i = 0; i <= steps; i++) {
@@ -117,7 +117,7 @@ export default function ChargingDetailPage() {
   // ChargingSession distance delta comes through the repo adapter as miles. Live
   // ChargingTelemetry fields with misleading suffixes are SI values. Keep these
   // conversions at the display boundary until the backend fields are renamed.
-  const { unitPrefs } = useUnits();
+  const { unitPrefs, formatEnergy } = useUnits();
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
 
   const distanceUnit = unitPrefs.distance;
@@ -142,7 +142,7 @@ export default function ChargingDetailPage() {
 
   const breadcrumbLabels = {
     '/charging/:id': session
-      ? `${formatDate(session.started_at)} — ${fmtNumber(session.total_energy_added_wh)} kWh`
+      ? `${formatDate(session.started_at)} — ${formatEnergy(session.total_energy_added_wh)}`
       : `Session #${id}`,
   };
 
@@ -303,10 +303,10 @@ export default function ChargingDetailPage() {
           <StaggerItem>
             <GlassPanel className="flex flex-col items-center py-4" glow="cyan">
               <RadialGauge
-                value={session.total_energy_added_wh ?? 0}
-                max={Math.max(session.total_energy_added_wh ?? 1, 80)}
+                value={convertEnergyFromSI(session.total_energy_added_wh ?? 0, unitPrefs.energy)}
+                max={Math.max(convertEnergyFromSI(session.total_energy_added_wh ?? 1, unitPrefs.energy), 80)}
                 label={t('charging.detail.energyAdded', 'Energy Added')}
-                unit="kWh"
+                unit={unitPrefs.energy}
                 color="#00f0ff"
               />
             </GlassPanel>
@@ -325,7 +325,7 @@ export default function ChargingDetailPage() {
           <StaggerItem>
             <GlassPanel className="flex flex-col items-center py-4" glow="purple">
               <RadialGauge
-                value={session.peak_power_w ?? 0}
+                value={convertPowerFromSI(session.peak_power_w ?? 0, 'kW')}
                 max={dc ? 250 : 22}
                 label={t('charging.detail.peakPower', 'Peak Power')}
                 unit="kW"
@@ -347,7 +347,7 @@ export default function ChargingDetailPage() {
           <StaggerItem>
             <GlassPanel className="flex flex-col items-center py-4" glow="none">
               <RadialGauge
-                value={session.avg_power_w ?? 0}
+                value={convertPowerFromSI(session.avg_power_w ?? 0, 'kW')}
                 max={dc ? 250 : 22}
                 label={t('charging.detail.avgPower', 'Avg Power')}
                 unit="kW"
@@ -405,7 +405,7 @@ export default function ChargingDetailPage() {
             <div>
               <p className="text-muted">{t('charging.detail.energyAdded', 'Energy Added')}</p>
               <p className="text-lg font-bold">
-                {fmtWithUnit(session.total_energy_added_wh, 'kWh')}
+                {formatEnergy(session.total_energy_added_wh)}
               </p>
             </div>
           </div>
@@ -416,8 +416,8 @@ export default function ChargingDetailPage() {
           <StatCard
             icon={<Zap className="h-4 w-4" />}
             label={t('charging.detail.energy', 'Energy')}
-            value={fmtNumber(session.total_energy_added_wh)}
-            unit="kWh"
+            value={fmtNumber(convertEnergyFromSI(session.total_energy_added_wh, unitPrefs.energy))}
+            unit={unitPrefs.energy}
           />
           <StatCard
             icon={<Clock className="h-4 w-4" />}
@@ -428,13 +428,13 @@ export default function ChargingDetailPage() {
           <StatCard
             icon={<Gauge className="h-4 w-4" />}
             label={t('charging.detail.peakPower', 'Peak Power')}
-            value={fmtNumber(session.peak_power_w)}
+            value={fmtNumber(convertPowerFromSI(session.peak_power_w ?? 0, 'kW'))}
             unit="kW"
           />
           <StatCard
             icon={<Battery className="h-4 w-4" />}
             label={t('charging.detail.socRange', 'SoC Range')}
-            value={`${session.start_soc_pct ?? 0}–${session.end_soc_pct ?? 0}`}
+            value={`${fmtNumber(session.start_soc_pct ?? 0, 0)}–${fmtNumber(session.end_soc_pct ?? 0, 0)}`}
             unit="%"
           />
           <StatCard
@@ -445,7 +445,7 @@ export default function ChargingDetailPage() {
             value={session.cost_decimal != null
               ? fmtNumber(session.cost_decimal, 2)
               : session.total_energy_added_wh > 0
-                ? formatEnergyCost(session.total_energy_added_wh)
+                ? formatEnergyCost(session.total_energy_added_wh / 1000)
                 : '—'}
             unit={session.cost_decimal != null ? '$' : ''}
             sublabel={session.cost_decimal == null && session.total_energy_added_wh > 0
@@ -488,7 +488,7 @@ export default function ChargingDetailPage() {
             <InlineMetric
               icon={<Gauge className="h-4 w-4 text-purple-400" />}
               label={t('charging.detail.avgPower', 'Avg Power')}
-              value={session.avg_power_w != null ? fmtWithUnit(session.avg_power_w, 'kW') : '—'}
+              value={session.avg_power_w != null ? fmtWithUnit(convertPowerFromSI(session.avg_power_w, 'kW'), 'kW') : '—'}
             />
             <InlineMetric
               icon={<MapPin className="h-4 w-4 text-green-400" />}

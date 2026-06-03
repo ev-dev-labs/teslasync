@@ -5,6 +5,7 @@ import { formatDateShort } from '@/lib/dateFormat';
 import { CHART_COLORS, CHARGER_COLORS } from '@/lib/colors';
 import { KWH_PER_GALLON, CO2_PER_GAL_KG, KG_CO2_PER_TREE_YEAR } from './constants';
 import { categorizeCharger, gasEquivalentCost } from './helpers';
+import { convertEnergyFromSI } from '@/lib/unitConversion';
 import type {
   CoreStats, MonthlyBucket, ChargerTypeData, HourBucket,
   TouInsights, GasComparison, LifetimeMetrics,
@@ -41,8 +42,8 @@ export function useCostAnalysisData({
   const coreStats = useMemo(() => {
     if (!sessions || sessions.length === 0) return null;
     const totalCost = sessions.reduce((s, c) => s + (c.cost_decimal ?? 0), 0);
-    const totalEnergy = sessions.reduce((s, c) => s + c.total_energy_added_wh, 0);
-    const avgCostPerKwh = totalEnergy > 0 ? totalCost / (totalEnergy / 1000) : 0;
+    const totalEnergy = convertEnergyFromSI(sessions.reduce((s, c) => s + c.total_energy_added_wh, 0), 'kWh');
+    const avgCostPerKwh = totalEnergy > 0 ? totalCost / totalEnergy : 0;
     const totalDuration = sessions.reduce((s, c) => s + durationMinutes(c.started_at, c.ended_at), 0);
 
     let totalDistanceM = 0;
@@ -82,13 +83,14 @@ export function useCostAnalysisData({
     return Object.entries(buckets)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([month, v]) => {
-        const ge = gasEquivalentCost(v.energy, mpg, gasPrice);
+        const energyKwh = convertEnergyFromSI(v.energy, 'kWh');
+        const ge = gasEquivalentCost(energyKwh, mpg, gasPrice);
         return {
           month,
           cost: v.cost,
-          energy: v.energy,
+          energy: energyKwh,
           sessions: v.sessions,
-          avgCostPerKwh: v.energy > 0 ? v.cost / (v.energy / 1000) : 0,
+          avgCostPerKwh: energyKwh > 0 ? v.cost / energyKwh : 0,
           gasEquiv: ge,
           savings: ge - v.cost,
         };
@@ -123,7 +125,7 @@ export function useCostAnalysisData({
       .map(([name, v]) => ({
         name,
         cost: v.cost,
-        energy: v.energy,
+        energy: convertEnergyFromSI(v.energy, 'kWh'),
         sessions: v.sessions,
         color: CHARGER_COLORS[name] ?? CHART_COLORS[4],
       }))
@@ -148,7 +150,7 @@ export function useCostAnalysisData({
         label: `${String(h).padStart(2, '0')}:00`,
         sessions: v.sessions,
         avgCost: v.sessions > 0 ? v.totalCost / v.sessions : 0,
-        totalEnergy: v.totalEnergy,
+        totalEnergy: convertEnergyFromSI(v.totalEnergy, 'kWh'),
       }))
       .sort((a, b) => a.hour - b.hour);
   }, [sessions]);

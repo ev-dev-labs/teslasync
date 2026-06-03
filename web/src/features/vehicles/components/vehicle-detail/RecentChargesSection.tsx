@@ -6,6 +6,7 @@ import { GlassPanel, DataTable, type Column } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
 import { formatDateTime } from '@/lib/dateFormat'
 import { fmtNumber } from '@/lib/numberFormat'
+import { convertEnergyFromSI } from '@/lib/unitConversion'
 import { useFormatting } from '@/hooks/useFormatting'
 import type { ChargingSession } from '@/api/types'
 import { durationStr } from './helpers'
@@ -26,7 +27,7 @@ function useChargeColumns(): Column<ChargingSession>[] {
     {
       key: 'energy',
       header: t('common.energy', 'Energy'),
-      render: (s) => `${fmtNumber(s.total_energy_added_wh)} kWh`,
+      render: (s) => `${fmtNumber(convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh'))} kWh`,
       sortable: true,
     },
     {

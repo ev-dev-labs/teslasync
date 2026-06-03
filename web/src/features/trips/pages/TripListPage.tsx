@@ -20,7 +20,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useUrlBatch, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { formatDate } from '@/lib/dateFormat';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { fmtInt } from '@/lib/numberFormat';
 import { exportAsCSV, exportAsJSON } from '@/lib/export';
 import { PullToRefresh } from '@/components/mobile';
 import type { Trip } from '@/api/types';
@@ -58,7 +58,7 @@ export default function TripListPage() {
   const [endDate] = useUrlString('to', defaultEnd);
   const setRangeBatch = useUrlBatch();
 
-  const { unitPrefs } = useUnits();
+  const { unitPrefs, formatEnergy } = useUnits();
   const { formatCurrency } = useFormatting();
   // useSettings retained for the legacy efficiencyUnit label string only.
 
@@ -122,7 +122,10 @@ export default function TripListPage() {
       ? (page - 1) * pageSize + allTrips.length
       : page * pageSize + 1;
 
-  const totalDistDisplay = convertDistanceFromSI(totalDist * 1000, unitPrefs.distance);
+  // totalDist is already a sum of SI meters (Trip.total_distance_m); convert
+  // straight from meters to the display unit. (Previously multiplied by 1000,
+  // which inflated the figure 1000x.)
+  const totalDistDisplay = convertDistanceFromSI(totalDist, unitPrefs.distance);
 
   return (
     <PageContainer
@@ -170,7 +173,7 @@ export default function TripListPage() {
             />
             <MetricCard
               label={t('trips.stats.energy', 'Energy Used')}
-              value={`${fmtNumber(totalEnergy)} Wh`}
+              value={formatEnergy(totalEnergy)}
               icon={<Zap className="h-4 w-4" />}
               color="amber"
               subtitle={t('trips.stats.driveCount', '{{count}} drives', { count: totalDrives })}
@@ -297,6 +300,7 @@ interface TripRowProps {
 function TripRow({ trip, distancePref, efficiencyUnit }: TripRowProps) {
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
+  const { formatEnergy } = useUnits();
 
   const whPerKm = trip.total_distance_m > 0
     ? (trip.total_energy_wh / (trip.total_distance_m / 1000))
@@ -340,7 +344,7 @@ function TripRow({ trip, distancePref, efficiencyUnit }: TripRowProps) {
         </div>
         <div>
           <p className="text-sm font-bold text-amber-400">
-            {fmtNumber(trip.total_energy_wh)} Wh
+            {formatEnergy(trip.total_energy_wh)}
           </p>
           <p className="text-[10px] text-[var(--text-muted)]">
             {trip.total_distance_m > 0

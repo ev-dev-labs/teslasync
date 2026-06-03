@@ -28,7 +28,7 @@ import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/us
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import { useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertTempFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAlertContext } from '@/hooks/useAlertContext';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -360,8 +360,8 @@ export default function BatteryHealthPage() {
     items.forEach((s) => {
       const isDC =
         (s.charger_type != null && s.charger_type.length > 0) ||
-        (s.peak_power_w != null && s.peak_power_w > 20);
-      const energy = s.total_energy_added_wh ?? 0;
+        (s.peak_power_w != null && s.peak_power_w > 20_000);
+      const energy = convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh');
       if (isDC) { dcEnergy += energy; dcCount++; }
       else { acEnergy += energy; acCount++; }
     });

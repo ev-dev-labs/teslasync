@@ -4,7 +4,7 @@ import { KWH_PER_GALLON } from './constants';
 export function categorizeCharger(session: ChargingSession): string {
   const ct = (session.charger_type ?? '').toLowerCase();
   if (ct.includes('tesla') || ct.includes('supercharger')) return 'Supercharger';
-  if ((session.peak_power_w ?? 0) > 22) return 'Public DC';
+  if ((session.peak_power_w ?? 0) > 22_000) return 'Public DC';
   const loc = (session.start_place ?? '').toLowerCase();
   if (loc.includes('work') || loc.includes('office')) return 'Work / L2';
   return 'Home';
