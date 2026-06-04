@@ -352,3 +352,29 @@ commit_msg*.txt
 .github/prompts/03-energy-cost-forecasting.md
 .github/prompts/02-driving-coaching.md
 .github/prompts/01-predictive-battery-degradation.md
+
+# --- apps: KMP / Gradle / Android ---
+apps/**/.gradle/
+apps/**/build/
+apps/**/local.properties
+apps/**/*.iml
+apps/android/.cxx/
+apps/**/.kotlin/
+
+# --- apps: .NET / WinUI (Windows) ---
+apps/windows/**/bin/
+apps/windows/**/obj/
+apps/windows/**/*.user
+apps/windows/**/AppPackages/
+apps/windows/**/BundleArtifacts/
+apps/windows/**/Generated Files/
+
+# --- apps: Xcode / Swift (Apple) ---
+apps/apple/**/.build/
+apps/apple/**/DerivedData/
+apps/apple/**/*.xcuserstate
+apps/apple/**/xcuserdata/
+apps/apple/**/.swiftpm/
+
+# --- apps: generated OpenAPI clients (regenerated, not committed raw) keep specs only ---
+apps/**/generated/

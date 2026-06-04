@@ -1,0 +1,17 @@
+=== PREFLIGHT ===
+0001 STATUS=DONE (verified)
+tree: runner artifacts only in logs/, no tracked changes
+=== CHANGES ===
+appended 3 toolchain blocks + generated block to .gitignore
+created apps/.editorconfig with 4 language sections
+=== GATE ===
+IGNORE_EXIT=0 (apps/windows/bin/x.dll ignored)
+APPLE_EXIT=0 (apps/apple/**/.build ignored)
+GEN_EXIT=0 (apps/**/generated ignored)
+EDITORCONFIG_EXISTS=True
+EXIT=0
+=== COMMIT ===
+
+COMMIT_EXIT=0
+EXIT=0
+STATUS=DONE
