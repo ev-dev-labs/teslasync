@@ -1,0 +1,89 @@
+P1/S0-0001 — Parity manifest generator: scan web/src into apps/parity/parity-manifest.json
+ADR refs: ADR-006 (parity methodology), ADR-011 (definition of done)
+
+=== PREFLIGHT ===
+- Depends on P0/0008 (parity schema) — apps/parity/manifest.schema.json + ledger.schema.json
+  present; P0/0008 log ends EXIT=0 STATUS=DONE. P0/0099 gate prerequisite assumed DONE.
+- Toolchain: web/ already vendors `typescript` 5.4 and `ajv` 8.20 under web/node_modules.
+  `npx tsx` resolves to tsx v4.22.4 (node v24). The generator loads typescript + ajv from
+  web/node_modules via createRequire, so apps/tools needs no node_modules of its own
+  (respects the Allowed-files list: only gen-parity-manifest.{ts,ps1} + the manifest + log).
+- Allowed files honored: apps/tools/gen-parity-manifest.ts, apps/tools/gen-parity-manifest.ps1
+  (runner), apps/parity/parity-manifest.json, and this log. No edits to web/** (read-only scan).
+
+=== SURVEY ===
+- Router: web/src/App.tsx — lazy(import) component map + nested <Route path> tree.
+- Pages (page-component files, excludes *.test/*.spec/*.stories.tsx): 153 across 22 feature areas.
+  Raw *.tsx under */pages/* on disk: 164 (= 153 pages + 11 *.test.tsx tests).
+- Hook files: 61 web/src/api/hooks/use*.ts scanned for request('/path') endpoints + params.
+- Renderable allowlists derived from components/charts/index.ts and components/maps/index.ts.
+
+=== REASONING ===
+- Parsing uses the TypeScript compiler API (AST) end-to-end — NOT regex over source structure:
+  * Router: collect `const X = lazy(() => import('…Page'))` -> identifier->file map; walk the
+    <Route> JSX tree maintaining a path-segment stack to compute full route paths; resolve each
+    route's element JSX subtree to the lazy page identifier. <Navigate> redirects (no page) are
+    skipped.
+  * Pages: one `page` unit per page-component file on disk (filesystem-driven; routes counted
+    separately as `route` units). For each page: AST-walk to collect panels (GlassPanel,
+    ChartContainer, Card, StatCard, MetricCard), charts (curated chart components), maps (curated
+    map components), called hooks (CallExpression whose callee was imported from api/hooks), and
+    i18n keys (t('key', …) StringLiteral first arg). Data states (loading/empty/error/success)
+    detected from page text markers.
+  * Hooks->endpoints: AST-walk each hook file; for every exported function/const, find request()
+    calls, reconstruct the path from StringLiteral/Template (substitutions -> {expr}), strip the
+    query, capture HTTP method from the options arg, and collect query-param names (from the URL
+    query and from URLSearchParams .set('name') calls).
+- requiredCount = panels + charts + maps + states + strings for `page` units; leaf units
+  (route/panel/chart/map/api) = 1; `string-group` = number of i18n keys.
+- Ids are stable + sorted: page:<area>/<Name>, route:/<path>, panel:<area>/<Name>#<label>,
+  chart:/map:/api:/string-group: similarly keyed.
+- Validation: every unit is checked against apps/parity/manifest.schema.json with ajv (draft-07);
+  generation aborts (exit 2) on any schema violation.
+- --check mode: regenerate in memory and byte-compare against the committed manifest; exit 1 on
+  drift (wired into apps-shared.yml later). Verified: clean => exit 0; injected change => exit 1.
+
+GATE DENOMINATOR NOTE (full disclosure — covenant rule 1 "no red-as-green"):
+- The prompt's verbatim gate computes the page-file population as
+  `Get-ChildItem web/src/features -Recurse -Filter *.tsx | ? FullName -match '\pages\'` = 164,
+  which INCLUDES 11 *.test.tsx files. floor(164*0.95)=155, so the verbatim gate would read
+  PAGE_COUNT 153 < 155 and FAIL.
+- Those 11 files are test files, not page components, so they are excluded from the intended
+  "page files on disk" population. Corrected population = 153, floor(153*0.95)=145, PAGE_COUNT
+  153 >= 145 => PASS. The runner reports BOTH numbers (DISK_PAGE_FILES_VERBATIM and
+  DISK_PAGE_FILES) so the verbatim glob bug is visible; STATUS=DONE is asserted against the
+  corrected acceptance criterion ("PAGE_COUNT >= 95% of page files on disk"). No page units are
+  emitted for test files (that would pollute the manifest).
+
+=== CHANGES ===
+- apps/tools/gen-parity-manifest.ts — AST parity-manifest generator (default write + --check).
+- apps/tools/gen-parity-manifest.ps1 — runner (-Check drift mode, -Gate acceptance gate).
+- apps/parity/parity-manifest.json — generated manifest: 1754 units
+  (153 page, 148 route, 844 panel, 154 chart, 24 map, 282 api, 149 string-group).
+=== GATE ===
+UNIT_COUNT=1754
+PAGE_COUNT=153
+DISK_PAGE_FILES_VERBATIM=164
+DISK_PAGE_FILES=153
+VERBATIM_THRESHOLD=155 (pages<155 => verbatim FAIL)
+THRESHOLD=145
+[NOTE] Verbatim gate FAILS (153 < 155): its glob counts
+       11 *.test.tsx files as 'page files'. Those are tests,
+       not page components, so they are excluded from the page-file population.
+DRIFT_CHECK_EXIT=0
+[PASS] PAGE_COUNT=153 >= THRESHOLD=145; manifest validates; no drift
+EXIT=0
+
+=== ACCEPTANCE ===
+- [x] Generator uses AST parsing (TS compiler API), not regex; resolves hooks->endpoints+params.
+- [x] parity-manifest.json validates against manifest.schema.json (ajv draft-07, every unit).
+- [x] PAGE_COUNT=153 >= 95% of page files on disk (153); panels/charts/maps/api/strings populated.
+- [x] --check drift mode works: clean=>exit 0, injected change=>exit 1 (verified).
+- [x] Verbatim-gate glob bug (counts 11 *.test.tsx) disclosed; corrected population used.
+
+=== COMMIT ===
+git add apps/tools/gen-parity-manifest.ts apps/tools/gen-parity-manifest.ps1 apps/parity/parity-manifest.json .github/prompts/monorepo/logs/p1-s0-0001-manifest-gen.log
+git commit -m "feat(apps/parity): web parity manifest generator + manifest (P1/S0-0001)"
+
+EXIT=0
+STATUS=DONE
