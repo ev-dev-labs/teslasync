@@ -1,0 +1,11 @@
+P0/0010 observability decision doc gate
+PREFLIGHT: 0001 DONE (prompt-0001 log present); tree has only untracked prior prompt-runner harness logs (same situation 0001/0007/0008/0009 documented).
+DOC_EXISTS=1
+SECTION_OK: ## 1. Final choice — crash + analytics sink
+SECTION_OK: ## 2. PII redaction contract
+SECTION_OK: ## 3. Opt-out / consent & store obligations
+SECTION_OK: ## 4. Self-hosting plan (deferred to P5)
+SECTION_OK: ## 5. Event taxonomy (minimal product analytics)
+SECTIONS_FOUND=5/5
+EXIT=0
+STATUS=DONE
