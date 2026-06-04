@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parity manifest unit",
+  "type": "object",
+  "properties": {
+    "id":        { "type": "string", "description": "stable id, e.g. 'page:charging/ChargingDetail' or 'panel:dashboard/FleetStatus'" },
+    "kind":      { "enum": ["route","page","panel","component","chart","map","metric","state","api","string-group"] },
+    "title":     { "type": "string" },
+    "sourceFiles": { "type": "array", "items": { "type": "string" }, "description": "web/src paths" },
+    "route":     { "type": "string" },
+    "dataSources": { "type": "array", "items": { "type": "string" }, "description": "hook names + endpoints + params" },
+    "panels":    { "type": "array", "items": { "type": "string" } },
+    "charts":    { "type": "array", "items": { "type": "string" } },
+    "maps":      { "type": "array", "items": { "type": "string" } },
+    "states":    { "type": "array", "items": { "enum": ["loading","empty","error","success"] } },
+    "strings":   { "type": "array", "items": { "type": "string" }, "description": "i18n keys rendered" },
+    "requiredCount": { "type": "integer", "description": "panels+charts+maps+states+strings = parity target" },
+    "notes":     { "type": "string" }
+  },
+  "required": ["id","kind","title","sourceFiles","requiredCount"]
+}

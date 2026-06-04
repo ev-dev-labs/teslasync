@@ -1,0 +1,38 @@
+P0/0008 — Parity directory schema: manifest + per-platform ledgers (ADR-006)
+
+PREFLIGHT
+- 0001 DONE (commit 884ad1bf7, STATUS=DONE in prompt-0001 log).
+- Tree clean for tracked work; only untracked items are prior prompt-runner harness
+  logs under .github/prompts/monorepo/logs (same judgement as 0001/0007). Scoped commit
+  to Allowed files only (apps/parity/** + this log).
+- ADR-006 + ADR-011 confirmed present under .github/prompts/monorepo/adrs/.
+
+WORK
+- Wrote apps/parity/manifest.schema.json (draft-07): one record per parity unit; kind enum
+  covers route,page,panel,component,chart,map,metric,state,api,string-group; requiredCount
+  present and required.
+- Wrote apps/parity/ledger.schema.json (draft-07): per-platform coverage row; platform enum
+  covers all 4 targets (windows,android,apple-macos,apple-ios); coveredCount + requiredCount
+  + evidenceLog present; required = unitId,platform,status,coveredCount,requiredCount.
+- Wrote apps/parity/README.md: manifest->ledger flow diagram, unit definition, the
+  === PARITY === -> ledger row mapping table, and DONE = ledger 100% (per ADR-006 + ADR-011).
+- Removed apps/parity/.gitkeep (dir now carries real content).
+
+=== GATE === (raw output)
+MANIFEST_PARSE=OK title=Parity manifest unit
+LEDGER_PARSE=OK title=Parity ledger row
+KINDS=route,page,panel,component,chart,map,metric,state,api,string-group
+MANIFEST_HAS_REQUIREDCOUNT=True
+PLATFORMS=windows,android,apple-macos,apple-ios
+LEDGER_HAS_EVIDENCELOG=True
+README_ADR006=True
+README_ADR011=True
+README_DONE_100=True
+
+ACCEPTANCE
+- [x] Manifest schema covers all unit kinds + requiredCount.
+- [x] Ledger schema covers all 4 platform targets + coverage counts + evidence log.
+- [x] README explains DONE = ledger 100%.
+
+EXIT=0
+STATUS=DONE

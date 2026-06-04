@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parity ledger row",
+  "type": "object",
+  "properties": {
+    "unitId":   { "type": "string" },
+    "platform": { "enum": ["windows","android","apple-macos","apple-ios"] },
+    "status":   { "enum": ["todo","in_progress","done","blocked"] },
+    "coveredCount":  { "type": "integer" },
+    "requiredCount": { "type": "integer" },
+    "promptId": { "type": "string", "description": "the prompt that implemented it" },
+    "evidenceLog": { "type": "string", "description": "path to the prompt log with === PARITY ===" }
+  },
+  "required": ["unitId","platform","status","coveredCount","requiredCount"]
+}
