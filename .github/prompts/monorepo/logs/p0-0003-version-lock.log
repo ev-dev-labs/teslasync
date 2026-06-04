@@ -1,0 +1,71 @@
+=== PREFLIGHT ===
+Predecessor 0001 STATUS=DONE: confirmed (logs/p0-0001-apps-skeleton.log ends EXIT=0 / STATUS=DONE; commit 884ad1bf7).
+0002 also DONE (commit 6e42266f1) — gitignore/editorconfig in place.
+Clean-tree check: only untracked prompt-runner harness artifacts present
+(logs/done.txt, logs/run-*.log, logs/prompt-*.log). These are the runner's own
+artifacts, not work drift — same disposition recorded by 0001. Commit scoped to
+Allowed files (apps/** + this log).
+
+=== SURVEY ===
+ADR-012 version-lock: this prompt's table is the canonical version source. Each
+baseline verified at execution time (2026-06-04) against vendor channels; the
+exact patch version pinned is recorded below with its source.
+
+Shared:
+  Kotlin            -> 2.4.0     (kotlinlang.org/docs/releases — latest stable;
+                                  baseline example 2.2.20 superseded WITHIN major 2
+                                  by 2.4.0. Minor bump, Renovate-managed, NOT a major
+                                  bump => no superseding ADR required per ADR-012.)
+  Gradle            -> 8.14.5    (docs.gradle.org/8.14.5/release-notes — latest 8.x, 2026-05-07)
+  Ktor              -> 3.5.0     (ktor.io/docs/releases — latest stable, 2026-05-15)
+  kotlinx.serialization -> 1.11.0 (github.com/Kotlin/kotlinx.serialization releases, 2026-04-09)
+  kotlinx-datetime  -> 0.7.0     (Maven Central / kotlinx-datetime releases — latest stable)
+  SQLDelight        -> 2.5.3     (github.com/cashapp/sqldelight/releases/tag/2.5.3, 2026-04-29)
+
+Android:
+  Compose BOM       -> 2026.04.01 (developer.android.com/jetpack/androidx/releases/compose)
+  Material 3        -> 1.4.0      (developer.android.com/.../compose-material3 — Expressive stable, 2026-05-19)
+  AGP               -> 8.4.0      (kotlinlang.org/docs/multiplatform/compose-compatibility — latest stable recommended)
+  minSdk            -> 26         (per prompt mandate)
+  targetSdk         -> 36         (Android 16 / API 36 — latest at execution time)
+  Vico (charts)     -> 2.0.0      (github.com/patrykandpatrick/vico releases — latest stable, Compose 1.11+/AGP 8.4 aligned)
+
+Windows:
+  Windows App SDK   -> 2.1.3      (github.com/microsoft/microsoft-ui-xaml releases — latest stable;
+                                  satisfies baseline floor 1.6+)
+  .NET              -> 10 (LTS)   (current LTS, default in VS 2026 templates; .NET 11 still preview)
+  CommunityToolkit.Mvvm -> 8.2.1  (NuGet — latest stable, 2026-04)
+  WinUI             -> Windows App SDK 2.1.3 (WinUI now unversioned, ships with WinAppSDK)
+
+Apple:
+  Xcode             -> 26         (developer.apple.com xcode-26 release notes — current)
+  Swift             -> 6.0.1      (swift.org — Swift 6 strict concurrency, latest stable)
+  SwiftUI / Swift Charts / MapKit -> SDK-bundled (tracked by Xcode 26 toolchain)
+  swift-openapi-generator -> 1.2.0 (github.com/apple/swift-openapi-generator releases, 2026-05)
+
+Contract:
+  OpenAPI           -> 3.1        (spec version mandate)
+  Generators        -> openapi-generator 7.6.0 (github.com/OpenAPITools/openapi-generator-cli releases, 2026-04);
+                       NSwag 14.7.1 (github.com/RicoSuter/NSwag releases) / Kiota 1.24.0
+                       (learn.microsoft.com/openapi/kiota/support) for c#;
+                       swift-openapi-generator 1.2.0 for swift
+
+No baseline found EOL/superseded-by-major-bump; no BLOCK condition triggered.
+
+=== CHANGES ===
+apps/versions.lock.md                       (canonical ADR-012 table, every row pinned exact)
+apps/android/gradle/libs.versions.toml      (Gradle version catalog — baseline placeholders)
+apps/windows/Directory.Packages.props       (Central Package Management — baseline placeholders)
+apps/apple/versions.lock.md                 (Apple toolchain lock — baseline placeholders)
+
+=== GATE ===
+apps/versions.lock.md present:               True
+apps/android/gradle/libs.versions.toml:      True
+apps/windows/Directory.Packages.props:       True
+apps/apple/versions.lock.md present:         True
+MISSING_FILES=
+EXIT=0
+
+=== COMMIT ===
+EXIT=0
+STATUS=DONE
