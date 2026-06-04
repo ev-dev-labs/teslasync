@@ -1,0 +1,39 @@
+P0/0009 — Authentik native OAuth client runbook (ADR-008)
+==========================================================
+
+PREFLIGHT
+- Depends-on 0001: DONE (log prompt-0001-0001-apps-skeleton.log ends STATUS=DONE, commit 884ad1bf7).
+- Branch: feature/apps
+- Working tree: only untracked harness/log artifacts under .github/prompts/monorepo/logs/
+  (prompt-runner output + run-*.log). Judged as harness artifacts, not work drift —
+  same judgment recorded by 0001. Commit scoped to Allowed files only.
+- Target apps/docs/ existed (only .gitkeep). No prior runbook.
+
+WORK
+- Created apps/docs/authentik-native-clients.md (public OIDC Auth Code + PKCE S256 clients).
+- All 6 required sections present:
+    1. Provider config (per app) — Windows ms-app://<package-SID> + loopback 127.0.0.1:<port>/callback;
+       Android App Link https://<host>/oauth/android/callback + scheme teslasync://oauth;
+       Apple Universal Link https://<host>/oauth/apple/callback + scheme teslasync://oauth.
+    2. Scopes/claims — openid, profile, email, offline_access (refresh) + required ID-token claims.
+    3. Token lifetimes + refresh rotation; bearer vs web ForwardAuth contrast.
+    4. Secret storage — Credential Manager / Keystore EncryptedSharedPreferences / Keychain (pointers, not code).
+    5. Verification — manual per-platform redirect round-trip checklist.
+    6. Security notes — no client secret, PKCE S256, reject implicit/hybrid, strict redirect matching.
+- Backend-additive requirements flagged as TODO-for-ADR (ADR-009), NOT coded:
+    * /api/v1/* bearer JWT acceptance/verification (currently ForwardAuth-only).
+    * /api/v1/devices session enumeration/revocation.
+    * Optional groups claim for authz parity.
+    * assetlinks.json / apple-app-site-association hosting owner.
+
+GATE
+- Test-Path apps/docs/authentik-native-clients.md => True
+- grep '^## \d\.' => 6 numbered headings (sections 1-6 all matched).
+
+ACCEPTANCE
+- [x] Runbook has all 6 sections with per-platform redirect URIs.
+- [x] Backend-additive requirements explicitly flagged for ADR review (ADR-009).
+- [x] EXIT=0 / STATUS=DONE.
+
+EXIT=0
+STATUS=DONE
