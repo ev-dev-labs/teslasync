@@ -1,0 +1,238 @@
+[
+  {
+    "domain": "useAchievementUnlocks",
+    "hooks": 1
+  },
+  {
+    "domain": "useAdmin",
+    "hooks": 21
+  },
+  {
+    "domain": "useAiSettings",
+    "hooks": 2
+  },
+  {
+    "domain": "useAiUsage",
+    "hooks": 3
+  },
+  {
+    "domain": "useAlertMessageHelpers",
+    "hooks": 3
+  },
+  {
+    "domain": "useAnalytics",
+    "hooks": 11
+  },
+  {
+    "domain": "useAnnotations",
+    "hooks": 5
+  },
+  {
+    "domain": "useAnomalies",
+    "hooks": 1
+  },
+  {
+    "domain": "useApiHealth",
+    "hooks": 1
+  },
+  {
+    "domain": "useAuthMode",
+    "hooks": 3
+  },
+  {
+    "domain": "useAutomations",
+    "hooks": 12
+  },
+  {
+    "domain": "useCharging",
+    "hooks": 16
+  },
+  {
+    "domain": "useChat",
+    "hooks": 5
+  },
+  {
+    "domain": "useCommands",
+    "hooks": 2
+  },
+  {
+    "domain": "useDashboard",
+    "hooks": 1
+  },
+  {
+    "domain": "useDashboardLayouts",
+    "hooks": 5
+  },
+  {
+    "domain": "useDLQ",
+    "hooks": 4
+  },
+  {
+    "domain": "useDriving",
+    "hooks": 17
+  },
+  {
+    "domain": "useEnergy",
+    "hooks": 24
+  },
+  {
+    "domain": "useExports",
+    "hooks": 13
+  },
+  {
+    "domain": "useFeatureFlags",
+    "hooks": 5
+  },
+  {
+    "domain": "useFeedback",
+    "hooks": 3
+  },
+  {
+    "domain": "useFleetTelemetry",
+    "hooks": 1
+  },
+  {
+    "domain": "useFSM",
+    "hooks": 2
+  },
+  {
+    "domain": "useGuard",
+    "hooks": 5
+  },
+  {
+    "domain": "useImpersonation",
+    "hooks": 4
+  },
+  {
+    "domain": "useIncidents",
+    "hooks": 6
+  },
+  {
+    "domain": "useIngestXRay",
+    "hooks": 1
+  },
+  {
+    "domain": "useLocations",
+    "hooks": 3
+  },
+  {
+    "domain": "useLogStream",
+    "hooks": 1
+  },
+  {
+    "domain": "useNotificationChannels",
+    "hooks": 4
+  },
+  {
+    "domain": "useNotifications",
+    "hooks": 36
+  },
+  {
+    "domain": "useOnboarding",
+    "hooks": 1
+  },
+  {
+    "domain": "useOperatorConfidence",
+    "hooks": 10
+  },
+  {
+    "domain": "usePinned",
+    "hooks": 3
+  },
+  {
+    "domain": "usePush",
+    "hooks": 4
+  },
+  {
+    "domain": "useRbacMatrix",
+    "hooks": 2
+  },
+  {
+    "domain": "useSavedViews",
+    "hooks": 5
+  },
+  {
+    "domain": "useSearch",
+    "hooks": 1
+  },
+  {
+    "domain": "useSessions",
+    "hooks": 3
+  },
+  {
+    "domain": "useSettings",
+    "hooks": 20
+  },
+  {
+    "domain": "useSettingsBackup",
+    "hooks": 3
+  },
+  {
+    "domain": "useSettingsReset",
+    "hooks": 2
+  },
+  {
+    "domain": "useSharing",
+    "hooks": 4
+  },
+  {
+    "domain": "useSignals",
+    "hooks": 3
+  },
+  {
+    "domain": "useSystem",
+    "hooks": 1
+  },
+  {
+    "domain": "useSystemDiagnostic",
+    "hooks": 2
+  },
+  {
+    "domain": "useSystemQueues",
+    "hooks": 2
+  },
+  {
+    "domain": "useTelemetry",
+    "hooks": 16
+  },
+  {
+    "domain": "useTOTP",
+    "hooks": 6
+  },
+  {
+    "domain": "useTrips",
+    "hooks": 2
+  },
+  {
+    "domain": "useUser",
+    "hooks": 11
+  },
+  {
+    "domain": "useVehicleAccess",
+    "hooks": 7
+  },
+  {
+    "domain": "useVehicleCommand",
+    "hooks": 1
+  },
+  {
+    "domain": "useVehiclePhoto",
+    "hooks": 3
+  },
+  {
+    "domain": "useVehicles",
+    "hooks": 31
+  },
+  {
+    "domain": "useVehicleSettings",
+    "hooks": 3
+  },
+  {
+    "domain": "useVehicleSystems",
+    "hooks": 11
+  },
+  {
+    "domain": "useWatch",
+    "hooks": 3
+  }
+]
