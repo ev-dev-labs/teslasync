@@ -1,0 +1,22 @@
+P0/0005 prompt-runner — artifact log
+=== self-test ===
+Test-LogSaysRed self-test:
+  [PASS] blocked -> isRed=True (expected True) reason='final STATUS=BLOCKED'
+  [PASS] exit-nonzero -> isRed=True (expected True) reason='final EXIT=1'
+  [PASS] fail-marker -> isRed=True (expected True) reason='[FAIL] marker'
+  [PASS] commit-fail -> isRed=True (expected True) reason='commit failed (COMMIT_EXIT=1)'
+  [PASS] parity-gap -> isRed=True (expected True) reason='parity gap (COVERED=7 < REQUIRED=10)'
+  [PASS] green -> isRed=False (expected False) reason=''
+  [PASS] log-missing -> isRed=True (expected True)
+
+SELFTEST_EXIT=0
+STATUS=DONE
+PWSH_SELFTEST_EXITCODE=0
+
+=== acceptance ===
+Test-LogSaysRed detects: EXIT!=0, STATUS=BLOCKED, [FAIL], commit fail, parity gap — PASS
+Self-test (positive+negative): PASS (SELFTEST_EXIT=0)
+Runner appends to done.txt only when not red; STOPs on red unless -ContinueOnRed — PASS
+
+EXIT=0
+STATUS=DONE

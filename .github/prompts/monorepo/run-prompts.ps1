@@ -49,7 +49,9 @@ param(
     [switch]$Reset        = $false,
     [int]$StartFrom       = 1,
     [int]$DelaySeconds    = 10,
-    [int]$TimeoutMinutes  = 60               # Platform UI prompts often need more than schema work
+    [int]$TimeoutMinutes  = 60,              # Platform UI prompts often need more than schema work
+    [switch]$ContinueOnRed = $false,         # Do not STOP after a red prompt (default: STOP on red)
+    [switch]$SelfTest      = $false          # Run Test-LogSaysRed self-test and exit
 )
 
 $ErrorActionPreference = "Stop"
@@ -193,11 +195,72 @@ function Test-LogSaysRed {
 
     if ($content -match '\[FAIL\]')                            { $reasons += '[FAIL] marker' }
     if ($content -match '(?m)^UNEXPECTED_COUNT=(?!0\s*$)\d+')  { $reasons += 'UNEXPECTED_COUNT' }
+
+    # Final-marker-wins for COMMIT_EXIT=. A non-zero last commit exit is RED.
+    $commitMatches = [regex]::Matches($content, '(?m)^COMMIT_EXIT=(\d+)\s*$')
+    if ($commitMatches.Count -gt 0 -and $commitMatches[$commitMatches.Count - 1].Groups[1].Value -ne '0') {
+        $reasons += "commit failed (COMMIT_EXIT=$($commitMatches[$commitMatches.Count - 1].Groups[1].Value))"
+    }
+
+    # Parity gate: PARITY_COVERED < PARITY_REQUIRED is RED.
+    if ($content -match '(?m)^PARITY_COVERED=(\d+)') {
+        $cov = [int]$Matches[1]
+        if ($content -match '(?m)^PARITY_REQUIRED=(\d+)') {
+            if ($cov -lt [int]$Matches[1]) { $reasons += "parity gap (COVERED=$cov < REQUIRED=$($Matches[1]))" }
+        }
+    }
+
     if ($reasons.Count -gt 0) { return @($true, ($reasons -join ', ')) }
     return @($false, '')
 }
 
-# Monorepo prompts declare their artifact log path in the Artifact Metadata
+# ---------------------------------------------------------------------------
+# Self-test (-SelfTest): prove Test-LogSaysRed flags red logs and passes green.
+# This is the gate required by P0/0005 — a runner that records a BLOCKED prompt
+# as DONE is the exact failure mode we must never reproduce.
+# ---------------------------------------------------------------------------
+if ($SelfTest) {
+    $stFails = 0
+    $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("runner-selftest-" + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $tmp -Force | Out-Null
+
+    function Assert-Red([string]$name, [string]$body, [bool]$expectRed) {
+        $f = Join-Path $tmp ($name + '.log')
+        Set-Content -Path $f -Value $body -Encoding UTF8
+        $res = Test-LogSaysRed $f
+        $ok = ($res[0] -eq $expectRed)
+        $verdict = if ($ok) { 'PASS' } else { 'FAIL' }
+        Write-Host ("  [{0}] {1} -> isRed={2} (expected {3}) reason='{4}'" -f $verdict, $name, $res[0], $expectRed, $res[1])
+        if (-not $ok) { $script:stFails++ }
+    }
+
+    Write-Host "Test-LogSaysRed self-test:" -ForegroundColor Cyan
+    Assert-Red 'blocked'     "STATUS=BLOCKED"                                  $true
+    Assert-Red 'exit-nonzero' "EXIT=1`nSTATUS=DONE"                            $true
+    Assert-Red 'fail-marker' "[FAIL] something broke`nEXIT=0"                  $true
+    Assert-Red 'commit-fail' "COMMIT_EXIT=1`nEXIT=0`nSTATUS=DONE"             $true
+    Assert-Red 'parity-gap'  "PARITY_REQUIRED=10`nPARITY_COVERED=7`nEXIT=0`nSTATUS=DONE" $true
+    Assert-Red 'green'       "PARITY_REQUIRED=10`nPARITY_COVERED=10`nCOMMIT_EXIT=0`nEXIT=0`nSTATUS=DONE" $false
+
+    # log-missing case (path that does not exist) must be red
+    $missingRes = Test-LogSaysRed (Join-Path $tmp 'does-not-exist.log')
+    $mOk = ($missingRes[0] -eq $true)
+    Write-Host ("  [{0}] log-missing -> isRed={1} (expected True)" -f $(if ($mOk) {'PASS'} else {'FAIL'}), $missingRes[0])
+    if (-not $mOk) { $stFails++ }
+
+    Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
+
+    Write-Host ""
+    Write-Host "SELFTEST_EXIT=$stFails"
+    if ($stFails -eq 0) {
+        Write-Host "STATUS=DONE" -ForegroundColor Green
+        exit 0
+    } else {
+        Write-Host "STATUS=BLOCKED" -ForegroundColor Red
+        exit 1
+    }
+}
+
 # table using a field labeled either `Log` (most common) or `Output log`
 # (db-refactor legacy). Both backtick-quoted relative paths are accepted.
 function Get-PromptArtifactLogPath {
@@ -269,6 +332,7 @@ $successCount = 0
 $failCount    = 0
 $skipCount    = 0
 $currentProgram = ""
+$results = @()   # per-prompt outcome table: id, RED?, reason
 
 foreach ($p in $prompts) {
 
@@ -420,16 +484,19 @@ foreach ($p in $prompts) {
 
     if ($exitCode -ne 0) {
         $failCount++
+        $results += [PSCustomObject]@{ Id = $p.RelPath; Red = $true; Reason = "exit $exitCode" }
         Log "$tag FAILED (exit $exitCode) after $mins min"
         Write-Host ""
         Write-Host "  FAILED after $mins min (exit code $exitCode)" -ForegroundColor Red
         Write-Host "  Log: $logFile" -ForegroundColor Red
         Write-Host ""
-        $answer = Read-Host "  Continue to next prompt? (y/n/q)"
-        if ($answer -eq 'q' -or $answer -eq 'n') {
-            Log "ABORTED by user at prompt $($p.Index)"
-            Write-Host "Aborted. Resume later with: -StartFrom $($p.Index)" -ForegroundColor Yellow
-            exit 1
+        if ($ContinueOnRed) {
+            Log "$tag CONTINUE-ON-RED set; advancing past red prompt"
+            Write-Host "  -ContinueOnRed set; advancing past red prompt." -ForegroundColor Yellow
+        } else {
+            Log "STOPPED at red prompt $($p.Index) (exit). Resume with: -StartFrom $($p.Index)"
+            Write-Host "  STOP: red prompt. Pass -ContinueOnRed to override. Resume with: -StartFrom $($p.Index)" -ForegroundColor Yellow
+            break
         }
     }
     else {
@@ -452,6 +519,7 @@ foreach ($p in $prompts) {
 
         if ($gateFailures.Count -gt 0) {
             $failCount++
+            $results += [PSCustomObject]@{ Id = $p.RelPath; Red = $true; Reason = ($gateFailures -join '; ') }
             Log "$tag LOG-GATE FAILED ($($gateFailures -join '; ')) after $mins min"
             Write-Host ""
             Write-Host "  LOG-GATE FAILED after $mins min" -ForegroundColor Red
@@ -459,15 +527,19 @@ foreach ($p in $prompts) {
             Write-Host "  CLI exited 0 but child log contains red markers." -ForegroundColor Red
             Write-Host "  Log: $logFile" -ForegroundColor Red
             Write-Host ""
-            $answer = Read-Host "  Continue to next prompt? (y/n/q)"
-            if ($answer -eq 'q' -or $answer -eq 'n') {
-                Log "ABORTED by user at prompt $($p.Index) (log-gate)"
-                Write-Host "Aborted. Resume later with: -StartFrom $($p.Index)" -ForegroundColor Yellow
-                exit 1
+            # NEVER append a red prompt to done.txt — STOP unless -ContinueOnRed.
+            if ($ContinueOnRed) {
+                Log "$tag CONTINUE-ON-RED set; advancing past red prompt (log-gate)"
+                Write-Host "  -ContinueOnRed set; advancing past red prompt." -ForegroundColor Yellow
+            } else {
+                Log "STOPPED at red prompt $($p.Index) (log-gate). Resume with: -StartFrom $($p.Index)"
+                Write-Host "  STOP: red prompt. Pass -ContinueOnRed to override. Resume with: -StartFrom $($p.Index)" -ForegroundColor Yellow
+                break
             }
         }
         else {
             $successCount++
+            $results += [PSCustomObject]@{ Id = $p.RelPath; Red = $false; Reason = '' }
             Log "$tag DONE in $mins min"
             Write-Host "  Completed in $mins min" -ForegroundColor Green
 
@@ -497,5 +569,18 @@ Write-Host "  Skipped   : $skipCount" -ForegroundColor DarkGray
 Write-Host "  Run log   : $runLog"
 Write-Host "  Done file : $doneFile"
 Write-Host "================================================================" -ForegroundColor Cyan
+
+# Per-prompt outcome table (id, RED?, reason)
+if ($results.Count -gt 0) {
+    Write-Host ""
+    Write-Host "  Prompt outcomes:" -ForegroundColor Cyan
+    Write-Host ("  {0,-55} {1,-5} {2}" -f 'id', 'RED?', 'reason')
+    Write-Host ("  {0,-55} {1,-5} {2}" -f ('-' * 55), '-----', ('-' * 20))
+    foreach ($r in $results) {
+        $redStr = if ($r.Red) { 'YES' } else { 'no' }
+        $color  = if ($r.Red) { 'Red' } else { 'Green' }
+        Write-Host ("  {0,-55} {1,-5} {2}" -f $r.Id, $redStr, $r.Reason) -ForegroundColor $color
+    }
+}
 
 if ($failCount -gt 0) { exit 1 }
