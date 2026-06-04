@@ -1,0 +1,33 @@
+P0/0011 — Contributor guide (apps/README.md)
+
+PREFLIGHT
+- 0001–0010 logs present with STATUS=DONE (verified prompt-0001..prompt-0010 *.log).
+- Working tree: apps/** tracked and clean; only untracked items are prior prompt-runner
+  harness logs under .github/prompts/monorepo/logs/ — judged harness artifacts, not work
+  drift. Commit scoped to Allowed files only (apps/README.md + this log).
+
+WORK
+- Replaced the 0001 placeholder apps/README.md with the full contributor guide.
+- Sourced facts from:
+  - apps/versions.lock.md (ADR-012 toolchain pins)
+  - adrs/ADR-001 (layout), ADR-003 (OpenAPI contract @ api/openapi/teslasync.openapi.json),
+    ADR-010 (build+lint+test triad table), ADR-012 (version lock)
+  - apps/parity/README.md, apps/design/README.md, apps/docs/{authentik-native-clients,observability}.md
+  - .github/prompts/monorepo/0000-methodology.prompt.md
+
+OUTPUT — 6 required sections all present:
+  1. Map of apps/ (shared/design/parity/windows/android/apple/tools/docs + versions.lock/.editorconfig)
+  2. Sparse / partial checkout (verbatim: git sparse-checkout set apps/shared apps/design apps/parity apps/windows api/openapi)
+  3. Per-platform dev setup (Windows VS2022+/.NET10/WinAppSDK; Android JDK17+/Studio/SDK26+/Gradle; Apple macOS/Xcode26/Swift6) — matches versions.lock.md
+  4. Build/lint/test ADR-010 triad commands per platform
+  5. Where the contract lives (api/openapi/teslasync.openapi.json) + client regen (kotlin/c#/swift)
+  6. Pointers to methodology, ADRs, parity README, both runbooks
+
+GATE
+- Section headers: 6/6 (## 1..## 6) matched via grep.
+- Sparse-checkout command present: 1 match.
+- Internal links resolved: 16/16 OK, BAD_LINKS=0 (Test-Path against each non-http link).
+- Per-platform setup cross-checked against versions.lock.md.
+
+EXIT=0
+STATUS=DONE
