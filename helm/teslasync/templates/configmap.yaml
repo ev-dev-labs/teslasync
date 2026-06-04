@@ -106,6 +106,9 @@ data:
   OTEL_ENDPOINT: {{ .Values.config.openTelemetry.endpoint | quote }}
   OTEL_SERVICE_NAME: {{ .Values.config.openTelemetry.serviceName | quote }}
   OTEL_INSECURE: {{ .Values.config.openTelemetry.insecure | quote }}
+  # ADR-0074 telemetry redaction — geo-fuzz precision (decimal places).
+  # The keyed-hash salt is sensitive and lives in the Secret, not here.
+  OTEL_REDACTION_GEO_PRECISION: {{ .Values.config.openTelemetry.redactionGeoPrecision | quote }}
   {{- end }}
   # Phase-44 / observability-batch / Prompt F4 — DLQ Inspector.
   # Replay is opt-in because re-publishing a payload that already

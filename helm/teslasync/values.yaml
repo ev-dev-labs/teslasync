@@ -561,6 +561,16 @@ config:
     endpoint: "jaeger:4317"
     serviceName: "teslasync"
     insecure: true
+    # ADR-0074 telemetry redaction. The processor is mandatory (always on
+    # when tracing is enabled); these only tune it.
+    # redactionSalt keys the identifier hash (VIN / vehicle-id / user-id).
+    # It is sensitive — set it to a stable per-deployment random string so
+    # hashes correlate across restarts but not across deployments. Stored in
+    # the Secret. Leave empty to fall back to non-correlatable hashing.
+    redactionSalt: ""
+    # redactionGeoPrecision is the lat/long rounding precision in decimal
+    # places (2 ≈ 1.1 km, enough to prevent home-address leakage).
+    redactionGeoPrecision: 2
 
   # ── Dead-letter queue inspector (Phase-44 / observability-batch / F4) ─
   # Subscribes to {fleetTelemetry.topicBase}/dlq/# and keeps the last

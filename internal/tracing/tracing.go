@@ -2,11 +2,15 @@ package tracing
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/tracing/redaction"
+	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -108,7 +112,32 @@ func Init(ctx context.Context, cfg *config.Config, opts ...Option) (func(context
 	// helm/teslasync/files/otel-collector/config.yaml and
 	// the trace-sampling runbook.
 	sampler := sdktrace.ParentBased(sdktrace.TraceIDRatioBased(ratio))
-	bsp := sdktrace.NewBatchSpanProcessor(exporter)
+
+	// ADR-0074: redaction is applied at the SDK source, not the collector,
+	// so it is symmetric across every exporter. The redactor hashes
+	// identifiers (VIN / vehicle-id / user-id), fuzzes geo-coordinates to
+	// RedactionGeoPrecision decimals, and scrubs secret-shaped values. It
+	// is wired mandatorily here — there is no per-service opt-in.
+	//
+	// The keyed-hash salt MUST be non-empty: an empty HMAC key is identical
+	// across every deployment, making hashes cross-deployment correlatable
+	// and offline-guessable. When OTEL_REDACTION_SALT is unset we fall back
+	// to a process-random salt — safe (non-correlatable, non-reversible)
+	// but it breaks correlation across restarts and across the API/worker
+	// binaries, so operators should set a stable per-deployment salt.
+	salt := strings.TrimSpace(cfg.OpenTelemetry.RedactionSalt)
+	if salt == "" {
+		salt = randomSalt()
+		log.Warn().
+			Str("component", "tracing.redaction").
+			Msg("OTEL_REDACTION_SALT is unset; using a process-random salt — telemetry identifier hashes will not correlate across restarts or across binaries. Set OTEL_REDACTION_SALT to a stable per-deployment secret.")
+	}
+	redactor := redaction.NewRedactor(redaction.DefaultConfig(
+		salt,
+		cfg.OpenTelemetry.RedactionGeoPrecision,
+	))
+	redactingExporter := redaction.NewRedactingExporter(exporter, redactor)
+	bsp := sdktrace.NewBatchSpanProcessor(redactingExporter)
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSpanProcessor(bsp),
 		sdktrace.WithResource(res),
@@ -133,4 +162,17 @@ func normalizeEndpoint(endpoint string, insecureTLS bool) (string, bool) {
 		return strings.TrimPrefix(endpoint, "https://"), insecureTLS
 	}
 	return endpoint, insecureTLS
+}
+
+// randomSalt returns a 32-hex-char (128-bit) random salt used as the
+// redaction HMAC key when the operator did not configure OTEL_REDACTION_SALT.
+// crypto/rand failure is treated as fatal-for-redaction by returning a fixed
+// non-empty sentinel — that still avoids the empty-key footgun, and the
+// accompanying warning log tells the operator to set a real salt.
+func randomSalt() string {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "teslasync-fallback-redaction-salt"
+	}
+	return hex.EncodeToString(b)
 }

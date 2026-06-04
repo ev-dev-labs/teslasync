@@ -179,6 +179,20 @@ type OpenTelemetryConfig struct {
 	Endpoint    string `json:"endpoint"`
 	ServiceName string `json:"service_name"`
 	Insecure    bool   `json:"insecure"`
+
+	// RedactionSalt is the per-deployment keyed-hash salt used by the
+	// mandatory ADR-0074 telemetry-redaction processor to hash
+	// identifiers (VIN / vehicle-id / user-id) on outgoing spans. It is
+	// sensitive (knowing it lets an attacker confirm a guessed identifier
+	// against a hash), so it is sourced from the secret bundle. When empty
+	// the redactor still hashes — output stays non-reversible — but loses
+	// cross-restart correlation.
+	RedactionSalt string `json:"-"`
+
+	// RedactionGeoPrecision is the number of fractional decimal places a
+	// latitude/longitude span attribute is rounded to before export.
+	// Defaults to 2 (~1.1 km) so a span can never leak a home address.
+	RedactionGeoPrecision int `json:"redaction_geo_precision"`
 }
 
 // ProfilingConfig controls Pyroscope continuous profiling. Defaults to
@@ -507,10 +521,12 @@ func Load() (*Config, error) {
 		},
 
 		OpenTelemetry: OpenTelemetryConfig{
-			Enabled:     envBool("OTEL_ENABLED", false),
-			Endpoint:    envStr("OTEL_ENDPOINT", "localhost:4317"),
-			ServiceName: envStr("OTEL_SERVICE_NAME", "teslasync"),
-			Insecure:    envBool("OTEL_INSECURE", true),
+			Enabled:               envBool("OTEL_ENABLED", false),
+			Endpoint:              envStr("OTEL_ENDPOINT", "localhost:4317"),
+			ServiceName:           envStr("OTEL_SERVICE_NAME", "teslasync"),
+			Insecure:              envBool("OTEL_INSECURE", true),
+			RedactionSalt:         envStr("OTEL_REDACTION_SALT", ""),
+			RedactionGeoPrecision: envInt("OTEL_REDACTION_GEO_PRECISION", 2),
 		},
 
 		Profiling: ProfilingConfig{

@@ -54,6 +54,10 @@ services:
       - OTEL_TRACES_SAMPLER_ARG=${OTEL_TRACES_SAMPLER_ARG:-1.0}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-api}
       - OTEL_INSECURE=${OTEL_INSECURE:-true}
+      # ADR-0074 telemetry redaction (mandatory). Salt keys the identifier
+      # hash; geo precision controls lat/long fuzzing (2dp ≈ 1.1 km).
+      - OTEL_REDACTION_SALT=${OTEL_REDACTION_SALT:-}
+      - OTEL_REDACTION_GEO_PRECISION=${OTEL_REDACTION_GEO_PRECISION:-2}
       # Pyroscope continuous profiling — opt-in via PYROSCOPE_ENABLED.
       # When enabled the API uploads CPU/heap/goroutine/mutex/block deltas
       # to the Pyroscope server every PYROSCOPE_UPLOAD_RATE (default 15s).
@@ -216,6 +220,8 @@ services:
       - OTEL_ENDPOINT=${OTEL_ENDPOINT:-otel-collector:4317}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-notification-worker}
       - OTEL_INSECURE=${OTEL_INSECURE:-true}
+      - OTEL_REDACTION_SALT=${OTEL_REDACTION_SALT:-}
+      - OTEL_REDACTION_GEO_PRECISION=${OTEL_REDACTION_GEO_PRECISION:-2}
       - PYROSCOPE_ENABLED=${PYROSCOPE_ENABLED:-false}
       - PYROSCOPE_SERVER_ADDRESS=${PYROSCOPE_SERVER_ADDRESS:-http://pyroscope:4040}
       - PYROSCOPE_UPLOAD_RATE=${PYROSCOPE_UPLOAD_RATE:-15s}
@@ -411,6 +417,8 @@ services:
       - OTEL_ENDPOINT=${OTEL_ENDPOINT:-otel-collector:4317}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-export-worker}
       - OTEL_INSECURE=${OTEL_INSECURE:-true}
+      - OTEL_REDACTION_SALT=${OTEL_REDACTION_SALT:-}
+      - OTEL_REDACTION_GEO_PRECISION=${OTEL_REDACTION_GEO_PRECISION:-2}
       - PYROSCOPE_ENABLED=${PYROSCOPE_ENABLED:-false}
       - PYROSCOPE_SERVER_ADDRESS=${PYROSCOPE_SERVER_ADDRESS:-http://pyroscope:4040}
       - PYROSCOPE_UPLOAD_RATE=${PYROSCOPE_UPLOAD_RATE:-15s}
@@ -458,6 +466,8 @@ services:
       - OTEL_ENDPOINT=${OTEL_ENDPOINT:-otel-collector:4317}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-automation-worker}
       - OTEL_INSECURE=${OTEL_INSECURE:-true}
+      - OTEL_REDACTION_SALT=${OTEL_REDACTION_SALT:-}
+      - OTEL_REDACTION_GEO_PRECISION=${OTEL_REDACTION_GEO_PRECISION:-2}
       - PYROSCOPE_ENABLED=${PYROSCOPE_ENABLED:-false}
       - PYROSCOPE_SERVER_ADDRESS=${PYROSCOPE_SERVER_ADDRESS:-http://pyroscope:4040}
       - PYROSCOPE_UPLOAD_RATE=${PYROSCOPE_UPLOAD_RATE:-15s}
