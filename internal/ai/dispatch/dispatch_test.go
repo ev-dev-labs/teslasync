@@ -13,7 +13,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
-// ---- scripted provider: returns canned ChatResponses in order ----
+// Scripted provider returns canned ChatResponses in order.
 
 type scriptedProvider struct {
 	mu    sync.Mutex
@@ -40,8 +40,8 @@ func (s *scriptedProvider) Chat(ctx context.Context, req provider.ChatRequest) (
 		return nil, s.err
 	}
 	if s.calls >= len(s.resps) {
-		// Return a terminal stop so loops that exceed the script
-		// degenerate gracefully (test catches the surprise).
+		// Return a terminal stop so an overrun still finishes; the test
+		// catches unexpected extra calls.
 		return &provider.ChatResponse{
 			Message:      provider.Message{Role: provider.RoleAssistant, Content: ""},
 			FinishReason: provider.FinishStop,
@@ -62,7 +62,7 @@ func (s *scriptedProvider) Capabilities() provider.Capabilities {
 	return provider.Capabilities{Tools: true}
 }
 
-// ---- in-process tools used by dispatch tests ----
+// In-process tools used by dispatch tests.
 
 type pingInput struct{}
 
@@ -104,7 +104,7 @@ func (echoTool) Execute(ctx context.Context, in any) (any, error) {
 	return map[string]string{"echo": in.(echoInput).Msg}, nil
 }
 
-// ---- minimal strategy ----
+// Minimal strategy for dispatcher tests.
 
 type fakeStrategy struct {
 	tools  []string
@@ -112,16 +112,16 @@ type fakeStrategy struct {
 	ctx    []provider.Message
 }
 
-func (f fakeStrategy) FeatureID() string                                 { return "test" }
-func (f fakeStrategy) System() string                                    { return f.system }
-func (f fakeStrategy) Tools() []string                                   { return f.tools }
+func (f fakeStrategy) FeatureID() string { return "test" }
+func (f fakeStrategy) System() string    { return f.system }
+func (f fakeStrategy) Tools() []string   { return f.tools }
 func (f fakeStrategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return f.ctx, nil
 }
 func (f fakeStrategy) RedactionPolicy() strategy.RedactionPolicy { return strategy.NoRedaction{} }
 func (f fakeStrategy) EvalGoldens() []strategy.EvalGolden        { return nil }
 
-// ---- helpers ----
+// Test helpers.
 
 func newRegistry() *tools.Registry {
 	r := tools.NewRegistry()
@@ -136,8 +136,6 @@ func newRegistryWithMutator() *tools.Registry {
 	r.Register(&pingTool{mutates: true})
 	return r
 }
-
-// ---- TESTS ----
 
 func TestDispatcher_SimpleChatNoTools(t *testing.T) {
 	t.Parallel()

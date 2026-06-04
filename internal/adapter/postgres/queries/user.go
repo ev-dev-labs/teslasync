@@ -1,6 +1,5 @@
 package queries
 
-// User SQL queries.
 const (
 	GetUserByID = `
 		SELECT id, email, display_name, avatar_url,

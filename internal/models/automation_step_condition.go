@@ -3,8 +3,7 @@ package models
 import "time"
 
 // CTI child rows for `automation_steps` of kind `condition_*`. See migration
-// 000142_baseline_typed and
-// .github/prompts/db-refactor/phase-3-schema/_baseline_source/15-automation-conditions.sql.
+// 000142_baseline_typed.
 //
 // ADR-001: typed-by-default — no raw_json, no JSONB carve-outs. Each condition
 // kind has its own child table with strongly-typed columns.
@@ -48,7 +47,7 @@ type AutomationStepConditionTimeWindow struct {
 // AutomationStepConditionGeofence mirrors `automation_step_condition_geofence`.
 //
 // State is one of: 'inside', 'outside', 'dwell' (enforced by CHECK constraint).
-// PlaceID is a FK to places(id) ON DELETE RESTRICT (added in prompt 23).
+// PlaceID is a FK to places(id) ON DELETE RESTRICT.
 type AutomationStepConditionGeofence struct {
 	StepID  int64  `db:"step_id"  json:"step_id"`
 	PlaceID int64  `db:"place_id" json:"place_id"`

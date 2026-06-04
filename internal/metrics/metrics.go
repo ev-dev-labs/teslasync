@@ -137,8 +137,7 @@ var (
 
 	// AlertRulesMaxFiresCapHit counts rule evaluations suppressed because
 	// the rule already hit its `max_fires_per_resolution` cap and the
-	// condition has not yet resolved (falling edge clears the counter).
-	// Phase-49 / Slice 0003 / Decision D5.
+	// condition has not yet resolved; a falling edge clears the counter.
 	AlertRulesMaxFiresCapHit = promauto.NewCounter(prometheus.CounterOpts{
 		Namespace: "teslasync",
 		Name:      "cep_rules_max_fires_cap_hit_total",
@@ -147,22 +146,19 @@ var (
 
 	// AlertRulesHourlyCapHit counts rule evaluations suppressed by the
 	// engine-level safety cap that limits a (rule, vehicle) pair to a
-	// fixed number of fires per rolling 1h window. Phase-49 / Slice 0004
-	// merged this from the now-deleted CooldownFSM.MaxFiresPerHour into
-	// the rule engine; the cap defaults to 4 (matching the legacy FSM
-	// default) and is overridable by tests via RuleEngine.SetMaxFiresPerHour.
+	// fixed number of fires per rolling 1h window. The cap defaults to 4
+	// and is overridable by tests via RuleEngine.SetMaxFiresPerHour.
 	AlertRulesHourlyCapHit = promauto.NewCounter(prometheus.CounterOpts{
 		Namespace: "teslasync",
 		Name:      "cep_rules_hourly_cap_hit_total",
 		Help:      "Alert rule evaluations suppressed because the engine-level hourly fire cap was reached",
 	})
 
-	// AlertRulesEscalated counts repeat-mode alert rule fires that were
-	// promoted to the rule's `escalation_severity` because the underlying
-	// condition stayed unresolved for at least `escalation_after_min`
-	// minutes. Incremented exactly once per dispatched escalated alert
-	// (NOT per evaluation, NOT per cap-suppressed evaluation). Phase-49
-	// / Slice 0009 / Decision D8.
+	// AlertRulesEscalated counts repeat-mode alert fires promoted to the
+	// rule's `escalation_severity` after the condition stays unresolved
+	// for at least `escalation_after_min` minutes. It increments once per
+	// dispatched escalated alert, not per evaluation or cap-suppressed
+	// evaluation.
 	AlertRulesEscalated = promauto.NewCounter(prometheus.CounterOpts{
 		Namespace: "teslasync",
 		Name:      "alert_rules_escalated_total",

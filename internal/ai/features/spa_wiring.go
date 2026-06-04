@@ -1,4 +1,4 @@
-// Phase-50 / 0065 W1 — SPA AI feature wiring contract.
+// SPA AI feature wiring contract.
 //
 // Every guarded AI surface listed in the registry above with a
 // non-empty UITestIDs and a public-facing ID (not the internal-only
@@ -6,25 +6,25 @@
 // be represented in SPAWiringTable below. The table is the single
 // source of truth that pairs a feature ID with:
 //
-//   1. The SPA component file (under web/src/) whose top-level
-//      JSX renders the feature's AI surface and consumes
-//      useAiStream against the registered backend route.
-//   2. The canonical backend endpoint string (taken verbatim from
-//      Registry[id].Routes.Backend[0]) so the W1-B aivet rule can
-//      assert the component references the right URL.
-//   3. The render contract (Narrative / Proposal / Suggestion) that
-//      classifies how the streamed SSE events are surfaced inside
-//      the AI panel. The current shipping pattern across every wired
-//      feature is RenderNarrative (delta-accumulator → AiOutputPanel).
+//  1. The SPA component file (under web/src/) whose top-level
+//     JSX renders the feature's AI surface and consumes
+//     useAiStream against the registered backend route.
+//  2. The canonical backend endpoint string (taken verbatim from
+//     Registry[id].Routes.Backend[0]) so static checks can assert
+//     the component references the right URL.
+//  3. The render contract (Narrative / Proposal / Suggestion) that
+//     classifies how the streamed SSE events are surfaced inside
+//     the AI panel. The current shipping pattern across every wired
+//     feature is RenderNarrative (delta-accumulator → AiOutputPanel).
 //
 // Why is this contract NOT part of the runtime Registry?
 //
 //   - Registry is consumed at runtime by the Settings UI generator,
 //     the off-mode walker, and the per-handler guard.Wrap dispatch.
 //     None of those need SPA component paths or render contracts.
-//   - SPA wiring is enforced at BUILD time only — by aivet (W1-A /
-//     W1-B) and by SPAWiringSelfCheck in spa_wiring_test.go — and is
-//     mirrored to TS by aigen --spa-wiring for component imports.
+//   - SPA wiring is enforced only at build time by static checks and
+//     SPAWiringSelfCheck in spa_wiring_test.go, then mirrored to TS
+//     by aigen --spa-wiring for component imports.
 //
 // Why a static table instead of "auto-discovery from the registry"?
 //
@@ -51,11 +51,9 @@ const (
 	// useAiStream hook's `text` accumulator. The component renders
 	// the accumulator inside AiOutputPanel.
 	//
-	// This is the dominant shipping pattern in TeslaSync (54 of 54
-	// wireable features as of W1). New features SHOULD default to
-	// this contract unless they have a clear proposal/suggestion
-	// hand-off requirement that is also implemented end-to-end on
-	// the SPA side.
+	// This is the dominant shipping pattern in TeslaSync. New features
+	// SHOULD default to this contract unless they have a clear
+	// proposal/suggestion hand-off implemented end-to-end on the SPA side.
 	RenderNarrative RenderContract = "narrative"
 
 	// RenderProposal — the stream emits one or more `tool_result`
@@ -68,10 +66,9 @@ const (
 	// the baseline form's existing Save button to persist (ADR-015
 	// §I3 + §I8).
 	//
-	// Reserved for future slices that implement the hand-off mechanic
-	// end-to-end. No 0065/W1 entry uses this contract — the current
-	// implementations all surface the proposal as narrative prose
-	// inside AiOutputPanel (RenderNarrative).
+	// Reserved for entries that implement the hand-off mechanic end-to-end.
+	// Current implementations surface proposals as narrative prose inside
+	// AiOutputPanel (RenderNarrative).
 	RenderProposal RenderContract = "proposal"
 
 	// RenderSuggestion — the stream emits a single suggestion event
@@ -79,8 +76,7 @@ const (
 	// alongside an existing manual rename/edit affordance. User clicks
 	// the existing Save/Apply button to persist.
 	//
-	// Reserved for future slices. As with RenderProposal, no W1 entry
-	// uses this contract today.
+	// Reserved for entries that implement this hand-off end-to-end.
 	RenderSuggestion RenderContract = "suggestion"
 )
 
@@ -118,11 +114,10 @@ type SPAWiring struct {
 }
 
 // SPAWiringIndicatorOnly lists AI component files that are EXEMPT
-// from the W1-B "must import useAiStream + reference endpoint" rule
+// from the endpoint-streaming rule
 // because their corresponding SPAWiringTable entry already points at
 // a page-level wiring file that owns the call path. Files listed
-// here REMAIN subject to W1-A (no placeholder strings / no permanent
-// disabled buttons).
+// here remain subject to the visible-surface checks.
 //
 // Today this allowlist contains exactly one entry: the chatbot
 // indicator badge that sits in the page header next to the actual
@@ -140,12 +135,12 @@ var SPAWiringIndicatorOnly = []string{
 //
 // Every entry's Endpoint value is the EXACT string stored in
 // Registry[id].Routes.Backend[0]. Keep them byte-identical so the
-// aigen --spa-wiring generator and the W1-B endpoint-reference check
-// can split the canonical path off the method prefix consistently.
+// aigen --spa-wiring generator and endpoint-reference check can
+// split the canonical path off the method prefix consistently.
 //
 // All current entries use RenderNarrative because that is the only
 // render contract implemented end-to-end on the SPA side today.
-// Future slices that introduce RenderProposal / RenderSuggestion
+// Future entries that introduce RenderProposal / RenderSuggestion
 // hand-offs MUST populate BaselineFormHandoff with a Frontend route
 // from the registry, and SPAWiringSelfCheck will enforce both
 // constraints automatically.
@@ -522,8 +517,8 @@ func spaWiringPublicIDs() map[string]struct{} {
 //
 // (4) is reserved-forward enforcement — no current entry uses
 // RenderProposal or RenderSuggestion, so the check is a no-op today.
-// The first slice that introduces a proposal hand-off will trip this
-// guard until BaselineFormHandoff is populated.
+// The first proposal hand-off will trip this guard until
+// BaselineFormHandoff is populated.
 //
 // Component file existence is NOT verified here because the
 // /internal package cannot reach across to web/src/ portably in
@@ -639,9 +634,9 @@ func SPAWiringEndpointMethod(endpoint string) string {
 // endpoint's path-after-prefix, stopping at the first '{' template
 // placeholder. For "/ai/drives/{driveID}/coach" it returns
 // "/ai/drives/". For "/ai/alerts/rules/draft" (no placeholder) it
-// returns the whole path. The W1-B aivet check uses this so a
-// component that builds a template-literal URL still passes when the
-// static prefix appears in the file.
+// returns the whole path. The endpoint-reference check uses this so
+// a component that builds a template-literal URL still passes when
+// the static prefix appears in the file.
 func SPAWiringEndpointStaticPrefix(endpoint string) string {
 	path := SPAWiringEndpointPath(endpoint)
 	if idx := indexByte(path, '{'); idx >= 0 {
@@ -651,7 +646,7 @@ func SPAWiringEndpointStaticPrefix(endpoint string) string {
 }
 
 // IsIndicatorOnly reports whether the given web/src/-relative path
-// is allowlisted to skip the W1-B "must import useAiStream" check.
+// is allowlisted to skip the endpoint-streaming check.
 func IsIndicatorOnly(componentPath string) bool {
 	for _, p := range SPAWiringIndicatorOnly {
 		if p == componentPath {

@@ -5,12 +5,12 @@
 // touch a real DB or filesystem. The goal is to pin three
 // behaviours the production deployment must keep:
 //
-//   1. Per-row try/catch — one panicking or erroring row MUST NOT
-//      block its siblings.
-//   2. Outcome propagation — every row finishes by writing exactly
-//      one MarkRunResult call carrying the recomputed next_run_at.
-//   3. Cancellation — a cancelled context drops the in-flight tick
-//      cleanly.
+//  1. Per-row try/catch — one panicking or erroring row MUST NOT
+//     block its siblings.
+//  2. Outcome propagation — every row finishes by writing exactly
+//     one MarkRunResult call carrying the recomputed next_run_at.
+//  3. Cancellation — a cancelled context drops the in-flight tick
+//     cleanly.
 package export
 
 import (
@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
 )
 
 // ---------------------------------------------------------------
@@ -29,22 +29,22 @@ import (
 
 type stubSchedulerStore struct {
 	mu        sync.Mutex
-	queued    []database.ScheduledExportRow
+	queued    []exportdb.ScheduledExportRow
 	consumed  bool
 	dueErr    error
 	markErr   error
-	outcomes  map[int64]database.ScheduledExportRunOutcome
+	outcomes  map[int64]exportdb.ScheduledExportRunOutcome
 	markCalls int
 }
 
-func newStubSchedulerStore(rows ...database.ScheduledExportRow) *stubSchedulerStore {
+func newStubSchedulerStore(rows ...exportdb.ScheduledExportRow) *stubSchedulerStore {
 	return &stubSchedulerStore{
 		queued:   rows,
-		outcomes: make(map[int64]database.ScheduledExportRunOutcome),
+		outcomes: make(map[int64]exportdb.ScheduledExportRunOutcome),
 	}
 }
 
-func (s *stubSchedulerStore) DueBefore(_ context.Context, _ time.Time, _ int) ([]database.ScheduledExportRow, error) {
+func (s *stubSchedulerStore) DueBefore(_ context.Context, _ time.Time, _ int) ([]exportdb.ScheduledExportRow, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.dueErr != nil {
@@ -54,12 +54,12 @@ func (s *stubSchedulerStore) DueBefore(_ context.Context, _ time.Time, _ int) ([
 		return nil, nil
 	}
 	s.consumed = true
-	out := make([]database.ScheduledExportRow, len(s.queued))
+	out := make([]exportdb.ScheduledExportRow, len(s.queued))
 	copy(out, s.queued)
 	return out, nil
 }
 
-func (s *stubSchedulerStore) MarkRunResult(_ context.Context, id int64, outcome database.ScheduledExportRunOutcome) error {
+func (s *stubSchedulerStore) MarkRunResult(_ context.Context, id int64, outcome exportdb.ScheduledExportRunOutcome) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.markCalls++
@@ -145,7 +145,7 @@ type stubDelivery struct {
 }
 
 type deliveryCall struct {
-	row    database.ScheduledExportRow
+	row    exportdb.ScheduledExportRow
 	result *ProcessResult
 }
 
@@ -153,7 +153,7 @@ func newStubDelivery() *stubDelivery {
 	return &stubDelivery{errs: make(map[int64]error)}
 }
 
-func (d *stubDelivery) Deliver(_ context.Context, row database.ScheduledExportRow, result *ProcessResult) error {
+func (d *stubDelivery) Deliver(_ context.Context, row exportdb.ScheduledExportRow, result *ProcessResult) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	d.calls = append(d.calls, deliveryCall{row: row, result: result})
@@ -167,15 +167,15 @@ func (d *stubDelivery) Deliver(_ context.Context, row database.ScheduledExportRo
 // Helpers
 // ---------------------------------------------------------------
 
-func makeRow(id int64, name string) database.ScheduledExportRow {
-	return database.ScheduledExportRow{
+func makeRow(id int64, name string) exportdb.ScheduledExportRow {
+	return exportdb.ScheduledExportRow{
 		ID:           id,
 		OwnerSubject: "alice",
 		Name:         name,
 		ExportType:   "drives",
 		Format:       "csv",
 		ScheduleCron: "0 9 * * 0",
-		Delivery:     database.ScheduledExportDelivery{Kind: database.DeliveryKindDownload},
+		Delivery:     exportdb.ScheduledExportDelivery{Kind: exportdb.DeliveryKindDownload},
 		RangeWindow:  "7d",
 		Enabled:      true,
 	}
@@ -186,7 +186,7 @@ func makeRow(id int64, name string) database.ScheduledExportRow {
 // ---------------------------------------------------------------
 
 func TestScheduler_PerRowFailureIsolation(t *testing.T) {
-	rows := []database.ScheduledExportRow{
+	rows := []exportdb.ScheduledExportRow{
 		makeRow(1, "ok-row-A"),
 		makeRow(2, "panicking-row"),
 		makeRow(3, "errored-row"),

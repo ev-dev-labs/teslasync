@@ -11,7 +11,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { useMediaQuery, useIsCoarsePointer, useIsMobile } from '@/hooks/useMediaQuery';
 
 /**
- * Phase-45 / Prompt 14 — Mobile responsive smoke test.
+ * Mobile responsive smoke test.
  *
  * Validates the shared primitives that every page composes for mobile
  * (375 px) viewports:

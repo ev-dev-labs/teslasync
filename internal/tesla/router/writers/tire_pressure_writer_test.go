@@ -39,8 +39,7 @@ func newTirePressureTestWriter(t *testing.T, rec *recorder) *tirePressureWriter 
 	}
 }
 
-// TestTirePressureWriter_ColumnMapMatchesRoutingYAML is the reflective
-// coverage gate from phase-42a prompt 0014 Decision #4. It walks
+// TestTirePressureWriter_ColumnMapMatchesRoutingYAML walks
 // router.LoadMap() (which parses the embedded routing.yaml), filters
 // to entries with Destination == DestTirePressure, and asserts the
 // tirePressureColumnByField map in tire_pressure_writer.go matches
@@ -129,16 +128,11 @@ func TestTirePressureWriter_TimestampColumnsCoverTimestamptzColumns(t *testing.T
 	}
 }
 
-// TestTirePressureWriter_TypeMatrix exercises one positive write per
-// kind from phase-42a prompt 0014 Decision #5(b) — substituted from
-// the prompt's "1 positive (text status)" because no `*_status`
-// field is routed under dest: tire_pressure_snapshot in routing.yaml
-// (status columns exist in the schema but are populated downstream
-// from the signal_log change feed per routing.yaml lines 889-895).
-// The substitution is documented in the AUDIT_EVIDENCE section of
-// the prompt 0014 log.
-//
-// The two routed kinds are:
+// TestTirePressureWriter_TypeMatrix exercises the two routed kinds.
+// No `*_status` field is routed under dest: tire_pressure_snapshot in
+// routing.yaml; status columns exist in the schema but are populated
+// downstream from the signal_log change feed per routing.yaml lines
+// 889-895.
 //
 //   - float64 → TpmsPressureFl → front_left_pa (DOUBLE PRECISION)
 //     — pure delegation to snapshotWriter, $3 bound as the bare
@@ -252,12 +246,11 @@ func TestTirePressureWriter_FractionalEpochPreserved(t *testing.T) {
 	}
 }
 
-// TestTirePressureWriter_UnknownFieldReturnsError covers phase-42a
-// prompt 0014 Decision #5(c): a Field that is NOT routed to
-// tire_pressure_snapshot must produce a "no column mapping" error
-// and MUST NOT touch the DB. The error wording mirrors
-// snapshot_base.go's prefix so the router classifyError tag set
-// treats both branches identically.
+// TestTirePressureWriter_UnknownFieldReturnsError verifies that a
+// Field not routed to tire_pressure_snapshot produces a "no column
+// mapping" error and does NOT touch the DB. The error wording mirrors
+// snapshot_base.go's prefix so the router classifyError tag set treats
+// both branches identically.
 //
 // VehicleSpeed is a deliberate choice — it IS a routed field
 // (dest: drive_telemetry per routing.yaml) so the test also
@@ -509,10 +502,10 @@ func TestTirePressureWriter_TimestampDBExecErrorWrapped(t *testing.T) {
 }
 
 // TestNewTirePressureWriter_NilPoolPanics locks the constructor's
-// fail-fast contract from phase-42a prompt 0014 Decision #1. A nil
-// pool is a wiring bug and panics so the failure surfaces at process
-// start, not at the first payload. Same panic pattern as
-// NewClimateWriter / NewMotorWriter / NewPositionsWriter.
+// fail-fast contract. A nil pool is a wiring bug and panics so the
+// failure surfaces at process start, not at the first payload. Same
+// panic pattern as NewClimateWriter / NewMotorWriter /
+// NewPositionsWriter.
 func TestNewTirePressureWriter_NilPoolPanics(t *testing.T) {
 	defer func() {
 		r := recover()

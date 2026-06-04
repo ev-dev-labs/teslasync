@@ -28,7 +28,7 @@ import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/us
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import { useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertTempFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAlertContext } from '@/hooks/useAlertContext';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -200,7 +200,7 @@ const QUICK_LINKS: { to: string; labelKey: string; fallback: string }[] = [
  * Mirrors the BatteryHealthPage layout while data loads:
  * page header → 6 hero metric cards → degradation prediction chart →
  * insights panel → recommendations panel → charging habits chart →
- * quick-links row. Phase-45 / Prompt 18.
+ * quick-links row.
  */
 function BatteryHealthSkeleton() {
   return (
@@ -227,19 +227,17 @@ export default function BatteryHealthPage() {
   const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
 
   const tempUnit = unitPrefs.temperature;
-  // Phase-43 / Prompt 0023 — `toDistanceDisplay` from useSettings expects MILES
-  // input. Backend's analytics range_km is genuinely km (derived SI from
+  // Backend analytics `range_km` is genuinely km (derived SI from
   // signal_log via `internal/api/battery_degradation_handler.go`). To convert
   // safely, route km → metres then through `convertDistanceFromSI`. Mixing
-  // the legacy helper with km input was the pre-existing bug this prompt
-  // fixes (same root cause as the Phase-43/0022 driving telemetry fix).
+  // the legacy helper with km input caused incorrect range display.
 
   const fromKm = useCallback(
     (km: number): number => convertDistanceFromSI(km * 1000, unitPrefs.distance),
     [unitPrefs.distance],
   );
 
-  /* ── Vehicle selector (Phase 40 / Prompt 16: header picker is the source of truth) ─ */
+  /* ── Vehicle selector: header picker is the source of truth ─ */
   // Alert drillthrough URLs (?vehicle_id=…&t=…) flow into the global store
   // via useSelectedVehicle; useAlertContext is still consulted for the
   // timestamp & signal name used by the chart marker below.
@@ -362,8 +360,8 @@ export default function BatteryHealthPage() {
     items.forEach((s) => {
       const isDC =
         (s.charger_type != null && s.charger_type.length > 0) ||
-        (s.peak_power_w != null && s.peak_power_w > 20);
-      const energy = s.total_energy_added_wh ?? 0;
+        (s.peak_power_w != null && s.peak_power_w > 20_000);
+      const energy = convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh');
       if (isDC) { dcEnergy += energy; dcCount++; }
       else { acEnergy += energy; acCount++; }
     });
@@ -383,7 +381,7 @@ export default function BatteryHealthPage() {
     ? fmtNumber(degradation!.prediction!.years_to_80_pct, 1)
     : '—';
 
-  /* ── No vehicle: defensive guard (Phase 40 / Prompt 18) ───────── */
+  /* ── No vehicle: defensive guard ─────────────────────────────── */
   if (vehicleId == null) {
     return <NoVehicleSelected pageTitle={t('battery.title', 'Battery Health')} />;
   }
@@ -422,8 +420,8 @@ export default function BatteryHealthPage() {
       }
     >
       <LiveStaleDataBanner />
-      {/* Phase-50 / 0027 — AI battery-health forecast narrator. Hidden when
-          ai_mode='off' or the per-feature toggle is off; baseline chart remains. */}
+      {/* AI battery-health forecast narrator. Hidden when ai_mode='off' or
+          the per-feature toggle is off; baseline chart remains. */}
       <FadeIn>
         <AIBatteryHealthForecastNarrative vehicleId={vehicleId ?? undefined} />
       </FadeIn>

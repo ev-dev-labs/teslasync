@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 36 — Settings export/import UI.
+ * Settings export/import UI.
  *
  * Renders a single GlassPanel under <section id="backup"> on the
  * Settings page with two flows:

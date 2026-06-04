@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 67 — ChartContainer chartKey + ChartLegend toggle tests.
+ * ChartContainer chartKey + ChartLegend toggle tests.
  *
  * Verifies the click-to-hide series UX:
  *   - When `chartKey` is set, the container provides a context that

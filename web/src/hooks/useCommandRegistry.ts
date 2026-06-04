@@ -30,7 +30,7 @@ export interface ResolvedCommand {
 }
 
 /**
- * useCommandRegistry — Phase 40 / Prompt 19.
+ * useCommandRegistry.
  *
  * Resolves the static {@link commandRegistry} against live React handles
  * (navigate, theme, toast, queryClient) and returns:

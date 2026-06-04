@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, act, fireEvent } from '@testing-library/react'
 
 /**
- * Phase-46 / Prompt 05 — SessionExpiredModal contract.
+ * SessionExpiredModal contract tests.
  *
  * Two activation paths:
  *   1. {@link useSessionMonitor} reports `hasExpired === true`.

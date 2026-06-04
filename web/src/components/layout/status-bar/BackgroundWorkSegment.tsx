@@ -6,7 +6,7 @@ import { useBackgroundJobs, type BackgroundJobKind } from '@/hooks/useBackground
 import { cn } from '@/lib/cn';
 
 /**
- * BackgroundWorkSegment — Phase-40 / Prompt 59.
+ * BackgroundWorkSegment.
  *
  * Footer status-bar segment that surfaces in-flight background work
  * (CSV exports, settings saves, ad-hoc registered jobs). Hidden when

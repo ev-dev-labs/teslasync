@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 
 /**
- * Phase-45 / Prompt 11 — NewVersionBanner contract.
+ * NewVersionBanner contract.
  *
  * Mocks {@link useVersionWatcher} and `react-i18next` so the test focuses
  * purely on the banner's visibility lifecycle and click behaviour.

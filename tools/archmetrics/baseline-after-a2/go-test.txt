@@ -1,0 +1,210 @@
+?   	github.com/ev-dev-labs/teslasync/cmd/ai-eval	[no test files]
+?   	github.com/ev-dev-labs/teslasync/cmd/audit-signal-types	[no test files]
+?   	github.com/ev-dev-labs/teslasync/cmd/automation-worker	[no test files]
+?   	github.com/ev-dev-labs/teslasync/cmd/backup-verify	[no test files]
+?   	github.com/ev-dev-labs/teslasync/cmd/chaos-runner	[no test files]
+?   	github.com/ev-dev-labs/teslasync/cmd/export-worker	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/cmd/fleet-config-validator	1.606s
+?   	github.com/ev-dev-labs/teslasync/cmd/metric-coverage-audit	[no test files]
+?   	github.com/ev-dev-labs/teslasync/cmd/notification-worker	[no test files]
+?   	github.com/ev-dev-labs/teslasync/cmd/ocpp-server	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/cmd/protogen-tesla	2.847s
+?   	github.com/ev-dev-labs/teslasync/cmd/pub-test-signal	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/cmd/resubscribe	1.057s
+?   	github.com/ev-dev-labs/teslasync/cmd/slo-coverage-audit	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/cmd/slogen	2.058s
+ok  	github.com/ev-dev-labs/teslasync/cmd/teslasync	1.187s [no tests to run]
+?   	github.com/ev-dev-labs/teslasync/cmd/trace-coverage-audit	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/cmd/unit-drift-validator	1.158s
+ok  	github.com/ev-dev-labs/teslasync/internal/adapter/gasprices	5.351s
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/geocoding	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/mqtt	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/postgres	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/postgres/queries	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/redis	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/storage	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/tesla	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/cost	1.217s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/dispatch	0.839s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/eval	1.890s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/features	1.327s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/guard	1.841s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/health	4.270s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/limit	1.116s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/provider	0.517s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/provider/anthropic	0.427s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/provider/azure	0.559s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/provider/mock	1.249s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/provider/ollama	0.654s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/provider/openai	0.473s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/rag	0.754s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/redact	1.676s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/alert-tuning-suggestions	0.462s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/anomaly-explanations	0.368s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-name-unnamed-locations	0.368s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-trip-naming	0.467s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/battery-health-forecast-narrative	0.411s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/cabin-temperature-impact-narrative	0.406s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-curve-fingerprint-clustering	0.496s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-diagnosis	0.486s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/chatbot-llm	0.407s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/cost-forecast-narration	0.554s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/cross-rule-conflict-detection	0.447s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/data-repair-suggestions	0.663s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/digest-narration	0.327s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/drive-coaching	0.468s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/feedback-queue-triage	0.492s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/geofence-aware-automation-suggestions	0.703s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/inbox-auto-categorization	0.673s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/incident-timeline-summarizer	0.762s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/learned-per-vehicle-anomaly-baselines	0.817s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/lifetime-stats-qa	0.552s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/log-trace-summarization	0.820s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/ml-charging-curve-clustering	0.714s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/mqtt-sse-inspector-explanations	0.927s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-alert-builder	0.856s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-automation-builder	0.790s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-dashboard-composer	2.067s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-drive-search-replay	1.309s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-grafana-panel	1.188s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-search	1.156s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-sql-playground	0.815s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/period-compare-narration	0.809s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/pii-redaction-shared-exports	0.536s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/predictive-maintenance	0.558s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/preheat-precool-recommender	0.472s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/quiet-hours-suggestion	0.717s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/rag-help	0.504s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/range-prediction-model	0.475s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/route-efficiency-suggestions	0.542s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/safety-setting-explainer	0.477s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/signal-explorer-nl-filter	0.591s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/smart-charge-schedule-suggestion	0.467s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/software-update-changelog-summarizer	0.566s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/speed-profile-insights	0.670s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/state-machine-debugger-narrator	0.395s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/suggest-new-geofences	0.513s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/tco-narration	0.469s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/tire-pressure-trend-reasoning	0.452s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/trip-planner-llm-agent	0.377s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/trip-postcard-share-card-image-generation	0.455s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/vampire-drain-explanation	0.419s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/vehicle-paint-preview	0.651s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/voice-mode	0.525s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/watch-face-nl-response	0.571s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration	0.441s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategy	0.272s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/strategy/redactadapter	0.234s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/stream	1.097s
+ok  	github.com/ev-dev-labs/teslasync/internal/ai/tools	1.284s
+ok  	github.com/ev-dev-labs/teslasync/internal/alertmsg	1.698s
+ok  	github.com/ev-dev-labs/teslasync/internal/api	10.160s
+ok  	github.com/ev-dev-labs/teslasync/internal/apilog	0.367s
+ok  	github.com/ev-dev-labs/teslasync/internal/app	1.663s
+?   	github.com/ev-dev-labs/teslasync/internal/app/adminobssvc	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/app/auditviewersvc	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/app/chargingsvc	0.729s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc	0.738s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/exportsvc	0.837s
+?   	github.com/ev-dev-labs/teslasync/internal/app/gdprexportsvc	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/app/notificationsvc	0.660s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/tripsvc	0.838s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc	0.584s
+ok  	github.com/ev-dev-labs/teslasync/internal/arch	18.463s
+ok  	github.com/ev-dev-labs/teslasync/internal/audit	0.785s
+ok  	github.com/ev-dev-labs/teslasync/internal/auth	0.667s
+ok  	github.com/ev-dev-labs/teslasync/internal/automation	0.380s
+ok  	github.com/ev-dev-labs/teslasync/internal/automation/action	2.151s
+ok  	github.com/ev-dev-labs/teslasync/internal/automation/condition	0.660s
+ok  	github.com/ev-dev-labs/teslasync/internal/automation/presets	0.807s
+ok  	github.com/ev-dev-labs/teslasync/internal/automation/safety	1.215s
+?   	github.com/ev-dev-labs/teslasync/internal/automation/trigger	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/backup	0.825s
+ok  	github.com/ev-dev-labs/teslasync/internal/backupverify	0.710s
+ok  	github.com/ev-dev-labs/teslasync/internal/cache	1.133s
+ok  	github.com/ev-dev-labs/teslasync/internal/chaos	1.703s
+ok  	github.com/ev-dev-labs/teslasync/internal/config	0.653s
+ok  	github.com/ev-dev-labs/teslasync/internal/crypto	0.655s
+ok  	github.com/ev-dev-labs/teslasync/internal/database	3.365s
+?   	github.com/ev-dev-labs/teslasync/internal/dataquality	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/domain	0.710s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/charging	0.637s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/export	0.525s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/fsm	0.622s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/notification	0.596s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/trip	0.547s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/user	0.524s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/vehicle	0.509s
+ok  	github.com/ev-dev-labs/teslasync/internal/enums	0.606s
+ok  	github.com/ev-dev-labs/teslasync/internal/events	0.739s
+ok  	github.com/ev-dev-labs/teslasync/internal/export	0.519s
+?   	github.com/ev-dev-labs/teslasync/internal/export/gdpr	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/flags	0.827s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm	0.240s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/automation	0.713s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/charge	0.557s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/command	0.583s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/drive	0.801s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/notification	0.621s
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/telemetry	1.112s
+ok  	github.com/ev-dev-labs/teslasync/internal/geocoding	1.273s
+?   	github.com/ev-dev-labs/teslasync/internal/handler/dto	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/handler/middleware	0.651s
+?   	github.com/ev-dev-labs/teslasync/internal/handler/v1	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/imaging	2.444s
+?   	github.com/ev-dev-labs/teslasync/internal/integrations	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/integrations/homeassistant	2.476s
+ok  	github.com/ev-dev-labs/teslasync/internal/jobs	0.493s
+ok  	github.com/ev-dev-labs/teslasync/internal/metrics	0.406s
+ok  	github.com/ev-dev-labs/teslasync/internal/ml/anomaly	1.099s
+ok  	github.com/ev-dev-labs/teslasync/internal/ml/chargingcurves	1.392s
+ok  	github.com/ev-dev-labs/teslasync/internal/ml/range	1.309s
+ok  	github.com/ev-dev-labs/teslasync/internal/models	0.542s
+ok  	github.com/ev-dev-labs/teslasync/internal/mqtt	0.761s
+ok  	github.com/ev-dev-labs/teslasync/internal/notification	0.511s
+ok  	github.com/ev-dev-labs/teslasync/internal/notification/computed	0.536s
+ok  	github.com/ev-dev-labs/teslasync/internal/notifier	3.054s
+ok  	github.com/ev-dev-labs/teslasync/internal/ocpp	0.952s
+ok  	github.com/ev-dev-labs/teslasync/internal/outbox	1.146s
+ok  	github.com/ev-dev-labs/teslasync/internal/platform	0.970s
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/buildinfo	0.765s
+?   	github.com/ev-dev-labs/teslasync/internal/platform/cache	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/config	0.732s
+?   	github.com/ev-dev-labs/teslasync/internal/platform/database	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/httputil	3.955s
+?   	github.com/ev-dev-labs/teslasync/internal/platform/telemetry	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/polling	0.192s
+?   	github.com/ev-dev-labs/teslasync/internal/port/external	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/port/messaging	0.863s
+?   	github.com/ev-dev-labs/teslasync/internal/port/repository	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/resilience	6.077s
+ok  	github.com/ev-dev-labs/teslasync/internal/rotation	1.409s
+ok  	github.com/ev-dev-labs/teslasync/internal/schemacheck	1.347s
+ok  	github.com/ev-dev-labs/teslasync/internal/service	0.385s
+ok  	github.com/ev-dev-labs/teslasync/internal/signal	3.784s
+?   	github.com/ev-dev-labs/teslasync/internal/signal/signaltest	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/slo	0.238s
+ok  	github.com/ev-dev-labs/teslasync/internal/synthetic	2.539s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla	3.311s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/bootstrap	0.478s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/codec	0.559s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/config	1.960s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/normalize	0.417s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/protomodel	1.805s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/router	0.527s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/router/writers	0.658s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/unit_history	0.437s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/units	1.511s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla_pipeline	0.391s
+ok  	github.com/ev-dev-labs/teslasync/internal/tracing	0.323s
+?   	github.com/ev-dev-labs/teslasync/internal/units	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/v2h	0.960s
+ok  	github.com/ev-dev-labs/teslasync/internal/webpush	1.731s
+ok  	github.com/ev-dev-labs/teslasync/internal/worker	0.329s
+ok  	github.com/ev-dev-labs/teslasync/tools/aigen	0.749s
+?   	github.com/ev-dev-labs/teslasync/tools/aistream-contract	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/tools/aivet	0.808s
+?   	github.com/ev-dev-labs/teslasync/tools/archmetrics	[no test files]
+?   	github.com/ev-dev-labs/teslasync/tools/eval-schema-check	[no test files]
+?   	github.com/ev-dev-labs/teslasync/web/node_modules/flatted/golang/pkg/flatted	[no test files]
+

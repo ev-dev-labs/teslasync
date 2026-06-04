@@ -93,24 +93,24 @@ var jsonFlattenErrorsTotal = registerCodecCounter(
 //
 // Inputs:
 //   - field      The canonical proto field name from topic segment 4
-//                (e.g. "Soc", "Gear", "Location"). Used to look up the
-//                ValueKind, CompoundKind, and EnumStringPrefix in
-//                protomodel.SignalsByName so the body is decoded against
-//                the SAME schema the proto-batch path uses.
+//     (e.g. "Soc", "Gear", "Location"). Used to look up the
+//     ValueKind, CompoundKind, and EnumStringPrefix in
+//     protomodel.SignalsByName so the body is decoded against
+//     the SAME schema the proto-batch path uses.
 //   - body       The raw MQTT message body. Either bare JSON
-//                (production) or an envelope `{"value":...,"ts":...}`
-//                (replay/test). Envelope detection is unambiguous: every
-//                Tesla compound uses domain-specific top-level keys
-//                (latitude/longitude, DriverFront/etc., FrontLeft/etc.)
-//                and "value" is reserved for the envelope.
+//     (production) or an envelope `{"value":...,"ts":...}`
+//     (replay/test). Envelope detection is unambiguous: every
+//     Tesla compound uses domain-specific top-level keys
+//     (latitude/longitude, DriverFront/etc., FrontLeft/etc.)
+//     and "value" is reserved for the envelope.
 //   - vin        The VIN from topic segment 2. Threaded into every emitted
-//                Atomic.VehicleID; the caller must validate it earlier so
-//                a malformed topic can't poison signal_log.
+//     Atomic.VehicleID; the caller must validate it earlier so
+//     a malformed topic can't poison signal_log.
 //   - fallbackTs The wall-clock at which the subscriber received the
-//                message. Used as Atomic.EmittedAt when the body is bare
-//                (production) since Tesla's per-field publisher does NOT
-//                include event-time. The envelope's "ts" overrides this
-//                when present (replay path preserves producer time).
+//     message. Used as Atomic.EmittedAt when the body is bare
+//     (production) since Tesla's per-field publisher does NOT
+//     include event-time. The envelope's "ts" overrides this
+//     when present (replay path preserves producer time).
 //
 // Output:
 //   - On success: ([]Atomic, nil). Atomics for an atomic ValueKind have
@@ -129,7 +129,7 @@ var jsonFlattenErrorsTotal = registerCodecCounter(
 //
 // DecodeJSONField is the SINGLE per-field MQTT translation point in the
 // pipeline; downstream code MUST consume []Atomic, never the raw body
-// (Phase-41 codec canonical-string contract, Rule 11 in
+// (canonical-string contract, Rule 11 in
 // .github/instructions/tesla-pipeline.instructions.md).
 //
 // Pure-function variant retained for tests and any caller that doesn't
@@ -141,10 +141,10 @@ func DecodeJSONField(field string, body []byte, vin string, fallbackTs time.Time
 	return DecodeJSONFieldCtx(context.Background(), field, body, vin, fallbackTs)
 }
 
-// DecodeJSONFieldCtx is the context-aware variant of DecodeJSONField
-// added by Phase-10 tracing. It emits a codec.decode_json_field child
-// span carrying field, body_size, atomics_emitted, and outcome
-// attributes so the codec boundary becomes visible in the trace tree.
+// DecodeJSONFieldCtx is the context-aware variant of DecodeJSONField. It
+// emits a codec.decode_json_field child span carrying field, body_size,
+// atomics_emitted, and outcome attributes so the codec boundary is visible
+// in the trace tree.
 //
 // The body slice MUST NOT be retained beyond the call (a bytes.NewReader
 // is captured for one Unmarshal, then released to the caller's pool).

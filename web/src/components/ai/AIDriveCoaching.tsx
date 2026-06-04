@@ -1,15 +1,15 @@
-// Phase-50 / 0018 — N4 Per-drive coaching narrative.
-// Phase-50 / W1 (slice 0065) — wired the Generate button to the SSE
+// Per-drive coaching narrative.
+// Wired the Generate button to the SSE
 // endpoint at POST /api/v1/ai/drives/{driveID}/coach (empty body).
-//
+
 // AIDriveCoaching is the visible AI surface for the drive detail
 // page. It is rendered conditionally via
 // withAiFeature('drive-coaching', …) so:
-//
-//   - When ai_mode='off' it does not render at all (ADR-015 §I5 + §I6).
-//   - When AI is on AND the drive-coaching toggle is on, this
+
+//   When ai_mode='off' it does not render at all (ADR-015 §I5 + §I6).
+//   When AI is on AND the drive-coaching toggle is on, this
 //     component renders the opt-in panel with the Generate button.
-//
+
 // The component does NOT replace the deterministic per-drive stat
 // cards, hero gauges, energy summary, or any other section already
 // rendered by DriveDetailPage. Those baseline panels remain the
@@ -44,7 +44,7 @@ interface InnerSectionProps {
  * body. The handler parses driveID from the URL and streams the
  * coaching narrative as `delta` text frames terminated by `done`.
  * `useAiStream` accumulates delta payloads into `stream.text` for us
- * — no manual onEvent handling needed for narrative output.
+ * no manual onEvent handling needed for narrative output.
  */
 function InnerSection({ driveId }: InnerSectionProps) {
   const { t } = useTranslation()

@@ -1,5 +1,5 @@
 /**
- * Phase-49 / Slice 0006 — Multi-vehicle picker for the Alert Studio.
+ * Multi-vehicle picker for the Alert Studio.
  *
  * Discriminated-union value shape modeling the editor invariant:
  *
@@ -9,12 +9,12 @@
  * The "All vehicles (current + future)" sentinel is mutually
  * exclusive with per-vehicle selection. Toggling it ON moves to
  * `all_sticky` and remembers the previous specific selection so a
- * subsequent toggle OFF restores it (Decision D13).
+ * subsequent toggle OFF restores it.
  *
- * Audit guardrails (Phase-49 / Slice 0006 / D1, D2):
+ * Implementation notes:
  * - Option items render as `<button role="checkbox" aria-checked>`,
  *   NOT raw `<input type="checkbox">` — no `Checkbox` primitive
- *   exists in `@/components/ui` (verified at slice 0006 authoring).
+ *   exists in `@/components/ui`.
  * - The trigger is a custom button + popover (Tailwind only), NOT
  *   the native `<select>` primitive.
  * - All visible strings flow through `t()` from i18next.
@@ -22,7 +22,7 @@
  * Unknown vehicle IDs (selected on a server-stored rule but not in
  * the current `useVehicles()` result, e.g. deleted/re-VINed vehicles)
  * are preserved in the selection and rendered with an "Unknown" badge
- * at the bottom of the list (Decision D10) — they are NEVER silently
+ * at the bottom of the list — they are never silently
  * dropped from the payload.
  */
 

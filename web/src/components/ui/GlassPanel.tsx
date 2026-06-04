@@ -9,7 +9,7 @@ export interface GlassPanelProps extends HTMLAttributes<HTMLDivElement> {
    * `className="p-4"` etc. inline). Pass `'auto'` to follow the user's
    * `ui_density` setting via the density-aware Tailwind utilities
    * (`px-d-pad-x py-d-pad-y`); see `useDensitySync` and `index.css`.
-   * (Phase 40 / Prompt 44.)
+   *
    */
   padding?: 'none' | 'sm' | 'md' | 'lg' | 'auto';
   children: ReactNode;
@@ -38,7 +38,7 @@ export const GlassPanel = forwardRef<HTMLDivElement, GlassPanelProps>(
       data-print-card
       className={cn(
         'bg-[var(--surface-2)] backdrop-blur-sm border border-[var(--border-subtle)] rounded-xl',
-        // Phase-46 / Prompt 11 — Windows High Contrast / forced-colors mode.
+        // Windows High Contrast / forced-colors mode.
         // The `--border-subtle` rgba alpha collapses to near-transparent
         // under forced-colors, making panels invisible against the OS
         // Canvas background. Force a system-color border + Canvas bg so

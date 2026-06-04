@@ -29,14 +29,14 @@ type Trigger int
 
 const (
 	TriggerGearDriving      Trigger = iota // Gear=D or Gear=R
-	TriggerGearParked                       // Gear=P
-	TriggerSpeedDetected                    // Speed > 1 (no Gear available — REST API polling only)
-	TriggerSpeedZero                        // Speed = 0 for driveHoldDuration (REST API polling only)
-	TriggerChargeStarted                    // DetailedChargeState is active
-	TriggerChargeEnded                      // DetailedChargeState = Complete/Disconnected/Stopped
-	TriggerTimeout                          // No signals for staleTimeout
-	TriggerSignalReceived                   // Any telemetry signal arrived (wake from sleep/offline)
-	TriggerActivityDetected                 // Non-idle signal while parked
+	TriggerGearParked                      // Gear=P
+	TriggerSpeedDetected                   // Speed > 1 (no Gear available — REST API polling only)
+	TriggerSpeedZero                       // Speed = 0 for driveHoldDuration (REST API polling only)
+	TriggerChargeStarted                   // DetailedChargeState is active
+	TriggerChargeEnded                     // DetailedChargeState = Complete/Disconnected/Stopped
+	TriggerTimeout                         // No signals for staleTimeout
+	TriggerSignalReceived                  // Any telemetry signal arrived (wake from sleep/offline)
+	TriggerActivityDetected                // Non-idle signal while parked
 )
 
 // String returns a human-readable name for the trigger.
@@ -71,7 +71,7 @@ type TransitionMode int
 
 const (
 	Immediate TransitionMode = iota // Commit on first occurrence
-	Debounced                        // Require confirmation period before commit
+	Debounced                       // Require confirmation period before commit
 )
 
 // String returns a human-readable name for the mode.

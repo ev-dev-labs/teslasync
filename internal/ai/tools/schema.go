@@ -14,8 +14,7 @@ import (
 //
 // The generator and the runtime [ValidateStruct] check the same set
 // of tag rules, so a payload accepted by one is accepted by the
-// other. This is the R2 mitigation called out in the F4 design doc:
-// the schema the LLM sees is reflected from the same source the
+// other. The schema the LLM sees is reflected from the same source the
 // dispatcher's validator uses, eliminating the class of bug where
 // the model proposes a payload the handler rejects.
 //

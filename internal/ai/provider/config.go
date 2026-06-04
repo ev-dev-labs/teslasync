@@ -17,34 +17,32 @@ const (
 	NameMock      = "mock"
 )
 
-// PD1 / PD2 / PD3 — provisional defaults. Surfaced in the F1 slice log
-// under === PROVISIONAL DEFAULTS === for owner ack. If the owner objects
-// the change applies here (single source of truth) and propagates DRY
-// to the Settings UI (F2), the embeddings worker (F7), and any feature
-// that does not override the default.
+// Default provider and model settings live here as the single source
+// of truth for the Settings UI, embeddings worker, and features that
+// do not override the default.
 const (
 	// DefaultLocalBaseURL is the canonical Ollama loopback endpoint.
 	// Honours the ADR-015 local-mode contract by being on 127.0.0.1.
 	DefaultLocalBaseURL = "http://localhost:11434"
 
-	// DefaultLocalModel is PD1 — a llama3.1 8B instruct quant that
-	// fits in ~6 GB of RAM and runs responsively on consumer GPUs.
+	// DefaultLocalModel is a llama3.1 8B instruct quant that fits in
+	// ~6 GB of RAM and runs responsively on consumer GPUs.
 	DefaultLocalModel = "llama3.1:8b-instruct-q4_K_M"
 
-	// DefaultLocalEmbeddingModel is PD3 (local half) — small, dense,
-	// 768-dim embeddings used by F7 RAG ingestion.
+	// DefaultLocalEmbeddingModel provides small, dense, 768-dim embeddings
+	// for local RAG ingestion.
 	DefaultLocalEmbeddingModel = "nomic-embed-text"
 
-	// DefaultCloudBaseURL is PD2 — the OpenAI-compatible API surface.
+	// DefaultCloudBaseURL is the OpenAI-compatible API surface.
 	// vLLM / LiteLLM / Together / Groq all expose the same routes, so
 	// "cloud" mode talks one wire format whatever the destination.
 	DefaultCloudBaseURL = "https://api.openai.com"
 
-	// DefaultCloudModel is PD2 — a small, low-cost OpenAI model that
+	// DefaultCloudModel is a small, low-cost OpenAI model that
 	// supports tool use + JSON mode. Users can override per feature.
 	DefaultCloudModel = "gpt-4o-mini"
 
-	// DefaultCloudEmbeddingModel is PD3 (cloud half).
+	// DefaultCloudEmbeddingModel is the default cloud embedding model.
 	DefaultCloudEmbeddingModel = "text-embedding-3-small"
 
 	// DefaultAzureAPIVersion is the Azure API version the adapter
@@ -126,13 +124,13 @@ type ProviderConfig struct {
 	EmbeddingDeployment string `json:"embedding_deployment,omitempty"`
 
 	// PinnedIP is set by [ValidateLocal] at config-save time so the
-	// runtime can detect DNS rebinding (R3 mitigation). Empty in
+	// runtime can detect DNS rebinding. Empty in
 	// cloud mode and for built-in loopback hosts.
 	PinnedIP string `json:"pinned_ip,omitempty"`
 }
 
 // SettingsView is the narrow shape the [Registry] needs from the live
-// settings row. Implemented by *database.SettingsRepo in production
+// settings row. Implemented by *settingsdb.SettingsRepo in production
 // wiring and by an in-memory fake in tests so the registry can be
 // unit-tested without a database.
 type SettingsView struct {
@@ -213,7 +211,7 @@ func ResolveProviderName(view SettingsView, featureID string) string {
 
 // applyDefaults seeds Model / EmbeddingModel / BaseURL when the user has
 // not pinned them in settings. Keeps the registry call site terse and
-// makes the defaults discoverable from one place (PD1/PD2/PD3 above).
+// makes the defaults discoverable from one place.
 func applyDefaults(providerName string, cfg ProviderConfig) ProviderConfig {
 	cfg.BaseURL = strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/")
 	switch providerName {

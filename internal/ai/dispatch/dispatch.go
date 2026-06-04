@@ -165,10 +165,10 @@ type LimitErrorEmitter interface {
 // fields are immutable after construction and Run owns its own
 // transient state.
 type Dispatcher struct {
-	reg            *tools.Registry
-	provider       provider.Provider
-	confirm        ConfirmFn
-	maxIterations  int
+	reg           *tools.Registry
+	provider      provider.Provider
+	confirm       ConfirmFn
+	maxIterations int
 }
 
 // New constructs a Dispatcher. Pass the per-feature provider

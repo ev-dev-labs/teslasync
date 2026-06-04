@@ -1,46 +1,10 @@
-// Phase-50 / 0044 — S3 Signal explorer natural-language filter.
-//
-// `TestSignalExplorerNLAIOffManualFiltersWork` is the slice's
-// load-bearing AI-OFF contract proof on the React side. It mounts
-// the AISignalExplorerNlFilter component with ai_mode='off' (plus
-// the per-feature toggle on, to defeat the obvious "off because
-// nothing is enabled" path) and asserts:
-//
-//   1. The AI section's rooted test ID is absent from the DOM.
-//   2. The wrapper renders no children (empty container).
-//   3. With ai_mode='cloud' AND signal-explorer-nl-filter=true, the
-//      section IS present + carries the expected test ID. This is
-//      the positive control that proves the gate actually works
-//      (otherwise the "absent in off mode" assertion is trivially
-//      true).
-//   4. The mode='cloud' path with toggle=false also hides the
-//      section — per-feature opt-in (ADR-015 §I7).
-//
-// In addition, this file mounts the FULL SignalExplorerPage in
-// off mode and asserts the deterministic SignalSelector +
-// RangePicker + Explore / Live buttons + page-size Select still
-// render — proving the AI surface's absence does NOT regress the
-// canonical baseline (ADR-015 §I3 + the prompt's explicit
-// "baseline behaviour still works" gate). The rendered page MUST
-// show:
-//
-//   - The page title (Signal Explorer).
-//   - The SignalSelector (signals checkbox list / picker).
-//   - The Time Range label + RangePicker trigger.
-//   - The Explore + Live buttons.
-//   - The "Pick signals and click Explore" empty state copy.
-//
-// The HTTP POST /api/v1/ai/signals/filter/draft 404-in-off-mode
-// invariant is proven by the Go-side
-// TestSignalExplorerNLAIOffManualFiltersWork in
-// internal/api/ai_signal_explorer_nl_filter_handler_test.go —
-// the network layer does not exist in the React unit-test scope.
-//
-// File name MUST stay
-// `TestSignalExplorerNLAIOffManualFiltersWork.test.tsx` — the
-// slice prompt's verification command runs
-// `vitest --run TestSignalExplorerNLAIOffManualFiltersWork`,
-// where the positional pattern is matched against the file PATH.
+// React-side AI-off contract test for the signal explorer natural-language filter.
+// The gated filter is mounted with ai_mode='off' and an enabled feature
+// toggle to prove mode wins over the toggle. A cloud-mode positive control
+// proves the gate works, and the full SignalExplorerPage render verifies
+// the manual SignalSelector, RangePicker, Explore/Live buttons, and empty
+// state still render when the AI section is absent. The API 404 invariant
+// is covered by the matching Go handler test.
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -150,10 +114,8 @@ function renderSignalExplorerPage() {
 
 describe('TestSignalExplorerNLAIOffManualFiltersWork (signal-explorer-nl-filter AI-off contract)', () => {
   it('TestSignalExplorerNLAIOffManualFiltersWork: AISignalExplorerNlFilter renders nothing when ai_mode=off even with the signal-explorer-nl-filter toggle on', () => {
-    // The toggle is intentionally set to true to defeat the
-    // shortcut path "the section hides because the feature flag is
-    // off". The mode='off' check MUST trump the per-feature toggle
-    // (ADR-015 §I7).
+    // The toggle is intentionally true to prove mode='off' wins over
+    // a per-feature opt-in.
     mockUseSettings.mockReturnValue(
       settingsPayload({
         ai_mode: 'off',
@@ -173,8 +135,7 @@ describe('TestSignalExplorerNLAIOffManualFiltersWork (signal-explorer-nl-filter 
 
   it('TestSignalExplorerNLAIOffManualFiltersWork: AISignalExplorerNlFilter renders nothing when ai_mode is non-off but the signal-explorer-nl-filter toggle is false', () => {
     // The other half of the gate: even with mode='cloud', a
-    // toggle=false MUST hide the surface (per-feature opt-in,
-    // ADR-015 §I7).
+    // disabled feature toggle must hide the surface.
     mockUseSettings.mockReturnValue(
       settingsPayload({
         ai_mode: 'cloud',
@@ -214,13 +175,10 @@ describe('TestSignalExplorerNLAIOffManualFiltersWork (signal-explorer-nl-filter 
   });
 
   it('TestSignalExplorerNLAIOffManualFiltersWork: SignalExplorerPage in off mode shows the deterministic manual-filter surface (baseline intact, ADR-015 §I3)', async () => {
-    // The slice's load-bearing baseline-coexistence proof: with
-    // ai_mode='off', the canonical SignalExplorerPage MUST continue
-    // to render every deterministic surface — page title, signal
-    // selector, range picker trigger, Explore + Live buttons,
-    // empty-state copy — exactly as it would without the AI feature
-    // ever existing. The AI filter section MUST be absent from the
-    // DOM (ADR-015 §I5 + §I6).
+    // With ai_mode='off', SignalExplorerPage must continue to render
+    // every deterministic surface — page title, signal selector,
+    // range picker trigger, Explore + Live buttons, and empty-state
+    // copy. The AI filter section must be absent from the DOM.
     mockUseSettings.mockReturnValue(
       settingsPayload({
         ai_mode: 'off',
@@ -253,10 +211,8 @@ describe('TestSignalExplorerNLAIOffManualFiltersWork (signal-explorer-nl-filter 
       screen.getByText(/Pick signals and click Explore/i),
     ).toBeInTheDocument();
 
-    // 5) The AI natural-language filter surface MUST be absent from
-    //    the DOM (ADR-015 §I5). This is the load-bearing baseline-
-    //    intact assertion: even though the AI component is mounted
-    //    by the page, the off-mode gate MUST hide it.
+    // 5) The AI natural-language filter surface must be absent from
+    //    the DOM even though the page mounts the component.
     expect(
       screen.queryByTestId('ai-feature-signal-explorer-nl-filter-root'),
     ).not.toBeInTheDocument();

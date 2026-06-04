@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 54 — Vehicle photo upload UI.
+// Vehicle photo upload UI.
 //
 // Drag-drop / file-picker zone + thumbnail preview + upload progress
 // + delete button. Wires into:

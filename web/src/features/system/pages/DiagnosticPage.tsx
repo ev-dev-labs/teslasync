@@ -1,4 +1,4 @@
-// DiagnosticPage — Phase-46 / Prompt 33
+// DiagnosticPage
 //
 // Operator-facing self-test wizard. A single button posts to
 // `POST /system/diagnostic` and renders the structured report as a

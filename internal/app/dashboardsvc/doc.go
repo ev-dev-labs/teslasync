@@ -1,4 +1,4 @@
-// Package dashboardsvc implements the use-case layer for the dashboard bounded context. houses use-case (application service) implementations.
+// Package dashboardsvc implements dashboard use cases.
 //
 // Layer: app
 package dashboardsvc

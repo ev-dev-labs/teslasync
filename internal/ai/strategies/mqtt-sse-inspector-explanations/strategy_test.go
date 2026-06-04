@@ -1,13 +1,7 @@
-// Phase-50 / 0047 — S6 MQTT and SSE inspector explanations.
-//
-// Unit tests for the mqtt-sse-inspector-explanations Strategy.
-// Mirrors the shape of log-trace-summarization's strategy_test.go
-// (the closest precedent: a tools+RAG-style narrator strategy
-// with a deny-all redaction policy). The Strategy is a pure value
-// (no internal state, no IO) so the tests are tight: pin the
-// feature ID + system prompt + tool whitelist + redaction policy
-// shape so a future edit that breaks the contract surfaces here
-// before the dispatcher silently changes behaviour.
+// Unit tests for the mqtt-sse-inspector-explanations strategy.
+// The strategy is a pure value, so these tests pin the feature ID,
+// system prompt, tool whitelist, and redaction policy before a
+// contract break can reach the dispatcher.
 
 package mqttsseinspectorexplanations
 
@@ -128,8 +122,8 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via
 // StrategyInput.History; the strategy must not contribute extra
-// prefix messages until a future slice that needs preferred-
-// greeting or preferred-unit-display preferences ships.
+// prefix messages until a feature needs preferred greeting or
+// preferred unit-display preferences.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -146,9 +140,8 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 // the dispatcher PolicyChatbot wrapped through the F4↔F8
 // adapter. PolicyChatbot is the DENY-BY-DEFAULT policy: Allow ==
 // nil so EVERY PII class — VIN, lat/long, addresses, place names,
-// AND vehicle-name — is tagged round-trip. The slice prompt
-// explicitly mandates "Allowed classes: none; broker and stream
-// details are redacted where needed."
+// AND vehicle-name — is tagged round-trip, including broker and
+// stream details.
 func TestStrategy_RedactionPolicyChatbot(t *testing.T) {
 	t.Parallel()
 	s := New()

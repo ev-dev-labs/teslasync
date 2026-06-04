@@ -1,22 +1,17 @@
-// Built-in starter tools (12 read-only tools).
+// Built-in read-only tools.
 //
 // Each tool wraps an existing repository method via a narrow domain
-// interface (VehicleSource / DriveSource / ...). Tools NEVER write
-// new SQL — the prompt is explicit: "thin Tool wrapper over an
-// existing handler. **No new SQL written.**"
+// interface (VehicleSource / DriveSource / ...). Tools never write SQL.
 //
 // The narrow interfaces serve two purposes:
 //
 //  1. Tests can substitute deterministic in-memory fakes without
 //     spinning up Postgres + Timescale.
-//  2. Production wiring (in a later slice that mounts the dispatcher)
-//     can pass the real *database.* repos directly — every method
-//     signature here matches an existing repo method.
+//  2. Production wiring can pass the real *database.* repos directly
+//     because every method signature here matches an existing repo method.
 //
-// Mutating tools are NOT shipped in this slice — they belong with
-// the features that use them (N1, N2, etc.). Every tool here is
-// read-only (Mutates() returns false) so the dispatcher's confirm
-// gate is exercised only by tests.
+// Every tool here is read-only (Mutates returns false); mutating tools
+// belong with the features that use them.
 
 package tools
 
@@ -28,7 +23,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 )
 
 // ---------------------------------------------------------------------------
@@ -37,10 +42,10 @@ import (
 // ---------------------------------------------------------------------------
 
 // VehicleSource is the read surface the vehicle-domain tools need.
-// Implemented by *database.VehicleRepo (GetAll, GetByID).
+// Implemented by *vehicledb.VehicleRepo (GetAll, GetByID).
 type VehicleSource interface {
-	GetAll(ctx context.Context) ([]*models.Vehicle, error)
-	GetByID(ctx context.Context, id int64) (*models.Vehicle, error)
+	GetAll(ctx context.Context) ([]*vehiclemodel.Vehicle, error)
+	GetByID(ctx context.Context, id int64) (*vehiclemodel.Vehicle, error)
 }
 
 // VehicleStateSource exposes the latest known state for a vehicle.
@@ -53,35 +58,35 @@ type VehicleStateSource interface {
 }
 
 // DriveSource is the read surface the drive-domain tools need.
-// Implemented by *database.DriveRepo.
+// Implemented by *drivedb.DriveRepo.
 type DriveSource interface {
-	GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*models.Drive, error)
-	GetByID(ctx context.Context, id int64) (*models.Drive, error)
+	GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*drivemodel.Drive, error)
+	GetByID(ctx context.Context, id int64) (*drivemodel.Drive, error)
 }
 
 // ChargeSource is the read surface the charging-domain tools need.
-// Implemented by *database.ChargingRepo.
+// Implemented by *chargingdb.ChargingRepo.
 type ChargeSource interface {
-	GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*models.ChargingSession, error)
-	GetByID(ctx context.Context, id int64) (*models.ChargingSession, error)
+	GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*chargingmodel.ChargingSession, error)
+	GetByID(ctx context.Context, id int64) (*chargingmodel.ChargingSession, error)
 }
 
 // AlertRuleSource is the read surface the alert-rule tools need.
-// Implemented by *database.AlertRuleRepo.
+// Implemented by *dbalert.AlertRuleRepo.
 type AlertRuleSource interface {
-	GetAll(ctx context.Context) ([]*models.AlertRule, error)
+	GetAll(ctx context.Context) ([]*alertmodel.AlertRule, error)
 }
 
 // NotificationSource is the read surface the recent-alerts tool
-// needs. Implemented by *database.NotificationRepo.GetLogs.
+// needs. Implemented by *dbnotif.NotificationRepo.GetLogs.
 type NotificationSource interface {
-	GetLogs(ctx context.Context, limit, offset int) ([]*models.NotificationLog, error)
+	GetLogs(ctx context.Context, limit, offset int) ([]*notificationmodel.NotificationLog, error)
 }
 
 // GeofenceSource is the read surface the geofences tool needs.
-// Implemented by *database.GeofenceRepo.
+// Implemented by *geofencedb.GeofenceRepo.
 type GeofenceSource interface {
-	GetAll(ctx context.Context) ([]*models.Geofence, error)
+	GetAll(ctx context.Context) ([]*systemmodel.Geofence, error)
 }
 
 // EfficiencySource is the read surface the efficiency tool needs.
@@ -89,7 +94,7 @@ type GeofenceSource interface {
 // DriveSource the listing tool uses, so this is a thin wrapper
 // rather than a new repo dependency.
 type EfficiencySource interface {
-	GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*models.Drive, error)
+	GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*drivemodel.Drive, error)
 }
 
 // Sources bundles every narrow source the built-in tools need. One
@@ -148,7 +153,7 @@ var BuiltinNames = []string{
 // sync.Map for safe concurrent first-access by multiple tool calls.
 var schemaCache sync.Map // map[reflect.Type]json.RawMessage
 
-func cachedSchema(v any) json.RawMessage {
+func CachedSchema(v any) json.RawMessage {
 	t := reflect.TypeOf(v)
 	if cached, ok := schemaCache.Load(t); ok {
 		return cached.(json.RawMessage)
@@ -166,12 +171,14 @@ type emptyInput struct{}
 
 type queryVehicleCount struct{ src VehicleSource }
 
-func (t *queryVehicleCount) Name() string                          { return "query_vehicle_count" }
-func (t *queryVehicleCount) Description() string                   { return "Return the number of vehicles in the fleet." }
-func (t *queryVehicleCount) InputSchema() json.RawMessage          { return cachedSchema(emptyInput{}) }
-func (t *queryVehicleCount) OutputSchema() json.RawMessage         { return nil }
-func (t *queryVehicleCount) Mutates() bool                         { return false }
-func (t *queryVehicleCount) RequiredScope() string                 { return "" }
+func (t *queryVehicleCount) Name() string { return "query_vehicle_count" }
+func (t *queryVehicleCount) Description() string {
+	return "Return the number of vehicles in the fleet."
+}
+func (t *queryVehicleCount) InputSchema() json.RawMessage  { return CachedSchema(emptyInput{}) }
+func (t *queryVehicleCount) OutputSchema() json.RawMessage { return nil }
+func (t *queryVehicleCount) Mutates() bool                 { return false }
+func (t *queryVehicleCount) RequiredScope() string         { return "" }
 func (t *queryVehicleCount) Validate(raw json.RawMessage) (any, error) {
 	return ValidateStruct[emptyInput](raw)
 }
@@ -199,12 +206,14 @@ type queryVehicleState struct {
 	vsrc VehicleSource
 }
 
-func (t *queryVehicleState) Name() string                          { return "query_vehicle_state" }
-func (t *queryVehicleState) Description() string                   { return "Return the vehicle's metadata + most recent driving state (drive/park/charge)." }
-func (t *queryVehicleState) InputSchema() json.RawMessage          { return cachedSchema(vehicleIDInput{}) }
-func (t *queryVehicleState) OutputSchema() json.RawMessage         { return nil }
-func (t *queryVehicleState) Mutates() bool                         { return false }
-func (t *queryVehicleState) RequiredScope() string                 { return "" }
+func (t *queryVehicleState) Name() string { return "query_vehicle_state" }
+func (t *queryVehicleState) Description() string {
+	return "Return the vehicle's metadata + most recent driving state (drive/park/charge)."
+}
+func (t *queryVehicleState) InputSchema() json.RawMessage  { return CachedSchema(vehicleIDInput{}) }
+func (t *queryVehicleState) OutputSchema() json.RawMessage { return nil }
+func (t *queryVehicleState) Mutates() bool                 { return false }
+func (t *queryVehicleState) RequiredScope() string         { return "" }
 func (t *queryVehicleState) Validate(raw json.RawMessage) (any, error) {
 	return ValidateStruct[vehicleIDInput](raw)
 }
@@ -241,12 +250,14 @@ func (t *queryVehicleState) Execute(ctx context.Context, in any) (any, error) {
 
 type queryVehicleLocation struct{ src VehicleStateSource }
 
-func (t *queryVehicleLocation) Name() string                          { return "query_vehicle_location" }
-func (t *queryVehicleLocation) Description() string                   { return "Return the vehicle's most recent latitude / longitude / heading." }
-func (t *queryVehicleLocation) InputSchema() json.RawMessage          { return cachedSchema(vehicleIDInput{}) }
-func (t *queryVehicleLocation) OutputSchema() json.RawMessage         { return nil }
-func (t *queryVehicleLocation) Mutates() bool                         { return false }
-func (t *queryVehicleLocation) RequiredScope() string                 { return "" }
+func (t *queryVehicleLocation) Name() string { return "query_vehicle_location" }
+func (t *queryVehicleLocation) Description() string {
+	return "Return the vehicle's most recent latitude / longitude / heading."
+}
+func (t *queryVehicleLocation) InputSchema() json.RawMessage  { return CachedSchema(vehicleIDInput{}) }
+func (t *queryVehicleLocation) OutputSchema() json.RawMessage { return nil }
+func (t *queryVehicleLocation) Mutates() bool                 { return false }
+func (t *queryVehicleLocation) RequiredScope() string         { return "" }
 func (t *queryVehicleLocation) Validate(raw json.RawMessage) (any, error) {
 	return ValidateStruct[vehicleIDInput](raw)
 }
@@ -278,12 +289,14 @@ type drivesRecentInput struct {
 
 type queryDrivesRecent struct{ src DriveSource }
 
-func (t *queryDrivesRecent) Name() string                          { return "query_drives_recent" }
-func (t *queryDrivesRecent) Description() string                   { return "Return the most-recent drives for a vehicle, newest first." }
-func (t *queryDrivesRecent) InputSchema() json.RawMessage          { return cachedSchema(drivesRecentInput{}) }
-func (t *queryDrivesRecent) OutputSchema() json.RawMessage         { return nil }
-func (t *queryDrivesRecent) Mutates() bool                         { return false }
-func (t *queryDrivesRecent) RequiredScope() string                 { return "" }
+func (t *queryDrivesRecent) Name() string { return "query_drives_recent" }
+func (t *queryDrivesRecent) Description() string {
+	return "Return the most-recent drives for a vehicle, newest first."
+}
+func (t *queryDrivesRecent) InputSchema() json.RawMessage  { return CachedSchema(drivesRecentInput{}) }
+func (t *queryDrivesRecent) OutputSchema() json.RawMessage { return nil }
+func (t *queryDrivesRecent) Mutates() bool                 { return false }
+func (t *queryDrivesRecent) RequiredScope() string         { return "" }
 func (t *queryDrivesRecent) Validate(raw json.RawMessage) (any, error) {
 	return ValidateStruct[drivesRecentInput](raw)
 }
@@ -313,12 +326,14 @@ type driveIDInput struct {
 
 type queryDriveDetail struct{ src DriveSource }
 
-func (t *queryDriveDetail) Name() string                          { return "query_drive_detail" }
-func (t *queryDriveDetail) Description() string                   { return "Return one drive by its ID, including SI distance/duration/energy fields." }
-func (t *queryDriveDetail) InputSchema() json.RawMessage          { return cachedSchema(driveIDInput{}) }
-func (t *queryDriveDetail) OutputSchema() json.RawMessage         { return nil }
-func (t *queryDriveDetail) Mutates() bool                         { return false }
-func (t *queryDriveDetail) RequiredScope() string                 { return "" }
+func (t *queryDriveDetail) Name() string { return "query_drive_detail" }
+func (t *queryDriveDetail) Description() string {
+	return "Return one drive by its ID, including SI distance/duration/energy fields."
+}
+func (t *queryDriveDetail) InputSchema() json.RawMessage  { return CachedSchema(driveIDInput{}) }
+func (t *queryDriveDetail) OutputSchema() json.RawMessage { return nil }
+func (t *queryDriveDetail) Mutates() bool                 { return false }
+func (t *queryDriveDetail) RequiredScope() string         { return "" }
 func (t *queryDriveDetail) Validate(raw json.RawMessage) (any, error) {
 	return ValidateStruct[driveIDInput](raw)
 }
@@ -348,12 +363,14 @@ type chargesRecentInput struct {
 
 type queryChargesRecent struct{ src ChargeSource }
 
-func (t *queryChargesRecent) Name() string                          { return "query_charges_recent" }
-func (t *queryChargesRecent) Description() string                   { return "Return the most-recent charging sessions for a vehicle, newest first." }
-func (t *queryChargesRecent) InputSchema() json.RawMessage          { return cachedSchema(chargesRecentInput{}) }
-func (t *queryChargesRecent) OutputSchema() json.RawMessage         { return nil }
-func (t *queryChargesRecent) Mutates() bool                         { return false }
-func (t *queryChargesRecent) RequiredScope() string                 { return "" }
+func (t *queryChargesRecent) Name() string { return "query_charges_recent" }
+func (t *queryChargesRecent) Description() string {
+	return "Return the most-recent charging sessions for a vehicle, newest first."
+}
+func (t *queryChargesRecent) InputSchema() json.RawMessage  { return CachedSchema(chargesRecentInput{}) }
+func (t *queryChargesRecent) OutputSchema() json.RawMessage { return nil }
+func (t *queryChargesRecent) Mutates() bool                 { return false }
+func (t *queryChargesRecent) RequiredScope() string         { return "" }
 func (t *queryChargesRecent) Validate(raw json.RawMessage) (any, error) {
 	return ValidateStruct[chargesRecentInput](raw)
 }
@@ -379,12 +396,14 @@ type chargeIDInput struct {
 
 type queryChargeDetail struct{ src ChargeSource }
 
-func (t *queryChargeDetail) Name() string                          { return "query_charge_detail" }
-func (t *queryChargeDetail) Description() string                   { return "Return one charging session by its ID, including SI energy/power fields." }
-func (t *queryChargeDetail) InputSchema() json.RawMessage          { return cachedSchema(chargeIDInput{}) }
-func (t *queryChargeDetail) OutputSchema() json.RawMessage         { return nil }
-func (t *queryChargeDetail) Mutates() bool                         { return false }
-func (t *queryChargeDetail) RequiredScope() string                 { return "" }
+func (t *queryChargeDetail) Name() string { return "query_charge_detail" }
+func (t *queryChargeDetail) Description() string {
+	return "Return one charging session by its ID, including SI energy/power fields."
+}
+func (t *queryChargeDetail) InputSchema() json.RawMessage  { return CachedSchema(chargeIDInput{}) }
+func (t *queryChargeDetail) OutputSchema() json.RawMessage { return nil }
+func (t *queryChargeDetail) Mutates() bool                 { return false }
+func (t *queryChargeDetail) RequiredScope() string         { return "" }
 func (t *queryChargeDetail) Validate(raw json.RawMessage) (any, error) {
 	return ValidateStruct[chargeIDInput](raw)
 }
@@ -409,12 +428,14 @@ func (t *queryChargeDetail) Execute(ctx context.Context, in any) (any, error) {
 
 type queryAlertsActive struct{ src AlertRuleSource }
 
-func (t *queryAlertsActive) Name() string                          { return "query_alerts_active" }
-func (t *queryAlertsActive) Description() string                   { return "Return every alert rule whose 'enabled' flag is true." }
-func (t *queryAlertsActive) InputSchema() json.RawMessage          { return cachedSchema(emptyInput{}) }
-func (t *queryAlertsActive) OutputSchema() json.RawMessage         { return nil }
-func (t *queryAlertsActive) Mutates() bool                         { return false }
-func (t *queryAlertsActive) RequiredScope() string                 { return "" }
+func (t *queryAlertsActive) Name() string { return "query_alerts_active" }
+func (t *queryAlertsActive) Description() string {
+	return "Return every alert rule whose 'enabled' flag is true."
+}
+func (t *queryAlertsActive) InputSchema() json.RawMessage  { return CachedSchema(emptyInput{}) }
+func (t *queryAlertsActive) OutputSchema() json.RawMessage { return nil }
+func (t *queryAlertsActive) Mutates() bool                 { return false }
+func (t *queryAlertsActive) RequiredScope() string         { return "" }
 func (t *queryAlertsActive) Validate(raw json.RawMessage) (any, error) {
 	return ValidateStruct[emptyInput](raw)
 }
@@ -426,7 +447,7 @@ func (t *queryAlertsActive) Execute(ctx context.Context, in any) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	active := make([]*models.AlertRule, 0, len(rules))
+	active := make([]*alertmodel.AlertRule, 0, len(rules))
 	for _, r := range rules {
 		if r.Enabled {
 			active = append(active, r)
@@ -441,12 +462,14 @@ type alertsRecentInput struct {
 
 type queryAlertsRecent struct{ src NotificationSource }
 
-func (t *queryAlertsRecent) Name() string                          { return "query_alerts_recent" }
-func (t *queryAlertsRecent) Description() string                   { return "Return the most-recent fired alerts (notification log entries), newest first." }
-func (t *queryAlertsRecent) InputSchema() json.RawMessage          { return cachedSchema(alertsRecentInput{}) }
-func (t *queryAlertsRecent) OutputSchema() json.RawMessage         { return nil }
-func (t *queryAlertsRecent) Mutates() bool                         { return false }
-func (t *queryAlertsRecent) RequiredScope() string                 { return "" }
+func (t *queryAlertsRecent) Name() string { return "query_alerts_recent" }
+func (t *queryAlertsRecent) Description() string {
+	return "Return the most-recent fired alerts (notification log entries), newest first."
+}
+func (t *queryAlertsRecent) InputSchema() json.RawMessage  { return CachedSchema(alertsRecentInput{}) }
+func (t *queryAlertsRecent) OutputSchema() json.RawMessage { return nil }
+func (t *queryAlertsRecent) Mutates() bool                 { return false }
+func (t *queryAlertsRecent) RequiredScope() string         { return "" }
 func (t *queryAlertsRecent) Validate(raw json.RawMessage) (any, error) {
 	return ValidateStruct[alertsRecentInput](raw)
 }
@@ -472,12 +495,12 @@ func (t *queryAlertsRecent) Execute(ctx context.Context, in any) (any, error) {
 
 type queryGeofencesList struct{ src GeofenceSource }
 
-func (t *queryGeofencesList) Name() string                          { return "query_geofences_list" }
-func (t *queryGeofencesList) Description() string                   { return "Return every configured geofence." }
-func (t *queryGeofencesList) InputSchema() json.RawMessage          { return cachedSchema(emptyInput{}) }
-func (t *queryGeofencesList) OutputSchema() json.RawMessage         { return nil }
-func (t *queryGeofencesList) Mutates() bool                         { return false }
-func (t *queryGeofencesList) RequiredScope() string                 { return "" }
+func (t *queryGeofencesList) Name() string                  { return "query_geofences_list" }
+func (t *queryGeofencesList) Description() string           { return "Return every configured geofence." }
+func (t *queryGeofencesList) InputSchema() json.RawMessage  { return CachedSchema(emptyInput{}) }
+func (t *queryGeofencesList) OutputSchema() json.RawMessage { return nil }
+func (t *queryGeofencesList) Mutates() bool                 { return false }
+func (t *queryGeofencesList) RequiredScope() string         { return "" }
 func (t *queryGeofencesList) Validate(raw json.RawMessage) (any, error) {
 	return ValidateStruct[emptyInput](raw)
 }
@@ -498,12 +521,14 @@ func (t *queryGeofencesList) Execute(ctx context.Context, in any) (any, error) {
 
 type queryBatteryStatus struct{ src VehicleStateSource }
 
-func (t *queryBatteryStatus) Name() string                          { return "query_battery_status" }
-func (t *queryBatteryStatus) Description() string                   { return "Return the vehicle's most recent state of charge, range, and charging status." }
-func (t *queryBatteryStatus) InputSchema() json.RawMessage          { return cachedSchema(vehicleIDInput{}) }
-func (t *queryBatteryStatus) OutputSchema() json.RawMessage         { return nil }
-func (t *queryBatteryStatus) Mutates() bool                         { return false }
-func (t *queryBatteryStatus) RequiredScope() string                 { return "" }
+func (t *queryBatteryStatus) Name() string { return "query_battery_status" }
+func (t *queryBatteryStatus) Description() string {
+	return "Return the vehicle's most recent state of charge, range, and charging status."
+}
+func (t *queryBatteryStatus) InputSchema() json.RawMessage  { return CachedSchema(vehicleIDInput{}) }
+func (t *queryBatteryStatus) OutputSchema() json.RawMessage { return nil }
+func (t *queryBatteryStatus) Mutates() bool                 { return false }
+func (t *queryBatteryStatus) RequiredScope() string         { return "" }
 func (t *queryBatteryStatus) Validate(raw json.RawMessage) (any, error) {
 	return ValidateStruct[vehicleIDInput](raw)
 }
@@ -535,12 +560,16 @@ type efficiencyPeriodInput struct {
 
 type queryEfficiencyPeriod struct{ src EfficiencySource }
 
-func (t *queryEfficiencyPeriod) Name() string                          { return "query_efficiency_period" }
-func (t *queryEfficiencyPeriod) Description() string                   { return "Return the vehicle's average Wh/km efficiency over the requested period (day|week|month|year)." }
-func (t *queryEfficiencyPeriod) InputSchema() json.RawMessage          { return cachedSchema(efficiencyPeriodInput{}) }
-func (t *queryEfficiencyPeriod) OutputSchema() json.RawMessage         { return nil }
-func (t *queryEfficiencyPeriod) Mutates() bool                         { return false }
-func (t *queryEfficiencyPeriod) RequiredScope() string                 { return "" }
+func (t *queryEfficiencyPeriod) Name() string { return "query_efficiency_period" }
+func (t *queryEfficiencyPeriod) Description() string {
+	return "Return the vehicle's average Wh/km efficiency over the requested period (day|week|month|year)."
+}
+func (t *queryEfficiencyPeriod) InputSchema() json.RawMessage {
+	return CachedSchema(efficiencyPeriodInput{})
+}
+func (t *queryEfficiencyPeriod) OutputSchema() json.RawMessage { return nil }
+func (t *queryEfficiencyPeriod) Mutates() bool                 { return false }
+func (t *queryEfficiencyPeriod) RequiredScope() string         { return "" }
 func (t *queryEfficiencyPeriod) Validate(raw json.RawMessage) (any, error) {
 	return ValidateStruct[efficiencyPeriodInput](raw)
 }

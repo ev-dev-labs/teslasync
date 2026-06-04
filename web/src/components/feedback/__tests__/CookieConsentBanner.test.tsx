@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 70 — CookieConsentBanner tests.
+ * CookieConsentBanner tests.
  *
  * The banner reads the deployment-wide `require_cookie_consent` flag
  * via useVersionInfo() and the per-user state via getConsent(). Both

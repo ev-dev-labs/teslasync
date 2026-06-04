@@ -81,7 +81,7 @@ func TestCompute_OpenAIRates(t *testing.T) {
 
 // TestCompute_AnthropicRates pins the Anthropic rate table the same
 // way TestCompute_OpenAIRates pins OpenAI's. Numbers reviewed against
-// https://www.anthropic.com/pricing during Phase-50.
+// https://www.anthropic.com/pricing.
 func TestCompute_AnthropicRates(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
@@ -122,10 +122,10 @@ func TestCompute_UnknownTuplesAreFree(t *testing.T) {
 	tests := []struct {
 		provider, model string
 	}{
-		{"openai", "gpt-9999"},                            // unknown model
-		{"unknown-provider", "anything"},                  // unknown provider
-		{"", ""},                                          // empty inputs
-		{"OpenAI", "gpt-4o-mini-typo"},                    // case-insensitive but mistyped
+		{"openai", "gpt-9999"},           // unknown model
+		{"unknown-provider", "anything"}, // unknown provider
+		{"", ""},                         // empty inputs
+		{"OpenAI", "gpt-4o-mini-typo"},   // case-insensitive but mistyped
 	}
 	for _, tt := range tests {
 		t.Run(tt.provider+"/"+tt.model, func(t *testing.T) {

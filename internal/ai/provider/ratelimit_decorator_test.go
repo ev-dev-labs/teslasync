@@ -36,7 +36,9 @@ func (f *rlFakeProvider) Name() string {
 	}
 	return f.name
 }
-func (f *rlFakeProvider) Capabilities() Capabilities { return Capabilities{Streaming: true, Embeddings: true} }
+func (f *rlFakeProvider) Capabilities() Capabilities {
+	return Capabilities{Streaming: true, Embeddings: true}
+}
 
 func (f *rlFakeProvider) Chat(_ context.Context, _ ChatRequest) (*ChatResponse, error) {
 	f.chatCalls.Add(1)
@@ -159,10 +161,14 @@ type slowChatProvider struct {
 	gate chan struct{}
 }
 
-func (s *slowChatProvider) Name() string                                                  { return s.name }
-func (s *slowChatProvider) Capabilities() Capabilities                                    { return Capabilities{} }
-func (s *slowChatProvider) Stream(context.Context, ChatRequest) (<-chan Chunk, error)     { return nil, ErrCapabilityNotSupported }
-func (s *slowChatProvider) Embed(context.Context, EmbedRequest) (*EmbedResponse, error)   { return nil, ErrCapabilityNotSupported }
+func (s *slowChatProvider) Name() string               { return s.name }
+func (s *slowChatProvider) Capabilities() Capabilities { return Capabilities{} }
+func (s *slowChatProvider) Stream(context.Context, ChatRequest) (<-chan Chunk, error) {
+	return nil, ErrCapabilityNotSupported
+}
+func (s *slowChatProvider) Embed(context.Context, EmbedRequest) (*EmbedResponse, error) {
+	return nil, ErrCapabilityNotSupported
+}
 func (s *slowChatProvider) Chat(_ context.Context, _ ChatRequest) (*ChatResponse, error) {
 	<-s.gate
 	return &ChatResponse{Message: Message{Role: RoleAssistant, Content: "ok"}}, nil

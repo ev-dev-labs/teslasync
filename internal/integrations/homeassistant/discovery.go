@@ -3,8 +3,6 @@
 // as native HA entities (sensor / binary_sensor / device_tracker /
 // lock) without any per-vehicle HA configuration.
 //
-// Phase-47 / p47-homeassist.
-//
 // The publisher follows the Home Assistant MQTT Discovery v1
 // specification (https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery):
 //

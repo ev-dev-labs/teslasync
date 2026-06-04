@@ -1,5 +1,3 @@
-// Phase-50 / 0051 — M3 Software update changelog summarizer.
-//
 // Unit tests for the software-update-changelog-summarizer
 // Strategy. Mirrors the shape of tco-narration's strategy_test.go
 // (the closest precedent). The Strategy is a pure value (no
@@ -57,7 +55,7 @@ func TestStrategy_System(t *testing.T) {
 		// strategy's two-tool contract requires the LLM to
 		// know it MAY (not MUST) reach for the F7 corpus.
 		"OPTIONALLY call retrieve_update_notes",
-		// Honest "no notes available" disclosure — slice 0051
+		// Honest "no notes available" disclosure — this feature
 		// load-bearing directive. The narrator MUST NOT
 		// fabricate release-note content when the corpus is
 		// empty for a listed version.
@@ -104,9 +102,7 @@ func TestStrategy_Tools(t *testing.T) {
 	}
 }
 
-// TestStrategy_ToolsIsDefensiveCopy proves Tools() returns a copy
-// — a caller that mutates the slice does NOT leak the mutation
-// back into the strategy. Dispatcher safety relies on this.
+// TestStrategy_ToolsIsDefensiveCopy proves Tools() returns a defensive copy.
 func TestStrategy_ToolsIsDefensiveCopy(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -143,7 +139,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs preferred-locale or
+// future feature that needs preferred-locale or
 // preferred-firmware-channel preferences ships.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
@@ -164,7 +160,7 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 // message reaches the provider — release-note text is public so
 // no class needs to be allowed in cleartext.
 //
-// The slice prompt explicitly mandates:
+// The feature requirements explicitly mandates:
 //
 //	"Policy:              PolicyChatbot from internal/ai/redact/policies.go
 //	 Allowed classes:     none; release notes are public text and vehicle

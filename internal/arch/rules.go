@@ -11,25 +11,31 @@ type ForbiddenEdge struct {
 	Reason string // human-readable; printed on test failure
 }
 
-// ForbiddenEdges is the canonical list. Phase-47 seeds it with the 5
-// edges established by the Principal Architect critique. Subsequent
-// prompts (06, 09, 10) append new rules.
+// ForbiddenEdges is the canonical list of import-graph boundaries. The
+// current rules cover Clean Architecture edges including app→handler,
+// app→api, handler→infra-direct, models→outward, adapter→app, and
+// cmd→api.
+//
+// The DAG mirrored here MUST match tools/archmetrics/main.go forbiddenEdges
+// — the two systems are deliberately redundant (arch_test enforces against
+// HEAD with explicit reasons, archmetrics ratchets against baseline.json).
 var ForbiddenEdges = []ForbiddenEdge{
+	// ----------------------------------------------------------------------
+	// cmd binaries must not bypass the internal/app composition root for
+	// HTTP API wiring. Workers depend on internal/apilog and
+	// internal/notification/computed for their cross-cutting needs.
+	// ----------------------------------------------------------------------
 	{
-		Source: "cmd/notification-worker",
+		Source: "cmd/...",
 		Target: "internal/api",
-		Reason: "workers must depend on internal/notify (extracted in phase-47/05), not the HTTP handler package",
+		Reason: "cmd binaries must not import internal/api; the composition root in internal/app is the only legitimate wiring layer for HTTP transport (phase-A3.1)",
 	},
-	{
-		Source: "cmd/automation-worker",
-		Target: "internal/api",
-		Reason: "workers must depend on internal/notify (extracted in phase-47/05), not the HTTP handler package",
-	},
-	// Phase-47/09 promoted these two to FAIL-level. Domain purity is
-	// also enforced (more strictly) by TestDomainPurity (ADR-006), which
-	// rejects ANY non-stdlib non-domain import; these edges remain in
-	// ForbiddenEdges so that violations surface with the layering reason
-	// in TestForbiddenEdges output as well.
+
+	// ----------------------------------------------------------------------
+	// Domain packages are pure. TestDomainPurity (ADR-006) enforces this
+	// more strictly by rejecting any non-stdlib, non-domain import. These
+	// edges stay here so TestForbiddenEdges reports the layering reason too.
+	// ----------------------------------------------------------------------
 	{
 		Source: "internal/domain/...",
 		Target: "internal/adapter/...",
@@ -40,14 +46,36 @@ var ForbiddenEdges = []ForbiddenEdge{
 		Target: "internal/database",
 		Reason: "domain must not depend on the database package (hexagonal inversion; ADR-006)",
 	},
-	// Still advisory until phase-47/10 promotes to fail-level.
 	{
-		Source: "internal/handler/v1",
-		Target: "internal/database",
-		Reason: "handlers must call internal/app/* services, not the database directly (advisory until prompt 10)",
+		Source: "internal/domain/...",
+		Target: "internal/models/...",
+		Reason: "domain entities must not depend on persistence/transport DTOs (ADR-006; phase-A3.1; broadened to models/... in phase-R5.0)",
 	},
-	// Phase-47/09: hexagonal layering rules promoted to FAIL.
-	// Ports never depend on adapters, persistence, transport, app, or platform.
+	{
+		Source: "internal/domain/...",
+		Target: "internal/port/...",
+		Reason: "domain must not know about its ports; ports live at the consumer (svc) boundary (ADR-007; phase-A3.1)",
+	},
+	{
+		Source: "internal/domain/...",
+		Target: "internal/handler/...",
+		Reason: "domain must not depend on HTTP handlers (wrong direction; phase-A3.1)",
+	},
+	{
+		Source: "internal/domain/...",
+		Target: "internal/api",
+		Reason: "domain must not depend on the HTTP router (wrong direction; phase-A3.1)",
+	},
+	{
+		Source: "internal/domain/...",
+		Target: "internal/app/...",
+		Reason: "domain must not depend on use cases (wrong direction; phase-A3.1)",
+	},
+
+	// ----------------------------------------------------------------------
+	// Ports never depend on adapters, persistence, transport, app, or
+	// platform. Ports are interface contracts in pure-domain terms.
+	// ----------------------------------------------------------------------
 	{
 		Source: "internal/port/...",
 		Target: "internal/adapter/...",
@@ -73,7 +101,10 @@ var ForbiddenEdges = []ForbiddenEdge{
 		Target: "internal/app/...",
 		Reason: "ports must not depend on app services (phase-47/09)",
 	},
-	// Phase-47/09: adapters never depend on transport or use cases.
+
+	// ----------------------------------------------------------------------
+	// Adapters never depend on transport or use cases.
+	// ----------------------------------------------------------------------
 	{
 		Source: "internal/adapter/...",
 		Target: "internal/api",
@@ -84,74 +115,160 @@ var ForbiddenEdges = []ForbiddenEdge{
 		Target: "internal/handler/...",
 		Reason: "adapters must not depend on HTTP handlers (phase-47/09)",
 	},
-	// Phase-47/10: handler thinness rule. Handlers in handler/v1 must
-	// stay thin: no direct database/adapter/models access, no import of
-	// the FROZEN internal/api. internal/api itself is exempt (it IS
-	// frozen; existing handlers query the DB freely until their per-
-	// handler migration to handler/v1 lands).
 	{
-		Source: "internal/handler/v1",
-		Target: "internal/database",
-		Reason: "handlers must call internal/app/<name>svc, not the database directly (phase-47/10)",
+		Source: "internal/adapter/...",
+		Target: "internal/app/...",
+		Reason: "adapters must not depend on use cases (wrong direction; phase-A3.1)",
+	},
+
+	// ----------------------------------------------------------------------
+	// Use cases (internal/app/*svc) must not depend on HTTP transport or
+	// the legacy router. The internal/app top-level composition root is the
+	// explicit carve-out and is exempted via AllowedExceptions.
+	// ----------------------------------------------------------------------
+	{
+		Source: "internal/app/...",
+		Target: "internal/handler/...",
+		Reason: "use cases (internal/app/*svc) must not depend on HTTP transport; the composition root internal/app is the carve-out (phase-A3.1)",
 	},
 	{
-		Source: "internal/handler/v1",
-		Target: "internal/platform/database",
-		Reason: "handlers must call internal/app/<name>svc, not platform DB helpers (phase-47/10)",
-	},
-	{
-		Source: "internal/handler/v1",
-		Target: "internal/adapter/...",
-		Reason: "handlers must depend on ports, not adapter implementations (phase-47/10)",
-	},
-	{
-		Source: "internal/handler/v1",
-		Target: "internal/models",
-		Reason: "handlers use internal/handler/dto for transport DTOs (ADR-006; phase-47/10)",
-	},
-	{
-		Source: "internal/handler/v1",
+		Source: "internal/app/...",
 		Target: "internal/api",
-		Reason: "internal/api is FROZEN per ADR-009; handlers must not import it (phase-47/10)",
+		Reason: "use cases (internal/app/*svc) must not depend on the legacy HTTP router; the composition root internal/app is the carve-out (phase-A3.1)",
+	},
+
+	// ----------------------------------------------------------------------
+	// Handlers in any handler subdir must stay thin: no direct database/
+	// adapter/models/api access, no infra-SDK reach-through. internal/api
+	// itself is exempt from these rules — it IS the legacy frozen package;
+	// its existing handlers freely query the DB until per-handler migration
+	// to handler/v1 lands. TestHandlerV1Thinness continues to enforce the
+	// stricter handler/v1-specific subset (no internal/models, etc).
+	// ----------------------------------------------------------------------
+	{
+		Source: "internal/handler/...",
+		Target: "internal/database",
+		Reason: "handlers must call internal/app/<name>svc, not the database directly (phase-47/10; broadened to handler/... in phase-A3.1)",
+	},
+	{
+		Source: "internal/handler/...",
+		Target: "internal/platform/database",
+		Reason: "handlers must call internal/app/<name>svc, not platform DB helpers (phase-47/10; broadened to handler/... in phase-A3.1)",
+	},
+	{
+		Source: "internal/handler/...",
+		Target: "internal/adapter/...",
+		Reason: "handlers must depend on ports, not adapter implementations (phase-47/10; broadened to handler/... in phase-A3.1)",
+	},
+	{
+		Source: "internal/handler/v1",
+		Target: "internal/models/...",
+		Reason: "handlers use internal/handler/dto for transport DTOs (ADR-006; phase-47/10; broadened to models/... in phase-R5.0)",
+	},
+	{
+		Source: "internal/handler/...",
+		Target: "internal/api",
+		Reason: "internal/api is FROZEN per ADR-009; handlers must not import it (phase-47/10; broadened to handler/... in phase-A3.1)",
+	},
+	// Handlers must not reach into infra/vendor SDKs; everything routes
+	// through internal/app/*svc and ports.
+	{
+		Source: "internal/handler/...",
+		Target: "internal/tesla/...",
+		Reason: "handlers must not call the Tesla pipeline directly; route through internal/app/<name>svc + ports (phase-A3.1)",
+	},
+	{
+		Source: "internal/handler/...",
+		Target: "internal/mqtt/...",
+		Reason: "handlers must not call MQTT directly; route through internal/app/<name>svc + ports (phase-A3.1)",
+	},
+	{
+		Source: "internal/handler/...",
+		Target: "internal/redis/...",
+		Reason: "handlers must not call Redis directly; route through internal/app/<name>svc + ports (phase-A3.1)",
+	},
+	{
+		Source: "internal/handler/...",
+		Target: "internal/geocoding/...",
+		Reason: "handlers must not call the geocoding adapter directly; route through internal/app/<name>svc + ports (phase-A3.1)",
+	},
+
+	// ----------------------------------------------------------------------
+	// Models (DTOs) are leaves. Per ADR-006 they must not depend on any
+	// other layer. TestModelsImportsRestricted enforces this more strictly;
+	// these edges mirror it for layering reason output. The source covers
+	// internal/models/... so each bounded-context subpackage inherits the
+	// DTO-leaf contract.
+	{
+		Source: "internal/models/...",
+		Target: "internal/database",
+		Reason: "models (DTOs) must not depend on persistence implementation (ADR-006; phase-A3.1; broadened in phase-R5.0)",
+	},
+	{
+		Source: "internal/models/...",
+		Target: "internal/adapter/...",
+		Reason: "models (DTOs) must not depend on adapters (ADR-006; phase-A3.1; broadened in phase-R5.0)",
+	},
+	{
+		Source: "internal/models/...",
+		Target: "internal/handler/...",
+		Reason: "models (DTOs) must not depend on handlers (ADR-006; phase-A3.1; broadened in phase-R5.0)",
+	},
+	{
+		Source: "internal/models/...",
+		Target: "internal/app/...",
+		Reason: "models (DTOs) must not depend on use cases (ADR-006; phase-A3.1; broadened in phase-R5.0)",
+	},
+	{
+		Source: "internal/models/...",
+		Target: "internal/api",
+		Reason: "models (DTOs) must not depend on the HTTP router (ADR-006; phase-A3.1; broadened in phase-R5.0)",
 	},
 }
 
 // Exception records edges that are forbidden by rule but grandfathered
-// for now. Each entry MUST cite the prompt that will remove it.
+// for now. Each entry must explain when it can be removed.
 type Exception struct {
 	Source string
 	Target string
-	Until  string // prompt that removes the exception, e.g. "phase-47/05"
+	Until  string // condition or milestone that removes the exception
 }
 
-// AllowedExceptions lists currently-tolerated forbidden edges. Each entry
-// MUST be removed by the cited prompt; arch_test will start failing again
-// at that point unless the underlying violation is fixed.
+// AllowedExceptions lists currently tolerated forbidden edges. Each entry
+// must be removed when its stated condition is met; arch_test will start
+// failing again unless the underlying violation is fixed.
 //
-// Phase-47/05 cleared the worker→internal/api exceptions: the workers now
-// depend on internal/apilog and internal/notification/computed (extracted
-// in that prompt) instead of the HTTP handler package.
-var AllowedExceptions = []Exception{}
+// These carve-outs mirror the composition-root exceptions in
+// tools/archmetrics/main.go forbiddenEdges (ExceptFrom):
+//   - internal/app top-level is the ONLY legitimate wiring layer for
+//     internal/api (HTTP transport) — it owns the router lifecycle.
+//   - internal/handler/middleware exposes a per-request pgx query counter
+//     that must be attached to context. The counter primitive lives in
+//     internal/database/query_budget.go (an observability cross-cut). The
+//     proper fix is to extract that primitive to internal/platform/
+//     dbobserver/ during a platform reshape.
+var AllowedExceptions = []Exception{
+	{
+		Source: "internal/app",
+		Target: "internal/api",
+		Until:  "permanent — internal/app top-level is THE composition root for HTTP transport (phase-A3.1)",
+	},
+	{
+		Source: "internal/handler/middleware",
+		Target: "internal/database",
+		Until:  "phase-A5 or later — extract query-budget counter primitive to internal/platform/dbobserver/ (phase-A3.1)",
+	},
+}
 
-// AdvisorySources marks rules whose violations log a WARNING but DO NOT
-// fail the test. Prompts that promote a rule to fail-level remove the
-// matching entry from this set.
-//
-// Phase-47/09 cleared "internal/domain/...": both domain→adapter and
-// domain→database edges in ForbiddenEdges are now FAIL-level.
-// Domain purity is independently enforced (more strictly) by
-// TestDomainPurity (ADR-006).
-//
-// Phase-47/10 cleared "internal/handler/v1": handler→database is now
-// FAIL-level. Handler thinness is independently enforced (more
-// strictly, with extra deny-list targets) by TestHandlerV1Thinness.
+// AdvisorySources marks rules whose violations log a warning but do not
+// fail the test. Empty means every configured rule is fail-level.
+// Domain purity and handler thinness are also enforced by focused tests.
 var AdvisorySources = map[string]bool{}
 
 // FrozenPackages lists package paths where new .go files (excluding
-// _test.go files for existing source files) are not allowed. Phase-47/06
-// declares the first entry per ADR-009: internal/api is frozen against
-// new files because internal/handler/v1 is now the canonical home for
-// new HTTP handlers.
+// _test.go files for existing source files) are not allowed. ADR-009
+// freezes internal/api because internal/handler/v1 is the canonical home
+// for new HTTP handlers.
 //
 // arch_test compares the live file list against
 // tools/archmetrics/baseline.json and fails if any production .go file
@@ -185,11 +302,10 @@ var ModelsForbiddenImports = []string{
 	"internal/port",
 }
 
-// AllowedPlatformSubpackages is the closed set of permitted
-// directories directly under internal/platform/. Per ADR-007
-// (phase-47/08), adding a new one requires an ADR amendment AND
-// updating this list in the same commit. arch_test
-// (TestPlatformSubpackagesGated) enforces.
+// AllowedPlatformSubpackages is the closed set of permitted directories
+// directly under internal/platform/. Per ADR-007, adding a new one
+// requires an ADR amendment and updating this list in the same commit.
+// arch_test (TestPlatformSubpackagesGated) enforces this.
 var AllowedPlatformSubpackages = []string{
 	"buildinfo",
 	"cache",
@@ -200,8 +316,8 @@ var AllowedPlatformSubpackages = []string{
 }
 
 // AdapterForbiddenImports lists internal/* package prefixes that
-// internal/adapter/* packages may NOT import. Per the phase-47/09
-// hexagonal contract, adapters MUST NOT depend on transport
+// internal/adapter/* packages may NOT import. Per the hexagonal
+// contract, adapters MUST NOT depend on transport
 // (internal/api, internal/handler/*) or use cases (internal/app/*).
 // Adapters MAY import stdlib, internal/port/* (the interfaces they
 // implement), internal/domain/* (entity types), internal/models (DB
@@ -214,8 +330,8 @@ var AdapterForbiddenImports = []string{
 }
 
 // PortAllowedInternalImports lists the internal/* package prefixes
-// that an internal/port/* package may import. Per the phase-47/09
-// hexagonal contract, ports declare interfaces and MAY import only
+// that an internal/port/* package may import. Per the hexagonal
+// contract, ports declare interfaces and MAY import only
 // stdlib, the parent internal/port package, sibling internal/port/*
 // packages, and internal/domain/* (entity types appearing in port
 // signatures). Anything else is forbidden.
@@ -225,8 +341,8 @@ var PortAllowedInternalImports = []string{
 }
 
 // HandlerV1ForbiddenImports lists internal/* package prefixes that
-// files in internal/handler/v1 may NOT import. Per the phase-47/10
-// thinness contract, handlers MUST NOT touch persistence
+// files in internal/handler/v1 may NOT import. Per the thin-handler
+// contract, handlers MUST NOT touch persistence
 // (internal/database, internal/platform/database), adapters
 // (internal/adapter/*), persistence DTOs (internal/models), or the
 // FROZEN HTTP package (internal/api). Handlers depend on

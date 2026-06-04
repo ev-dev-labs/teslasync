@@ -52,15 +52,14 @@ export default function MileagePage() {
 
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
-  // Backend `/mileage/{stats,daily,monthly}` returns SI kilometres
-  // (Phase-43a / Prompt 0004 + Phase-43a / Prompt 0009 fix/misc-fixes).
-  // `convertDistanceFromSI` expects SI meters — multiply km by 1000.
+  // Backend `/mileage/{stats,daily,monthly}` returns kilometres, while
+  // `convertDistanceFromSI` expects meters — multiply km by 1000.
   const fromKm = (km: number) => convertDistanceFromSI(km * 1000, distanceUnit);
 
-  // Phase-45/23 — reactive chart palette (CB-safe / neon per user pref).
+  // Reactive chart palette follows the active theme and color-vision settings.
   const palette = useChartPalette();
 
-  // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
+  // Header VehiclePicker is the source of truth.
   const { vehicleId } = useSelectedVehicle();
   const activeId = vehicleId != null ? String(vehicleId) : '';
 
@@ -104,7 +103,6 @@ export default function MileagePage() {
     [dailyRows, fromKm],
   );
 
-  /* Daily distance (bar chart). */
   const dailyData = useMemo(
     () =>
       dailyRows.map((d) => ({
@@ -136,7 +134,7 @@ export default function MileagePage() {
     { key: 'dailyAvg', header: `${t('Distance per Drive')} (${distanceUnit})`, render: (r) => fmtNumber(r.dailyAvg), sortable: true },
   ], [t, distanceUnit]);
 
-  // Defensive guard: no vehicle selected (Phase 40 / Prompt 18).
+  // Defensive guard: no vehicle selected.
   if (vehicleId == null) {
     return <NoVehicleSelected pageTitle={t('mileage.title', 'Mileage')} />;
   }

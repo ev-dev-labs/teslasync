@@ -1,22 +1,22 @@
-// Phase-50 / 0034 — A1 Alert tuning suggestions.
+// Alert tuning suggestions.
 //
-// W1 inline wiring (P11/P12):
+// Streaming contract:
 //   - useAiStream targets POST /ai/alerts/rules/{ruleID}/tune/draft
 //     (the backend path after stripping the /api/v1 prefix).
 //   - The primary action button is disabled via a COMPUTED expression
 //     (`stream.state === 'streaming' || stream.state === 'paused-confirm' || !ruleId`),
-//     never a literal `disabled` or `disabled={true}` (Rule W1-A).
+//     never a literal `disabled` or `disabled={true}`.
 //   - tool_result frames carrying a typed AlertRulePatchProposal are
 //     captured in component state; clicking "Apply to form" copies
 //     the proposed scalars onto the parent form via the onApplyDraft
 //     callback. The AI panel NEVER persists state directly — the
 //     baseline AlertStudio Save button remains the sole write path
-//     (ADR-015 §I3 + §I8 propose-only contract).
+//     (ADR-015 §I3 + §I8).
 //   - cancel() runs on unmount AND on ruleId change (dedicated
 //     useEffect with explicit deps).
 //   - Component is wrapped with withAiFeature so it is ABSENT (returns
 //     null) when ai_mode='off' or the per-feature toggle is off
-//     (ADR-015 §I5 hidden UI).
+//     (ADR-015 §I5).
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -137,7 +137,7 @@ function InnerSection({
   // Cancel + reset on ruleId change so a stale stream from a
   // previously-selected rule cannot bleed proposals into the new
   // rule's editor. Dedicated effect so the cleanup deps stay
-  // explicit (Rule of Hooks / W1 §6).
+  // explicit and Rule-of-Hooks safe.
   useEffect(() => {
     return () => {
       cancelStream()

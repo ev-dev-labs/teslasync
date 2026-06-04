@@ -1,6 +1,4 @@
-// Phase-50 / 0062 — ML1 Learned per-vehicle anomaly baselines.
-//
-// safe_ranges.go ships the canonical static safe-range envelope used
+// Package anomaly keeps the canonical static safe-range envelope used
 // as the deterministic FALLBACK by the learned-baseline trainer when
 // a per-vehicle signal does not yet have enough samples for a
 // statistical envelope (mean/stddev/p5/p95). The envelope is a
@@ -8,19 +6,11 @@
 // anomaly detector at internal/api/anomaly_handler.go already uses
 // as the canonical baseline visible to every off-mode user.
 //
-// Why this map lives here AND in internal/api/anomaly_handler.go:
-//
-//	The Phase-50 / 0062 slice's allowed-files list explicitly admits
-//	`internal/ml/**` for ML-tier code AND forbids touching the
-//	non-AI baseline at internal/api/anomaly_handler.go beyond what is
-//	strictly required for this slice. Moving the canonical map out
-//	of api would change the deterministic detector's import surface
-//	(api would import internal/ml/anomaly), which is a wider
-//	architectural change than this slice should make. The two-copy
-//	approach is contained: the parity test at
-//	internal/api/ai_ml_anomaly_safe_ranges_parity_test.go pins the
-//	two maps byte-for-byte, so a future divergence is surfaced as a
-//	failing test rather than a silent learned-baseline regression.
+// This map intentionally remains duplicated with internal/api/anomaly_handler.go.
+// Moving it into internal/ml/anomaly would make the deterministic detector import
+// this package; the parity test at
+// internal/api/ai_ml_anomaly_safe_ranges_parity_test.go pins the two maps
+// byte-for-byte so drift fails loudly.
 //
 // Importing direction:
 //

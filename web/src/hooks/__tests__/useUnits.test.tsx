@@ -1,5 +1,5 @@
 /**
- * Phase-43 / Prompt 0013 — `useUnits` SI-aware formatter tests.
+ * `useUnits` SI-aware formatter tests.
  *
  * Verifies that:
  *   1. `unitPrefs` is derived correctly from `useSettings()` for both the

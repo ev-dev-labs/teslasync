@@ -1,5 +1,4 @@
-// Package feedbackqueuetriage is the Phase-50 / 0046 S5 strategy
-// for the LLM-backed feedback-queue-triage surface.
+// Package feedbackqueuetriage implements the LLM-backed feedback-queue triage surface.
 //
 // The strategy declares:
 //
@@ -42,7 +41,7 @@
 //     3. `retrieve_feedback_chunks` — OPTIONAL F7 retrieval over
 //     the per-feature source-type allowlist {feedback_item,
 //     audit_log}. Both source types are reserved by string for
-//     forward-compatibility — a future slice will index per-item
+//     forward-compatibility — a future feature will index per-item
 //     feedback chunks and an audit-log corpus. Until then,
 //     retrieve_feedback_chunks called with either source type
 //     simply returns zero chunks for that corpus — which is the
@@ -50,14 +49,14 @@
 //     zero-matches narration and the system prompt instructs the
 //     LLM to answer gracefully when zero chunks are returned.
 //
-//   - the redaction policy (`PolicyAlertBuilder`) which the slice
-//     prompt mandates ("Allowed classes: none; feedback text is
+//   - the redaction policy (`PolicyAlertBuilder`), which the feature
+//     requires: allowed classes are none; feedback text is
 //     redacted and proposals require confirmation"): every PII
 //     class — VIN, lat/long, addresses, place names, vehicle-name,
 //     AND every other PII class — remains tagged via round-trip
 //     markers so a leaked transcript reveals nothing about a
 //     submitter's environment. PolicyAlertBuilder mirrors the
-//     N1 alert-builder slice's deny-by-default stance.
+//     alert-builder's deny-by-default stance.
 //
 // The strategy is consumed by the AI HTTP handler at
 // `internal/api/ai_feedback_triage_handler.go` which builds a
@@ -69,7 +68,7 @@
 // is unchanged. The registry's Frontend coverage anchor is
 // `/system/feedback`; the AI section is rendered inside the
 // canonical FeedbackQueuePage when the feature is enabled (same
-// path-drift as slice 0045's log-trace-summarization, which
+// path-drift as log-trace-summarization, which
 // rendered inside LiveLogsPage at /live-logs even though its
 // registry anchor was /system/logs). Off-mode users never see the
 // AI section at all (ADR-015 §I3, §I5, §I6).
@@ -211,14 +210,14 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyAlertBuilder from
+// Per the feature requirements: "Policy: PolicyAlertBuilder from
 // internal/ai/redact/policies.go. Allowed classes: none; feedback
 // text is redacted and proposals require confirmation. Round-trip
 // required: no." PolicyAlertBuilder's deny-by-default stance keeps
 // every PII class round-tripped to a tag before the message ever
 // reaches the provider. The "round-trip required: no" half of the
-// slice prompt is honoured by NOT installing a post-provider
-// restoration step in this slice's handler — the proposal renders
+// feature requirements is honoured by NOT installing a post-provider
+// restoration step in this feature's handler — the proposal renders
 // the redacted tags as-is in the AI panel; the user sees the
 // canonical row in the baseline form alongside.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {

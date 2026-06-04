@@ -1,5 +1,5 @@
-// Package anomalyexplanations is the Phase-50 / U4 strategy for the
-// LLM-narrated explanation of already-detected anomalies.
+// Package anomalyexplanations provides the LLM-narrated explanation
+// of already-detected anomalies.
 //
 // The strategy declares:
 //
@@ -9,7 +9,7 @@
 //     suppression or threshold edits;
 //   - the single read-only tool the LLM is allowed to call —
 //     `query_anomaly_context` — which calls into the existing
-//     *api.AnomalyHandler.DetectAnomalies (no new SQL written);
+//     (*apianomaly.Handler).DetectAnomalies (no new SQL written);
 //   - the redaction policy (`PolicyDigest`) which allows
 //     ClassVehicleName so the narration can address the user's car
 //     by name; every other PII class is redacted via round-trip tags.
@@ -26,12 +26,12 @@
 //
 //   - I1 default-off:    feature toggle defaults false in features.Registry.
 //   - I3 baseline intact: this strategy never replaces the detector
-//                         or the static safeRanges-based messages
-//                         emitted by anomaly_handler.go.
+//     or the static safeRanges-based messages
+//     emitted by anomaly_handler.go.
 //   - I7 per-feature:     the AI route is gated by guard.Wrap("anomaly-explanations").
 //   - I9 redaction:       PolicyDigest restricts cleartext to vehicle
-//                         name only; numeric anomaly facts are bounded
-//                         and contain no free-form PII.
+//     name only; numeric anomaly facts are bounded
+//     and contain no free-form PII.
 package anomalyexplanations
 
 import (
@@ -86,7 +86,7 @@ const SystemPrompt = `You are the TeslaSync anomaly narrator. ` +
 // dispatcher construction time — the dispatcher refuses to mount a
 // strategy that references an unknown tool.
 //
-// This slice ships zero mutating tools: anomaly explanation only
+// This strategy ships zero mutating tools: anomaly explanation only
 // READS already-detected state. A future "suggest a remediation"
 // strategy that needs to propose a maintenance task will add its
 // own strategy with its own confirm hook.
@@ -134,21 +134,18 @@ func (s *Strategy) Tools() []string {
 //
 // Future work: this is where a per-vehicle "user prefers SI vs US
 // units" preference snippet would be injected once anomaly narration
-// grows that surface. Today's slice keeps Context empty so the
-// dispatcher's behaviour is fully determined by [System] + History.
+// grows that surface. Context stays empty so the dispatcher's
+// behaviour is fully determined by [System] + History.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyDigest wrapped through the F4↔F8 adapter so the dispatcher's
+// PolicyDigest wrapped through the redaction adapter so the dispatcher's
 // per-request ctx-installation step (dispatch.Run installs the
 // policy via redact.WithPolicy) sees the concrete policy.
 //
-// Per the slice prompt: "Policy: PolicyDigest from
-// internal/ai/redact/policies.go. Allowed classes: ClassVehicleName
-// only; anomaly facts are passed as bounded numeric DTOs". Reusing
-// PolicyDigest is intentional — the narration's value proposition
+// Reusing PolicyDigest is intentional: the narration's value proposition
 // matches the digest's (name the car, never expose VINs/coords).
 // A future change that diverges anomaly redaction from digest
 // redaction can introduce a dedicated PolicyAnomalyExplanations()

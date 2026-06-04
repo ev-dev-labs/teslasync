@@ -9,7 +9,7 @@ import { useOptionalToast } from '@/components/feedback/Toast'
  *
  * Promoted from `features/admin/components/devtools/CopyButton.tsx` to the shared
  * UI library so every page can use the same affordance instead of rolling its
- * own `navigator.clipboard.writeText` block. Phase-40 / Prompt 53.
+ * own `navigator.clipboard.writeText` block.
  *
  * Defaults match the original component (ghost/sm, label toggles between
  * `Copy` / `Copied`) so existing callers don't need any changes beyond the

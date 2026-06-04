@@ -100,11 +100,10 @@ export function GeneralSettings() {
   })
   const [saved, setSaved] = useState(false)
 
-  // Phase-45 / Prompt 16: in-app navigation guard. The settings form has no
-  // explicit isDirty flag — diff the in-progress draft against the persisted
-  // server snapshot so sidebar clicks / browser back surface a discard
-  // dialog while the user has un-applied changes. Falls back to "no diff
-  // possible" until settings load.
+  // In-app navigation guard. The settings form has no explicit isDirty flag,
+  // so diff the in-progress draft against the persisted server snapshot. This
+  // surfaces a discard dialog for sidebar clicks or browser back while the user
+  // has unapplied changes. Falls back to "no diff possible" until settings load.
   const isDirty = useMemo(() => {
     if (!settings) return false
     if (settingsMut.isPending) return false

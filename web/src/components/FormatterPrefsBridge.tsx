@@ -12,7 +12,7 @@ import {
 } from '@/lib/numberFormat'
 
 /**
- * Phase-45 / Prompt 06 — keeps module-level formatter globals
+ * Keeps module-level formatter globals
  * (`numberFormat._globalLocale`, `_globalPrecision`) in sync with the
  * persisted user settings, regardless of which page is currently
  * mounted.

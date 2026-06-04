@@ -1,7 +1,7 @@
 /**
  * @module api/hooks/useAuthMode
  *
- * Phase-46 / Prompt 57 — Auth-mode contract.
+ * Auth-mode contract.
  *
  * Single source of truth for "what authentication mode is this
  * deployment running in, and who is the current request's principal".

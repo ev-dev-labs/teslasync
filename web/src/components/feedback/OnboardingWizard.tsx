@@ -56,8 +56,8 @@ export default function OnboardingWizard() {
     }
   }, [])
 
-  // Phase-40 / Prompt 69 — when another tab finishes onboarding, dismiss
-  // the wizard here too instead of letting two tabs race the same intro.
+  // When another tab finishes onboarding, dismiss the wizard here too
+  // instead of letting two tabs race the same intro.
   useEffect(() => {
     return subscribe((m) => {
       if (m.type === 'onboarded') setVisible(false)

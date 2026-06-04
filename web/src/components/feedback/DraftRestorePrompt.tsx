@@ -13,7 +13,7 @@ import {
 import { subscribe as subscribeBroadcast, TAB_ID } from '@/lib/broadcast'
 
 /**
- * Phase-46 / Prompt 47 — DraftRestorePrompt.
+ * Draft restore prompt.
  *
  * Surfaces unsaved `useFormDraft` work after a tab close, browser crash,
  * PWA reload, or auth redirect. Mounted once globally in `Layout.tsx`,

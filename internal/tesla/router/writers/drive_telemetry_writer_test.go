@@ -32,7 +32,7 @@ func newDriveTelemetryTestWriter(t *testing.T, rec *recorder) *driveTelemetryWri
 }
 
 // TestDriveTelemetryWriter_ColumnMapMatchesRoutingYAML is the
-// reflective coverage gate from phase-42a prompt 0020 Decision #5.
+// reflective coverage gate for drive_telemetry routing.
 // It walks router.LoadMap() (which parses the embedded routing.yaml),
 // filters to entries with Destination == DestDriveTelemetry, and
 // asserts the driveTelemetryColumnByField map in
@@ -164,8 +164,8 @@ func TestDriveTelemetryWriter_EnumFieldsMatchProtomodel(t *testing.T) {
 	}
 }
 
-// TestDriveTelemetryWriter_TypeMatrix exercises one positive write
-// per kind from phase-42a prompt 0020 Decision #6: float64, bool,
+// TestDriveTelemetryWriter_TypeMatrix exercises one positive write per
+// supported kind: float64, bool,
 // and the proto-enum-via-Stringer path that drives the gear column.
 // We pick representative routed fields so the map lookup AND the
 // snapshotWriter SQL composition are both covered:
@@ -230,8 +230,8 @@ func TestDriveTelemetryWriter_TypeMatrix(t *testing.T) {
 	}
 }
 
-// TestDriveTelemetryWriter_DriveIDNotTouched locks phase-42a prompt
-// 0020 Decision #3: the writer NEVER references the drive_id column
+// TestDriveTelemetryWriter_DriveIDNotTouched locks the invariant that the
+// writer never references the drive_id column
 // on insert. drive_id is backfilled by the session tracker observer
 // in 0030 via a separate UPDATE; if the writer accidentally included
 // drive_id in the column list it would either (a) write SQL NULL on
@@ -291,8 +291,8 @@ func TestDriveTelemetryWriter_DriveIDNotTouched(t *testing.T) {
 	}
 }
 
-// TestDriveTelemetryWriter_UnknownFieldReturnsError covers
-// phase-42a prompt 0020 Decision #6: a Field that is NOT routed to
+// TestDriveTelemetryWriter_UnknownFieldReturnsError verifies that a Field
+// not routed to
 // drive_telemetry must produce a "no column mapping" error and
 // MUST NOT touch the DB.
 //
@@ -436,7 +436,7 @@ type emptyStringer struct{}
 func (emptyStringer) String() string { return "" }
 
 // TestNewDriveTelemetryWriter_NilPoolPanics locks the constructor's
-// fail-fast contract from phase-42a prompt 0020 Decision #1. A nil
+// fail-fast contract. A nil
 // pool is a wiring bug and panics so the failure surfaces at process
 // start, not at the first payload.
 func TestNewDriveTelemetryWriter_NilPoolPanics(t *testing.T) {

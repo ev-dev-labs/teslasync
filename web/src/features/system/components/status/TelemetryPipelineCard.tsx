@@ -2,23 +2,23 @@
  * TelemetryPipelineCard — operator-grade per-vehicle telemetry liveness.
  *
  * Renders:
- *  - Compact fleet stats grid (vehicles · positions · drives · charges · signals)
- *  - Per-vehicle list showing which vehicles are sending data right now,
+ *  Compact fleet stats grid (vehicles · positions · drives · charges · signals)
+ *  Per-vehicle list showing which vehicles are sending data right now,
  *    when each was last seen (most recent of MQTT stream OR REST poll),
  *    what state it's in, battery %, and the next scheduled poll.
  *
  * TeslaSync has TWO ingest paths and a vehicle can be live on either:
  *   1. Fleet Telemetry streaming → MQTT broker → `/telemetry` (useMQTTStatus)
- *      — primary path for phase-42+ deployments
+ *      primary path for + deployments
  *   2. Legacy REST polling engine → `/polling/status` (getPollingStatus)
- *      — fallback for vehicles not enrolled in Fleet Telemetry
+ *      fallback for vehicles not enrolled in Fleet Telemetry
  *
  * Liveness is the MOST RECENT of {last MQTT message, last poll}.
  * Threshold ladder (applied to the union timestamp):
- *   < 5 min   → green (sending)
- *   5–30 min  → amber (slow / asleep cadence)
- *   > 30 min  → red   (stale)
- *   no signal → grey  (offline)
+ *   < 5 min → green (sending)
+ *   5–30 min → amber (slow / asleep cadence)
+ *   > 30 min → red (stale)
+ *   no signal → grey (offline)
  *
  * The "polling engine disabled" chip is informational, NOT a problem
  * state, when MQTT streaming is healthy — many production setups disable

@@ -1,5 +1,5 @@
-// Package preheatprecoolrecommender is the Phase-50 / 0031 T1 strategy
-// for the LLM-driven preheat/precool schedule recommender.
+// Package preheatprecoolrecommender provides the LLM-driven
+// preheat/precool schedule recommender.
 //
 // The strategy declares:
 //
@@ -10,8 +10,7 @@
 //     persist anything, never modify the deterministic
 //     ClimateControlPage stats, refuse cross-vehicle requests, and
 //     ALWAYS require explicit confirmation before any schedule is
-//     created (matches the slice prompt's verbatim mandate
-//     "requiring confirmation before creating any schedule");
+//     created;
 //
 //   - the two propose-only tools the LLM is allowed to call:
 //
@@ -50,11 +49,10 @@
 // departure-time heuristic — is unchanged. Off-mode users never see
 // the AI surface at all (ADR-015 §I3, §I5, §I6).
 //
-// Service-worker chunks: this slice's frontend code is loaded under
-// the page-bundle for /climate (and the aliased
-// /vehicle-systems/climate-control); the off-mode walker validates
-// code chunks via the `withAiFeature` HOC + the AI_FEATURES map.
-// See the slice log for the documented mapping.
+// Service-worker chunks: frontend code for this feature is loaded
+// under the page bundle for /climate and the aliased
+// /vehicle-systems/climate-control; the off-mode walker validates
+// chunks via the `withAiFeature` HOC and AI_FEATURES map.
 //
 // ADR-015 alignment:
 //
@@ -111,9 +109,7 @@ const FeatureID = "preheat-precool-recommender"
 //     the schedule is PROPOSE-only.
 //   - REQUIRES the narration to ask the user to CONFIRM via the
 //     existing manual climate-controls UI before any schedule is
-//     created. The slice prompt's verbatim mandate is "requiring
-//     confirmation before creating any schedule"; the prompt makes
-//     that confirmation contract explicit.
+//     created; the prompt makes that confirmation contract explicit.
 //   - Refuses cross-vehicle requests: the AI handler always scopes
 //     to the caller-supplied vehicle_id from the body; any other
 //     vehicle ID in the user message is by definition out of scope.
@@ -144,10 +140,9 @@ const SystemPrompt = `You are the TeslaSync preheat-and-precool recommender. ` +
 // Both tools are PROPOSE / pure-functional: neither touches the
 // database write path. The dispatcher's deny-all confirm gate is
 // therefore never reached in practice — defence in depth in case a
-// future edit accidentally adds a write tool. The slice prompt's
-// "requiring confirmation before creating any schedule" mandate is
-// satisfied by the absence of any save_* tool: the user must click
-// the existing manual climate-controls UI to apply.
+// future edit accidentally adds a write tool. The confirmation
+// requirement is satisfied by the absence of any save_* tool: the
+// user must click the existing manual climate-controls UI to apply.
 var allowedTools = []string{
 	"draft_climate_schedule",
 	"validate_climate_schedule",
@@ -194,21 +189,18 @@ func (s *Strategy) Tools() []string {
 //
 // Future work: this is where a per-vehicle "preferred preheat
 // temperature" preference snippet would be injected once
-// preheat-precool-recommender grows that surface. Today's slice
-// keeps Context empty so the dispatcher's behaviour is fully
-// determined by [System] + History.
+// preheat-precool-recommender grows that surface. Context stays empty
+// so the dispatcher's behaviour is fully determined by [System] + History.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyPreheatPrecoolRecommender wrapped through the F4↔F8
+// PolicyPreheatPrecoolRecommender wrapped through the redaction
 // adapter so the dispatcher's per-request ctx-installation step
 // (dispatch.Run installs the policy via redact.WithPolicy) sees
 // the concrete policy.
 //
-// Per the slice prompt: "Allowed classes: ClassVehicleName only;
-// departure places remain tagged. Round-trip required: yes".
 // PolicyPreheatPrecoolRecommender is the per-feature constructor
 // with the same allow-list as PolicyDigest /
 // PolicySmartChargeScheduleSuggestion / PolicyVampireDrainExplanation

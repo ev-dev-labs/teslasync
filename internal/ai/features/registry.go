@@ -5,7 +5,7 @@
 //
 //  1. The Settings UI is generated from this registry — adding a new
 //     toggle means adding an entry, not touching the form.
-//  2. The off-mode walker (Phase-50 / 9999 final-gate) discovers every
+//  2. The off-mode walker discovers every
 //     feature surface through this registry, so a feature without an
 //     entry is invisible to the AI-off contract enforcement.
 //  3. The Go vet tool tools/aivet asserts every /api/v1/ai/* route is
@@ -31,14 +31,14 @@ import (
 )
 
 // RouteSet enumerates every concrete surface a feature exposes. The
-// final-gate AI-off invariant suite walks each list and asserts the
+// final gate AI-off invariant suite walks each list and asserts the
 // expected behaviour for each in `ai_mode='off'`:
 //
-//   - Backend  : HTTP request → 404
-//   - Frontend : React route mount → no DOM nodes carrying the feature's
-//     UITestIDs
-//   - JobNames : background dispatcher gate trips before execution
-//   - PushKinds: push fan-out worker filters before delivery
+//	Backend: HTTP request → 404
+//	Frontend: React route mount → no DOM nodes carrying the feature's
+//	  UITestIDs
+//	JobNames: background dispatcher gate trips before execution
+//	PushKinds: push fan-out worker filters before delivery
 //
 // Empty arrays are explicit and allowed — they mean "this feature
 // does not have this kind of surface". A nil array, by contrast, is a
@@ -72,7 +72,7 @@ type RouteSet struct {
 }
 
 // Feature is one row in the registry. The tier code is a single
-// letter mapping to the Phase-50 methodology slice prefix
+// letter mapping to the methodology tier prefix
 // (F, U, N, D, C, T, A, G, X, S, M, P, V, PU, GEN, ML).
 //
 // DefaultOn must be false for every feature (ADR-015 §I7); the field
@@ -91,16 +91,14 @@ type Feature struct {
 }
 
 // Registry is the single source of truth for AI feature metadata.
-// Every later Phase-50 slice (0011 onward) extends this map with a
-// populated entry as part of its diff. A slice that does not is
+// Each feature registration extends this map with a
+// populated entry as part of its diff. A feature that does not is
 // rejected by aivet and the ESLint rule at CI time.
 //
 // Keys MUST match the canonical kebab-case ID embedded in the entry
 // (CoverageOK enforces this).
 var Registry = map[string]Feature{
-	// Phase-50 / U1 (slice 0011) seeds the LLM chatbot. The route
-	// stub is wired in slice F0 (this slice) so the AI-off contract
-	// has a concrete 404 to assert against.
+	// LLM chatbot route stub used by the AI-off contract.
 	"chatbot-llm": {
 		ID:          "chatbot-llm",
 		Name:        "LLM Chatbot",
@@ -119,7 +117,7 @@ var Registry = map[string]Feature{
 		},
 	},
 
-	// Phase-50 / F1 (slice 0002) — provider-abstraction health probe.
+	// provider-abstraction health probe.
 	// Ops-only diagnostic that reports the *currently active*
 	// adapter's name + capabilities so a deploy can confirm the
 	// settings-driven provider selection behaves as expected. Has no
@@ -143,7 +141,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / F3 (slice 0004) — AI Call Log + Usage Card meta-feature.
+	// AI Call Log + Usage Card meta-feature.
 	//
 	// `__usage__` is a SPECIAL-CASE meta-feature: it has no per-feature
 	// content of its own, only a usage/spend visualisation that the
@@ -180,7 +178,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / U2 (slice 0012) — Weekly digest narration.
+	// Weekly digest narration.
 	//
 	// Adds opt-in LLM-narrated prose on top of the existing template
 	// weekly digest. The baseline template renderer at
@@ -194,7 +192,7 @@ var Registry = map[string]Feature{
 	// (ADR-015 §I6).
 	//
 	// Frontend: the canonical host route is `/analytics/digest`
-	// (declared per the slice prompt) — the AI section actually
+	// (declared per the feature spec) — the AI section actually
 	// renders inside the existing /weekly-digest page so the off-mode
 	// invariant test (`WeeklyDigestAIOff.test.tsx`) can prove that
 	// the wrapped component carrying `ai-feature-digest-narration-root`
@@ -226,7 +224,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{"ai_digest_ready"},
 		},
 	},
-	// Phase-50 / U3 (slice 0013) — Year-in-review narration.
+	// Year-in-review narration.
 	//
 	// Adds opt-in LLM-narrated prose layered on top of the existing
 	// template year-in-review slide deck. The baseline slide renderer
@@ -240,14 +238,14 @@ var Registry = map[string]Feature{
 	// guard.Wrap so off-mode requests return 404 BEFORE the handler
 	// runs (ADR-015 §I6).
 	//
-	// Frontend: the canonical host route declared by the slice prompt
+	// Frontend: the canonical host route declared by the feature spec
 	// is `/analytics/year-in-review` — the AI section actually renders
 	// inside the existing /year-review/:year page so the off-mode
 	// invariant test (`YearReviewAIOff.test.tsx`) can prove that the
 	// wrapped component carrying `ai-feature-yir-narration-root` is
 	// absent from the DOM in off mode. The pattern (canonical host
 	// route in the registry, real render path elsewhere) mirrors the
-	// digest-narration entry above (slice 0012); both surfaces are
+	// digest-narration entry above; both surfaces are
 	// rendered conditionally inside the same baseline page they
 	// narrate.
 	//
@@ -278,7 +276,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{"ai_yir_ready"},
 		},
 	},
-	// Phase-50 / U4 (slice 0014) — Anomaly explanation narration.
+	// Anomaly explanation narration.
 	//
 	// Adds opt-in LLM-narrated plain-language explanation of anomalies
 	// the deterministic Z-score detector has ALREADY identified. The
@@ -292,7 +290,7 @@ var Registry = map[string]Feature{
 	// Detector behaviour, threshold values, and alerting routing are
 	// UNCHANGED. The strategy reads anomalies via the typed
 	// `query_anomaly_context` tool which delegates to the existing
-	// AnomalyHandler.DetectAnomalies — no new SQL, no parallel
+	// (*apianomaly.Handler).DetectAnomalies — no new SQL, no parallel
 	// detector implementation.
 	//
 	// Backend: POST /api/v1/ai/anomalies/explain is mounted by
@@ -300,7 +298,7 @@ var Registry = map[string]Feature{
 	// off-mode requests return 404 BEFORE the handler runs (ADR-015
 	// §I6).
 	//
-	// Frontend: the canonical host route declared by the slice prompt
+	// Frontend: the canonical host route declared by the feature spec
 	// is `/analytics/anomalies` — the AI section actually renders
 	// inside the existing /anomaly-detection page (the only anomaly
 	// dashboard in the SPA today; lives under
@@ -311,7 +309,7 @@ var Registry = map[string]Feature{
 	// component carrying `ai-feature-anomaly-explanations-root` is
 	// absent from the DOM in off mode.
 	//
-	// Background / Push: this slice ships zero new jobs and zero new
+	// Background / Push: this feature ships zero new jobs and zero new
 	// push kinds — anomaly explanation is request/response, narrated
 	// on demand from the dashboard. The empty arrays are explicit so
 	// CoverageOK passes.
@@ -332,16 +330,16 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / D4 (slice 0024) — Auto trip naming.
+	// Auto trip naming.
 	//
 	// Adds opt-in LLM-assisted SUGGESTION of trip names from the
 	// route context of one existing trip. The strategy is
 	// propose-only: the AI produces a structured name proposal via
-	// the F4 `draft_trip_name` + `validate_trip_name` tools and the
+	// the `draft_trip_name` + `validate_trip_name` tools and the
 	// user then explicitly confirms / edits / saves the name from
 	// the TripDetailPage UI. The actual persistence flows through
 	// the existing typed trip-update path (out of scope for this
-	// slice — the slice prompt says "while requiring explicit user
+	// feature — the feature spec says "while requiring explicit user
 	// confirmation before saving"). Both tools are pure DTO
 	// transforms with no DB writes.
 	//
@@ -403,12 +401,12 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / N1 (slice 0015) — Natural-language alert builder.
+	// Natural-language alert builder.
 	//
 	// Adds opt-in LLM-assisted DRAFTING of AlertRule DTOs from a
 	// natural-language description of the desired alert. The strategy
 	// is propose-only: the AI produces a typed AlertRule draft via the
-	// F4 `draft_alert_rule` + `validate_alert_rule` tools and the user
+	// `draft_alert_rule` + `validate_alert_rule` tools and the user
 	// then explicitly clicks Save in the existing AlertStudioPage —
 	// the actual mutation flows through the existing
 	// POST /api/v1/alerts/rules typed handler, which is unchanged.
@@ -426,7 +424,7 @@ var Registry = map[string]Feature{
 	// for the user to confirm or edit before saving through the
 	// canonical alerts handler. No state is mutated by this route.
 	//
-	// Frontend: the canonical host route declared by the slice prompt
+	// Frontend: the canonical host route declared by the feature spec
 	// is `/alerts/studio` — the AI section actually renders inside
 	// the existing /notifications/studio page (the only AlertStudio
 	// page in the SPA today; lives under `web/src/features/notifications/...`
@@ -440,7 +438,7 @@ var Registry = map[string]Feature{
 	// elsewhere) mirrors the digest-narration / yir-narration /
 	// anomaly-explanations entries above.
 	//
-	// Background / Push: this slice ships zero new jobs and zero new
+	// Background / Push: this feature ships zero new jobs and zero new
 	// push kinds — alert drafting is request/response, on demand from
 	// the AlertStudio page. The empty arrays are explicit so
 	// CoverageOK passes.
@@ -461,12 +459,12 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / N2 (slice 0016) — Natural-language automation builder.
+	// Natural-language automation builder.
 	//
 	// Adds opt-in LLM-assisted DRAFTING of typed Automation graph DTOs
 	// (trigger + conditions + actions) from a natural-language
 	// description. The strategy is propose-only: the AI produces a
-	// typed automation draft via the F4 `draft_automation_graph` +
+	// typed automation draft via the `draft_automation_graph` +
 	// `validate_automation_graph` tools and the user then explicitly
 	// clicks Save in the existing AutomationBuilderPage — the actual
 	// mutation flows through the existing POST /api/v1/automations
@@ -489,7 +487,7 @@ var Registry = map[string]Feature{
 	// canonical automations handler. No state is mutated by this
 	// route.
 	//
-	// Frontend: the canonical host route declared by the slice prompt
+	// Frontend: the canonical host route declared by the feature spec
 	// is `/automations/builder` — the AI section actually renders
 	// inside the existing AutomationBuilderPage which mounts at
 	// /automations/new and /automations/:id/edit (the only
@@ -504,7 +502,7 @@ var Registry = map[string]Feature{
 	// path elsewhere) mirrors the digest-narration / yir-narration /
 	// anomaly-explanations / nl-alert-builder entries above.
 	//
-	// Background / Push: this slice ships zero new jobs and zero new
+	// Background / Push: this feature ships zero new jobs and zero new
 	// push kinds — automation drafting is request/response, on demand
 	// from the AutomationBuilder page. The empty arrays are explicit
 	// so CoverageOK passes.
@@ -525,18 +523,18 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / N3 (slice 0017) — Natural-language search across drives,
+	// Natural-language search across drives,
 	// charges, and alerts.
 	//
 	// Adds opt-in LLM-assisted DRAFTING of natural-language search queries
 	// that retrieve and narrate matches across the user's drive summaries,
-	// charging sessions, and alert history via the F7 RAG retriever. The
+	// charging sessions, and alert history via the RAG retriever. The
 	// strategy is propose-only and read-only: the AI fetches existing
-	// chunks via the F4 `retrieve_chunks` tool, optionally hydrates one
+	// chunks via the `retrieve_chunks` tool, optionally hydrates one
 	// or more cited results via `hydrate_search_result`, and narrates the
 	// answer to the user — it never writes to the database, never creates
 	// or mutates any drive/charge/alert, and never bypasses the
-	// per-tenant subject scoping built into the F7 retriever.
+	// per-tenant subject scoping built into the RAG retriever.
 	//
 	// The deterministic typed search at GET /api/v1/search served by the
 	// existing SearchHandler (`internal/api/search_handler.go`) and
@@ -552,7 +550,7 @@ var Registry = map[string]Feature{
 	// response is a STRUCTURED PROPOSAL the frontend renders alongside
 	// the typed result list. No state is mutated by this route.
 	//
-	// Frontend: the canonical host route declared by the slice prompt is
+	// Frontend: the canonical host route declared by the feature spec is
 	// `/search` — the AI section actually renders inside the existing
 	// SearchPage at `web/src/features/system/pages/SearchPage.tsx` so
 	// the off-mode invariant test
@@ -565,13 +563,13 @@ var Registry = map[string]Feature{
 	// nl-alert-builder / nl-automation-builder above.
 	//
 	// Background: `ai_search_indexer` is the cross-cutting cron a future
-	// scheduler will invoke to refresh the embeddings the F7 retriever
+	// scheduler will invoke to refresh the embeddings the RAG retriever
 	// reads when scoring NL queries; the job re-checks ai_mode +
 	// per-feature toggle on every tick (ADR-015 §I12 #3) and is a no-op
-	// when either is off. This slice declares the JobName so registry
+	// when either is off. This feature declares the JobName so registry
 	// coverage + the off-mode walker can enforce the absence-in-off
-	// contract before the worker ships, mirroring the U2 digest-narration
-	// `ai_digest_weekly` precedent (worker landed in a follow-up slice).
+	// contract before the worker ships, mirroring the digest-narration
+	// `ai_digest_weekly` precedent (worker landed in a follow-up feature).
 	//
 	// Push: zero new push kinds — NL search is request/response, on
 	// demand from the SearchPage. The empty array is explicit so
@@ -593,7 +591,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / N4 (slice 0018) — Per-drive coaching narrative.
+	// Per-drive coaching narrative.
 	//
 	// Backend: POST /api/v1/ai/drives/{driveID}/coach. The route is
 	// the FIRST AI surface to take its primary identifier from a chi
@@ -606,7 +604,7 @@ var Registry = map[string]Feature{
 	// drive-coaching strategy with the locked decorator order
 	// (redact → rate-limit → cost-cap → audit → trace).
 	//
-	// Frontend: the canonical host route declared by the slice
+	// Frontend: the canonical host route declared by the feature
 	// prompt is `/drives/:driveId`, but the actual app route in
 	// web/src/router/routeRegistry.ts is `/drives/:id` — we register
 	// the SAME pattern the router actually uses so the off-mode
@@ -626,14 +624,14 @@ var Registry = map[string]Feature{
 	//
 	// NeedsRAG=false: the strategy uses ONLY the two declared tools
 	// (`query_drive_detail` + `query_drive_telemetry_summary`); it
-	// does NOT call the F7 retriever. The
+	// does NOT call the RAG retriever. The
 	// `drive_summary` / `route_efficiency` / `speed_profile` source
-	// types listed in the slice prompt's RAG section are not yet
+	// types listed in the feature spec's RAG section are not yet
 	// wired into internal/ai/rag/rag.go, and adding them would
-	// require migrations that are explicitly NOT in this slice's
+	// require migrations that are explicitly NOT in this feature's
 	// allowed file list. The two read-only tools fully satisfy the
 	// strategy's needs from the existing per-drive aggregates on
-	// the *models.Drive struct.
+	// the *drivemodel.Drive struct.
 	"drive-coaching": {
 		ID:          "drive-coaching",
 		Name:        "Per-drive coaching",
@@ -651,11 +649,11 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / N5 (slice 0019) — Per-charging-session diagnosis.
+	// Per-charging-session diagnosis.
 	//
 	// Backend: POST /api/v1/ai/charging/{sessionID}/diagnose. The route
 	// follows the same URL-as-primary-identifier shape introduced in
-	// the N4 drive-coaching slice: the AI surface attaches to a
+	// the drive-coaching feature: the AI surface attaches to a
 	// specific charging session's detail page (/charging/:id), so
 	// {sessionID} lives in the chi URL path and the JSON body is
 	// empty. The handler (internal/api/ai_charging_diagnosis_handler.go)
@@ -664,7 +662,7 @@ var Registry = map[string]Feature{
 	// against the charging-diagnosis strategy with the locked decorator
 	// order (redact → rate-limit → cost-cap → audit → trace).
 	//
-	// Frontend: the canonical host route declared by the slice prompt
+	// Frontend: the canonical host route declared by the feature spec
 	// is `/charging/:sessionId`, but the actual app route in
 	// web/src/lib/routeRegistry.ts (line 45) is `/charging/:id` — we
 	// register the SAME pattern the router actually uses so the
@@ -676,7 +674,7 @@ var Registry = map[string]Feature{
 	// / hero gauges / charge curve / battery-level chart on
 	// ChargingDetailPage continue to render. Mirrors the host-route-
 	// vs-render-path pattern of every other N-tier feature above —
-	// most notably the drive-coaching N4 slice immediately preceding
+	// most notably the drive-coaching feature immediately preceding
 	// this one which made the same `:driveId` → `:id` adjustment.
 	//
 	// Background + push: zero new background jobs and zero new push
@@ -686,18 +684,18 @@ var Registry = map[string]Feature{
 	//
 	// NeedsRAG=false: the strategy uses ONLY the two declared tools
 	// (`query_charge_session` + `query_charging_aggregation`); it
-	// does NOT call the F7 retriever. The slice prompt's RAG section
+	// does NOT call the RAG retriever. The feature spec's RAG section
 	// names `charge_session` / `energy_price` / `vehicle_state`
 	// source types but those are not yet wired into
 	// internal/ai/rag/rag.go, and adding them would require
-	// migrations explicitly outside this slice's allowed file list.
+	// migrations explicitly outside this feature's allowed file list.
 	// The two read-only tools fully satisfy the strategy's needs
 	// from the existing per-session aggregates on the
-	// *models.ChargingSession struct plus the deterministic
+	// *chargingmodel.ChargingSession struct plus the deterministic
 	// flag-detection logic that today lives in
-	// web/src/lib/chargingAggregation.ts (slice 0019 mirrors that
+	// web/src/lib/chargingAggregation.ts (the existing feature mirrors that
 	// logic server-side as a *read-only* tool — flag computation
-	// itself is unchanged on the frontend per the slice prompt's
+	// itself is unchanged on the frontend per the feature spec's
 	// "without changing how flags are computed" mandate).
 	"charging-diagnosis": {
 		ID:          "charging-diagnosis",
@@ -716,14 +714,14 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / N6 (slice 0020) — RAG-backed app help.
+	// RAG-backed app help.
 	//
 	// `rag-help` is the opt-in LLM-narrated app help assistant. The
 	// AI route POST /api/v1/ai/help/query opens a one-shot SSE
 	// stream backed by the dispatcher loop: the LLM calls
 	// retrieve_docs across the curated docs|runbooks|i18n corpora
-	// (F7 rag.Retriever scoped to the GLOBAL user_subject="" rows
-	// the F7 docs_indexer writes), optionally calls cite_help_chunk
+	// (rag.Retriever scoped to the GLOBAL user_subject="" rows
+	// the docs indexer writes), optionally calls cite_help_chunk
 	// to format a citation envelope, and narrates a concise answer
 	// with explicit citations.
 	//
@@ -738,9 +736,9 @@ var Registry = map[string]Feature{
 	// JobNames: `ai_docs_indexer` is the gated background job that
 	// keeps the help corpus embeddings fresh. Today it is a fail-
 	// closed gate stub (mirrors the pattern from ai_digest_weekly
-	// and ai_year_in_review_pregen); a future slice wires the
+	// and ai_year_in_review_pregen); a future feature wires the
 	// actual fan-out across curated docs/runbooks/i18n sources.
-	// The job MUST be listed here so the final-gate proves it has
+	// The job MUST be listed here so the final gate proves it has
 	// no scheduled invocation when ai_mode='off'.
 	"rag-help": {
 		ID:          "rag-help",
@@ -759,11 +757,11 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / D1 (slice 0021) — Natural-language drive search and replay.
+	// Natural-language drive search and replay.
 	//
 	// Backend: POST /api/v1/ai/drives/search. The AI handler streams
 	// SSE frames from the dispatch loop; the two declared tools are
-	// retrieve_drive_chunks (F7 retriever over the drive corpora) and
+	// retrieve_drive_chunks (RAG retriever over the drive corpora) and
 	// hydrate_drive_replay (read-only port that resolves a drive
 	// reference into a {title, subtitle, url, replay_url, when}
 	// envelope). The route is mounted under guard.Wrap so it returns
@@ -782,16 +780,16 @@ var Registry = map[string]Feature{
 	// Background: `ai_drive_indexer` is the gated job that keeps the
 	// drive corpora embeddings fresh. Today it is a fail-closed gate
 	// stub (mirrors `ai_docs_indexer` + `ai_search_indexer`); a
-	// future slice wires the actual fan-out across drive_summary,
+	// future feature wires the actual fan-out across drive_summary,
 	// route_segment, and location_summary sources. The job MUST be
-	// listed here so the final-gate proves it has no scheduled
+	// listed here so the final gate proves it has no scheduled
 	// invocation when ai_mode='off'.
 	//
 	// Push kinds: zero — the AI side panel is request/response on
 	// demand from the user's NL query. Explicit []string{} so
 	// CoverageOK passes.
 	//
-	// NeedsRAG=true because retrieve_drive_chunks calls the F7
+	// NeedsRAG=true because retrieve_drive_chunks calls the RAG
 	// retriever; NeedsTools=true because the strategy invokes two
 	// read-only tools; NeedsStream=true because the handler streams
 	// SSE frames from the dispatch loop.
@@ -812,16 +810,16 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / D2 (slice 0022) — Speed-profile insights.
+	// Speed-profile insights.
 	//
 	// Backend: POST /api/v1/ai/drives/{driveID}/speed-profile/insights.
 	// The AI handler streams SSE frames from the dispatch loop; the
 	// two declared tools are query_speed_profile (returns SI-canonical
 	// aggregates plus derived speed regime classification from the
-	// existing *models.Drive struct) and query_drive_context (returns
+	// existing *drivemodel.Drive struct) and query_drive_context (returns
 	// the drive's temporal + battery + temperature envelope). Both
 	// are read-only and call `DriveSource.GetByID` directly — no new
-	// SQL is added by this slice. The route is mounted under
+	// SQL is added by this feature. The route is mounted under
 	// guard.Wrap so it returns 404 when ai_mode='off' OR when the
 	// per-feature toggle is off.
 	//
@@ -851,7 +849,7 @@ var Registry = map[string]Feature{
 	"speed-profile-insights": {
 		ID:          "speed-profile-insights",
 		Name:        "Speed-profile insights",
-		Description: "Opt-in LLM-narrated insights about a single drive's speed regime, outliers, and route context. Reads from the existing *models.Drive aggregates via two read-only tools; the deterministic SpeedHistogramChart + summary metrics on /drives/:id remain the canonical baseline when AI is off. Precise route coordinates remain tagged by the per-feature redaction policy; only the vehicle name may be narrated.",
+		Description: "Opt-in LLM-narrated insights about a single drive's speed regime, outliers, and route context. Reads from the existing *drivemodel.Drive aggregates via two read-only tools; the deterministic SpeedHistogramChart + summary metrics on /drives/:id remain the canonical baseline when AI is off. Precise route coordinates remain tagged by the per-feature redaction policy; only the vehicle name may be narrated.",
 		Tier:        "D",
 		DefaultOn:   false,
 		NeedsRAG:    false,
@@ -865,14 +863,14 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / D3 (slice 0023) — Route-efficiency suggestions.
+	// Route-efficiency suggestions.
 	//
 	// Backend: POST /api/v1/ai/routes/{routeID}/efficiency/suggest.
 	// The AI handler streams SSE frames from the dispatch loop; the
-	// two declared tools are retrieve_route_chunks (the F7 RAG
+	// two declared tools are retrieve_route_chunks (the RAG
 	// retriever scoped to the calling user_subject over the
 	// per-feature allowlist {drive_summary, route_efficiency,
-	// weather_context}; only drive_summary is wired into the F7
+	// weather_context}; only drive_summary is wired into the RAG
 	// indexer today, the other two are reserved by string for the
 	// future ai_route_indexer slice) and query_route_efficiency
 	// (returns SI-canonical aggregates over the user's top
@@ -901,13 +899,13 @@ var Registry = map[string]Feature{
 	// returns Skipped=1 whenever either gate is off. The future
 	// indexer body that will populate the route_efficiency /
 	// weather_context corpora replaces the stub body without
-	// touching the registry. Mirrors the slice 0021
+	// touching the registry. Mirrors the the existing feature
 	// ai_drive_indexer fail-closed pattern.
 	//
 	// Push kinds: zero — the panel is request/response on demand.
 	// Explicit `[]string{}` so CoverageOK passes.
 	//
-	// NeedsRAG=true because retrieve_route_chunks calls the F7
+	// NeedsRAG=true because retrieve_route_chunks calls the RAG
 	// retriever; NeedsTools=true because the strategy invokes two
 	// read-only tools; NeedsStream=true because the handler
 	// streams SSE frames from the dispatch loop.
@@ -928,13 +926,13 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / D5 (slice 0025) — Trip planner LLM agent.
+	// Trip planner LLM agent.
 	//
 	// `trip-planner-llm-agent` adds an opt-in LLM-assisted trip
 	// planner alongside the deterministic heuristic trip planner.
 	// The heuristic planner served by POST /api/v1/trip-planner/plan
 	// and rendered by /trip-planner remains the canonical baseline
-	// — opt-in toggle defaults FALSE per ADR-015 §I1 so off-mode
+	// opt-in toggle defaults FALSE per ADR-015 §I1 so off-mode
 	// users see the manual form + canonical Plan button only.
 	//
 	// Backend: POST /api/v1/ai/trips/plan/draft mounted from
@@ -944,10 +942,10 @@ var Registry = map[string]Feature{
 	// AND of the global mode gate and the per-feature toggle).
 	//
 	// Tools (all PROPOSE-only / read-only; no DB write tools exist
-	// in this slice): `query_chargers_along_route` and
+	// in this feature): `query_chargers_along_route` and
 	// `query_user_charge_dwells` read the existing
 	// `charging_sessions` table via the shared ChargeSource port
-	// satisfied at boot by *database.ChargingRepo (no new SQL);
+	// satisfied at boot by *chargingdb.ChargingRepo (no new SQL);
 	// `draft_trip_plan` delegates to the canonical
 	// TripPlannerHandler.computePlan path via a narrow
 	// TripPlanComputer port satisfied by AITripPlanComputer
@@ -975,7 +973,7 @@ var Registry = map[string]Feature{
 	// the same HTTP request, no out-of-band push. Explicit
 	// `[]string{}`.
 	//
-	// NeedsRAG=false because the agent does NOT call the F7
+	// NeedsRAG=false because the agent does NOT call the RAG
 	// retriever today; corridor projection over the user's
 	// charging history is a typed query, not an embedding lookup.
 	// NeedsTools=true because the strategy invokes three read-only
@@ -998,7 +996,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / C1 (slice 0026) — Smart-charge schedule suggestion.
+	// Smart-charge schedule suggestion.
 	//
 	// Opt-in LLM agent that proposes a time-of-use-optimized charge
 	// schedule by delegating to the canonical
@@ -1028,7 +1026,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / C2 (slice 0027) — Battery health forecast narrative.
+	// Battery health forecast narrative.
 	//
 	// Opt-in LLM narration that explains the drivers of the
 	// deterministic battery-health forecast already rendered on the
@@ -1038,12 +1036,12 @@ var Registry = map[string]Feature{
 	// count, high-SOC dwell), and the risk-factor severity table the
 	// existing /analytics/battery-degradation handler returns. The
 	// strategy is READ-ONLY: it composes the existing
-	// *database.SignalLogReader.SignalTrace + ChargeSource.GetByVehicle
+	// *signaldb.SignalLogReader.SignalTrace + ChargeSource.GetByVehicle
 	// surfaces through a narrow [BatteryHealthForecaster] port and
 	// reuses the existing package-level helpers (synthesizeBatterySnapshots,
 	// predictDegradation, computeRiskFactors) so the AI narration is
 	// grounded in the SAME deterministic forecast model the chart
-	// uses — the slice explicitly does NOT change the forecast model.
+	// uses — the feature explicitly does NOT change the forecast model.
 	// The narration only translates the typed envelope into a 2-3
 	// sentence plain-language explanation of WHY the forecast is what
 	// it is and which charging habits contribute to it.
@@ -1072,13 +1070,13 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / 0028 — C3 Charging-curve fingerprint clustering.
+	// Charging-curve fingerprint clustering.
 	//
 	// Opt-in LLM narrator that NAMES each deterministic
 	// charging-curve cluster and EXPLAINS what makes the sessions in
 	// it cohere for one vehicle in scope. The statistical clustering
 	// mechanics (k-means, fingerprint similarity, etc.) are owned by
-	// the ML3 sibling slice — this C3 surface ONLY adds a
+	// the statistical clustering sibling feature — this charging-curve surface ONLY adds a
 	// human-readable narrator over the already-computed buckets.
 	//
 	// The deterministic ChargingCurvePage charts (SummaryStatsGrid,
@@ -1091,7 +1089,7 @@ var Registry = map[string]Feature{
 	// is HIDDEN entirely when ai_mode='off' or the per-feature
 	// toggle is off (ADR-015 §I3, §I5, §I6).
 	//
-	// Tools: retrieve_charge_curve_chunks (F7 RAG retrieval over the
+	// Tools: retrieve_charge_curve_chunks (RAG retrieval over the
 	// per-feature source-type allowlist {charge_curve, charge_session})
 	// + query_charge_curve_features (deterministic per-cluster
 	// envelope derived in-memory from the user's existing
@@ -1100,10 +1098,10 @@ var Registry = map[string]Feature{
 	// JobNames: ["ai_charge_curve_indexer"] — gated indexer stub
 	// registered for forward-compat. Skipped (Skipped=1) whenever
 	// ai_mode='off' or charging-curve-fingerprint-clustering is off,
-	// matching the F7/I12 contract.
+	// matching the RAG contract contract.
 	//
 	// PushKinds: explicitly empty (no notification/push channel
-	// surface). features.CoverageOK rejects nil; the empty slice is
+	// surface). features.CoverageOK rejects nil; the empty feature is
 	// the affirmative "no surface" signal.
 	"charging-curve-fingerprint-clustering": {
 		ID:          "charging-curve-fingerprint-clustering",
@@ -1122,7 +1120,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / 0029 — C4 Cost forecast narration.
+	// Cost forecast narration.
 	//
 	// Opt-in LLM narrator that EXPLAINS the deterministic cost
 	// forecast on the Cost Analysis page — historical monthly cost
@@ -1148,13 +1146,13 @@ var Registry = map[string]Feature{
 	// the AI narration is therefore grounded in the same numbers the
 	// chart renders, never a parallel re-implementation.
 	//
-	// NeedsRAG: false — the slice prompt lists only the single typed
-	// tool, so the F7 retrieval entry point is intentionally not
+	// NeedsRAG: false — the feature spec lists only the single typed
+	// tool, so the RAG retrieval entry point is intentionally not
 	// invoked.
 	//
 	// JobNames / PushKinds: explicitly empty (no background job, no
 	// notification/push channel surface). features.CoverageOK rejects
-	// nil; the empty slice is the affirmative "no surface" signal.
+	// nil; the empty feature is the affirmative "no surface" signal.
 	"cost-forecast-narration": {
 		ID:          "cost-forecast-narration",
 		Name:        "Cost forecast narration",
@@ -1172,7 +1170,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / 0030 — C5 Vampire-drain explanation.
+	// Vampire-drain explanation.
 	//
 	// Opt-in LLM narrator that EXPLAINS the deterministic vampire-drain
 	// (idle-energy-loss) signal already surfaced on the Vampire Drain
@@ -1195,33 +1193,33 @@ var Registry = map[string]Feature{
 	// §I5, §I6).
 	//
 	// Tools:
-	//   - retrieve_idle_drain_chunks — F7 RAG retrieval over the
+	//   retrieve_idle_drain_chunks — RAG retrieval over the
 	//     per-feature source-type allowlist {idle_drain, vehicle_state,
-	//     climate_state}. None of the three is wired into the F7
-	//     indexer today (slice 0008 only indexes drive_summary +
+	//     climate_state}. None of the three is wired into the RAG
+	//     indexer today (the existing feature only indexes drive_summary +
 	//     charge_session); they are reserved by string for forward-
 	//     compatibility — the gated `ai_idle_drain_indexer` job
 	//     (registered as JobNames=["ai_idle_drain_indexer"] below)
-	//     will fan out into the idle-drain corpus once a future slice
+	//     will fan out into the idle-drain corpus once a future feature
 	//     wires the per-event embeddings. Until then the retriever
 	//     simply returns zero chunks for these source types — which
 	//     is the correct behaviour: the strategy's goldens already
 	//     cover the zero-matches narration.
-	//   - query_vampire_drain_windows — a deterministic typed
-	//     envelope derived from the SAME *database.VampireDrainRepo
+	//   query_vampire_drain_windows — a deterministic typed
+	//     envelope derived from the SAME *drivedb.VampireDrainRepo
 	//     that backs the canonical baseline GET /vampire-drain +
 	//     GET /vampire-drain/stats handlers; the AI narration is
 	//     therefore grounded in the same numbers the chart renders,
 	//     never a parallel re-implementation. No new SQL is added by
-	//     this slice.
+	//     this feature.
 	//
 	// JobNames: ["ai_idle_drain_indexer"] — gated indexer stub
 	// registered for forward-compat. Skipped (Skipped=1) whenever
 	// ai_mode='off' or vampire-drain-explanation is off, matching
-	// the F7 / I12 contract.
+	// the RAG contract contract.
 	//
 	// PushKinds: explicitly empty (no notification/push channel
-	// surface). features.CoverageOK rejects nil; the empty slice is
+	// surface). features.CoverageOK rejects nil; the empty feature is
 	// the affirmative "no surface" signal.
 	"vampire-drain-explanation": {
 		ID:          "vampire-drain-explanation",
@@ -1241,7 +1239,7 @@ var Registry = map[string]Feature{
 		},
 	},
 
-	// trip-postcard-share-card-image-generation — Phase-50 / 0060 (GEN1).
+	// trip-postcard-share-card-image-generation.
 	//
 	// Opt-in LLM-backed propose-only assistant that drafts a typed
 	// share-card image-prompt + a render-ready share-card preview
@@ -1258,17 +1256,17 @@ var Registry = map[string]Feature{
 	// canonical baseline when AI is off (ADR-015 §I3, §I5, §I6).
 	//
 	// JobNames: ["ai_share_card_pregen"] — gated pregen job stub
-	// registered for forward-compat per the slice prompt's
+	// registered for forward-compat per the feature spec's
 	// "New background jobs: ai_share_card_pregen" line. Slice
 	// 0060 does NOT ship the job; the AI handler is request-scoped
 	// today. The job name is registered so the off-mode coverage
 	// walker can prove its absence in off mode and so a future
-	// job-tier slice (server-side pregenerated image-prompt
+	// job-tier feature (server-side pregenerated image-prompt
 	// suggestions warmed during low-traffic windows) does NOT
 	// widen the off-mode surface when it lands.
 	//
 	// PushKinds: ["ai_share_card_ready"] — gated push-event kind
-	// registered for forward-compat per the slice prompt's
+	// registered for forward-compat per the feature spec's
 	// "New push kinds: ai_share_card_ready" line, same forward-
 	// compat rationale as JobNames.
 	//
@@ -1305,7 +1303,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{"ai_share_card_ready"},
 		},
 	},
-	// vehicle-paint-preview — Phase-50 / 0061 (GEN2).
+	// vehicle-paint-preview.
 	//
 	// Opt-in LLM-backed propose-only assistant that drafts a typed
 	// paint-preview image-prompt envelope (proposed_color,
@@ -1322,9 +1320,9 @@ var Registry = map[string]Feature{
 	// vehicle photo gallery + manual exterior_color row remain the
 	// canonical baseline when AI is off (ADR-015 §I3, §I5, §I6).
 	//
-	// JobNames + PushKinds: intentionally empty — this slice has no
+	// JobNames + PushKinds: intentionally empty — this feature has no
 	// background pregen, no push-event kind. A future ML/job-tier
-	// slice that pregenerates paint-preview suggestions would land
+	// feature that pregenerates paint-preview suggestions would land
 	// its own job + push-kind entries; today the AI handler is
 	// strictly request-scoped.
 	//
@@ -1360,7 +1358,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / T1 (slice 0031) — Preheat and precool recommender.
+	// Preheat and precool recommender.
 	//
 	// preheat-precool-recommender is the first T-tier (Tools-rich) AI
 	// surface: it proposes a preheat or precool schedule grounded in
@@ -1369,7 +1367,7 @@ var Registry = map[string]Feature{
 	// is created. The actual schedule persistence remains an explicit
 	// user click on the existing manual climate controls baseline; the
 	// AI panel never writes a schedule directly. This matches the
-	// slice prompt's verbatim mandate: "Suggest preheat or precool
+	// feature spec's verbatim mandate: "Suggest preheat or precool
 	// schedules while requiring confirmation before creating any
 	// schedule."
 	//
@@ -1384,7 +1382,7 @@ var Registry = map[string]Feature{
 	// per-feature toggle is off (ADR-015 §I3, §I5, §I6).
 	//
 	// Tools (PROPOSE-only — both):
-	//   - draft_climate_schedule — drafts a preheat/precool window
+	//   draft_climate_schedule — drafts a preheat/precool window
 	//     by combining the typical departure timestamp the caller
 	//     supplies (read off the canonical departure-history typed
 	//     hook on the SPA, NOT a parallel SQL path) with the
@@ -1395,7 +1393,7 @@ var Registry = map[string]Feature{
 	//     the structured envelope is rendered in the AI panel; the
 	//     user reviews and clicks the existing canonical climate
 	//     controls UI to save / apply.
-	//   - validate_climate_schedule — pure-Go sanity check on the
+	//   validate_climate_schedule — pure-Go sanity check on the
 	//     drafted envelope: start_time < end_time, end_time <=
 	//     depart_by, target_cabin_temp_c is in a safe range, mode
 	//     matches the temperature delta. Returns {status: ok |
@@ -1404,10 +1402,10 @@ var Registry = map[string]Feature{
 	//     window the drafter returned AND that passes the post-hoc
 	//     consistency check.
 	//
-	// Source-types (per-feature retrieval allowlist; the slice
+	// Source-types (per-feature retrieval allowlist; the feature
 	// prompt mandates {climate_state, departure_history,
-	// weather_context}). None of the three is wired into the F7
-	// indexer today (slice 0008 only indexes drive_summary +
+	// weather_context}). None of the three is wired into the RAG
+	// indexer today (the existing feature only indexes drive_summary +
 	// charge_session); they are reserved by string for forward-
 	// compatibility — the per-feature retrieval entry point hands
 	// them to the canonical rag.Retriever and gets zero chunks
@@ -1417,13 +1415,13 @@ var Registry = map[string]Feature{
 	// per-strategy).
 	//
 	// JobNames: explicitly empty (no background indexer is registered
-	// for this slice; the future per-event embedding job is reserved
+	// for this feature; the future per-event embedding job is reserved
 	// by string in the strategy/tools docs but not registered as a
 	// dispatcher job entry — features.CoverageOK rejects nil; the
-	// empty slice is the affirmative "no surface" signal).
+	// empty feature is the affirmative "no surface" signal).
 	//
 	// PushKinds: explicitly empty (no notification/push channel
-	// surface). features.CoverageOK rejects nil; the empty slice is
+	// surface). features.CoverageOK rejects nil; the empty feature is
 	// the affirmative "no surface" signal.
 	"preheat-precool-recommender": {
 		ID:          "preheat-precool-recommender",
@@ -1442,7 +1440,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / 0032 (T2) — Cabin temperature impact narrative.
+	// Cabin temperature impact narrative.
 	//
 	// `cabin-temperature-impact-narrative` is an opt-in LLM narrator
 	// that explains HOW outside ambient temperature affects driving
@@ -1453,7 +1451,7 @@ var Registry = map[string]Feature{
 	// the AI surface adds prose explanation, not new aggregation.
 	//
 	// Backend: POST /api/v1/ai/climate/temperature-impact/narrate is the
-	// single AI route for this slice. It is mounted under guard.Wrap
+	// single AI route for this feature. It is mounted under guard.Wrap
 	// so it returns 404 when ai_mode='off' OR the per-feature toggle
 	// is off (ADR-015 §I6 + §I7).
 	//
@@ -1481,11 +1479,11 @@ var Registry = map[string]Feature{
 	// stream.Writer so the SPA can render delta tokens live.
 	//
 	// JobNames: explicitly empty (no background job is registered for
-	// this slice). features.CoverageOK rejects nil; the empty slice is
+	// this feature). features.CoverageOK rejects nil; the empty feature is
 	// the affirmative "no surface" signal.
 	//
 	// PushKinds: explicitly empty (no notification/push channel
-	// surface). features.CoverageOK rejects nil; the empty slice is
+	// surface). features.CoverageOK rejects nil; the empty feature is
 	// the affirmative "no surface" signal.
 	"cabin-temperature-impact-narrative": {
 		ID:          "cabin-temperature-impact-narrative",
@@ -1504,7 +1502,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / 0033 (T3) — Tire pressure trend reasoning.
+	// Tire pressure trend reasoning.
 	//
 	// `tire-pressure-trend-reasoning` is an opt-in LLM narrator
 	// that explains the recent trend in this vehicle's four corner
@@ -1520,7 +1518,7 @@ var Registry = map[string]Feature{
 	// never modifies the deterministic thresholds.
 	//
 	// Backend: POST /api/v1/ai/tire-pressure/trends/explain is the
-	// single AI route for this slice. It is mounted under guard.Wrap
+	// single AI route for this feature. It is mounted under guard.Wrap
 	// so it returns 404 when ai_mode='off' OR the per-feature toggle
 	// is off (ADR-015 §I6 + §I7).
 	//
@@ -1541,11 +1539,11 @@ var Registry = map[string]Feature{
 	// NeedsRAG: false — the narrator has a single read-only tool
 	// (query_tire_pressure_trend) that returns a deterministic
 	// envelope from the signal_log change feed; there is no
-	// per-event embedding retrieval. The slice prompt's
+	// per-event embedding retrieval. The feature spec's
 	// "source types: tire_pressure;climate_state" describes the
 	// data domains the tool reads from (TpmsPressure* and
 	// OutsideTemp signals via signal.StateReader.Timeline), NOT
-	// an embeddings-backed retrieval surface — F7 is not invoked.
+	// an embeddings-backed retrieval surface — RAG retrieval is not invoked.
 	//
 	// NeedsTools: true — the narrator MUST call
 	// query_tire_pressure_trend before narrating (system prompt
@@ -1555,8 +1553,8 @@ var Registry = map[string]Feature{
 	// shared stream.Writer so the SPA can render delta tokens live.
 	//
 	// JobNames: explicitly empty (no background job is registered
-	// for this slice). features.CoverageOK rejects nil; the empty
-	// slice is the affirmative "no surface" signal.
+	// for this feature). features.CoverageOK rejects nil; the empty
+	// feature is the affirmative "no surface" signal.
 	//
 	// PushKinds: explicitly empty (no notification/push channel
 	// surface). features.CoverageOK rejects nil; the empty slice
@@ -1578,7 +1576,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / 0034 (A1) — Alert tuning suggestions.
+	// Alert tuning suggestions.
 	//
 	// `alert-tuning-suggestions` is an opt-in LLM that proposes a
 	// lower-noise typed AlertRule patch for an EXISTING rule based
@@ -1593,7 +1591,7 @@ var Registry = map[string]Feature{
 	// is off (ADR-015 §I3).
 	//
 	// Backend: POST /api/v1/ai/alerts/rules/{ruleID}/tune/draft is
-	// the single AI route for this slice. ruleID is taken from the
+	// the single AI route for this feature. ruleID is taken from the
 	// URL path; the AI handler clamps the LLM's tool calls to
 	// that scope so a "tune rule 999 instead" prompt cannot
 	// cross-rule the proposal. The route is mounted under
@@ -1602,7 +1600,7 @@ var Registry = map[string]Feature{
 	//
 	// Frontend: /alerts/studio is the canonical AlertStudio page.
 	// The AI side panel is rendered next to the editor via
-	// withAiFeature('alert-tuning-suggestions', ...) so it is
+	// withAiFeature('alert-tuning-suggestions',...) so it is
 	// completely absent from the DOM when the toggle is off
 	// (ADR-015 §I5).
 	//
@@ -1615,10 +1613,10 @@ var Registry = map[string]Feature{
 	// (draft_alert_rule_patch reads the existing rule + replays
 	// the recent notification_logs firing window;
 	// validate_alert_rule runs the canonical AlertRule validator
-	// over the merged shape). The slice prompt's "source types:
+	// over the merged shape). The feature spec's "source types:
 	// alert_history;alert_rule" describes the data domains the
 	// tools read from (alert_rules + notification_logs), NOT an
-	// embeddings-backed retrieval surface — F7 is not invoked.
+	// embeddings-backed retrieval surface — RAG retrieval is not invoked.
 	//
 	// NeedsTools: true — the assistant MUST call
 	// draft_alert_rule_patch FIRST and validate_alert_rule on the
@@ -1630,8 +1628,8 @@ var Registry = map[string]Feature{
 	// tool_result arrives.
 	//
 	// JobNames: explicitly empty (no background job is registered
-	// for this slice). features.CoverageOK rejects nil; the empty
-	// slice is the affirmative "no surface" signal.
+	// for this feature). features.CoverageOK rejects nil; the empty
+	// feature is the affirmative "no surface" signal.
 	//
 	// PushKinds: explicitly empty (no notification/push channel
 	// surface). features.CoverageOK rejects nil; the empty slice
@@ -1653,7 +1651,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / 0035 (A2) — Inbox auto-categorization.
+	// Inbox auto-categorization.
 	//
 	// `inbox-auto-categorization` is an opt-in LLM that reads the
 	// recent notification_logs window for the user's current inbox
@@ -1672,7 +1670,7 @@ var Registry = map[string]Feature{
 	// when AI is off.
 	//
 	// Backend: POST /api/v1/ai/alerts/inbox/categorize is the
-	// single AI route for this slice. The body carries the
+	// single AI route for this feature. The body carries the
 	// optional vehicle_id / severity / window_days filter so the
 	// tool's deterministic counter scopes to the same row set the
 	// SPA's filter bar would have produced. The route is mounted
@@ -1682,10 +1680,10 @@ var Registry = map[string]Feature{
 	// Frontend: /alerts/inbox is the canonical inbox host route
 	// in the registry metadata; the page actually mounts at
 	// /notifications/inbox (the legacy /alerts/inbox path is a
-	// no-op redirect) — same convention slice 0034 uses for
+	// no-op redirect) — same convention the existing feature uses for
 	// /alerts/studio vs /notifications/studio. The AI side panel
 	// is rendered above the filter bar via
-	// withAiFeature('inbox-auto-categorization', ...) so it is
+	// withAiFeature('inbox-auto-categorization',...) so it is
 	// completely absent from the DOM when the toggle is off
 	// (ADR-015 §I5).
 	//
@@ -1698,10 +1696,10 @@ var Registry = map[string]Feature{
 	// (draft_alert_categories aggregates notification_logs by a
 	// deterministic signal_name → category mapping;
 	// validate_alert_category asserts every proposed label is in
-	// the closed taxonomy). The slice prompt's "source types:
+	// the closed taxonomy). The feature spec's "source types:
 	// alert_history;alert_payload" describes the data domains the
 	// tools read from (notification_logs + alert_rules), NOT an
-	// embeddings-backed retrieval surface — F7 is not invoked.
+	// embeddings-backed retrieval surface — RAG retrieval is not invoked.
 	//
 	// NeedsTools: true — the assistant MUST call
 	// draft_alert_categories FIRST and validate_alert_category on
@@ -1714,19 +1712,19 @@ var Registry = map[string]Feature{
 	// tool_result arrives.
 	//
 	// JobNames: ai_alert_inbox_categorizer is declared in the
-	// slice prompt's Off-mode contract impact section as a
-	// FUTURE optional background categorizer. This slice does
+	// feature spec's Off-mode contract impact section as a
+	// FUTURE optional background categorizer. This feature does
 	// NOT register the job (no runtime registration). The
-	// metadata is recorded so a future slice that adds the job
+	// metadata is recorded so a future feature that adds the job
 	// satisfies CoverageOK without a registry edit. The off-mode
 	// invariant remains intact: the dispatcher would refuse to
 	// run the job when ai_mode='off'.
 	//
 	// PushKinds: ai_alert_category_suggested is declared in the
-	// slice prompt's Off-mode contract impact section as a
-	// FUTURE optional push kind. This slice does NOT register
+	// feature spec's Off-mode contract impact section as a
+	// FUTURE optional push kind. This feature does NOT register
 	// the kind in the push fan-out worker. The metadata is
-	// recorded so a future slice that adds the push satisfies
+	// recorded so a future feature that adds the push satisfies
 	// CoverageOK without a registry edit.
 	"inbox-auto-categorization": {
 		ID:          "inbox-auto-categorization",
@@ -1745,7 +1743,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{"ai_alert_category_suggested"},
 		},
 	},
-	// Phase-50 / 0036 — A3 Cross-rule conflict detection.
+	// Cross-rule conflict detection.
 	//
 	// `cross-rule-conflict-detection` is the LLM-backed assistant
 	// at POST /api/v1/ai/alerts/rules/conflicts that READS the
@@ -1767,7 +1765,7 @@ var Registry = map[string]Feature{
 	// surface (ADR-015 §I3).
 	//
 	// Backend: POST /api/v1/ai/alerts/rules/conflicts is the
-	// single AI route for this slice. The body carries the
+	// single AI route for this feature. The body carries the
 	// optional vehicle_id / signal_name / rule_ids /
 	// enabled_only / limit filter so the tool's deterministic
 	// detector scopes to the same rule set the SPA's AlertStudio
@@ -1778,10 +1776,10 @@ var Registry = map[string]Feature{
 	// Frontend: /alerts/studio is the canonical AlertStudio host
 	// route in the registry metadata; the page actually mounts
 	// at /notifications/studio (the legacy /alerts/studio path
-	// is a no-op redirect) — same convention slice 0034 +
+	// is a no-op redirect) — same convention the existing feature +
 	// 0035 use. The AI conflict panel is rendered above the
 	// rule editor via withAiFeature('cross-rule-conflict-
-	// detection', ...) so it is completely absent from the DOM
+	// detection',...) so it is completely absent from the DOM
 	// when the toggle is off (ADR-015 §I5).
 	//
 	// UI test ID: ai-feature-cross-rule-conflict-detection-root
@@ -1794,10 +1792,10 @@ var Registry = map[string]Feature{
 	// (query_alert_rules reads alert_rules via the
 	// CrossRuleConflictSource port; detect_rule_conflicts runs
 	// the pure-functional structural conflict detector over the
-	// same rule set). The slice prompt's "source types:
+	// same rule set). The feature spec's "source types:
 	// alert_rule;automation_rule" describes the data domains the
 	// tools read from (alert_rules), NOT an embeddings-backed
-	// retrieval surface — F7 is not invoked for A3.
+	// retrieval surface — RAG retrieval is not invoked for this feature.
 	//
 	// NeedsTools: true — the assistant MUST call query_alert_rules
 	// FIRST and detect_rule_conflicts SECOND on the same rule
@@ -1808,7 +1806,7 @@ var Registry = map[string]Feature{
 	// live and surface the typed conflict envelope as soon as
 	// the tool_result arrives.
 	//
-	// JobNames + PushKinds: explicitly empty arrays. This slice
+	// JobNames + PushKinds: explicitly empty arrays. This feature
 	// adds NO background job (the detector is per-request, not
 	// scheduled) and NO push notification (the conflict surface
 	// is a passive in-page panel; the user reviews it via the
@@ -1817,7 +1815,7 @@ var Registry = map[string]Feature{
 	// Service worker chunks: ai-cross-rule-conflict-detection
 	// is the dynamic-import name the SPA's lazy loader uses for
 	// the AICrossRuleConflictDetection component. Documented in
-	// the slice prompt's Off-mode contract impact section so the
+	// the feature spec's Off-mode contract impact section so the
 	// W1 wired-or-absent invariant has a known chunk name to
 	// audit against.
 	"cross-rule-conflict-detection": {
@@ -1837,7 +1835,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / 0037 — G1 Auto-name unnamed locations.
+	// Auto-name unnamed locations.
 	//
 	// `auto-name-unnamed-locations` is the LLM-backed assistant at
 	// POST /api/v1/ai/locations/{locationID}/name/draft that
@@ -1852,7 +1850,7 @@ var Registry = map[string]Feature{
 	//
 	// Tier "G" reflects the "Geo / Locations" tier — auto-name-
 	// unnamed-locations is the first feature in this tier; future
-	// G-tier slices (location categorisation, address normalisation,
+	// location-related features (location categorisation, address normalisation,
 	// etc.) will join it. CoverageOK accepts any non-empty Tier
 	// string; the value is plumbed into the SettingsPage groupings
 	// only.
@@ -1887,7 +1885,7 @@ var Registry = map[string]Feature{
 	//
 	// Service worker chunks: ai-auto-name-unnamed-locations is the
 	// dynamic-import name the SPA's lazy loader uses for the
-	// AIAutoNameUnnamedLocations component. Documented in the slice
+	// AIAutoNameUnnamedLocations component. Documented in the feature
 	// prompt's Off-mode contract impact section so the W1 wired-or-
 	// absent invariant has a known chunk name to audit against.
 	"auto-name-unnamed-locations": {
@@ -1907,7 +1905,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / 0038 — G2 Suggest new geofences.
+	// Suggest new geofences.
 	//
 	// `suggest-new-geofences` is the LLM-backed assistant at
 	// POST /api/v1/ai/geofences/draft that PROPOSES a typed
@@ -1921,7 +1919,7 @@ var Registry = map[string]Feature{
 	// copies the typed envelope into the existing baseline Add
 	// Geofence form — and then SAVES IT THEMSELVES via the canonical
 	// POST /api/v1/geofences write path. The AI itself never
-	// persists. The slice prompt's "without creating them
+	// persists. The feature spec's "without creating them
 	// autonomously" mandate is enforced by the absence of any
 	// create_/update_/delete_ tool from the strategy's whitelist
 	// (the dispatcher's deny-all confirm hook would refuse them
@@ -1944,7 +1942,7 @@ var Registry = map[string]Feature{
 	// at the moment the user clicks Suggest.
 	//
 	// Frontend route: /geofences is the canonical baseline
-	// geofences page (App.tsx). The slice prompt documents the
+	// geofences page (App.tsx). The feature spec documents the
 	// route as `/locations/geofences`, but the SPA's actual
 	// mount point is `/geofences` — the registry MUST carry the
 	// real route so the off-mode walker can confirm the
@@ -1958,22 +1956,22 @@ var Registry = map[string]Feature{
 	//
 	// JobNames: []string{} explicitly — suggest-new-geofences is
 	// request-scoped only; no background job, no Redis queue, no
-	// scheduled task. The slice prompt's Off-mode contract impact
-	// section names ai_location_cluster_indexer as a future-slice
-	// optional dependency, but THIS slice ships no jobs (the
+	// scheduled task. The feature spec's Off-mode contract impact
+	// section names ai_location_cluster_indexer as a future-feature
+	// optional dependency, but THIS feature ships no jobs (the
 	// LLM works directly on the visited-location aggregate the
 	// existing drives-table read produces).
 	//
 	// PushKinds: []string{} explicitly — there is no
 	// notifications.kind for "AI proposed a geofence" in this
-	// slice. The user only sees the proposal inside the SPA
-	// when they explicitly open the GeofencesPage. The slice
-	// prompt names ai_geofence_suggested as a future-slice push
-	// kind, but THIS slice does not enqueue any push.
+	// feature. The user only sees the proposal inside the SPA
+	// when they explicitly open the GeofencesPage. The feature
+	// prompt names ai_geofence_suggested as a future-feature push
+	// kind, but THIS feature does not enqueue any push.
 	//
 	// Service worker chunks: ai-suggest-new-geofences is the
 	// dynamic-import name the SPA's lazy loader uses for the
-	// AISuggestNewGeofences component. Documented in the slice
+	// AISuggestNewGeofences component. Documented in the feature
 	// prompt's Off-mode contract impact section so the W1
 	// wired-or-absent invariant has a known chunk name to audit
 	// against.
@@ -1994,7 +1992,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / 0039 — G3 Geofence-aware automation suggestions.
+	// Geofence-aware automation suggestions.
 	//
 	// `geofence-aware-automation-suggestions` is the LLM-backed
 	// assistant at POST /api/v1/ai/geofences/automations/draft that
@@ -2010,13 +2008,13 @@ var Registry = map[string]Feature{
 	// to form" to copy the typed envelope into the existing
 	// baseline form state, and SAVES IT THEMSELVES via the
 	// canonical POST /api/v1/automations write path. The AI itself
-	// never persists. The slice prompt's "geofence IDs flow through
+	// never persists. The feature spec's "geofence IDs flow through
 	// tools" mandate is enforced by the absence of any
 	// create_/update_/delete_/save_ tool from the strategy's
 	// whitelist (the dispatcher's deny-all confirm hook would
 	// refuse them even if one slipped in). The strategy reuses the
 	// `draft_automation_graph` + `validate_automation_graph` tools
-	// already registered by slice 0016 (nl-automation-builder) —
+	// already registered by the existing feature (nl-automation-builder) —
 	// re-registering them would panic on a duplicate name. The two
 	// strategies share the same process-wide tool instances; tools
 	// are stateless so this is safe.
@@ -2025,9 +2023,7 @@ var Registry = map[string]Feature{
 	// auto-name-unnamed-locations and suggest-new-geofences as the
 	// third feature in this tier. CoverageOK accepts any non-empty
 	// Tier string; the value is plumbed into the SettingsPage
-	// groupings only. The slice-prompt label "G3" is the
-	// per-tier ordinal (third feature added in tier G across the
-	// Phase-50 sequence).
+	// groupings only. The "G3" label is the per-tier ordinal.
 	//
 	// Backend route: POST /api/v1/ai/geofences/automations/draft
 	// is mounted in mountAIRoutes (internal/api/ai_routes.go) under
@@ -2036,23 +2032,23 @@ var Registry = map[string]Feature{
 	// request (ADR-015 §I6). The handler is constructed in
 	// internal/api/router.go from the same provider.Registry +
 	// tools.Registry the rest of the AI surface uses, plus a
-	// *database.GeofenceRepo for the deterministic geofence catalog
+	// *geofencedb.GeofenceRepo for the deterministic geofence catalog
 	// the handler injects into the synthesised user message. The
 	// route has no URL path param — the SPA picks the in-scope
 	// vehicle + free-form prompt at click time and ships them in
 	// the JSON body.
 	//
 	// Frontend route: /automations/builder is the canonical
-	// baseline AutomationBuilderPage (App.tsx). The slice prompt's
+	// baseline AutomationBuilderPage (App.tsx). The feature spec's
 	// allowed-files list documents `web/src/features/locations/**`
 	// but that directory does not exist in the SPA — the
 	// canonical automation builder lives at
 	// web/src/features/automations/pages/AutomationBuilderPage.tsx.
-	// Following the precedent set by slice 0036
+	// Following the precedent set by the existing feature
 	// (cross-rule-conflict-detection mounted into
 	// notifications/pages/AlertStudioPage.tsx even though the
 	// allowed-files list documented web/src/features/alerts/**),
-	// this slice mounts the AISection alongside the existing
+	// this feature mounts the AISection alongside the existing
 	// AINLAutomationBuilder panel inside AutomationBuilderPage so
 	// the W1 wired-or-absent invariant holds at the surface a
 	// user actually reaches. The registry MUST carry the real
@@ -2070,14 +2066,14 @@ var Registry = map[string]Feature{
 	//
 	// PushKinds: []string{} explicitly — there is no
 	// notifications.kind for "AI proposed a geofence-aware
-	// automation" in this slice. The user only sees the proposal
+	// automation" in this feature. The user only sees the proposal
 	// inside the SPA when they explicitly open
 	// AutomationBuilderPage and click Suggest.
 	//
 	// Service worker chunks: ai-geofence-aware-automation-
 	// suggestions is the dynamic-import name the SPA's lazy loader
 	// uses for the AIGeofenceAwareAutomationSuggestions component.
-	// Documented in the slice prompt's Off-mode contract impact
+	// Documented in the feature spec's Off-mode contract impact
 	// section so the W1 wired-or-absent invariant has a known
 	// chunk name to audit against.
 	"geofence-aware-automation-suggestions": {
@@ -2097,7 +2093,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / 0040 — X1 Period compare narration.
+	// Period compare narration.
 	//
 	// Opt-in LLM narrator that EXPLAINS the deterministic period-
 	// over-period delta envelope already rendered on the
@@ -2113,7 +2109,7 @@ var Registry = map[string]Feature{
 	// canonical baseline visible to every off-mode user.
 	//
 	// Tools:
-	//   - query_period_compare — a read-only typed envelope derived
+	//   query_period_compare — a read-only typed envelope derived
 	//     from the SAME api.ComputePeriodStats helper that backs the
 	//     canonical baseline GET /api/v1/analytics/period-stats
 	//     handler (the AI tool composes the helper twice, once for
@@ -2121,15 +2117,15 @@ var Registry = map[string]Feature{
 	//     percent change in-memory). The AI narration is therefore
 	//     grounded in the same numbers the chart / table render —
 	//     never a parallel re-implementation. No new SQL is added by
-	//     this slice.
+	//     this feature.
 	//
-	// NeedsRAG: false — the slice prompt lists only the single typed
-	// tool, so the F7 retrieval entry point is intentionally not
+	// NeedsRAG: false — the feature spec lists only the single typed
+	// tool, so the RAG retrieval entry point is intentionally not
 	// invoked.
 	//
 	// JobNames / PushKinds: explicitly empty (no background job, no
 	// notification/push channel surface). features.CoverageOK rejects
-	// nil; the empty slice is the affirmative "no surface" signal.
+	// nil; the empty feature is the affirmative "no surface" signal.
 	"period-compare-narration": {
 		ID:          "period-compare-narration",
 		Name:        "Period compare narration",
@@ -2147,7 +2143,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / 0041 — X2 Lifetime stats Q&A.
+	// Lifetime stats Q&A.
 	//
 	// Opt-in LLM Q&A surface that answers natural-language questions
 	// about ONE vehicle's all-time stats by routing through TWO
@@ -2156,7 +2152,7 @@ var Registry = map[string]Feature{
 	// GET /api/v1/analytics/lifetime handler — total drives, total
 	// distance, charge sessions, savings, achievements, personal
 	// records, ownership timeline) and the OPTIONAL secondary
-	// retrieve_analytics_chunks (F7 retrieval restricted to
+	// retrieve_analytics_chunks (RAG retrieval restricted to
 	// {analytics_lifetime, drive_summary, charge_session} source
 	// types) for additional per-event context. The deterministic
 	// Lifetime Stats hero card, key-stats grid, achievements gallery,
@@ -2169,23 +2165,23 @@ var Registry = map[string]Feature{
 	// addresses.
 	//
 	// Routes:
-	//   - Backend: POST /api/v1/ai/analytics/lifetime/qa (gated by
+	//   Backend: POST /api/v1/ai/analytics/lifetime/qa (gated by
 	//     guard.Wrap("lifetime-stats-qa"); 404 in off mode).
-	//   - Frontend: /analytics/lifetime (Navigate alias to the
+	//   Frontend: /analytics/lifetime (Navigate alias to the
 	//     canonical /lifetime-stats page; the Q&A panel is rendered
 	//     inside that page only when the feature is enabled).
-	//   - UITestIDs: ai-feature-lifetime-stats-qa-root (auto-applied
+	//   UITestIDs: ai-feature-lifetime-stats-qa-root (auto-applied
 	//     by withAiFeature HOC reading meta.uiTestIds[0]).
 	//
 	// NeedsRAG: true — the OPTIONAL secondary tool routes through
-	// the F7 rag.Retriever entry point.
+	// the rag.Retriever entry point.
 	// NeedsTools: true — query_lifetime_stats + retrieve_analytics_chunks.
 	// NeedsStream: true — the dispatcher streams delta+done frames
 	// to the SPA via internal/ai/stream.
 	//
 	// JobNames / PushKinds: explicitly empty (no background job, no
 	// notification/push channel surface). features.CoverageOK rejects
-	// nil; the empty slice is the affirmative "no surface" signal.
+	// nil; the empty feature is the affirmative "no surface" signal.
 	"lifetime-stats-qa": {
 		ID:          "lifetime-stats-qa",
 		Name:        "Lifetime stats Q&A",
@@ -2203,7 +2199,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / 0042 — S1 Incident timeline summarizer.
+	// Incident timeline summarizer.
 	//
 	// Opt-in LLM summarizer that condenses ONE incident's
 	// chronological timeline into a 3-6 sentence factual summary by
@@ -2213,7 +2209,7 @@ var Registry = map[string]Feature{
 	// description, severity, status, source, affected_components,
 	// started_at, resolved_at, total_updates count, and the full
 	// chronological updates list with at/status/message/author) and
-	// the OPTIONAL secondary retrieve_system_chunks (F7 retrieval
+	// the OPTIONAL secondary retrieve_system_chunks (RAG retrieval
 	// restricted to {system_event, audit_log} source types) for
 	// additional per-event context. The deterministic incident
 	// timeline list, append-update form, and lifecycle controls at
@@ -2235,27 +2231,27 @@ var Registry = map[string]Feature{
 	// the model's context.
 	//
 	// Routes:
-	//   - Backend: POST /api/v1/ai/system/incidents/{incidentID}/summarize
+	//   Backend: POST /api/v1/ai/system/incidents/{incidentID}/summarize
 	//     (gated by guard.Wrap("incident-timeline-summarizer"); 404
 	//     in off mode).
-	//   - Frontend: /system/incidents (registry metadata only;
+	//   Frontend: /system/incidents (registry metadata only;
 	//     summary surface is rendered inside the canonical
 	//     IncidentTimelinePage at /system-status/incidents/:id when
 	//     the feature is enabled — the registry route is the
 	//     coverage anchor for off-mode walker tests).
-	//   - UITestIDs: ai-feature-incident-timeline-summarizer-root
+	//   UITestIDs: ai-feature-incident-timeline-summarizer-root
 	//     (auto-applied by withAiFeature HOC reading
 	//     meta.uiTestIds[0]).
 	//
 	// NeedsRAG: true — the OPTIONAL secondary tool routes through
-	// the F7 rag.Retriever entry point.
+	// the rag.Retriever entry point.
 	// NeedsTools: true — query_incident_timeline + retrieve_system_chunks.
 	// NeedsStream: true — the dispatcher streams delta+done frames
 	// to the SPA via internal/ai/stream.
 	//
 	// JobNames / PushKinds: explicitly empty (no background job, no
 	// notification/push channel surface). features.CoverageOK rejects
-	// nil; the empty slice is the affirmative "no surface" signal.
+	// nil; the empty feature is the affirmative "no surface" signal.
 	"incident-timeline-summarizer": {
 		ID:          "incident-timeline-summarizer",
 		Name:        "Incident timeline summarizer",
@@ -2273,7 +2269,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / S2 (slice 0043) — Data repair suggestions.
+	// Data repair suggestions.
 	//
 	// LLM-assisted assistant for the /system/data-repair page that
 	// proposes a typed RepairPlan for ONE stale charging session
@@ -2286,11 +2282,11 @@ var Registry = map[string]Feature{
 	// sole write surface).
 	//
 	// The strategy invokes two propose-only tools:
-	//   - draft_data_repair_plan    — builds a normalized + scope-
+	//   draft_data_repair_plan    — builds a normalized + scope-
 	//     checked RepairPlan DTO with the per-kind allowlist of
 	//     update_fields enforced (mirrors database.chargingPartialAllowed
 	//     / drivePartialAllowed exactly).
-	//   - validate_data_repair_plan — re-runs the same shape /
+	//   validate_data_repair_plan — re-runs the same shape /
 	//     scope / allowlist checks so the LLM can confirm the
 	//     proposed draft would be accepted by the canonical
 	//     handler before narrating it.
@@ -2298,28 +2294,28 @@ var Registry = map[string]Feature{
 	// Per-request scope binding (defence against prompt-injection
 	// exfiltration): the AI handler installs a snapshot of the
 	// CURRENT in-scope (chargingIDs, driveIDs) into ctx via
-	// tools.WithScopedDataRepairIDs BEFORE invoking the dispatcher.
+	// diagnostic.WithScopedDataRepairIDs BEFORE invoking the dispatcher.
 	// Both tools refuse any LLM-supplied (target_kind, target_id)
 	// pair that is NOT in the snapshot — even if the LLM tries to
 	// propose discarding a different row, the scope check refuses
 	// the call before the proposal reaches the frontend AI panel.
 	//
 	// Routes:
-	//   - Backend: POST /api/v1/ai/system/data-repair/draft
+	//   Backend: POST /api/v1/ai/system/data-repair/draft
 	//     (gated by guard.Wrap("data-repair-suggestions"); 404 in
 	//     off mode).
-	//   - Frontend: /system/data-repair (registry metadata only;
+	//   Frontend: /system/data-repair (registry metadata only;
 	//     the AI side panel is rendered inside the canonical
 	//     DataRepairPage at /system/data-repair when the feature
 	//     is enabled — the registry route is the coverage anchor
 	//     for off-mode walker tests).
-	//   - UITestIDs: ai-feature-data-repair-suggestions-root
+	//   UITestIDs: ai-feature-data-repair-suggestions-root
 	//     (auto-applied by withAiFeature HOC reading
 	//     meta.uiTestIds[0]).
 	//
-	// NeedsRAG: false — the slice prompt enumerates the source
+	// NeedsRAG: false — the feature spec enumerates the source
 	// types audit_log;signal_gap;job_status as future-eligible RAG
-	// corpora, but Phase-50 / 0043 ships propose-only without RAG;
+	// corpora, but ships propose-only without RAG;
 	// the inventory the handler synthesises is sufficient ground
 	// truth.
 	// NeedsTools: true — draft_data_repair_plan +
@@ -2337,7 +2333,7 @@ var Registry = map[string]Feature{
 	//
 	// JobNames / PushKinds: explicitly empty (no background job, no
 	// notification/push channel surface). features.CoverageOK
-	// rejects nil; the empty slice is the affirmative "no surface"
+	// rejects nil; the empty feature is the affirmative "no surface"
 	// signal.
 	"data-repair-suggestions": {
 		ID:          "data-repair-suggestions",
@@ -2356,7 +2352,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / 0044 — S3 Signal explorer natural-language filter.
+	// Signal explorer natural-language filter.
 	//
 	// Opt-in LLM that translates a natural-language filter request
 	// (e.g. "show me speed for the last hour" or "battery level
@@ -2369,7 +2365,7 @@ var Registry = map[string]Feature{
 	//
 	// Tool sequence (mirrors data-repair-suggestions S2):
 	//
-	//   - draft_signal_filter:    accept a typed
+	//   draft_signal_filter:    accept a typed
 	//     {vehicle_id, signals, range_preset, per_page} input and
 	//     return a normalized + validated SignalFilter draft envelope.
 	//     The tool is per-request scope-bound to the per-vehicle
@@ -2378,7 +2374,7 @@ var Registry = map[string]Feature{
 	//     signal that is not in the catalog. Defence-in-depth
 	//     against prompt injection in user prose.
 	//
-	//   - validate_signal_filter: accept the same typed shape and
+	//   validate_signal_filter: accept the same typed shape and
 	//     re-run the canonical validator without rebuilding the
 	//     draft envelope. Used by the LLM to confirm a draft is
 	//     acceptable before narrating it to the user.
@@ -2393,15 +2389,15 @@ var Registry = map[string]Feature{
 	// refuses the proposal before it reaches the SPA.
 	//
 	// Routes:
-	//   - Backend: POST /api/v1/ai/signals/filter/draft
+	//   Backend: POST /api/v1/ai/signals/filter/draft
 	//     (gated by guard.Wrap("signal-explorer-nl-filter"); 404 in
 	//     off mode).
-	//   - Frontend: /signals/explorer (registry metadata only; the
+	//   Frontend: /signals/explorer (registry metadata only; the
 	//     AI panel is rendered inside the canonical
 	//     SignalExplorerPage when the feature is enabled — the
 	//     registry route is the coverage anchor for off-mode walker
 	//     tests).
-	//   - UITestIDs: ai-feature-signal-explorer-nl-filter-root
+	//   UITestIDs: ai-feature-signal-explorer-nl-filter-root
 	//     (auto-applied by withAiFeature HOC reading
 	//     meta.uiTestIds[0]).
 	//
@@ -2417,12 +2413,12 @@ var Registry = map[string]Feature{
 	// every PII class redacted to a round-trip tag) so a leaked
 	// transcript reveals nothing about VINs, vehicle names,
 	// coordinates, or any pasted operator value. Vehicle identifiers
-	// flow through the typed F4 tool envelope, not through prompt
+	// flow through the typed typed tool envelope, not through prompt
 	// prose.
 	//
 	// JobNames / PushKinds: explicitly empty (no background job, no
 	// notification/push channel surface). features.CoverageOK
-	// rejects nil; the empty slice is the affirmative "no surface"
+	// rejects nil; the empty feature is the affirmative "no surface"
 	// signal.
 	"signal-explorer-nl-filter": {
 		ID:          "signal-explorer-nl-filter",
@@ -2441,7 +2437,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
+	// Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as
 	// `__usage__`: it has no per-feature toggle of its own, only a
@@ -2472,7 +2468,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / 0062 — ML1 Learned per-vehicle anomaly baselines.
+	// Learned per-vehicle anomaly baselines.
 	//
 	// Opt-in LLM narrator that EXPLAINS the per-signal learned
 	// anomaly envelope the deterministic statistical trainer at
@@ -2486,25 +2482,25 @@ var Registry = map[string]Feature{
 	// and on the Anomaly Detection page when this toggle is off.
 	//
 	// Tools:
-	//   - train_anomaly_baseline (read-only) — recomputes the
+	//   train_anomaly_baseline (read-only) — recomputes the
 	//     per-signal learned envelope on demand from signal_log;
 	//     returns the LearnedBaseline DTO with explicit Source per
 	//     entry ("learned" or "safe_ranges_fallback") so the
 	//     narrator can honestly report which signals fell back.
-	//   - query_anomaly_baseline (read-only) — returns the
+	//   query_anomaly_baseline (read-only) — returns the
 	//     CURRENTLY-effective per-vehicle envelope the deterministic
 	//     detector uses today (today: every signal is the static
-	//     safeRanges fallback because this slice does not persist
-	//     learned envelopes; a future job-tier slice may persist
+	//     safeRanges fallback because this feature does not persist
+	//     learned envelopes; a future job-tier feature may persist
 	//     them — see JobNames).
 	// Both tools are Mutates=false and never write to signal_log
 	// or any other table.
 	//
 	// JobNames: ["ai_ml_anomaly_trainer"] — gated daily-trainer
-	// stub registered for forward-compat. The slice does NOT ship
+	// stub registered for forward-compat. The feature does NOT ship
 	// the job; declaring it now keeps the registry the single
 	// source of truth for the off-mode coverage walker so when a
-	// future slice adds the job it does NOT widen the off-mode
+	// future feature adds the job it does NOT widen the off-mode
 	// surface.
 	//
 	// PushKinds: ["ai_ml_anomaly_ready"] — gated push-event kind
@@ -2527,7 +2523,7 @@ var Registry = map[string]Feature{
 		},
 	},
 
-	// ml-charging-curve-clustering — Phase-50 / 0064 (ML3).
+	// ml-charging-curve-clustering.
 	//
 	// Opt-in LLM narrator over a per-vehicle deterministic learned
 	// charging-curve clustering model: the trainer at
@@ -2537,7 +2533,7 @@ var Registry = map[string]Feature{
 	// power, mean total energy, mean duration, mean ramp shape,
 	// dominant charger type) from charging_sessions in the recent
 	// window, with per-cluster fallback to the deterministic L1/L2/DC
-	// rule label (mirroring the SPA helpers.ts and the C3 sibling
+	// rule label (mirroring the SPA helpers.ts and the charging-curve sibling
 	// classifier in internal/ai/tools/charge_curve_clustering.go,
 	// pinned by the parity test
 	// internal/api/ai_ml_charging_curve_parity_test.go) when fewer
@@ -2549,31 +2545,31 @@ var Registry = map[string]Feature{
 	// (alias of /charging-curve, mounted by App.tsx) and its
 	// rule-based session labels in
 	// web/src/features/charging/components/charging-curve/helpers.ts
-	// remain the canonical baseline when AI is off — this slice does
+	// remain the canonical baseline when AI is off — this feature does
 	// NOT replace them.
 	//
-	// Sibling distinction: this is the ML3-tier *statistical clustering*
-	// model. The C3-tier *charging-curve-fingerprint-clustering* slice
-	// 0028 is a separate LLM narrator over the C3 aggregator's output
+	// Sibling distinction: this is the *statistical clustering*
+	// model. The *charging-curve-fingerprint-clustering* feature
+	// The charging-curve fingerprint feature is a separate LLM narrator over the charging-curve aggregator's output
 	// (per-cluster averages, no stddev/p5/p95, no learned-vs-fallback
 	// label). Both surfaces coexist on /charging/curves with
 	// independent per-feature toggles and independent test IDs; they
 	// can be enabled together or independently.
 	//
-	// JobNames: ["ai_ml_charge_curve_trainer"] — slice 0064 does
+	// JobNames: ["ai_ml_charge_curve_trainer"] — the existing feature does
 	// not ship the job; the trainer is request-scoped today. The
 	// job name is registered for forward-compat so the off-mode
 	// coverage walker can prove its absence in off mode and so a
-	// future job-tier slice does NOT widen the off-mode surface
+	// future job-tier feature does NOT widen the off-mode surface
 	// when it lands.
 	//
 	// PushKinds: ["ai_ml_charge_curve_ready"] — gated push-event
 	// kind registered for forward-compat for the same reason.
 	//
-	// Frontend: ["/charging/curves"] — the slice prompt requires
+	// Frontend: ["/charging/curves"] — the feature spec requires
 	// this route. App.tsx exposes /charging/curves as an alias of
-	// the canonical /charging-curve route (added by slice 0028 for
-	// the C3 sibling).
+	// the canonical /charging-curve route (added by the existing feature for
+	// the charging-curve sibling).
 	"ml-charging-curve-clustering": {
 		ID:          "ml-charging-curve-clustering",
 		Name:        "Charging-curve clustering model",
@@ -2592,7 +2588,7 @@ var Registry = map[string]Feature{
 		},
 	},
 
-	// range-prediction-model — Phase-50 / 0063 (ML2).
+	// range-prediction-model.
 	//
 	// Opt-in LLM narrator over a per-vehicle deterministic learned
 	// range model: the trainer at internal/ml/range computes per-bucket
@@ -2606,19 +2602,19 @@ var Registry = map[string]Feature{
 	//
 	// The deterministic Projected Range page at /projected-range
 	// (RangeProjectionHandler at /api/v1/vehicles/{id}/range/projection)
-	// remains the canonical baseline when AI is off — this slice does
+	// remains the canonical baseline when AI is off — this feature does
 	// NOT replace it.
 	//
-	// JobNames: ["ai_ml_range_trainer"] — slice 0063 does not ship
+	// JobNames: ["ai_ml_range_trainer"] — the existing feature does not ship
 	// the job; the trainer is request-scoped today. The job name is
 	// registered for forward-compat so the off-mode coverage walker
 	// can prove its absence in off mode and so a future job-tier
-	// slice does NOT widen the off-mode surface when it lands.
+	// feature does NOT widen the off-mode surface when it lands.
 	//
 	// PushKinds: ["ai_ml_range_ready"] — gated push-event kind
 	// registered for forward-compat for the same reason.
 	//
-	// Frontend: ["/analytics/range"] — the slice prompt requires this
+	// Frontend: ["/analytics/range"] — the feature spec requires this
 	// route. The canonical Projected Range page lives at
 	// /projected-range; App.tsx exposes /analytics/range as an alias
 	// route that mounts the same page (see web/src/App.tsx).
@@ -2640,29 +2636,29 @@ var Registry = map[string]Feature{
 		},
 	},
 
-	// Phase-50 / 0045 — S4 Log and trace summarization.
+	// Log and trace summarization.
 	//
 	// Opt-in LLM summarizer that condenses a recent redacted log /
 	// trace window for the operator-facing live-logs surface into a
 	// 3-6 sentence factual summary by routing through two read-only
 	// tools:
 	//
-	//   - query_trace_window — returns a typed deterministic
+	//   query_trace_window — returns a typed deterministic
 	//     TraceWindowEnvelope (window bounds, log-event count by
 	//     level, top recurring log-event templates with counts,
 	//     trace-span count, top trace-span operations with mean
-	//     duration). The slice ships with a deterministic empty
+	//     duration). The feature ships with a deterministic empty
 	//     source adapter (the operator-facing log surface is
 	//     stream-only — there is no historical log persistence
 	//     beyond zerolog's stdout); the adapter installs the bound
 	//     window in ctx via tools.WithScopedLogTraceWindow so a
-	//     future slice that wires a log-history reader does NOT
+	//     future feature that wires a log-history reader does NOT
 	//     widen the per-request scope contract.
 	//
-	//   - retrieve_log_chunks — F7 retrieval restricted to the
+	//   retrieve_log_chunks — RAG retrieval restricted to the
 	//     per-feature source-type allowlist {log_event, trace_span}.
 	//     Both source types are reserved for forward-compatibility
-	//     — a future slice will index per-window log-event and
+	//     a future feature will index per-window log-event and
 	//     trace-span chunks. Until then, retrieve_log_chunks called
 	//     with either source type simply returns zero chunks for
 	//     that corpus; the strategy's goldens already cover the
@@ -2674,26 +2670,26 @@ var Registry = map[string]Feature{
 	// authenticated SSE-backed log tail with manual level + grep +
 	// vehicle filters) is the canonical baseline when AI is off.
 	// The registry's Frontend route metadata is `/system/logs`
-	// (the slice prompt's documented coverage anchor); the AI
+	// (the feature spec's documented coverage anchor); the AI
 	// section is rendered inside the canonical LiveLogsPage when
 	// the feature is enabled — same coverage-anchor pattern used
 	// by incident-timeline-summarizer and signal-explorer-nl-filter.
 	//
 	// Routes:
-	//   - Backend: POST /api/v1/ai/system/logs/summarize
+	//   Backend: POST /api/v1/ai/system/logs/summarize
 	//     (gated by guard.Wrap("log-trace-summarization"); 404 in
 	//     off mode).
-	//   - Frontend: /system/logs (registry metadata only;
+	//   Frontend: /system/logs (registry metadata only;
 	//     summary surface is rendered inside the canonical
 	//     LiveLogsPage at /live-logs when the feature is enabled
-	//     — the registry route is the coverage anchor for off-mode
+	//     the registry route is the coverage anchor for off-mode
 	//     walker tests).
-	//   - UITestIDs: ai-feature-log-trace-summarization-root
+	//   UITestIDs: ai-feature-log-trace-summarization-root
 	//     (auto-applied by withAiFeature HOC reading
 	//     meta.uiTestIds[0]).
 	//
 	// NeedsRAG: true — the OPTIONAL secondary tool routes through
-	// the F7 rag.Retriever entry point.
+	// the rag.Retriever entry point.
 	// NeedsTools: true — query_trace_window + retrieve_log_chunks.
 	// NeedsStream: true — the dispatcher streams delta+done frames
 	// to the SPA via internal/ai/stream.
@@ -2709,10 +2705,10 @@ var Registry = map[string]Feature{
 	// exfiltration via operator-authored log messages.
 	//
 	// JobNames: ["ai_log_trace_indexer"] — gated indexer stub
-	// registered for forward-compat. The slice ships the gated
+	// registered for forward-compat. The feature ships the gated
 	// no-op stub at internal/jobs/ai_log_trace_indexer.go so the
 	// off-mode coverage walker can prove its absence in off mode
-	// and so a future slice that wires the real indexer fan-out
+	// and so a future feature that wires the real indexer fan-out
 	// does NOT widen the off-mode surface when it lands.
 	//
 	// PushKinds: explicitly empty (no notification/push channel
@@ -2736,16 +2732,16 @@ var Registry = map[string]Feature{
 		},
 	},
 
-	// Phase-50 / 0046 — S5 Feedback queue triage.
+	// Feedback queue triage.
 	//
 	// Opt-in LLM triage advisor that proposes a typed
 	// {proposed_status, proposed_category, proposed_priority,
 	// rationale} envelope for one user_feedback row by routing
 	// through three propose/read-only tools:
 	//
-	//   - draft_feedback_triage    — loads the in-scope row via
+	//   draft_feedback_triage    — loads the in-scope row via
 	//     the FeedbackTriageSource port (a thin wrapper around
-	//     *database.UserFeedbackRepo.Get that PII-minimizes the
+	//     *dbuser.UserFeedbackRepo.Get that PII-minimizes the
 	//     row into a FeedbackTriageEntry — only id / created_at /
 	//     category / title / body[truncated] / page_route /
 	//     app_version / status / github_issue_url are forwarded;
@@ -2753,16 +2749,16 @@ var Registry = map[string]Feature{
 	//     recent_errors, console_tail are NOT forwarded) and
 	//     returns a normalized + scope-checked typed proposal.
 	//
-	//   - validate_feedback_triage — pure DTO transform that
+	//   validate_feedback_triage — pure DTO transform that
 	//     asserts the proposal's enum fields are members of the
 	//     closed taxonomies (status: new|triaged|closed; category:
 	//     bug|feature|other; priority: low|normal|high|critical).
 	//     No IO; no source touch.
 	//
-	//   - retrieve_feedback_chunks — F7 retrieval restricted to
+	//   retrieve_feedback_chunks — RAG retrieval restricted to
 	//     the per-feature source-type allowlist {feedback_item,
 	//     audit_log}. Both source types are reserved for
-	//     forward-compatibility — a future indexer slice will
+	//     forward-compatibility — a future indexer feature will
 	//     index per-item feedback chunks + an audit-log corpus.
 	//     Until then, retrieve_feedback_chunks called with either
 	//     source type simply returns zero chunks for that corpus;
@@ -2774,27 +2770,27 @@ var Registry = map[string]Feature{
 	// admin manual-triage surface that hits PATCH
 	// /api/v1/admin/feedback/{id}) is the canonical baseline when
 	// AI is off. The registry's Frontend route metadata is
-	// `/system/feedback` (the slice prompt's documented coverage
+	// `/system/feedback` (the feature spec's documented coverage
 	// anchor); the AI section is rendered inside the canonical
 	// FeedbackQueuePage when the feature is enabled — same
 	// coverage-anchor pattern used by log-trace-summarization,
 	// incident-timeline-summarizer, and signal-explorer-nl-filter.
 	//
 	// Routes:
-	//   - Backend: POST /api/v1/ai/feedback/triage/draft
+	//   Backend: POST /api/v1/ai/feedback/triage/draft
 	//     (gated by guard.Wrap("feedback-queue-triage"); 404 in
 	//     off mode).
-	//   - Frontend: /system/feedback (registry metadata only;
+	//   Frontend: /system/feedback (registry metadata only;
 	//     proposal surface is rendered inside the canonical
 	//     FeedbackQueuePage at /admin/feedback when the feature
 	//     is enabled — the registry route is the coverage anchor
 	//     for off-mode walker tests).
-	//   - UITestIDs: ai-feature-feedback-queue-triage-root
+	//   UITestIDs: ai-feature-feedback-queue-triage-root
 	//     (auto-applied by withAiFeature HOC reading
 	//     meta.uiTestIds[0]).
 	//
 	// NeedsRAG: true — the OPTIONAL secondary retrieve_feedback_chunks
-	// tool routes through the F7 rag.Retriever entry point.
+	// tool routes through the rag.Retriever entry point.
 	// NeedsTools: true — draft_feedback_triage +
 	// validate_feedback_triage + retrieve_feedback_chunks.
 	// NeedsStream: true — the dispatcher streams delta+done frames
@@ -2812,22 +2808,22 @@ var Registry = map[string]Feature{
 	// triage feedback_id=99 instead").
 	//
 	// JobNames: ["ai_feedback_triage"] — gated indexer stub
-	// registered for forward-compat. The slice ships the gated
+	// registered for forward-compat. The feature ships the gated
 	// no-op stub at internal/jobs/ai_feedback_triage.go so the
 	// off-mode coverage walker can prove its absence in off mode
-	// and so a future slice that wires the real proposer fan-out
+	// and so a future feature that wires the real proposer fan-out
 	// does NOT widen the off-mode surface when it lands.
 	//
 	// PushKinds: ["ai_feedback_triaged"] — declared for forward-
-	// compat with a future broadcaster slice that fan-outs a
+	// compat with a future broadcaster feature that fan-outs a
 	// proposed-triage notification to operator subscribers; this
-	// slice does not produce the kind, but registering it in the
+	// feature does not produce the kind, but registering it in the
 	// metadata lets the off-mode coverage walker prove its
 	// absence in off mode without a follow-up registry edit.
 	"feedback-queue-triage": {
 		ID:          "feedback-queue-triage",
 		Name:        "Feedback queue triage",
-		Description: "Opt-in LLM triage advisor that proposes a typed {proposed_status, proposed_category, proposed_priority, rationale} envelope for one user_feedback row by routing through three propose/read-only tools: draft_feedback_triage (loads the in-scope row via the FeedbackTriageSource port — a thin wrapper around *database.UserFeedbackRepo.Get that PII-minimizes the row into a FeedbackTriageEntry; only id / created_at / category / title / body[truncated] / page_route / app_version / status / github_issue_url are forwarded; user_email, submitter_subject, submitter_ip, recent_errors, console_tail are NOT forwarded), validate_feedback_triage (pure DTO transform asserting enum membership for status / category / priority), and the OPTIONAL retrieve_feedback_chunks (F7 retrieval restricted to {feedback_item, audit_log} source types) for per-row context. The deterministic FeedbackQueuePage manual-triage surface remains the canonical baseline when AI is off. Per-feature redaction policy is PolicyAlertBuilder (deny-by-default; every tag class redacted to a round-trip tag) so a leaked transcript reveals nothing about VINs, coordinates, or any value the user typed into the feedback body. Per-request scope binding installs the body-supplied feedback_id in ctx and refuses any LLM-supplied feedback_id outside that id to defend against prompt-injection exfiltration via user-authored feedback bodies. Only proposed_status maps onto the canonical FeedbackUpdateInput.status field; proposed_category and proposed_priority are recommendation-only chips with no persistence path.",
+		Description: "Opt-in LLM triage advisor that proposes a typed {proposed_status, proposed_category, proposed_priority, rationale} envelope for one user_feedback row by routing through three propose/read-only tools: draft_feedback_triage (loads the in-scope row via the FeedbackTriageSource port — a thin wrapper around *dbuser.UserFeedbackRepo.Get that PII-minimizes the row into a FeedbackTriageEntry; only id / created_at / category / title / body[truncated] / page_route / app_version / status / github_issue_url are forwarded; user_email, submitter_subject, submitter_ip, recent_errors, console_tail are NOT forwarded), validate_feedback_triage (pure DTO transform asserting enum membership for status / category / priority), and the OPTIONAL retrieve_feedback_chunks (F7 retrieval restricted to {feedback_item, audit_log} source types) for per-row context. The deterministic FeedbackQueuePage manual-triage surface remains the canonical baseline when AI is off. Per-feature redaction policy is PolicyAlertBuilder (deny-by-default; every tag class redacted to a round-trip tag) so a leaked transcript reveals nothing about VINs, coordinates, or any value the user typed into the feedback body. Per-request scope binding installs the body-supplied feedback_id in ctx and refuses any LLM-supplied feedback_id outside that id to defend against prompt-injection exfiltration via user-authored feedback bodies. Only proposed_status maps onto the canonical FeedbackUpdateInput.status field; proposed_category and proposed_priority are recommendation-only chips with no persistence path.",
 		Tier:        "S5",
 		DefaultOn:   false,
 		NeedsRAG:    true,
@@ -2842,14 +2838,14 @@ var Registry = map[string]Feature{
 		},
 	},
 
-	// Phase-50 / 0047 — S6 mqtt-sse-inspector-explanations.
+	// S6 mqtt-sse-inspector-explanations.
 	//
 	// Opt-in LLM-backed explainer that turns the deterministic
 	// MQTT-broker / SSE-hub / background-job snapshot into a 3-6
 	// sentence operator-readable factual explanation by routing
 	// through two read-only tools:
 	//
-	//   - query_stream_inspector — typed deterministic envelope
+	//   query_stream_inspector — typed deterministic envelope
 	//     describing the in-scope (from_unix, to_unix) window:
 	//     broker connectivity (mqtt_connected, mqtt_uptime_seconds,
 	//     mqtt_broker_address, mqtt_topic_patterns), per-vehicle
@@ -2862,16 +2858,16 @@ var Registry = map[string]Feature{
 	//     last_run_unix, last_run_time, last_status,
 	//     last_duration_ms). Per-request scope binding installs the
 	//     body-supplied (from_unix, to_unix) tuple in ctx via
-	//     tools.WithScopedStreamInspectorWindow and refuses any
+	//     diagnostic.WithScopedStreamInspectorWindow and refuses any
 	//     LLM-supplied window outside that tuple to defend against
 	//     prompt-injection exfiltration via operator-readable VINs,
 	//     topic names, or broker hostnames.
 	//
-	//   - retrieve_stream_chunks — F7 retrieval restricted to the
+	//   retrieve_stream_chunks — RAG retrieval restricted to the
 	//     per-feature source-type allowlist {mqtt_status,
 	//     sse_status, job_status}. All three source types are
 	//     reserved for forward-compatibility — a future indexer
-	//     slice will index per-window broker / SSE-hub / job
+	//     feature will index per-window broker / SSE-hub / job
 	//     chunks. Until then, retrieve_stream_chunks called with
 	//     any of these source types simply returns zero chunks for
 	//     that corpus; the strategy's goldens already cover the
@@ -2882,27 +2878,27 @@ var Registry = map[string]Feature{
 	// The deterministic MQTTInspectorPage at /mqtt-inspector (the
 	// canonical broker-status snapshot table) is the baseline
 	// rendered when AI is off. The registry's Frontend route
-	// metadata is `/system/streams` (the slice prompt's documented
+	// metadata is `/system/streams` (the feature spec's documented
 	// coverage anchor); the AI section is rendered inside the
 	// canonical MQTTInspectorPage when the feature is enabled —
 	// same coverage-anchor pattern used by log-trace-summarization,
 	// incident-timeline-summarizer, and feedback-queue-triage.
 	//
 	// Routes:
-	//   - Backend: POST /api/v1/ai/system/streams/explain
+	//   Backend: POST /api/v1/ai/system/streams/explain
 	//     (gated by guard.Wrap("mqtt-sse-inspector-explanations");
 	//     404 in off mode).
-	//   - Frontend: /system/streams (registry metadata only;
+	//   Frontend: /system/streams (registry metadata only;
 	//     explanation surface is rendered inside the canonical
 	//     MQTTInspectorPage at /mqtt-inspector when the feature
 	//     is enabled — the registry route is the coverage anchor
 	//     for off-mode walker tests).
-	//   - UITestIDs: ai-feature-mqtt-sse-inspector-explanations-root
+	//   UITestIDs: ai-feature-mqtt-sse-inspector-explanations-root
 	//     (auto-applied by withAiFeature HOC reading
 	//     meta.uiTestIds[0]).
 	//
 	// NeedsRAG: true — the OPTIONAL secondary
-	// retrieve_stream_chunks tool routes through the F7
+	// retrieve_stream_chunks tool routes through the RAG
 	// rag.Retriever entry point.
 	// NeedsTools: true — query_stream_inspector +
 	// retrieve_stream_chunks.
@@ -2914,11 +2910,11 @@ var Registry = map[string]Feature{
 	// tag) so a leaked transcript reveals nothing about broker
 	// hostnames, ports, SSE client identifiers, or VINs.
 	//
-	// JobNames: [] — this slice does NOT add a background job;
+	// JobNames: [] — this feature does NOT add a background job;
 	// the canonical telemetry-ingest path is unchanged and the
 	// AI surface is request-scoped to the user's HTTP call.
 	//
-	// PushKinds: [] — this slice does NOT add a push kind; the
+	// PushKinds: [] — this feature does NOT add a push kind; the
 	// SSE stream the AI handler writes to is the per-request
 	// dispatcher stream, not a fan-out to subscribers.
 	"mqtt-sse-inspector-explanations": {
@@ -2939,14 +2935,14 @@ var Registry = map[string]Feature{
 		},
 	},
 
-	// Phase-50 / 0048 — S7 state-machine-debugger-narrator.
+	// S7 state-machine-debugger-narrator.
 	//
 	// Opt-in LLM-backed narrator that turns the deterministic
 	// per-vehicle FSM transition trace into a 3-6 sentence
 	// operator-readable factual narration by routing through two
 	// read-only tools:
 	//
-	//   - query_fsm_trace — typed deterministic envelope
+	//   query_fsm_trace — typed deterministic envelope
 	//     describing the in-scope (vehicle_id, from_unix, to_unix)
 	//     tuple: window bounds, vehicle id, total_transitions,
 	//     per_fsm ([{fsm_name, count}]), per_edge ([{from_state,
@@ -2961,11 +2957,11 @@ var Registry = map[string]Feature{
 	//     against prompt-injection exfiltration via operator-
 	//     readable trigger strings or FSM names.
 	//
-	//   - retrieve_fsm_chunks — F7 retrieval restricted to the
+	//   retrieve_fsm_chunks — RAG retrieval restricted to the
 	//     per-feature source-type allowlist {fsm_transition,
 	//     signal_history_summary}. Both source types are
 	//     reserved for forward-compatibility — a future indexer
-	//     slice will index per-transition and per-window signal-
+	//     feature will index per-transition and per-window signal-
 	//     history chunks. Until then, retrieve_fsm_chunks called
 	//     with either source type simply returns zero chunks for
 	//     that corpus; the strategy's goldens already cover the
@@ -2977,7 +2973,7 @@ var Registry = map[string]Feature{
 	// (the canonical transition table + state diagram + FSM health
 	// panel + timeline chart) is the baseline rendered when AI is
 	// off. The registry's Frontend route metadata is
-	// `/system/fsm-debugger` (the slice prompt's documented
+	// `/system/fsm-debugger` (the feature spec's documented
 	// coverage anchor); the AI section is rendered inside the
 	// canonical StateMachineDebuggerPage when the feature is
 	// enabled — same coverage-anchor pattern used by
@@ -2985,26 +2981,26 @@ var Registry = map[string]Feature{
 	// feedback-queue-triage, and mqtt-sse-inspector-explanations.
 	//
 	// Routes:
-	//   - Backend: POST /api/v1/ai/system/fsm/narrate
+	//   Backend: POST /api/v1/ai/system/fsm/narrate
 	//     (gated by guard.Wrap("state-machine-debugger-narrator");
 	//     404 in off mode).
-	//   - Frontend: /system/fsm-debugger (registry metadata only;
+	//   Frontend: /system/fsm-debugger (registry metadata only;
 	//     narration surface is rendered inside the canonical
 	//     StateMachineDebuggerPage at /state-debugger when the
 	//     feature is enabled — the registry route is the
 	//     coverage anchor for off-mode walker tests).
-	//   - UITestIDs: ai-feature-state-machine-debugger-narrator-root
+	//   UITestIDs: ai-feature-state-machine-debugger-narrator-root
 	//     (auto-applied by withAiFeature HOC reading
 	//     meta.uiTestIds[0]).
 	//
 	// NeedsRAG: true — the OPTIONAL secondary retrieve_fsm_chunks
-	// tool routes through the F7 rag.Retriever entry point.
+	// tool routes through the rag.Retriever entry point.
 	// NeedsTools: true — query_fsm_trace + retrieve_fsm_chunks.
 	// NeedsStream: true — the dispatcher streams delta+done
 	// frames to the SPA via internal/ai/stream.
 	//
 	// Per-feature redaction policy is PolicyDigest
-	// (Allow=[ClassVehicleName]) per the slice prompt — every
+	// (Allow=[ClassVehicleName]) per the feature spec — every
 	// other PII class (VIN, lat/long, place names, IP addresses,
 	// emails, phone numbers, MAC addresses, IDs) is tagged
 	// round-trip BEFORE the message is sent to the provider so a
@@ -3012,11 +3008,11 @@ var Registry = map[string]Feature{
 	// chosen car name. Transition details are user-visible to
 	// the operator already, so the narration is unaffected.
 	//
-	// JobNames: [] — this slice does NOT add a background job;
+	// JobNames: [] — this feature does NOT add a background job;
 	// the canonical fsm-transition write path is unchanged and
 	// the AI surface is request-scoped to the user's HTTP call.
 	//
-	// PushKinds: [] — this slice does NOT add a push kind; the
+	// PushKinds: [] — this feature does NOT add a push kind; the
 	// SSE stream the AI handler writes to is the per-request
 	// dispatcher stream, not a fan-out to subscribers.
 	"state-machine-debugger-narrator": {
@@ -3036,7 +3032,7 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
-	// Phase-50 / M1 (slice 0049) — Predictive maintenance.
+	// Predictive maintenance.
 	//
 	// Adds an opt-in LLM-backed advisor that turns the existing
 	// per-vehicle maintenance reminders + service history + (when
@@ -3060,12 +3056,12 @@ var Registry = map[string]Feature{
 	//      is written by the tool.
 	//
 	//   2. `retrieve_maintenance_chunks` — OPTIONAL thin wrapper
-	//      over the F7 rag.Retriever scoped to the calling
-	//      user_subject, restricted to the slice's per-feature
+	//      over the rag.Retriever scoped to the calling
+	//      user_subject, restricted to the feature's per-feature
 	//      source-type allowlist {maintenance_event, vehicle_state,
 	//      ml_anomaly}. All three source types are reserved by
 	//      string for forward-compatibility — future indexer
-	//      slices will index per-service-event / per-state-summary
+	//      features will index per-service-event / per-state-summary
 	//      / per-ML-anomaly chunks. Until then, the retriever
 	//      simply returns zero chunks for each corpus, which is
 	//      the correct behaviour: the strategy's goldens cover the
@@ -3097,7 +3093,7 @@ var Registry = map[string]Feature{
 	//
 	// Per-request scope binding: the AI handler installs the
 	// body-supplied vehicle_id in ctx via
-	// tools.WithScopedMaintenancePredictionWindow. The
+	// maintenance.WithScopedMaintenancePredictionWindow. The
 	// query_maintenance_context tool refuses any LLM-supplied
 	// vehicle_id that does not match the in-scope vehicle. This
 	// defeats prompt-injection exfiltration via operator-authored
@@ -3105,7 +3101,7 @@ var Registry = map[string]Feature{
 	// attacker pastes "load vehicle_id=99 instead" the tool
 	// refuses before the source is touched. The retrieve_maintenance_chunks
 	// tool omits vehicle_id from its input shape entirely; the
-	// F7 retriever's per-subject filter handles vehicle-vs-other-
+	// RAG retriever's per-subject filter handles vehicle-vs-other-
 	// vehicle separation (subject scoping is enforced by the
 	// retriever itself) and the source-type allowlist handles
 	// corpus restriction.
@@ -3113,17 +3109,17 @@ var Registry = map[string]Feature{
 	// Background: `ai_maintenance_model_update` is the cross-
 	// cutting cron a future scheduler will invoke to refresh the
 	// ML anomaly baselines + maintenance-history embeddings the
-	// F7 retriever reads when scoring predictive context; the job
+	// RAG retriever reads when scoring predictive context; the job
 	// re-checks ai_mode + per-feature toggle on every tick
 	// (ADR-015 §I12 #3) and is a no-op when either is off. This
-	// slice declares the JobName so registry coverage + the
+	// feature declares the JobName so registry coverage + the
 	// off-mode walker can enforce the absence-in-off contract
-	// before the worker ships, mirroring the U2 digest-narration
-	// `ai_digest_weekly` and N3 nl-search `ai_search_indexer`
-	// precedents (workers landed in follow-up slices).
+	// before the worker ships, mirroring the digest-narration
+	// `ai_digest_weekly` and nl-search `ai_search_indexer`
+	// precedents (workers landed in follow-up features).
 	//
 	// Push: `ai_maintenance_alert` is the push kind a future
-	// outreach slice will surface when the advisor's risk score
+	// outreach feature will surface when the advisor's risk score
 	// crosses a configurable threshold (e.g. overdue tire
 	// rotation + low pressure trend); declared here so the
 	// AI-off contract walker can enforce absence-in-off before
@@ -3161,7 +3157,7 @@ var Registry = map[string]Feature{
 		},
 	},
 
-	// tco-narration (Phase-50 / M2, slice 0050) narrates the
+	// tco-narration narrates the
 	// deterministic operating-cost envelope the SPA's
 	// TrueCostPage (/tco and the alias /analytics/tco) already
 	// renders from GET /api/v1/analytics/tco. Description
@@ -3213,12 +3209,12 @@ var Registry = map[string]Feature{
 		},
 	},
 
-	// software-update-changelog-summarizer (Phase-50 / M3, slice 0051)
+	// software-update-changelog-summarizer
 	// summarizes the deterministic firmware update history the SPA's
 	// SoftwareUpdatesPage already renders from
 	// GET /api/v1/software-updates. Routes through TWO read-only tools:
 	//
-	//   - query_vehicle_software loads the in-scope vehicle's
+	//   query_vehicle_software loads the in-scope vehicle's
 	//     deterministic update envelope (current installed version,
 	//     recent install/scheduled history, install cadence) from the
 	//     SAME software_updates table the canonical baseline timeline
@@ -3226,14 +3222,14 @@ var Registry = map[string]Feature{
 	//     includes a vehicle_id scope binding so an LLM-supplied
 	//     vehicle_id outside scope is refused at the tool boundary.
 	//
-	//   - retrieve_update_notes is the OPTIONAL F7 retrieval tool
+	//   retrieve_update_notes is the OPTIONAL RAG retrieval tool
 	//     scoped to the per-feature source-type allowlist
 	//     {software_update, docs}. Returns at most k cached release-
 	//     note chunks the operator can quote when summarizing the
 	//     changelog. Vehicle scoping for retrieve_update_notes is
 	//     INTENTIONALLY implicit: the input schema does NOT accept
 	//     vehicle_id so the LLM cannot request another vehicle's
-	//     chunks; per-vehicle separation is handled by the F7
+	//     chunks; per-vehicle separation is handled by the RAG
 	//     retriever's per-subject filter and the source-type
 	//     allowlist.
 	//
@@ -3257,14 +3253,14 @@ var Registry = map[string]Feature{
 	//
 	// JobNames: [ai_update_notes_indexer] is reserved for the
 	// future cron that re-embeds the cached release-note corpus
-	// into the F7 vector store. The job stub at
+	// into the vector store. The job stub at
 	// internal/jobs/ai_update_notes_indexer.go is fail-closed: when
 	// ai_mode='off' OR the per-feature toggle is off the cron
 	// returns Skipped=1 without touching the embedder or the vector
 	// DB (ADR-015 §I12 #3). The actual fan-out implementation lands
-	// in a future indexer-fan-out slice; today's contract pins the
-	// gate so the off-mode 9999 final-gate has provable evidence.
-	// pii-redaction-shared-exports (Phase-50 / P1, slice 0052)
+	// in a future indexer-fan-out feature; today's contract pins the
+	// gate so the off-mode 9999 final gate has provable evidence.
+	// pii-redaction-shared-exports
 	// helps users choose redaction settings before they create a
 	// shared / downloadable export. The deterministic export
 	// pipeline at POST /api/v1/export/jobs is unchanged; this
@@ -3275,7 +3271,7 @@ var Registry = map[string]Feature{
 	//
 	// The advisor routes through TWO read-only typed tools:
 	//
-	//   - draft_export_redaction_plan reads a STATIC Go catalog
+	//   draft_export_redaction_plan reads a STATIC Go catalog
 	//     keyed by export_type ({drives, charging, trips,
 	//     analytics, backup, account}) and returns a typed
 	//     envelope listing the PII classes typically present in
@@ -3284,7 +3280,7 @@ var Registry = map[string]Feature{
 	//     performed; the catalog is hard-coded so the
 	//     recommendation is reproducible across boots.
 	//
-	//   - validate_export_redaction_plan accepts a candidate
+	//   validate_export_redaction_plan accepts a candidate
 	//     plan and asserts every cited class is recognized,
 	//     every "highly recommended" class for the export_type
 	//     is covered by the plan, and the plan is internally
@@ -3300,12 +3296,12 @@ var Registry = map[string]Feature{
 	// create an export through the existing baseline export UI.
 	// There is no "Apply to form" affordance because the
 	// /exports page is a list view (past export jobs); a future
-	// slice MAY wire a recommendation-into-form copy when the
+	// feature MAY wire a recommendation-into-form copy when the
 	// export creation form gains an explicit redaction picker.
 	//
 	// Per-feature redaction policy is PolicyAlertBuilder
 	// (Allow=nil, Mode=ModeRedactedTags). Round-trip is NOT
-	// required for this slice (the static catalog never carries
+	// required for this feature (the static catalog never carries
 	// PII; the policy is defence-in-depth in case a future edit
 	// accidentally surfaces user-supplied text through one of
 	// the tools). The deterministic GET /api/v1/export/jobs +
@@ -3313,15 +3309,15 @@ var Registry = map[string]Feature{
 	// ExportsPage list rendering remain the canonical baseline
 	// when AI is off (ADR-015 §I3).
 	//
-	// The future F7 retrieval surface for export-related
+	// The future RAG retrieval surface for export-related
 	// guidance is reserved under source types
-	// {export_manifest, redaction_report}. This slice does NOT
+	// {export_manifest, redaction_report}. This feature does NOT
 	// wire a retrieve tool — the catalog is static and
 	// sufficient for the v1 advisor — so NeedsRAG is false.
-	// The source-type strings are reserved as slice-local
+	// The source-type strings are reserved as feature-local
 	// constants in internal/ai/tools/export_redaction_plan.go
-	// for forward-compat without widening the global F7
-	// contract; a future slice that adds a retrieve tool will
+	// for forward-compat without widening the global RAG
+	// contract; a future feature that adds a retrieve tool will
 	// promote them to the per-feature allowlist there.
 	"pii-redaction-shared-exports": {
 		ID:          "pii-redaction-shared-exports",
@@ -3359,7 +3355,7 @@ var Registry = map[string]Feature{
 		},
 	},
 
-	// quiet-hours-suggestion (Phase-50 / P2, slice 0053)
+	// quiet-hours-suggestion
 	// helps the user discover a sensible quiet-hours / Do-Not-
 	// Disturb window from their actual notification history. The
 	// canonical baseline at the QuietHoursPanel (the manual
@@ -3372,7 +3368,7 @@ var Registry = map[string]Feature{
 	//
 	// The advisor routes through TWO read-only typed tools:
 	//
-	//   - draft_quiet_hours_window reads the recent
+	//   draft_quiet_hours_window reads the recent
 	//     notification_logs window (non-critical severities
 	//     only) plus the user's existing quiet-hours windows,
 	//     finds the longest contiguous "quiet" interval where
@@ -3383,7 +3379,7 @@ var Registry = map[string]Feature{
 	//     beyond what the canonical NotificationRepo and
 	//     QuietHoursRepo readers already issue.
 	//
-	//   - validate_quiet_hours_window accepts a candidate
+	//   validate_quiet_hours_window accepts a candidate
 	//     window and asserts it satisfies the SAME validation
 	//     rules the canonical /api/v1/notifications/quiet-hours
 	//     POST handler enforces (HH:MM format, distinct
@@ -3420,23 +3416,23 @@ var Registry = map[string]Feature{
 	// notification dispatcher's defer logic remain the
 	// canonical baseline when AI is off (ADR-015 §I3).
 	//
-	// This slice does NOT use F7 retrieval — the candidate
+	// This feature does NOT use RAG retrieval — the candidate
 	// window is computed deterministically from the SAME
 	// notification_logs rows the canonical InboxPage reads, no
 	// vector store consultation needed. NeedsRAG is false.
 	//
 	// Frontend route metadata in the registry is "/settings/
-	// notifications" per the slice prompt (the conceptual
+	// notifications" per the feature spec (the conceptual
 	// "notifications settings" surface). The actual SPA route
 	// the AI panel mounts on is /notifications/quiet-hours
 	// (where the QuietHoursPanel lives in this codebase); both
 	// names refer to the same QuietHoursPage. The
 	// /settings/notifications path is reserved for a future
 	// settings-area redirect — keeping it in the registry
-	// satisfies the slice prompt's explicit metadata
+	// satisfies the feature spec's explicit metadata
 	// requirement and the off-mode walker treats both routes
 	// as gated by the same toggle.
-	// safety-setting-explainer (Phase-50 / P3, slice 0054)
+	// safety-setting-explainer
 	// adds an opt-in Helix advisor on the NEW /settings/safety
 	// SPA page that explains the user's existing safety-related
 	// TeslaSync settings in plain English. Targeted at users
@@ -3455,7 +3451,7 @@ var Registry = map[string]Feature{
 	//
 	// The advisor routes through TWO read-only typed tools:
 	//
-	//   - query_safety_settings reads the deterministic
+	//   query_safety_settings reads the deterministic
 	//     SettingsRepo and returns a typed envelope of the
 	//     safety-related toggles only: notification quiet
 	//     hours state, alert digest mode, critical-flash
@@ -3468,8 +3464,8 @@ var Registry = map[string]Feature{
 	//     database write. NO new SQL beyond what the canonical
 	//     SettingsRepo readers already issue.
 	//
-	//   - retrieve_docs is the SHARED F7-backed RAG tool
-	//     registered globally by the rag-help slice (0020). The
+	//   retrieve_docs is the SHARED RAG-backed RAG tool
+	//     registered globally by the rag-help feature (0020). The
 	//     safety-setting-explainer strategy reuses it scoped to
 	//     the global `docs` corpus only — the system prompt
 	//     forbids querying the runbooks or i18n corpora because
@@ -3486,24 +3482,24 @@ var Registry = map[string]Feature{
 	// (Allow=nil, Mode=ModeRedactedTags). The query tool returns
 	// scalar setting values only — no PII, no notification
 	// titles, no addresses — so the policy is defence in depth
-	// in case a future edit widens the schema. The slice prompt
+	// in case a future edit widens the schema. The feature spec
 	// explicitly states "Allowed classes: none; current
 	// settings are redacted and no provider sees secrets".
 	//
-	// This slice does NOT use F7 retrieval against
+	// This feature does NOT use RAG retrieval against
 	// `settings_schema` — the schema is delivered
 	// deterministically by query_safety_settings (which is
 	// itself the canonical schema-plus-state source), so the
-	// RAG block in the slice prompt's evidence section
+	// RAG block in the feature spec's evidence section
 	// ("settings_schema;docs") is satisfied by:
-	//   - settings_schema → query_safety_settings (typed tool,
+	//   settings_schema → query_safety_settings (typed tool,
 	//     deterministic Go-defined schema; never an embedding
 	//     query against arbitrary text).
-	//   - docs              → retrieve_docs (F7 RAG, scoped to
+	//   docs              → retrieve_docs (RAG, scoped to
 	//     the docs corpus only).
 	// NeedsRAG is true because retrieve_docs is in the
-	// allowedTools set — even though no F7 corpus is mutated
-	// here, the strategy's runtime path consults the F7
+	// allowedTools set — even though no RAG corpus is mutated
+	// here, the strategy's runtime path consults the RAG
 	// retriever.
 	//
 	// Frontend route metadata is "/settings/safety" — a NEW
@@ -3534,7 +3530,7 @@ var Registry = map[string]Feature{
 		},
 	},
 
-	// Phase-50 / V1 (slice 0055) — Voice mode.
+	// Voice mode.
 	//
 	// Opt-in browser STT/TTS voice mode that wraps the existing
 	// /chatbot conversational surface. Two halves:
@@ -3562,21 +3558,21 @@ var Registry = map[string]Feature{
 	// contract is NARRATIVE.
 	//
 	// ADR-015 alignment:
-	//   - I1 default-off:   DefaultOn=false; toggle defaults
+	//   I1 default-off:   DefaultOn=false; toggle defaults
 	//     false in features.Registry.
-	//   - I3 baseline:      the /chatbot text path remains the
+	//   I3 baseline:      the /chatbot text path remains the
 	//     canonical baseline when AI is off; the voice card is
 	//     absent (withAiFeature returns null) so neither the
 	//     mic UI nor the localStorage transcript key surface.
-	//   - I5 hidden UI:     ai-feature-voice-mode-root is the
+	//   I5 hidden UI:     ai-feature-voice-mode-root is the
 	//     only DOM marker the surface emits; absent in off mode.
-	//   - I6 404 routes:    POST /api/v1/ai/voice/chat is gated
+	//   I6 404 routes:    POST /api/v1/ai/voice/chat is gated
 	//     by guard.Wrap and returns 404 in off mode.
-	//   - I7 per-feature:   per-feature toggle 'voice-mode' is
+	//   I7 per-feature:   per-feature toggle 'voice-mode' is
 	//     the only on-switch; mode='off' trumps the toggle.
-	//   - I9 redaction:     PolicyChatbot (Allow=nil, round-trip
+	//   I9 redaction:     PolicyChatbot (Allow=nil, round-trip
 	//     redacted tags) so no PII reaches the provider.
-	//   - I12 client/bg:    service-worker chunk 'ai-voice-mode'
+	//   I12 client/bg:    service-worker chunk 'ai-voice-mode'
 	//     is registered for off-mode SW filtering; client
 	//     storage key 'ai.voiceMode.transcriptDraft' is only
 	//     written when the gated component mounts, so off mode
@@ -3617,7 +3613,7 @@ var Registry = map[string]Feature{
 		},
 	},
 
-	// watch-face-nl-response is the Phase-50 / 0056 V2 surface
+	// watch-face-nl-response is the V2 surface
 	// that adds an OPT-IN Helix narrator answering glance-style
 	// natural-language questions on the /watch route. The
 	// deterministic /watch baseline (battery gauge, status icons,
@@ -3642,7 +3638,7 @@ var Registry = map[string]Feature{
 	// trip before the provider sees the message). The PushKind
 	// 'ai_watch_response' is registered for off-mode push-kind
 	// filter coverage; no background jobs, service-worker chunks,
-	// or client-storage keys are added in this slice.
+	// or client-storage keys are added in this feature.
 	"watch-face-nl-response": {
 		ID:          "watch-face-nl-response",
 		Name:        "Helix watch face natural-language response",
@@ -3661,7 +3657,7 @@ var Registry = map[string]Feature{
 		},
 	},
 
-	// nl-sql-playground is the Phase-50 / 0057 PU1 surface that
+	// nl-sql-playground is the PU1 surface that
 	// adds an OPT-IN Helix translator on the /power/sql route that
 	// turns plain-English data questions into a typed read-only
 	// SELECT draft the user can review before manually executing
@@ -3716,7 +3712,7 @@ var Registry = map[string]Feature{
 		},
 	},
 
-	// nl-grafana-panel is the Phase-50 / 0058 PU2 surface that
+	// nl-grafana-panel is the PU2 surface that
 	// adds an OPT-IN Helix translator on the /power/grafana route
 	// that turns plain-English data questions into a typed
 	// GrafanaPanelDraft (a single Grafana panel JSON envelope —
@@ -3744,7 +3740,7 @@ var Registry = map[string]Feature{
 	// table MUST appear in the same in-scope curated table
 	// catalog (drives, charging_sessions, vehicles,
 	// signal_log_view, alerts) the nl-sql-playground tools enforce
-	// — re-using one whitelist guarantees the two slices stay
+	// re-using one whitelist guarantees the two features stay
 	// in lock-step. For prometheus targets the expr MUST be a
 	// single non-empty PromQL expression (no semicolons). gridPos
 	// MUST be inside the dashboard grid (x in [0..23], y in
@@ -3799,7 +3795,7 @@ var Registry = map[string]Feature{
 	// pushes the dashboard to Grafana itself — propose-only,
 	// review-and-copy.
 	//
-	// The slice ships TWO propose-only typed tools
+	// The feature ships TWO propose-only typed tools
 	// (draft_dashboard_layout, validate_dashboard_layout) that
 	// share the SAME single-dimension allowlist enforcement: every
 	// slot.panel_name MUST be in the in-scope curated panel
@@ -3883,7 +3879,7 @@ func IDs() []string {
 
 // CoverageOK fails if any registered feature has a nil RouteSet
 // surface field. Empty arrays are allowed (signaling "this feature
-// has no surface of this kind"); nil is not, because the final-gate
+// has no surface of this kind"); nil is not, because the final gate
 // off-mode walker cannot enumerate a missing field.
 //
 // The map-key invariant (key == entry.ID) is validated here too, so

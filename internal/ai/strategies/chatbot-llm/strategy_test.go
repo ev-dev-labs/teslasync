@@ -1,4 +1,4 @@
-// Phase-50 / 0011 — U1 Chatbot LLM upgrade.
+// Chatbot LLM strategy tests.
 //
 // Unit tests for the chatbot-llm Strategy. The Strategy is a pure
 // value (no internal state, no IO) so the tests are tight: pin the

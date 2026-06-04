@@ -12,16 +12,16 @@ import {
 import { cn } from '@/lib/cn'
 
 /**
- * ReleaseNotes — Phase-40 / Prompt 67.
+ * Compact, collapsible release-notes accordion.
  *
- * Compact, collapsible release-notes accordion. Consumes the auto-generated
+ * Consumes the auto-generated
  * `@/generated/changelog` module so the data is identical to the in-app
  * and the "what's new" modal — no more drift between three hand-curated
  * lists.
  *
  * The previous implementation hard-coded a `releases` constant with inline
  * `style={{ background, color, border }}` values that violated the audit
- * rules (Phase-40 / Prompt 02). Section colors are now driven by the shared
+ * rules. Section colors are now driven by the shared
  * Badge component + Tailwind utility classes.
  */
 

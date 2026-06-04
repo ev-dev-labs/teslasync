@@ -9,14 +9,14 @@ import { formatRelative } from '@/lib/dateFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
 
 /**
- * Phase 40 / Prompt 58 — horizontal mini-timeline of FSM transitions.
+ * horizontal mini-timeline of FSM transitions.
  *
  * Each tick is a state transition placed on the timeline by its created_at
  * timestamp, colored by destination state via the shared FSM theme. Clicking a
  * tick selects that transition in the inspector. The component is purely
  * presentational — the page owns the buffer/window and the selected id.
  *
- * Phase 45 / Prompt 35 — the component is no longer responsible for
+ * the component is no longer responsible for
  * windowing transitions. Callers pre-window via `windowTransitions()` so
  * the page-level "buffered" counter and the timeline view share a single
  * source of truth. When the page hands us an empty array AND a

@@ -10,8 +10,8 @@ import {
 } from '@/components/data-display/DataFreshness';
 
 /**
- * Phase-45 / Prompt 19 — pick the most-degraded query in a list so the
- * single page-tier badge reflects the worst data state on the page.
+ * Pick the most-degraded query in a list so the single page-tier badge
+ * reflects the worst data state on the page.
  *
  * Priority: `error` > `stale` (incl. `forceStaleAfterMs`) > `fetching` >
  * `fresh`. A page that fans out into a hero query + a long-tail of cagg
@@ -54,12 +54,12 @@ interface PageContainerProps {
   /**
    * Show a "Copy link" button next to actions that copies the current URL
    * (with all query params) to the clipboard. Use on pages where users would
-   * reasonably share a filtered view. Phase 40 / Prompt 33.
+   * reasonably share a filtered view.
    */
   copyLink?: boolean;
   /**
-   * Phase-45 / Prompt 19 — when provided, renders `<DataFreshnessAuto>` in
-   * the header next to `actions`. Pass either a single `useQuery()` result
+   * When provided, renders `<DataFreshnessAuto>` in the header next to
+   * `actions`. Pass either a single `useQuery()` result
    * or an array; arrays surface the most-degraded state via
    * `pickWorstQuery` so a single chip can stand in for the whole page.
    *

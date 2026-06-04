@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 30 — shared `<ContextMenu>` primitive.
+ * Shared `<ContextMenu>` primitive.
  *
  * Right-click is unused in TeslaSync. Power users expect right-click to
  * surface a contextual action menu on data-table rows, map markers, and
@@ -422,7 +422,7 @@ function ContextMenuView({ state }: ContextMenuViewProps) {
         'border border-[var(--glass-border)] bg-[var(--surface-elevated)] shadow-xl',
         // Forced-colors / Windows High Contrast: surface vars collapse to
         // the OS Canvas, so make the border explicit so the menu remains a
-        // distinct rectangle. Phase-46 / Prompt 11 contract.
+        // distinct rectangle.
         'forced-colors:border forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
         'focus-visible:outline-none',
       )}

@@ -3,11 +3,10 @@
 // are configured, and individual clients should be no-ops (or absent
 // entirely) when their env vars are unset.
 //
-// Phase-46 / Prompt 08 introduces the GitHub Issues client used by
-// the admin feedback queue's "Forward to GitHub" action. Configure
-// via TESLASYNC_GITHUB_REPO + TESLASYNC_GITHUB_TOKEN; absent either,
-// the admin handler is constructed with a nil client and the SPA
-// hides the action.
+// The GitHub Issues client backs the admin feedback queue's "Forward to
+// GitHub" action. Configure it with TESLASYNC_GITHUB_REPO and
+// TESLASYNC_GITHUB_TOKEN; when either is absent, the admin handler gets a
+// nil client and the SPA hides the action.
 package integrations
 
 import (

@@ -1,5 +1,5 @@
 /**
- * Phase-49 / Slice 0008 — exhaustive op -> recommended-trigger-mode tests.
+ * Exhaustive operator-to-trigger-mode tests.
  *
  * Every member of `ALERT_RULE_OPS` is covered. Adding a new operator to
  * the union without extending `recommendedTriggerMode` will fail to

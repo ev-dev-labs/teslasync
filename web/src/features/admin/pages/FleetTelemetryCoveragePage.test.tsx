@@ -1,5 +1,5 @@
 /**
- * FleetTelemetryCoveragePage — Phase-43a / Prompt 0002 contract tests.
+ * FleetTelemetryCoveragePage contract tests.
  *
  * Covers:
  *  1. Loading state spinner renders.

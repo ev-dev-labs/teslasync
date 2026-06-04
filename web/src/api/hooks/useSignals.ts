@@ -1,20 +1,19 @@
 /**
  * @module api/hooks/useSignals
  *
- * Phase-42 typed-envelope consumers for the per-vehicle signal-inspector
+ * typed-envelope consumers for the per-vehicle signal-inspector
  * endpoints (`/signals/{vehicleID}/available`, `/signals/{vehicleID}/live`,
  * `/signals/{vehicleID}/{signalName}/history`). The backend rewrite in
- * Prompt 0069 returns each value as `{kind, value, ts}` keyed by the
+ * returns each value as `{kind, value, ts}` keyed by the
  * canonical `protomodel.ValueKind` discriminator. These hooks normalize
  * the long-form ValueKind / UnitKind names into the compact `SignalKind`
  * / `SignalUnitKind` unions defined in `@/api/types`, then surface the
  * typed primitive `value` directly so consumers can switch on `kind`
  * without re-parsing strings.
  *
- * Forward-only: there is NO fallback for the pre-Phase-42 raw-string
+ * Forward-only: there is NO fallback for the previous raw-string
  * value shape. Hooks that need the legacy snapshot-table shape continue
- * to live in `useTelemetry.ts` (they will be migrated in a follow-on
- * prompt once the consuming pages move over).
+ * to live in `useTelemetry.ts` until the consuming pages move over.
  */
 
 import { useQuery } from '@tanstack/react-query'
@@ -39,7 +38,7 @@ export const signalKeys = {
 }
 
 /** Time window for /history queries. `hours` (default) is converted into
- *  the snake_case `hours` query parameter; explicit `from`/`to` win. */
+ * the snake_case `hours` query parameter; explicit `from`/`to` win. */
 export interface SignalHistoryRange {
   hours?: number
   from?: string
@@ -202,7 +201,7 @@ function normalizeDescriptor(raw: RawAvailableResponse['signals'] extends (infer
 
 /**
  * GET /signals/{vehicleID}/available — typed catalog of every Tesla
- * telemetry field the backend exposes (Phase-42 Prompt 0069). The
+ * telemetry field the backend exposes (). The
  * response is normalized so each entry's `value_kind` / `unit_kind`
  * uses the compact `SignalKind` / `SignalUnitKind` discriminators
  * defined in `@/api/types`.

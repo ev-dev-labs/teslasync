@@ -1,5 +1,4 @@
-// Package watchfacenlresponse is the Phase-50 / 0056 V2 strategy
-// for the Helix watch-face natural-language response surface.
+// Package watchfacenlresponse defines the Helix watch-face natural-language response strategy.
 //
 // The strategy declares:
 //
@@ -19,6 +18,7 @@
 //     command path.
 //
 //   - the one read-only typed tool the LLM is allowed to call:
+//
 //   - query_watch_context — REQUIRED, called FIRST. Reads
 //     the canonical VehicleRepo (primary vehicle), the
 //     signal.LiveStateReader (battery, range, charging,
@@ -57,7 +57,7 @@
 // because the watch face NL response never proposes a setting
 // change or command.
 //
-// ADR-015 alignment:
+// ADR-015 constraints:
 //
 //   - I1 default-off:    feature toggle defaults false in features.Registry.
 //   - I3 baseline intact: this strategy never replaces the
@@ -133,9 +133,7 @@ const SystemPrompt = `You are Helix on the TeslaSync watch face, the fleet assis
 // dispatcher refuses to mount a strategy that references an
 // unknown tool.
 //
-// The whitelist is intentionally NARROW — the slice prompt
-// mandates this exact list: "Implement or register only the
-// tools listed for this feature: query_watch_context."
+// The whitelist is intentionally narrow: only query_watch_context is registered.
 //
 // The tool is read-only / pure aggregator: the dispatcher's
 // deny-all confirm gate is therefore never reached in practice —
@@ -187,15 +185,12 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyChatbot wrapped through the F4↔F8 adapter so the
+// PolicyChatbot wrapped through the redaction adapter so the
 // dispatcher's per-request ctx-installation step (dispatch.Run
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyChatbot from
-// internal/ai/redact/policies.go. Allowed classes: none; watch
-// responses use tagged vehicle state and no secrets.
-// Round-trip required: yes." PolicyChatbot's Allow=nil +
+// PolicyChatbot's Allow=nil +
 // Mode=ModeRedactedTags satisfies that contract: every PII class
 // is tagged round-trip BEFORE the message reaches the provider
 // so a leaked transcript reveals nothing. The typed envelope

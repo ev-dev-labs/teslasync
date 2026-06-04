@@ -52,8 +52,8 @@ interface SafetySnapshot {
   automatic_blind_spot_camera?: boolean | null;
   blind_spot_collision_warning?: boolean | null;
   emergency_lane_departure_avoidance?: boolean | null;
-  // See lib/safetyEnum.ts for the rationale: Phase-42a interface{}
-  // pass-through means these may arrive as string|boolean|number|null.
+  // See lib/safetyEnum.ts for the rationale: pass-through values may arrive as
+  // string|boolean|number|null.
   forward_collision_warning?: string | boolean | number | null;
   lane_departure_avoidance?: string | boolean | number | null;
   speed_limit_warning?: string | boolean | number | null;

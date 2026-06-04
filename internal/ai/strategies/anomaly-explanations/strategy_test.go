@@ -1,11 +1,5 @@
-// Phase-50 / 0014 — U4 Anomaly explanation narration.
-//
-// Unit tests for the anomaly-explanations Strategy. Mirrors the
-// shape of yir-narration's strategy_test.go. The Strategy is a pure
-// value (no internal state, no IO) so the tests are tight: pin the
-// feature ID + system prompt + tool whitelist + redaction policy
-// shape so a future edit that breaks the contract surfaces here
-// before the dispatcher silently changes behaviour.
+// Unit tests pin the anomaly explanation strategy's public contract:
+// feature ID, system prompt, tool whitelist, and redaction policy.
 
 package anomalyexplanations
 
@@ -111,7 +105,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs RAG-backed anomaly context ships.
+// future change that needs RAG-backed anomaly context ships.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -125,10 +119,10 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 }
 
 // TestStrategy_RedactionPolicyDigest proves the strategy hands the
-// dispatcher PolicyDigest wrapped through the F4↔F8 adapter.
+// dispatcher PolicyDigest wrapped through the redaction adapter.
 // PolicyDigest allows ClassVehicleName so the narration can name
 // the user's car; every other PII class is redacted to a round-trip
-// tag. The slice prompt explicitly mandates PolicyDigest reuse.
+// tag. The strategy intentionally reuses PolicyDigest.
 func TestStrategy_RedactionPolicyDigest(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -159,8 +153,7 @@ func TestStrategy_RedactionPolicyDigest(t *testing.T) {
 // TestStrategy_EvalGoldensReturnsNil pins the YAML-driven goldens
 // contract: the harness loads goldens from
 // internal/ai/strategies/anomaly-explanations/goldens.yaml directly,
-// so the in-code EvalGoldens() returns nil. Future strategies may
-// override.
+// so the in-code EvalGoldens() returns nil. Future strategies may override.
 func TestStrategy_EvalGoldensReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()

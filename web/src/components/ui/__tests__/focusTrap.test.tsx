@@ -1,5 +1,5 @@
 /**
- * Focus-trap audit — Phase-45 / Prompt 13.
+ * Focus-trap audit — .
  *
  * Comprehensive accessibility audit verifies that every dialog-style overlay
  * shipped from `@/components/ui/*` traps Tab + Shift+Tab inside the dialog
@@ -9,9 +9,9 @@
  * wraps to the first focusable (and vice versa for Shift+Tab).
  *
  * Coverage:
- *   - <Modal>          — the canonical primitive
- *   - <ConfirmDialog>  — composed on top of <Modal>; verifies inheritance
- *   - <Drawer>         — independent implementation; was unaudited
+ * - <Modal> — the canonical primitive
+ * - <ConfirmDialog> — composed on top of <Modal>; verifies inheritance
+ * - <Drawer> — independent implementation; was unaudited
  *
  * <CommandPalette> is intentionally NOT covered here: it implements its
  * own keyboard navigation primitive (single-input, arrow-key result list,

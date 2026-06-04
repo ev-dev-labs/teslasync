@@ -74,32 +74,24 @@ func (t *ErrorTracker) Track(code, category, message, path, method, requestID st
 	defer t.mu.Unlock()
 
 	t.totalErrors++
-
-	// By code
 	if _, ok := t.codeCounts[code]; !ok {
 		t.codeCounts[code] = &ErrorCount{}
 	}
 	t.codeCounts[code].Count++
 	t.codeCounts[code].LastSeen = now
 	t.codeCounts[code].LastMsg = message
-
-	// By category
 	if _, ok := t.catCounts[category]; !ok {
 		t.catCounts[category] = &ErrorCount{}
 	}
 	t.catCounts[category].Count++
 	t.catCounts[category].LastSeen = now
 	t.catCounts[category].LastMsg = message
-
-	// By status
 	if _, ok := t.statusCounts[status]; !ok {
 		t.statusCounts[status] = &ErrorCount{}
 	}
 	t.statusCounts[status].Count++
 	t.statusCounts[status].LastSeen = now
 	t.statusCounts[status].LastMsg = message
-
-	// Ring buffer for recent errors
 	t.recentErrors[t.writeIdx] = TrackedError{
 		Code:      code,
 		Category:  category,
@@ -117,8 +109,6 @@ func (t *ErrorTracker) Track(code, category, message, path, method, requestID st
 func (t *ErrorTracker) Stats() ErrorStats {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-
-	// Copy maps
 	byCode := make(map[string]*ErrorCount, len(t.codeCounts))
 	for k, v := range t.codeCounts {
 		cp := *v
@@ -134,8 +124,6 @@ func (t *ErrorTracker) Stats() ErrorStats {
 		cp := *v
 		byStatus[k] = &cp
 	}
-
-	// Build ordered recent list (newest first)
 	var recent []TrackedError
 	n := int(t.totalErrors)
 	if n > t.maxRecent {

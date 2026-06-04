@@ -5,7 +5,7 @@
  * These helpers convert to the user's local timezone for display,
  * keeping the source-of-truth as UTC.
  *
- * Phase 40 / Prompt 22: every helper accepts an optional second
+ * Every helper accepts an optional second
  * `FormatOptions` argument carrying an IANA timezone name and a BCP-47
  * locale. When omitted the helper preserves its prior behavior (browser
  * locale + browser timezone) so existing callers stay byte-for-byte
@@ -13,7 +13,7 @@
  * zone via `Intl.DateTimeFormat`, which is what `<DateTime in="vehicle">`
  * relies on to render drive/charge times in the car's local time.
  *
- * Formatter contract (Phase-45 / Prompt 03):
+ * Formatter contract:
  * Every formatter in this file accepts `null | undefined` and any garbage
  * numeric input (a non-finite number such as NaN, Infinity, -Infinity, a
  * negative duration, or a non-number masquerading via a cast) and returns

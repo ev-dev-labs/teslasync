@@ -7,16 +7,15 @@ import { usePinned } from '@/api/hooks/usePinned';
 import { cn } from '@/lib/cn';
 
 /**
- * VehiclePicker — Phase 40 / Prompt 16.
+ * Persistent app-wide vehicle selector mounted in the sidebar header.
  *
- * Persistent, app-wide vehicle selector mounted in the sidebar header.
  * Hides itself for single-vehicle owners (and while the fleet is still
  * loading) so it doesn't add noise for the common case.
  *
  * Reads & writes via {@link useSelectedVehicle}, which keeps the store in
  * sync with `/vehicles/:id` and `?vehicle_id=N` URLs.
  *
- * Pin-aware ordering (Phase 40 / Prompt 48): vehicles the user has pinned
+ * Pin-aware ordering: vehicles the user has pinned
  * float to the top in pin position order, then the rest follow in their
  * original API order.
  */

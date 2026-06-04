@@ -37,13 +37,11 @@ export function useTrips(params?: UseTripParams) {
  * (list) is registered in `internal/api/router.go`. Calls made by this
  * hook will resolve to a 404 from the backend and surface through
  * tanstack-query's `error` channel; consumers (TripDetailPage) display
- * the error gracefully via the standard PageContainer error path
- * (ADR-005 #1: never hide failures with empty UIs).
+ * the error gracefully via the standard PageContainer error path.
  *
- * Locked-policy continuation from Phase-43 prompts 0023/0024/0025: the
- * hook is retained because removing it would break the consumer at
- * compile time, and the consumer's UI shape should remain in place
- * pending a future replacement endpoint that the backend can adopt.
+ * Retained because removing it would break the consumer at compile time;
+ * the UI shape should remain in place until the backend adds a replacement
+ * endpoint.
  */
 export function useTrip(id: string) {
   return useQuery({

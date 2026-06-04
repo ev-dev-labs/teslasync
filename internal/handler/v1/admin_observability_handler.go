@@ -1,10 +1,10 @@
 package v1
 
-// Phase-45 — Admin observability handler. Five read-only routes
-// backed by adminobssvc.Service. Each route gracefully returns 503
-// (with a stable error code the SPA can render as "subsystem not
-// configured on this deployment") when the backing repo is nil
-// instead of crashing on a nil-pointer.
+// Admin observability handler. Five read-only routes are backed by
+// adminobssvc.Service. Each route gracefully returns 503 (with a
+// stable error code the SPA can render as "subsystem not configured on
+// this deployment") when the backing repo is nil instead of crashing
+// on a nil-pointer.
 
 import (
 	"errors"
@@ -18,7 +18,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
-// AdminObservabilityHandler serves the Phase-45 admin observability routes.
+// AdminObservabilityHandler serves the admin observability routes.
 type AdminObservabilityHandler struct {
 	svc *adminobssvc.Service
 }

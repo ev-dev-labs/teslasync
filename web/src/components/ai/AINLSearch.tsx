@@ -1,6 +1,5 @@
-// Phase-50 / 0017 — N3 Natural-language search.
-// Phase-50 / W1 (slice 0065) — wired the Search button to
-// POST /api/v1/ai/search/query.
+// Natural-language search surface. The Search button streams
+// POST /api/v1/ai/search/query through useAiStream.
 
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'

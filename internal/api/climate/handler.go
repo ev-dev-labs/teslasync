@@ -1,0 +1,155 @@
+package climate
+
+import (
+	"net/http"
+	"strconv"
+	"time"
+
+	"github.com/rs/zerolog/log"
+
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
+)
+
+// ClimateHandler serves climate/HVAC endpoints backed by signal.StateReader.
+//
+// Climate fields (cabin temp, HVAC state, seat heaters) change rarely once
+// set. StateReader.Timeline forward-folds chart rows so every projected
+// signal carries its most recently observed value, avoiding sawtooth gaps
+// when a signal does not re-emit inside a bucket. See ADR-002.
+type ClimateHandler struct {
+	state signal.StateReader
+	live  signal.LiveStateReader
+}
+
+// Signal → JSON field mappings for climate timeline / state projection.
+// Field names are snake_case; the frontend camelCaseKeys transform produces
+// matching camelCase keys (e.g. inside_temp → insideTemp).
+var climateMappings = []signal.FieldMapping{
+	// Temperatures
+	{Signal: "InsideTemp", Field: "inside_temp"},
+	{Signal: "OutsideTemp", Field: "outside_temp"},
+	{Signal: "HvacLeftTemperatureRequest", Field: "driver_temp_setting"},
+	{Signal: "HvacRightTemperatureRequest", Field: "passenger_temp_setting"},
+	// HVAC system
+	{Signal: "HvacPower", Field: "hvac_power"},
+	{Signal: "HvacACEnabled", Field: "is_ac_on"},
+	{Signal: "HvacAutoMode", Field: "hvac_auto_mode"},
+	{Signal: "HvacFanSpeed", Field: "fan_speed"},
+	{Signal: "HvacFanStatus", Field: "hvac_fan_status"},
+	// Climate modes
+	{Signal: "ClimateKeeperMode", Field: "climate_keeper_mode"},
+	{Signal: "DefrostMode", Field: "defrost_mode"},
+	{Signal: "DefrostForPreconditioning", Field: "defrost_for_preconditioning"},
+	{Signal: "RearDefrostEnabled", Field: "rear_defrost_enabled"},
+	{Signal: "WiperHeatEnabled", Field: "wiper_heat_enabled"},
+	{Signal: "RearDisplayHvacEnabled", Field: "rear_display_hvac_enabled"},
+	// Battery & protection
+	{Signal: "BatteryHeaterOn", Field: "battery_heater"},
+	{Signal: "CabinOverheatProtectionMode", Field: "overheat_protection"},
+	{Signal: "CabinOverheatProtectionTemperatureLimit", Field: "cabin_overheat_protection_temp_limit"},
+	// Steering wheel
+	{Signal: "HvacSteeringWheelHeatAuto", Field: "hvac_steering_wheel_heat_auto"},
+	{Signal: "HvacSteeringWheelHeatLevel", Field: "hvac_steering_wheel_heat_level"},
+	// Seat heaters
+	{Signal: "SeatHeaterLeft", Field: "seat_heater_left"},
+	{Signal: "SeatHeaterRight", Field: "seat_heater_right"},
+	{Signal: "SeatHeaterRearLeft", Field: "seat_heater_rear_left"},
+	{Signal: "SeatHeaterRearCenter", Field: "seat_heater_rear_center"},
+	{Signal: "SeatHeaterRearRight", Field: "seat_heater_rear_right"},
+	// Seat climate
+	{Signal: "AutoSeatClimateLeft", Field: "auto_seat_climate_left"},
+	{Signal: "AutoSeatClimateRight", Field: "auto_seat_climate_right"},
+	{Signal: "ClimateSeatCoolingFrontLeft", Field: "climate_seat_cooling_front_left"},
+	{Signal: "ClimateSeatCoolingFrontRight", Field: "climate_seat_cooling_front_right"},
+	{Signal: "SeatVentEnabled", Field: "seat_vent_enabled"},
+}
+
+func NewClimateHandler(state signal.StateReader, live signal.LiveStateReader) *ClimateHandler {
+	return &ClimateHandler{state: state, live: live}
+}
+
+// List returns climate history from the signal-log change feed via
+// StateReader.Timeline in CHART MODE (empty CollapseBy). Each emission
+// becomes one row; forward-folding ensures rare HVAC fields (cabin temp,
+// seat heaters, defrost mode) carry their most-recent value across rows
+// where they did not re-emit, fixing the legacy "blank panel" bug for
+// long stable climate runs.
+func (h *ClimateHandler) List(w http.ResponseWriter, r *http.Request) {
+	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
+	if err != nil || vehicleID == 0 {
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id required")
+		return
+	}
+
+	from := time.Now().AddDate(0, 0, -7)
+	to := time.Now()
+	if start, end := apiparams.ParseDateRange(r); !start.IsZero() {
+		from = start
+		if !end.IsZero() {
+			to = end
+		}
+	}
+
+	timelineRows, err := h.state.Timeline(r.Context(),
+		vehicleID, climateMappings, from, to, signal.TimelineOptions{})
+	if err != nil {
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get climate data from signal_log")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get climate data")
+		return
+	}
+	rows := timelineRowsToFlat(timelineRows)
+	for i, row := range rows {
+		if ts, ok := row["ts"]; ok {
+			row["created_at"] = ts
+			row["timestamp"] = ts
+		}
+		row["id"] = i + 1
+	}
+	httpx.WriteJSON(w, http.StatusOK, rows)
+}
+
+// Latest returns the most recent climate values, derived from the
+// forward-folded signal-log state at time.Now() via StateReader.State.
+// Every climateMappings entry whose Signal is present in State is
+// projected under its mapped Field name.
+func (h *ClimateHandler) Latest(w http.ResponseWriter, r *http.Request) {
+	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
+	if err != nil || vehicleID == 0 {
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id required")
+		return
+	}
+
+	snap, err := h.live.LiveState(r.Context(), vehicleID)
+	if err != nil {
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest climate data")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get latest climate data")
+		return
+	}
+
+	result := make(map[string]interface{})
+	for _, m := range climateMappings {
+		if v, ok := snap[m.Signal]; ok {
+			result[m.Field] = v
+		}
+	}
+	httpx.WriteJSON(w, http.StatusOK, result)
+}
+
+// timelineRowsToFlat converts ordered TimelineRows into the legacy
+// []map[string]interface{} flat-pivot shape ({"ts": ts, "<field>": value, ...})
+// that the climate endpoints emit. Duplicated from the parent api package
+// until the shared signal-history handlers move into a reusable package.
+func timelineRowsToFlat(rows []signal.TimelineRow) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(rows))
+	for _, tr := range rows {
+		row := make(map[string]interface{}, len(tr.Fields)+1)
+		for k, v := range tr.Fields {
+			row[k] = v
+		}
+		row["ts"] = tr.Timestamp
+		out = append(out, row)
+	}
+	return out
+}

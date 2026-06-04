@@ -21,8 +21,8 @@ import (
 )
 
 // Compile-time assert: every stream.Writer is a dispatch.StreamWriter.
-// If this fails to compile, the F4 dispatcher cannot use the F5 SSE
-// writer and the slice is broken at the type level.
+// If this fails to compile, the dispatcher cannot use the SSE writer
+// through its streaming port.
 var _ dispatch.StreamWriter = (*stream.Writer)(nil)
 
 // --- minimal flushable recorder ----------------------------------
@@ -119,8 +119,11 @@ func (n *nonFlushable) Header() http.Header {
 	}
 	return n.header
 }
-func (n *nonFlushable) Write(b []byte) (int, error) { n.body = append(n.body, b...); return len(b), nil }
-func (n *nonFlushable) WriteHeader(statusCode int)  { n.status = statusCode }
+func (n *nonFlushable) Write(b []byte) (int, error) {
+	n.body = append(n.body, b...)
+	return len(b), nil
+}
+func (n *nonFlushable) WriteHeader(statusCode int) { n.status = statusCode }
 
 func TestNew_RejectsNonFlushable(t *testing.T) {
 	t.Parallel()

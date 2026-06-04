@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 12 — VisuallyHidden / SrOnly utility.
+ * VisuallyHidden / SrOnly utility.
  *
  * Renders content that is invisible to sighted users but exposed to
  * assistive technologies (screen readers, voice control, refreshable

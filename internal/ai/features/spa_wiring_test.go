@@ -32,7 +32,7 @@ func TestSPAWiringComponentsExist(t *testing.T) {
 }
 
 // TestSPAWiringIndicatorOnlyExists asserts each allowlist entry
-// points at a real file. Stale allowlist entries dilute the W1-B
+// points at a real file. Stale allowlist entries dilute the
 // enforcement signal.
 func TestSPAWiringIndicatorOnlyExists(t *testing.T) {
 	root := repoRoot(t)
@@ -52,10 +52,10 @@ func TestSPAWiringIndicatorOnlyExists(t *testing.T) {
 // canonical endpoint strings.
 func TestSPAWiringEndpointPathRoundTrip(t *testing.T) {
 	cases := []struct {
-		endpoint    string
-		wantMethod  string
-		wantPath    string
-		wantPrefix  string
+		endpoint   string
+		wantMethod string
+		wantPath   string
+		wantPrefix string
 	}{
 		{"POST /api/v1/ai/chatbot", "POST", "/ai/chatbot", "/ai/chatbot"},
 		{"POST /api/v1/ai/drives/{driveID}/coach", "POST", "/ai/drives/{driveID}/coach", "/ai/drives/"},

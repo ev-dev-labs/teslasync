@@ -10,9 +10,9 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 )
 
-// Phase-44 / observability-batch / Prompt F12 — Span budget gate.
+// Span budget gate for telemetry observer traces.
 //
-// The Phase-10 instrumentation emits roughly 8 spans for a single
+// The instrumentation emits roughly 8 spans for a single
 // observer.OnPayloadProcessed call (parent + 6 cross-cutting children
 // + the VIN resolver). With the mqtt.consume + normalize.* + router
 // + writer spans added at the MQTT entry point, the END-TO-END trace
@@ -20,18 +20,16 @@ import (
 // future spans, but tight enough that an accidental N² span bug
 // (e.g. starting a span inside a per-row hot loop) trips CI.
 //
-// To raise this budget, you must update SpanBudgetPerPayload AND
-// document the new spans in the Phase-10 acceptance section of the
-// session plan. Don't just bump the number.
+// To raise this budget, update SpanBudgetPerPayload and document why
+// the additional spans are worth the ingest overhead.
 const SpanBudgetPerPayload = 25
 
 // TestSpanBudget_OneAtomic asserts that processing a single atomic
 // through the SideEffectsObserver emits at most SpanBudgetPerPayload
 // spans. The mqtt.consume + normalize chain are NOT included here
 // because they live in different packages; the budget is for the
-// observer subtree only. The Phase-10 acceptance diagram lists
-// ~14 spans for an end-to-end ingest including the producer spans
-// that this test doesn't exercise.
+// observer subtree only; end-to-end ingest also includes producer and
+// MQTT/normalize spans that this test doesn't exercise.
 //
 // The test must remain stable across refactors that move spans
 // between packages — moving a span out of the observer subtree

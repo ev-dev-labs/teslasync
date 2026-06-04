@@ -12,8 +12,8 @@ import (
 // de-duplicated so a VIN that also matches the alphanumeric heuristic
 // of another class only appears once.
 //
-// Plate detection is OPT-IN per prompt D9.2 and is NOT included by
-// Detect. Use [DetectAll] (tests/admin) or [Apply] with
+// Plate detection is opt-in and is not included by Detect. Use
+// [DetectAll] (tests/admin) or [Apply] with
 // [Policy.EnablePlate] = true to enable it. The plate regex has a
 // high false-positive rate on common alphanumeric IDs, so the
 // default-off stance protects every other feature from accidental

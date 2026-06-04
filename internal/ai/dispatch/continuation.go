@@ -6,15 +6,10 @@ import (
 	"time"
 )
 
-// ContinuationState is the persisted form of a paused dispatcher
-// run. When a mutating tool requires user confirmation the
-// dispatcher serialises this struct, hands the continuation_id
-// back over SSE, the frontend POSTs to /ai/chat/continue/{id} with
-// a Confirm/Cancel decision, and the resume handler reloads this
-// state and calls Dispatcher.Resume.
-//
-// F4 ships the data type + repository; the SSE wiring lands with
-// F5 (streaming) which owns the HTTP boundary.
+// ContinuationState persists a paused dispatcher run while a
+// mutating tool waits for user confirmation. The resume handler
+// reloads this state after the frontend posts a Confirm or Cancel
+// decision to /ai/chat/continue/{id}.
 type ContinuationState struct {
 	// FeatureID identifies which Strategy was running.
 	FeatureID string `json:"feature_id"`
@@ -46,9 +41,6 @@ func UnmarshalState(raw json.RawMessage) (ContinuationState, error) {
 	return s, err
 }
 
-// _ assert MarshalState/UnmarshalState are pure round-trips at
-// compile time; the runtime test in continuation_test.go enforces
-// the actual round-trip semantics.
 var _ = func() bool {
 	_ = context.TODO
 	return true

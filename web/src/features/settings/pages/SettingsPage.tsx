@@ -19,18 +19,18 @@ import {
   AdvancedSettings,
   SettingsSearch,
 } from '../components'
-// Phase-46 / Prompt 36 — Settings export/import has moved to the
+// Settings export/import has moved to the
 // dedicated Backup & Restore page (/backup) so the DATA category owns
 // every backup/restore surface. The component is still imported there
 // from features/settings/components.
-// Phase-46 / Prompt 42 — ActiveSessionsSection moved to its own page
+// ActiveSessionsSection moved to its own page
 // (ActiveSessionsPage). Direct import retained for the same reason.
 //
-// Phase-46 / Prompt 50 — Reset to defaults. Same direct-import
+// Reset to defaults. Same direct-import
 // rationale as above; the components barrel is outside the prompt's
 // allowed-files regex.
 import { ResetSection } from '../components/ResetSection'
-// Phase-46 / Prompt 70 — PrivacySection moved to its own page
+// PrivacySection moved to its own page
 // (PrivacyPage at /account/privacy). Browser-local privacy controls
 // (recently viewed pages, cookies / GDPR consent) now live under the
 // Account side-nav category alongside 2FA and Active Sessions.
@@ -55,7 +55,7 @@ export default function SettingsPage() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  // Phase-46 / Prompt 66 — claim an edit lease for the entire settings
+  // Claim an edit lease for the entire settings
   // page so a second tab editing the same settings sees a banner before
   // their save can silently overwrite this tab's changes. The lease is
   // scoped per-origin (no per-user scoping yet because TeslaSync's
@@ -76,7 +76,7 @@ export default function SettingsPage() {
 
   // Hash-anchor scroll: when /settings#appearance (or any other anchor)
   // loads, scroll the corresponding <section id="..."> into view. Triggered
-  // by the onboarding-checklist CTAs (Phase-40 / Prompt 68).
+  // by the onboarding-checklist CTAs.
   useEffect(() => {
     if (!location.hash) return
     const id = location.hash.slice(1)
@@ -164,7 +164,7 @@ export default function SettingsPage() {
         </GlassPanel>
       </FadeIn>
 
-      {/* Setup Checklist — restart affordance (Phase-40 / Prompt 68) */}
+      {/* Setup Checklist — restart affordance */}
       <FadeIn delay={0.22}>
         <GlassPanel className="p-5 flex items-center gap-4">
           <IconBox color="cyan">

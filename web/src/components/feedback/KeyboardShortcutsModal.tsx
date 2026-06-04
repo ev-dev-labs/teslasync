@@ -6,7 +6,7 @@ import { SearchInput } from '@/components/forms'
 import { useAllShortcuts, type ShortcutDefinition } from '@/hooks/useShortcutRegistry'
 
 /**
- * KeyboardShortcutsModal — Phase 40 / Prompt 19, refactored in Prompt 64.
+ * KeyboardShortcutsModal — , refactored in .
  *
  * Single source of truth for the "?" cheat sheet. Reads from the
  * {@link useShortcutRegistry} so any page or component can declare new
@@ -15,10 +15,10 @@ import { useAllShortcuts, type ShortcutDefinition } from '@/hooks/useShortcutReg
  * `KeyboardCheatSheet` component) are gone.
  *
  * Surfaces three controls:
- *  - Search input (filters by description)
- *  - Filter chips: All / Global / This page
- *  - When the user is on a page that registered shortcuts, the modal jumps
- *    to that page's group on open.
+ * - Search input (filters by description)
+ * - Filter chips: All / Global / This page
+ * - When the user is on a page that registered shortcuts, the modal jumps
+ * to that page's group on open.
  *
  * Filter selection persists in `sessionStorage` so the user's choice
  * survives within the tab session (deliberately not localStorage —

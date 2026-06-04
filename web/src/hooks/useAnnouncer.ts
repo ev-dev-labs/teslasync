@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 12 — Global screen-reader announcer.
+ * Global screen-reader announcer.
  *
  * Single shared live-region API for firing imperative SR
  * announcements from anywhere in the app — bulk action completed,

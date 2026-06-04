@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 37 — Webhook notification channels Settings section.
+// Webhook notification channels Settings section.
 //
 // Surfaces the existing notification_channel_webhook records as an
 // editable list under <section id="webhooks"> on the Settings page.
@@ -23,9 +23,8 @@
 // payload through `NotificationChannelInput` so the type-checker stays
 // honest while the runtime contract matches the existing schema.
 //
-// Body template editor and content-type select are intentionally
-// omitted from this prompt. They will arrive once a follow-up prompt
-// can extend `notification_channel_webhook` with the missing columns
+// Body template editor and content-type select are intentionally omitted
+// until `notification_channel_webhook` has the missing columns
 // (separate migration → schema → repo → handler patch).
 
 import {
@@ -55,8 +54,8 @@ import {
   Text,
   Toggle,
 } from '@/components/ui';
-// Phase-46 / Prompt 37 — the form Label (label element with htmlFor +
-// required asterisk) is intentionally imported directly. The barrel
+// The form Label (label element with htmlFor + required asterisk) is
+// intentionally imported directly. The barrel
 // `@/components/ui` re-exports the typography Label (a span-based
 // caption) under the same name; importing from the file path is the
 // established escape hatch documented in TOTPEnrollmentSection.
@@ -138,8 +137,8 @@ function toSavePayload(form: WebhookFormState): NotificationChannelInput {
     method: safeMethod,
     headers: {} as Record<string, string>,
     body_template: '',
-    // Phase-46 / Prompt 37 — the backend repurposes `bearer_token`
-    // as the HMAC signing secret. Sending an empty string clears it.
+    // The backend repurposes `bearer_token` as the HMAC signing secret.
+    // Sending an empty string clears it.
     bearer_token: form.secret,
   } as unknown as NotificationChannelInput;
   return payload;

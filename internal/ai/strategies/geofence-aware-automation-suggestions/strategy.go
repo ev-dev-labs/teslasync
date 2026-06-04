@@ -1,6 +1,5 @@
-// Package geofenceawareautomationsuggestions is the Phase-50 / G3
-// strategy for the LLM-assisted "geofence-aware automation
-// suggestions" surface.
+// Package geofenceawareautomationsuggestions implements the LLM-assisted
+// geofence-aware automation suggestions strategy.
 //
 // The strategy declares:
 //
@@ -25,8 +24,8 @@
 //     flow through tools, narrative is identifier-free.
 //
 // The strategy is consumed by the AI HTTP handler at
-// `internal/api/ai_geofence_aware_automation_handler.go` which
-// builds a dispatcher, a stream.Writer (SSE), and runs a one-shot
+// `internal/api/aigeofautom/handler.go` which builds a dispatcher,
+// a stream.Writer (SSE), and runs a one-shot
 // generation loop. The non-AI baseline at POST /api/v1/automations
 // (the canonical typed AutomationHandler.Create + decode path with
 // per-step validators at `internal/api/automation_handler_decode.go`)
@@ -34,7 +33,7 @@
 // remain the canonical baseline in off mode (ADR-015 §I3).
 //
 // The "geofence-aware" framing distinguishes this strategy from the
-// existing `nl-automation-builder` (slice 0016): rather than
+// existing `nl-automation-builder`: rather than
 // drafting an Automation from a free-form natural-language prompt
 // against an empty context, this strategy asks the LLM to propose
 // an Automation whose trigger and/or conditions reference one of
@@ -50,15 +49,15 @@
 //
 //   - I1 default-off:    feature toggle defaults false in features.Registry.
 //   - I3 baseline intact: this strategy never replaces the typed
-//                         Automation validator or the existing
-//                         AutomationBuilderPage editor. Save path
-//                         is the existing handler; the AI only
-//                         DRAFTS.
+//     Automation validator or the existing
+//     AutomationBuilderPage editor. Save path
+//     is the existing handler; the AI only
+//     DRAFTS.
 //   - I7 per-feature:     the AI route is gated by
-//                         guard.Wrap("geofence-aware-automation-suggestions").
+//     guard.Wrap("geofence-aware-automation-suggestions").
 //   - I9 redaction:       PolicyAlertBuilder denies all classes;
-//                         identifiers (vehicle_id, place_id) flow
-//                         through tools, not prose.
+//     identifiers (vehicle_id, place_id) flow
+//     through tools, not prose.
 package geofenceawareautomationsuggestions
 
 import (
@@ -125,12 +124,11 @@ const SystemPrompt = `You are the TeslaSync geofence-aware automation suggester.
 // defence in depth in case a future edit accidentally adds a write
 // tool.
 //
-// IMPORTANT: this strategy does NOT register the tools itself —
-// they are already registered by RegisterAutomationBuilderTools in
-// router.go for slice 0016 (nl-automation-builder). Re-registering
-// would panic (duplicate name in tools.Registry). The two
-// strategies share the same process-wide tool instances; tools are
-// stateless so this is safe.
+// IMPORTANT: this strategy does NOT register the tools itself.
+// RegisterAutomationBuilderTools already registers them in router.go;
+// re-registering would panic on duplicate names in tools.Registry.
+// The two strategies share the same stateless process-wide tool
+// instances, so this is safe.
 var allowedTools = []string{
 	"draft_automation_graph",
 	"validate_automation_graph",
@@ -178,9 +176,8 @@ func (s *Strategy) Tools() []string {
 // Future work: this is where a per-vehicle "current automations
 // summary" snippet would be injected once geofence-aware drafting
 // grows that surface (e.g. for de-duplication against existing
-// geofence-anchored automations). The current slice keeps Context
-// empty so the dispatcher's behaviour is fully determined by
-// [System] + History.
+// geofence-anchored automations). Context stays empty so dispatcher
+// behaviour is fully determined by [System] + History.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
 }
@@ -191,15 +188,12 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyAlertBuilder from
-// internal/ai/redact/policies.go. Allowed classes: none; geofence
-// IDs flow through tools". The policy's Allow list is nil, so every
-// PII class — VIN, lat/long, vehicle name, addresses, phone numbers
-// — is redacted to a round-trip tag before the prompt reaches the
-// provider. The handler synthesises the geofence catalog as
-// id + name + category (no lat/lon) so the redaction policy never
-// needs to mask coordinates that should not have been emitted in
-// the first place.
+// PolicyAlertBuilder's Allow list is nil, so every PII class — VIN,
+// lat/long, vehicle name, addresses, phone numbers — is redacted to a
+// round-trip tag before the prompt reaches the provider. Geofence IDs
+// flow through tools. The handler synthesises the geofence catalog as
+// id + name + category (no lat/lon), so the redaction policy never
+// needs to mask coordinates that should not have been emitted.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {
 	return redactadapter.Wrap(redact.PolicyAlertBuilder())
 }

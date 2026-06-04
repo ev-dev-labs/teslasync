@@ -1,23 +1,8 @@
-// Phase-50 / 0011 — U1 Chatbot LLM upgrade.
-//
-// `TestChatbotAIOffUsesBaselineAndAiRoute404` (the Vitest sibling to
-// the Go test of the same name) is the slice's load-bearing
-// AI-OFF contract proof on the React side. It mounts the
-// AIChatbotIndicator with ai_mode='off' (plus the per-feature toggle
-// on, to defeat the obvious "off because nothing's enabled" path)
-// and asserts:
-//
-//   1. The AI indicator's rooted test ID is absent from the DOM.
-//   2. The wrapper renders no children (empty container).
-//   3. With ai_mode='cloud' AND chatbot-llm=true, the indicator IS
-//      present + carries the expected test ID. This is the positive
-//      control that proves the gate actually works (otherwise the
-//      "absent in off mode" assertion is trivially true).
-//
-// The HTTP /api/v1/ai/chatbot 404-in-off-mode invariant is proven by
-// the Go-side TestChatbotAIOffUsesBaselineAndAiRoute404 in
-// internal/api/ai_chatbot_handler_test.go — the network layer does
-// not exist in the React unit-test scope.
+// React-side AI-off contract test for the chatbot indicator.
+// Mounts AIChatbotIndicator with ai_mode='off' while the feature toggle is
+// on, then asserts the gated UI is absent. A cloud-mode positive control
+// proves the gate itself works. The API 404 invariant is covered by the
+// matching Go handler test.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -68,10 +53,8 @@ beforeEach(() => {
 
 describe('TestChatbotAIOffUsesBaselineAndAiRoute404 (chatbot-llm AI-off contract)', () => {
   it('renders nothing when ai_mode=off even with the chatbot-llm toggle on', () => {
-    // The toggle is intentionally set to true to defeat the
-    // shortcut path "the indicator hides because the feature flag
-    // is off". The mode='off' check MUST trump the per-feature
-    // toggle (ADR-015 §I7).
+    // The toggle is intentionally true to prove mode='off' wins over
+    // a per-feature opt-in.
     mockUseSettings.mockReturnValue(
       settingsPayload({ ai_mode: 'off', ai_features: { 'chatbot-llm': true } }),
     );

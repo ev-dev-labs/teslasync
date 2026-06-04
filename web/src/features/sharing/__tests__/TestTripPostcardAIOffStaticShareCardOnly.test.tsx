@@ -1,7 +1,7 @@
-// Phase-50 / 0060 — GEN1 trip postcard and share-card image generation.
+// Trip postcard and share-card image generation off-mode contract tests.
 //
 // `TestTripPostcardAIOffStaticShareCardOnly` (the Vitest sibling
-// to the Go test of the same name) is the slice's load-bearing
+// to the Go test of the same name) is the load-bearing
 // AI-OFF contract proof on the React side. It mounts the
 // AITripPostcardShareCardImageGeneration component with
 // ai_mode='off' (plus the per-feature toggle on, to defeat the
@@ -29,7 +29,7 @@
 //
 // File name MUST stay
 // `TestTripPostcardAIOffStaticShareCardOnly.test.tsx` — the
-// slice prompt's verification command runs
+// targeted verification runs
 // `vitest --run TestTripPostcardAIOffStaticShareCardOnly`,
 // where the positional pattern is matched against the file PATH.
 

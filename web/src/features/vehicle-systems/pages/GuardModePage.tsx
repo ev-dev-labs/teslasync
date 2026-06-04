@@ -49,7 +49,7 @@ import type { MapStyle } from '@/components/maps';
 
 // ── Event type display helpers ──────────────────────────────────────────
 
-// Phase-43a `/vehicles/{id}/guard/events` returns state-change records
+// `/vehicles/{id}/guard/events` returns state-change records
 // derived from `security_events` (`locked`, `sentry_mode`,
 // `valet_mode_enabled` — see `securityEventTypeByField` in
 // `internal/tesla/router/writers/security_event_writer.go`). Legacy
@@ -444,7 +444,7 @@ function LiveMap({
 }) {
   const [mapStyle] = useState<MapStyle>('dark');
 
-  // Phase-43a: GuardEvent records are state-change rows (locked,
+  // GuardEvent records are state-change rows (locked,
   // valet_mode_enabled, …) sourced from security_events; they no longer
   // carry latitude/longitude. The map therefore omits the trail and
   // shows only the live vehicle position + home geofence circle.

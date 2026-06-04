@@ -74,14 +74,12 @@ function fmtDriveTime(min: number): string {
 /* ================================================================== */
 
 /**
- * Phase-45 / Prompt 26 — TripReplayPage with bidirectional map ↔ chart
+ * TripReplayPage with bidirectional map ↔ chart
  * cursor sync.
- *
  * The page owns three rendered surfaces (map, scrubber, speed+power
  * chart) and threads a single source of truth — `replay.currentIndex`
  * from {@link useTripReplay} — through all of them via the shared
  * `handleSeekToIndex` callback.
- *
  * Sync wiring:
  *   - Replay tick           → useTripReplay advances currentIndex →
  *                             TripReplayMap re-renders its marker AND
@@ -90,19 +88,14 @@ function fmtDriveTime(min: number): string {
  *   - Map polyline click    → TripReplayMap onSeekToIndex → seekTo(idx)
  *   - Chart click / hover   → TripReplayCharts → ChartTimeRangeProvider →
  *                             ChartCursorBridge → onSeekToIndex → seekTo(idx)
- *
  * `prefers-reduced-motion: reduce` swaps the AnimatedMarker for a snap
  * CircleMarker and disables the underlying Leaflet pan/zoom animations.
- *
- * Phase-43 / Prompt 0026 — SI cutover:
+ * SI display contract:
  *   Position-derived fields (speed, outsideTemp, ratedRange, cumulative
  *   distance from haversine) are SI canonical. They go through
  *   `convertXFromSI` from `@/lib/unitConversion` via `useUnits`.
- *   Drive-level summary fields (`drive.distanceM`, `maxSpeedMps`,
- *   `avgSpeedMph`) are genuine miles/mph after the SQL adapter boundary
- *   in `internal/database/drive_repo.go`, so they remain on the legacy
- *   `useSettings` helpers (locked-policy continuation from Phase-43/0022
- *   `useDriveDetailData`).
+ *   Drive summary values are adapted at the API boundary; this page keeps
+ *   replay-specific display formatting at render time.
  */
 export default function TripReplayPage() {
   const { id } = useParams<{ id: string }>();
@@ -112,11 +105,9 @@ export default function TripReplayPage() {
   const { data: drive, isLoading, error } = useDrive(id ?? '');
   const { reduce } = useMotionPreference();
 
-  // SI helpers + display preferences for position-derived fields.
+  // Display preferences for position-derived SI fields.
   const { unitPrefs } = useUnits();
-  // Legacy helpers retained for drive-level summary fields that are
-  // genuine miles / mph after the SQL adapter boundary
-  // (locked-policy continuation from Phase-43/0022).
+
 
   const distanceUnit = unitPrefs.distance;
 
@@ -209,7 +200,7 @@ export default function TripReplayPage() {
     [controls],
   );
 
-  /* ---- Timeline markers (Phase-40 / Prompt 57) ---- */
+  /* ---- Timeline markers ---- */
   const replayMarkers: ReplayMarker[] = useMemo(
     () => computeReplayMarkers(positions),
     [positions],
@@ -278,7 +269,7 @@ export default function TripReplayPage() {
   /* ---- Elevation profile data ---- */
   // PRE-EXISTING BUG fix: cumDist is meters from haversineDistance, but the
   // legacy code did `toDistanceDisplay(cumDist / 1000)` which fed kilometres
-  // into a miles-based helper — same bug pattern Phase-43/0022 fixed in
+  // into a miles-based helper — this would reintroduce the same unit bug in
   // useDriveDetailData. Now we use convertDistanceFromSI on raw meters.
   const elevationData: ElevationDataPoint[] = useMemo(() => {
     let cumDistMeters = 0;
@@ -382,7 +373,7 @@ export default function TripReplayPage() {
   const cp = replay.currentPosition;
 
   /* ---- Drive summary stats ---- */
-  // Phase-48 Slice 1: drive.distanceM is meters, drive.durationS is seconds.
+  // drive.distanceM is meters, drive.durationS is seconds.
   // Use convertDistanceFromSI/convertSpeedFromSI for SI-aware conversion.
   const distanceM = drive?.distanceM ?? 0;
   const durationS = drive?.durationS ?? 0;
@@ -425,7 +416,7 @@ export default function TripReplayPage() {
       ) : (
         <>
           {/* ================================================================ */}
-          {/*  Section 1 — Map (Phase-45/26: factored sub-component)            */}
+          {/*  Section 1 — Map (factored sub-component)                         */}
           {/* ================================================================ */}
           <FadeIn>
             <TripReplayMap
@@ -555,7 +546,7 @@ export default function TripReplayPage() {
           </FadeIn>
 
           {/* ================================================================ */}
-          {/*  Section 5 — Speed + Power Timeline (Phase-45/26: cursor-synced) */}
+          {/*  Section 5 — Speed + Power Timeline (cursor-synced)              */}
           {/* ================================================================ */}
           <FadeIn delay={0.2}>
             <TripReplayCharts

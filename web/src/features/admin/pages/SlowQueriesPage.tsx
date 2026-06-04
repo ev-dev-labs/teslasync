@@ -1,12 +1,10 @@
 /**
- * Slow Queries Page — Phase-45 admin observability surface.
- *
+ * Slow Queries page for admin observability.
  * Top-N slowest queries from pg_stat_statements with sortable order
  * (mean_time / total_time / calls / max_time) and a configurable
  * limit. Each row shows the fingerprint, call count, time stats, and
  * shared-buffer cache hit/read ratio so operators can spot the
  * difference between "slow but cached" and "slow because of I/O".
- *
  * Backed by GET /api/v1/admin/observability/slow-queries
  * (internal/handler/v1/admin_observability_handler.go).
  */
@@ -146,6 +144,7 @@ export default function SlowQueriesPage() {
             </div>
             <SectionErrorBoundary name="slow-queries-table">
               {rows.length === 0 && !query.isLoading && !subsystemMissing ? (
+                // no-action: pg_stat_statements is populated by Postgres itself; users cannot seed rows from the UI
                 <EmptyState
                   icon={<Timer className="h-8 w-8" />}
                   title={t('admin.slowQueries.emptyTitle', 'No slow queries')}
@@ -156,6 +155,7 @@ export default function SlowQueriesPage() {
                 />
               ) : (
                 <DataTable
+                  tableId="admin:slow-queries"
                   columns={columns}
                   data={rows}
                   keyExtractor={(r) => r.query_id}

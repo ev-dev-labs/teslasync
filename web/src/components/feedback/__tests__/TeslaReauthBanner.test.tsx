@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import '@/i18n'
 
 /**
- * Phase-45 / Prompt 30 — TeslaReauthBanner contract.
+ * TeslaReauthBanner contract tests.
  *
  * The banner reacts to two document-level CustomEvents:
  *   • teslasync:tesla-auth-expired   — surfaced by resilientFetch when

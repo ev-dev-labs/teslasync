@@ -1,6 +1,5 @@
-// Phase-50 / 0016 — N2 NL automation builder.
-// Phase-50 / W1 (slice 0065) — wired the Draft button to
-// POST /api/v1/ai/automations/draft.
+// Natural-language automation builder.
+// The Draft button streams from POST /api/v1/ai/automations/draft.
 
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'

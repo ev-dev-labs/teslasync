@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 21 — Route-change announcer.
+ * Route-change announcer.
  *
  * Single-page-app navigation is silent to screen readers — clicking a
  * `<NavLink>` swaps the document content but the AT user gets no
@@ -37,9 +37,8 @@
  * exactly one region.
  *
  * The region itself still goes through `<VisuallyHidden liveRegion>`
- * so the `audit:sr-only` script (Phase-46 / Prompt 12) keeps passing
- * — that audit forbids the literal Tailwind `sr-only` class outside
- * `VisuallyHidden.tsx`.
+ * because the `audit:sr-only` script forbids the literal Tailwind
+ * `sr-only` class outside `VisuallyHidden.tsx`.
  */
 
 import { useEffect, useRef, useState } from 'react';

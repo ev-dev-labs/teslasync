@@ -1,5 +1,3 @@
-// Phase-50 / 0048 — S7 State-machine debugger narrator.
-//
 // Unit tests for the state-machine-debugger-narrator Strategy.
 // Mirrors the shape of mqtt-sse-inspector-explanations'
 // strategy_test.go (the closest precedent: a tools+RAG-style
@@ -129,8 +127,8 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via
 // StrategyInput.History; the strategy must not contribute extra
-// prefix messages until a future slice that needs preferred-
-// greeting or preferred-unit-display preferences ships.
+// prefix messages until a feature needs preferred-greeting or
+// preferred-unit-display preferences.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -147,10 +145,8 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 // the dispatcher PolicyDigest wrapped through the F4↔F8
 // adapter. PolicyDigest allows ONLY ClassVehicleName so the
 // narration can say "your Roadie's vehicle FSM held parked for
-// 18 hours" without leaking the VIN or any coordinates. The
-// slice prompt explicitly mandates "Allowed classes:
-// ClassVehicleName only; transition details are user-visible
-// and VINs remain tagged."
+// 18 hours" without leaking the VIN or any coordinates. Transition
+// details are user-visible, but VINs remain tagged.
 func TestStrategy_RedactionPolicyDigest(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -182,7 +178,7 @@ func TestStrategy_EvalGoldensReturnsNil(t *testing.T) {
 	}
 }
 
-// --- helpers ---------------------------------------------------------
+// Helpers.
 
 func contains(s, sub string) bool {
 	return len(s) >= len(sub) && (s == sub || indexOf(s, sub) >= 0)

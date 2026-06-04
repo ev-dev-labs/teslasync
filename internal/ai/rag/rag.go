@@ -12,15 +12,15 @@ import (
 // strings, so consumer slices MUST use the constants rather than
 // inline string literals to avoid drift.
 const (
-	SourceDocs           = "docs"
-	SourceDriveSummary   = "drive_summary"
-	SourceChargeSession  = "charge_session"
-	SourceAlertHistory   = "alert_history"
-	SourceAutomationRun  = "automation_run"
-	SourceUserNote       = "user_note"
+	SourceDocs          = "docs"
+	SourceDriveSummary  = "drive_summary"
+	SourceChargeSession = "charge_session"
+	SourceAlertHistory  = "alert_history"
+	SourceAutomationRun = "automation_run"
+	SourceUserNote      = "user_note"
 )
 
-// Embedding model names supported by the F7 retriever. Adding a new
+// Embedding model names supported by the retriever. Adding a new
 // model requires:
 //  1. Adding it here with the correct dimension in [modelDims].
 //  2. Confirming the cost table in internal/ai/cost has an entry.
@@ -28,8 +28,8 @@ const (
 //     — VECTOR(N) is fixed-size per column, so a model with a new
 //     dim needs a new table (and a new migration).
 const (
-	ModelNomicEmbedText      = "nomic-embed-text"        // PD3 local, 768-dim
-	ModelTextEmbedding3Small = "text-embedding-3-small"  // PD3 cloud, 1536-dim
+	ModelNomicEmbedText      = "nomic-embed-text"       // PD3 local, 768-dim
+	ModelTextEmbedding3Small = "text-embedding-3-small" // PD3 cloud, 1536-dim
 )
 
 // modelDims maps a vendor embedding model name to its vector
@@ -130,7 +130,7 @@ type Chunk struct {
 	Score      float32 // cosine similarity, range [-1, 1].
 }
 
-// Retriever is the single canonical RAG entry point (P7). Every
+// Retriever is the single canonical RAG entry point. Every
 // AI feature that needs similarity search consumes this interface;
 // no feature instantiates its own embedding query path.
 //
@@ -174,7 +174,7 @@ func DimFor(model string) (int, bool) {
 
 // KnownModels returns every registered embedding model name in
 // deterministic order. Used by the cost table snapshot test and the
-// settings-UI model picker (when N6 wires it).
+// settings-UI model picker.
 func KnownModels() []string {
 	out := make([]string, 0, len(modelDims))
 	for m := range modelDims {

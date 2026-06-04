@@ -1,12 +1,8 @@
-// Phase-50 / 0048 — S7 State-machine debugger narrator.
-// Phase-50 / W1 inline wiring (per slice prompt 0048) — wired the
-// "Narrate transitions" button to POST /api/v1/ai/system/fsm/narrate
-// via the canonical useAiStream hook. The slice methodology forbids
-// shipping the visual affordance without end-to-end SSE wiring;
-// this component lands both in one commit so the on-mode wiring
-// test (TestStateMachineDebuggerNarratorAIOnWiredCallsRoute) can
-// prove the button actually opens an SSE stream against the
-// registered backend route.
+// State-machine debugger narrator.
+// The "Narrate transitions" button POSTs to /api/v1/ai/system/fsm/narrate
+// via the canonical useAiStream hook. Keep the visual affordance and SSE
+// wiring together so the on-mode wiring test can prove the button opens
+// a stream against the registered backend route.
 //
 // AIStateMachineDebuggerNarrator is the visible AI surface for the
 // StateMachineDebuggerPage. It is rendered conditionally via
@@ -28,7 +24,7 @@
 // deterministic /api/v1/fsm/transitions surfaces above for raw
 // inspection. ADR-015 §I3 baseline intact.
 //
-// Render contract (P11/P12 — Wired-or-absent, No-placeholder-buttons):
+// Render contract:
 //   - useAiStream is called unconditionally at the top of the body
 //     (Hooks-rules safe).
 //   - The "Narrate transitions" button's disabled prop is a COMPUTED

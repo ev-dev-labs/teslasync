@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	backupmodel "github.com/ev-dev-labs/teslasync/internal/models/backup"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
@@ -19,8 +21,9 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/backup"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbbackup "github.com/ev-dev-labs/teslasync/internal/database/backup"
+	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
 	"github.com/ev-dev-labs/teslasync/internal/export"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 
@@ -67,7 +70,7 @@ func main() {
 			Msg("OpenTelemetry tracing enabled")
 	}
 
-	// Pyroscope continuous profiling — non-fatal (Phase-49 / p49-profiling).
+	// Pyroscope continuous profiling is non-fatal.
 	profilerShutdown, err := tracing.StartProfiler(ctx, cfg, "teslasync-export-worker")
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to initialize pyroscope profiler, continuing without it")
@@ -78,7 +81,6 @@ func main() {
 			Msg("Pyroscope continuous profiling enabled")
 	}
 
-	// Database connection
 	var db *database.DB
 	err = resilience.ConnectWithRetry(ctx, "database", 10, func(ctx context.Context) error {
 		var connErr error
@@ -91,7 +93,6 @@ func main() {
 	defer db.Close()
 	log.Info().Msg("database connected")
 
-	// MQTT connection
 	opts := pahomqtt.NewClientOptions().
 		AddBroker(cfg.MQTT.BrokerURL()).
 		SetClientID(cfg.MQTT.ClientID + "-export-worker").
@@ -114,14 +115,13 @@ func main() {
 	defer mqttClient.Disconnect(1000)
 	log.Info().Msg("MQTT connected")
 
-	// Start MQTT export consumer
 	worker := export.NewWorker(db)
 	go func() {
 		worker.Start(ctx, mqttClient)
 	}()
 
-	// Periodic cleanup of old export jobs (every 6 hours, remove jobs older than 7 days)
-	exportJobRepo := database.NewExportJobRepo(db)
+	// Cleanup runs every 6 hours and removes export jobs older than 7 days.
+	exportJobRepo := exportdb.NewExportJobRepo(db)
 	go func() {
 		ticker := time.NewTicker(6 * time.Hour)
 		defer ticker.Stop()
@@ -146,10 +146,10 @@ func main() {
 		}
 	}()
 
-	// Backup scheduler — checks for due backup configs every 60s
+	// Backup scheduler checks for due configs every 60s.
 	go func() {
-		backupCfgRepo := database.NewBackupConfigRepo(db)
-		backupRunRepo := database.NewBackupRunRepo(db)
+		backupCfgRepo := dbbackup.NewBackupConfigRepo(db)
+		backupRunRepo := dbbackup.NewBackupRunRepo(db)
 		processor := backup.NewProcessor(db)
 		ticker := time.NewTicker(60 * time.Second)
 		defer ticker.Stop()
@@ -172,7 +172,7 @@ func main() {
 				}
 				span.SetAttributes(attribute.Int("backup.due_count", len(dueConfigs)))
 				for _, cfg := range dueConfigs {
-					run := &models.BackupRun{
+					run := &backupmodel.BackupRun{
 						ConfigID:   &cfg.ID,
 						RunType:    "backup",
 						BackupType: cfg.BackupType,
@@ -192,7 +192,7 @@ func main() {
 					// trace "which tick scheduled this backup" without making
 					// the tick wait synchronously.
 					tickSpanCtx := span.SpanContext()
-					go func(cfg *models.BackupConfig, run *models.BackupRun) {
+					go func(cfg *backupmodel.BackupConfig, run *backupmodel.BackupRun) {
 						runCtx, runSpan := workerTracer().Start(
 							context.Background(),
 							"export.backup_run",
@@ -215,7 +215,7 @@ func main() {
 
 	log.Info().Msg("export worker running (MQTT consumer + job cleanup)")
 
-	// Health endpoint for k8s probes
+	// Health endpoint for Kubernetes probes.
 	healthPort := os.Getenv("HEALTH_PORT")
 	if healthPort == "" {
 		healthPort = "8082"
@@ -237,7 +237,6 @@ func main() {
 		}
 	}()
 
-	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-quit

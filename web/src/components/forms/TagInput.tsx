@@ -1,10 +1,10 @@
 /**
- * Phase-46 / Prompt 24 — Free-text tag chip input.
+ * Free-text tag chip input.
  *
  * Canonical primitive for collecting an arbitrary list of short
  * user-typed strings (alert tags, vehicle nicknames, custom labels,
  * vehicle-ID lists, etc.). Intentionally distinct from
- * {@link ComboboxMulti} from prompt 14: that primitive picks values
+ * {@link ComboboxMulti}: that primitive picks values
  * from an existing set with autocomplete; this one CREATES new
  * values from free text.
  *
@@ -450,9 +450,9 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(
       </>
     );
 
-    /* Phase-46 / Prompt 11 — system-colour border survives Forced
-     * Colors mode (where bg-[var(--surface-1)] resolves to Canvas
-     * and the field outline disappears). */
+    /* System-colour border survives Forced Colors mode, where
+     * bg-[var(--surface-1)] resolves to Canvas and the field outline
+     * disappears. */
     const fieldClass = cn(
       'flex w-full flex-wrap items-center gap-1.5 rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] px-2 py-1.5 text-sm transition-colors',
       'focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-1 focus-within:ring-offset-[var(--bg)]',

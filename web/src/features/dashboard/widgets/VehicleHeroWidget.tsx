@@ -21,12 +21,9 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
   const id = vehicle?.id ?? 0;
   const { data: stateData, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
   const { state: live } = useVehicleLive(vehicle?.id);
-  /* Phase-43 SI-floor: state.{rated_range, odometer, ideal_range} arrive in
-   * METERS, state.speed in M/S, state.{inside, outside}_temp in °C. The legacy
-   * useSettings.convert{Distance, Speed} expected miles/mph in and would multiply
-   * by ~1× when user prefs were "mi" — which is why the values appeared
-   * 1000× / 2000× too large on the dashboard. Wrap SI-aware converters so the
-   * VehicleHero component's contract stays intact. */
+  /* State values arrive in SI units: range/odometer in meters, speed in m/s,
+   * and temperatures in °C. Wrap SI-aware converters so VehicleHero receives
+   * display-unit values without changing its component contract. */
   const { unitPrefs } = useUnits();
   const { isFahrenheit } = useSettings();
 

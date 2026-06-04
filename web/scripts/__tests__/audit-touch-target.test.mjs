@@ -1,15 +1,15 @@
 /**
- * Phase-46 / Prompt 69 — Tests for the touch-target audit.
+ * Tests for the touch-target audit.
  *
  * The audit script exposes two test seams:
- *  • `_classifyForTest({ openTag, elementName, innerContent, allowlisted })`
- *    — classify a single element directly, bypassing file I/O.
- *  • `_scanSourceForTest(source, { rel, allowlist })` — feed an entire
- *    synthetic `.tsx` source string and get back the list of failures.
+ * • `_classifyForTest({ openTag, elementName, innerContent, allowlisted })`
+ * — classify a single element directly, bypassing file I/O.
+ * • `_scanSourceForTest(source, { rel, allowlist })` — feed an entire
+ * synthetic `.tsx` source string and get back the list of failures.
  *
  * Tests use these seams instead of writing real files so they're fast
  * and hermetic across CI runners. We use the built-in `node:test`
- * runner (zero deps) per the prompt's requirement.
+ * runner (zero deps) to keep the tests lightweight.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

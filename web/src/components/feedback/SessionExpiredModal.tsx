@@ -6,8 +6,6 @@ import { useSessionMonitor } from '@/hooks/useSessionMonitor'
 import { navigateToReauth } from '@/lib/resilience'
 
 /**
- * Phase-46 / Prompt 05 — SessionExpiredModal.
- *
  * Hard-blocks the UI when the upstream ForwardAuth session has fully
  * expired. Two activation paths:
  *   1. {@link useSessionMonitor} reports `hasExpired === true` (the

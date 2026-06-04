@@ -2,8 +2,7 @@ package models
 
 import "time"
 
-// PushSubscription represents one row of the push_subscriptions table
-// (migration 000165, Phase 40 / Prompt 52).
+// PushSubscription represents one row of the push_subscriptions table.
 //
 // The wire shape mirrors the JSON returned by PushSubscription.toJSON()
 // in the browser, with two TeslaSync-specific additions:

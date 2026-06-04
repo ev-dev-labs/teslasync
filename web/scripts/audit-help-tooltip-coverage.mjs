@@ -1,20 +1,20 @@
 #!/usr/bin/env node
 /**
- * Phase-45 / 09 — HelpTooltip coverage audit.
+ * HelpTooltip coverage audit.
  *
  * Asserts that every deeply-technical surface references the shared
- * `<HelpTooltip>` primitive (Phase-40 / Prompt 47) — either directly or
+ * `<HelpTooltip>` primitive — either directly or
  * via `<MetricCard help={…}>` / similar wrappers that take a
  * `HelpTooltipProps` object.
  *
  * Detection rules (any one is enough):
- *   1. Source contains the literal string `HelpTooltip` (direct import).
- *   2. Source contains `\bhelp\s*=\s*\{` (component-prop form, e.g.
- *      `<MetricCard help={{ i18nKey: 'help.X', defaultValue: '…' }} />`).
- *   3. Source contains `helpKey=` (legacy/alternate prop name, in case any
- *      surface uses a wrapper exposing it).
+ * 1. Source contains the literal string `HelpTooltip` (direct import).
+ * 2. Source contains `\bhelp\s*=\s*\{` (component-prop form, e.g.
+ * `<MetricCard help={{i18nKey: 'help.X', defaultValue: '…' }} />`).
+ * 3. Source contains `helpKey=` (legacy/alternate prop name, in case any
+ * surface uses a wrapper exposing it).
  *
- * Surfaces are pinned by their REAL paths in the repo (the prompt's draft
+ * Surfaces are pinned by their REAL paths in the repo (the earlier draft
  * list mentioned `StateMachinePage.tsx` and `SleepAnalyticsPage.tsx`,
  * which don't exist — the actual files are `StateMachineDebuggerPage.tsx`
  * and `SleepEfficiencyPage.tsx`).

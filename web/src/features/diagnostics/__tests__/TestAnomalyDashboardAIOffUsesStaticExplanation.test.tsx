@@ -1,12 +1,12 @@
-// Phase-50 / 0014 — U4 Anomaly explanation narration.
-//
+// Anomaly explanation narration.
+
 // `TestAnomalyDashboardAIOffUsesStaticExplanation` (the Vitest
-// sibling to the Go test of the same name) is the slice's
+// sibling to the Go test of the same name) verifies the
 // load-bearing AI-OFF contract proof on the React side. It mounts
 // the AIAnomalyExplanations component with ai_mode='off' (plus the
 // per-feature toggle on, to defeat the obvious "off because nothing
 // is enabled" path) and asserts:
-//
+
 //   1. The AI section's rooted test ID is absent from the DOM.
 //   2. The wrapper renders no children (empty container).
 //   3. With ai_mode='cloud' AND anomaly-explanations=true, the
@@ -14,14 +14,14 @@
 //      the positive control that proves the gate actually works
 //      (otherwise the "absent in off mode" assertion is trivially
 //      true).
-//
+
 // The HTTP /api/v1/ai/anomalies/explain 404-in-off-mode invariant
 // is proven by the Go-side TestAnomalyDashboardAIOffUsesStaticExplanation
 // in internal/api/ai_anomaly_handler_test.go — the network layer
 // does not exist in the React unit-test scope.
-//
+
 // File name MUST stay `TestAnomalyDashboardAIOffUsesStaticExplanation.test.tsx`
-// — the slice prompt's verification command runs
+// the verification command runs
 // `vitest --run TestAnomalyDashboardAIOffUsesStaticExplanation`,
 // where the positional pattern is matched against the file PATH.
 

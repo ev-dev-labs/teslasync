@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 46 — UserImpersonateButton contract.
+ * UserImpersonateButton contract.
  *
  * Coverage:
  *   1. Click opens the ConfirmDialog with target subject in the body.

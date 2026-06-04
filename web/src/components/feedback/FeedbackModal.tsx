@@ -9,7 +9,7 @@ import { useSubmitFeedback } from '@/api/hooks/useFeedback'
 import { getRecentReportsForFeedback } from '@/lib/errorReporter'
 import type { FeedbackCategory, FeedbackSubmitInput } from '@/api/types'
 
-// Phase-46 / Prompt 08 — In-app feedback / report-bug modal.
+// In-app feedback and bug-report modal.
 //
 // Captures category + title + body, optionally attaches the most-recent
 // frontend error reports (from the errorReporter ring buffer) and the

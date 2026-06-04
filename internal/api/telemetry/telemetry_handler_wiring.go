@@ -1,0 +1,317 @@
+package telemetry
+
+import (
+	"context"
+	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
+
+	"github.com/ev-dev-labs/teslasync/internal/api/sse"
+	"github.com/ev-dev-labs/teslasync/internal/api/vehiclefsm"
+	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	positiondb "github.com/ev-dev-labs/teslasync/internal/database/position"
+	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
+	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
+	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
+	"github.com/ev-dev-labs/teslasync/internal/events"
+	telemetryfsm "github.com/ev-dev-labs/teslasync/internal/fsm/telemetry"
+	"github.com/ev-dev-labs/teslasync/internal/geocoding"
+	"github.com/ev-dev-labs/teslasync/internal/mqtt"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
+
+	pahomqtt "github.com/eclipse/paho.mqtt.golang"
+)
+
+// NewHandler creates a handler for fleet telemetry ingestion.
+func NewHandler(db *database.DB, mc *mqtt.Client, hub *sse.EventHub, staleTimeout time.Duration, geocoder geocoding.Geocoder) *Handler {
+	var eventBus *events.Bus
+	if mc != nil {
+		eventBus = events.NewBus(mc.Underlying())
+	} else {
+		eventBus = events.NewBus(nil)
+	}
+	if staleTimeout <= 0 {
+		staleTimeout = 5 * time.Minute
+	}
+	bgCtx, bgCancel := context.WithCancel(context.Background())
+	return &Handler{
+		db:             db,
+		posRepo:        positiondb.NewPositionRepo(db),
+		vehicleRepo:    vehicledb.NewVehicleRepo(db),
+		swUpdateRepo:   systemdb.NewSoftwareUpdateRepo(db),
+		mqttClient:     mc,
+		logRepo:        systemdb.NewAPICallLogRepo(db),
+		eventHub:       hub,
+		sessionTracker: NewTelemetrySessionTracker(db, eventBus, geocoder, nil),
+		alertEvaluator: NewTelemetryAlertEvaluator(db, eventBus, hub, func() pahomqtt.Client {
+			if mc != nil {
+				return mc.Underlying()
+			}
+			return nil
+		}()),
+		staleTimeout:          staleTimeout,
+		snapshotWriteInterval: 10 * time.Second,
+		cleanupInterval:       2 * time.Minute,
+		staleSessionTimeout:   5 * time.Minute,
+		startTime:             time.Now().UTC(),
+		bgCtx:                 bgCtx,
+		bgCancel:              bgCancel,
+		streamingState:        make(map[string]*VehicleStreamState),
+		lastWriteAt:           make(map[string]time.Time),
+		accumulatedSignals:    make(map[string]map[string]interface{}),
+		connFSMs:              make(map[int64]*telemetryfsm.ConnectionFSM),
+		fsmHandler:            vehiclefsm.NewHandler(vehicledb.NewVehicleRepo(db), dbobs.NewFSMTransitionRepo(db)),
+	}
+}
+
+// SetRawTelemetryRepo enables raw telemetry signal capture to MongoDB.
+func (h *Handler) SetRawTelemetryRepo(repo *telemetrydb.RawTelemetryRepo) {
+	h.rawTelemetryRepo = repo
+}
+
+// SetTimings overrides default telemetry processing intervals.
+// Zero values are ignored (defaults are kept).
+func (h *Handler) SetTimings(snapshotWrite, cleanup, staleSession time.Duration) {
+	if snapshotWrite > 0 {
+		h.snapshotWriteInterval = snapshotWrite
+	}
+	if cleanup > 0 {
+		h.cleanupInterval = cleanup
+	}
+	if staleSession > 0 {
+		h.staleSessionTimeout = staleSession
+	}
+}
+
+// SetSignalStore sets the in-memory signal store for real-time state tracking.
+func (h *Handler) SetSignalStore(store *signal.Store) {
+	h.signalStore = store
+	if h.sessionTracker != nil {
+		h.sessionTracker.localSignals = store
+	}
+	if store != nil && h.redisCache != nil {
+		store.SetRedisCache(h.redisCache)
+	}
+}
+
+// SetLiveSignalStore sets the live signal boundary used by telemetry ingestion.
+func (h *Handler) SetLiveSignalStore(store signal.LiveSignalStore) {
+	h.liveSignalStore = store
+}
+
+// SetRedisCache sets the Redis cache used by SSE Pub/Sub and startup recovery.
+// Live-state writes are routed through LiveSignalStore to avoid duplicate HSETs.
+func (h *Handler) SetRedisCache(cache *signal.RedisSignalCache) {
+	h.redisCache = cache
+	if h.signalStore != nil {
+		h.signalStore.SetRedisCache(cache)
+	}
+}
+
+// SetEventHub sets the SSE event hub for real-time browser updates.
+func (h *Handler) SetEventHub(hub *sse.EventHub) {
+	h.eventHub = hub
+}
+
+// BroadcastSSE forwards a vehicle_update SSE payload through the
+// handler's existing fanout (Redis Pub/Sub when configured, in-process
+// EventHub fallback otherwise). Exposed as a public accessor so the
+// cutover wiring in cmd/teslasync can register the
+// teslapipeline.SideEffectsObserver's BroadcastSSEFunc against the
+// canonical Handler implementation without duplicating the
+// pub/sub-with-fallback branching logic.
+//
+// Mirrors the existing FSMHandler / SessionTracker / AlertEvaluator
+// accessor pattern on this struct: the underlying field
+// (broadcastSSE method) stays unexported; this is the public seam.
+// A nil eventHub at call time is a no-op (matches the legacy
+// HTTP-ingest behaviour).
+//
+// Takes a ctx so the resulting sse.broadcast / sse.redis_fanout spans
+// nest under the caller's trace (typically a normalize.Pipeline
+// ProcessAtomics span from MQTT telemetry consumer).
+func (h *Handler) BroadcastSSE(ctx context.Context, payload map[string]any) {
+	h.broadcastSSE(ctx, payload)
+}
+
+// GetSignalStore returns the signal store (for use by other handlers).
+func (h *Handler) GetSignalStore() *signal.Store {
+	return h.signalStore
+}
+
+// GetLiveSignalStore returns the live-signal boundary for cross-pod API reads.
+func (h *Handler) GetLiveSignalStore() signal.LiveSignalStore {
+	return h.liveSignalStore
+}
+
+// SessionTracker returns the underlying session tracker for backfill tasks.
+func (h *Handler) SessionTracker() *TelemetrySessionTracker {
+	return h.sessionTracker
+}
+
+// AlertEvaluator returns the underlying alert evaluator for state recovery.
+func (h *Handler) AlertEvaluator() *TelemetryAlertEvaluator {
+	return h.alertEvaluator
+}
+
+// SetSignalLogRepo enables per-signal logging to MongoDB.
+func (h *Handler) SetSignalLogRepo(repo *signaldb.SignalLogRepo) {
+	h.signalLogRepo = repo
+}
+
+// SetSignalHistoryWriter enables per-signal history logging to Postgres.
+func (h *Handler) SetSignalHistoryWriter(w *signaldb.SignalHistoryWriter) {
+	h.signalHistoryWriter = w
+	if h.sessionTracker != nil {
+		h.sessionTracker.signalHistoryWriter = w
+	}
+}
+
+// SignalLogRepo returns the optional MongoDB-backed signal-log repository, or nil.
+func (h *Handler) SignalLogRepo() *signaldb.SignalLogRepo {
+	return h.signalLogRepo
+}
+
+// SignalHistoryWriter returns the Postgres-backed signal history writer, or nil.
+func (h *Handler) SignalHistoryWriter() *signaldb.SignalHistoryWriter {
+	return h.signalHistoryWriter
+}
+
+// FSMHandler returns the FSM handler for status/stats queries.
+func (h *Handler) FSMHandler() *vehiclefsm.Handler {
+	return h.fsmHandler
+}
+
+// SetCaptureEnabled toggles raw telemetry capture on or off.
+func (h *Handler) SetCaptureEnabled(enabled bool) {
+	h.captureEnabled.Store(enabled)
+}
+
+// IsCaptureEnabled returns whether raw telemetry capture is currently active.
+func (h *Handler) IsCaptureEnabled() bool {
+	return h.captureEnabled.Load()
+}
+
+// StartCleanup runs periodic cleanup of stale streaming state entries
+// and stale drive/charge sessions. Call this once at startup; it stops when ctx is cancelled.
+func (h *Handler) StartCleanup(ctx context.Context) {
+	// Run cleanup immediately on startup to close orphaned DB sessions
+	if h.sessionTracker != nil {
+		h.sessionTracker.CleanupStaleSessions(ctx, 2*h.staleSessionTimeout)
+	}
+
+	safeGo("telemetry-cleanup", func() {
+		ticker := time.NewTicker(h.cleanupInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				h.cleanupStaleEntries()
+				// Close drive/charge sessions with no signals for 5+ minutes
+				if h.sessionTracker != nil {
+					h.sessionTracker.CleanupStaleSessions(ctx, h.staleSessionTimeout)
+				}
+			}
+		}
+	})
+
+	// Periodic connection FSM timeout checker (every 10s)
+	safeGo("conn-fsm-timeout-checker", func() {
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				h.checkConnFSMTimeouts()
+			}
+		}
+	})
+}
+
+// checkConnFSMTimeouts copies FSM pointers under lock, then checks timeouts unlocked.
+func (h *Handler) checkConnFSMTimeouts() {
+	h.connFSMMu.Lock()
+	fsms := make([]*telemetryfsm.ConnectionFSM, 0, len(h.connFSMs))
+	for _, cfsm := range h.connFSMs {
+		fsms = append(fsms, cfsm)
+	}
+	h.connFSMMu.Unlock()
+
+	for _, cfsm := range fsms {
+		cfsm.CheckTimeouts()
+	}
+}
+
+func (h *Handler) cleanupStaleEntries() {
+	now := time.Now().UTC()
+	cutoff := 3 * h.staleTimeout // remove entries 3x past stale timeout
+
+	// Find stale VINs and mark their vehicles offline
+	h.mu.Lock()
+	staleVINs := map[string]bool{}
+	for vin, state := range h.streamingState {
+		if now.Sub(state.LastReceived) > cutoff {
+			staleVINs[vin] = true
+			delete(h.streamingState, vin)
+		}
+	}
+	h.mu.Unlock()
+
+	// Mark stale vehicles as offline
+	if len(staleVINs) > 0 {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		for vin := range staleVINs {
+			var vehicleID int64
+			if err := h.db.Pool.QueryRow(ctx, "SELECT id FROM vehicles WHERE vin = $1", vin).Scan(&vehicleID); err == nil {
+				if h.fsmHandler != nil {
+					h.fsmHandler.HandleTimeout(ctx, vehicleID)
+				}
+			}
+		}
+	}
+
+	h.lastWriteMu.Lock()
+	for vin, lastWrite := range h.lastWriteAt {
+		if now.Sub(lastWrite) > cutoff {
+			delete(h.lastWriteAt, vin)
+		}
+	}
+	h.lastWriteMu.Unlock()
+
+	h.accumulatedSignalsMu.Lock()
+	for vin := range h.accumulatedSignals {
+		// Clean up accumulated signals for VINs no longer streaming
+		h.mu.RLock()
+		_, still := h.streamingState[vin]
+		h.mu.RUnlock()
+		if !still {
+			delete(h.accumulatedSignals, vin)
+		}
+	}
+	h.accumulatedSignalsMu.Unlock()
+
+	// Evict connection FSMs for vehicles that have been cleaned up
+	h.connFSMMu.Lock()
+	for vid, cfsm := range h.connFSMs {
+		if cfsm.IsStale() {
+			h.mu.RLock()
+			_, stillTracked := h.streamingState[cfsm.VIN()]
+			h.mu.RUnlock()
+			if !stillTracked {
+				delete(h.connFSMs, vid)
+			}
+		}
+	}
+	h.connFSMMu.Unlock()
+}
+
+// Shutdown cancels all background goroutines spawned by the handler.
+func (h *Handler) Shutdown() {
+	h.bgCancel()
+}

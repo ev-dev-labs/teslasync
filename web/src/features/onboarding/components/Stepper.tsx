@@ -4,8 +4,6 @@ import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui';
 
 /**
- * Stepper — Phase 40 / Prompt 18.
- *
  * Compact vertical step list used by the onboarding page. Each step
  * is in one of three states:
  *

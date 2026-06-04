@@ -29,7 +29,7 @@ func (s *stubProvider) Embed(_ context.Context, _ EmbedRequest) (*EmbedResponse,
 }
 
 // recordingDecorator returns a decorator that prepends a tag to the
-// call slice before delegating to the inner provider, and similarly
+// call feature before delegating to the inner provider, and similarly
 // after. Used to prove [Chain] composes left-to-right (outer-to-inner).
 func recordingDecorator(tag string, calls *[]string) Decorator {
 	return func(inner Provider) Provider {

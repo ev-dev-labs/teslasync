@@ -1,5 +1,5 @@
 /**
- * DataTable — column reorder + visibility (Phase-46 / Prompt 45)
+ * DataTable column reorder + visibility tests.
  *
  * Sibling test file (next to DataTable.tsx) for the new
  * `columnReorder` + `columnVisibility` props. The pre-existing,
@@ -215,7 +215,7 @@ describe('DataTable — columnReorder + columnVisibility (Phase-46 / Prompt 45)'
   })
 })
 
-// ── Phase-46 / Prompt 52 — virtualization adoption ────────────────────────
+// Virtualization stress tests.
 // Stress test: with `virtualized` enabled on a 5000-row dataset the DOM
 // must contain only the spacer rows + a small visible window — never
 // the full row set. This guards against accidental virtualization
@@ -246,7 +246,7 @@ describe('DataTable — virtualization stress (Phase-46 / Prompt 52)', () => {
     const tbody = container.querySelector('tbody')
     expect(tbody).not.toBeNull()
     const rows = tbody!.querySelectorAll('tr')
-    // Count includes spacer rows; the prompt's threshold is < 50.
+    // Count includes spacer rows; the regression threshold is < 50.
     expect(rows.length).toBeLessThan(50)
     // Defensive: also ensure we did NOT explode the DOM.
     expect(rows.length).toBeGreaterThan(0)
@@ -270,7 +270,7 @@ describe('DataTable — virtualization stress (Phase-46 / Prompt 52)', () => {
   })
 })
 
-// ── Phase-46 / Prompt 55 — DataTable export adoption ──────────────────────
+// DataTable export tests.
 // Long-tail list pages (charging, alerts, etc.) opt into a "Download CSV"
 // button via the `exportable` prop. These tests guard against regressions
 // in the export pipeline:

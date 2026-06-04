@@ -2,7 +2,7 @@
  * alertDrillthrough — map an Alert (from `useAlerts`) to a navigable URL on the
  * relevant context page so the user can investigate what triggered it.
  *
- * Phase 40 / Prompt 14. The backend stamps each alert with `rule_signal`
+ * The backend stamps each alert with `rule_signal`
  * (e.g. "BatteryLevel"), `vehicle_id`, and `created_at`; we look up the signal
  * in `SIGNAL_TO_PAGE` to pick the destination page and forward the context
  * (vehicle, timestamp, signal) as query params. Pages opt-in to centering their

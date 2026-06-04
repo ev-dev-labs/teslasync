@@ -1,11 +1,10 @@
-// Package nlautomationbuilder is the Phase-50 / N2 strategy for the
-// LLM-assisted "natural-language automation builder".
+// Package nlautomationbuilder defines the LLM-assisted natural-language automation builder strategy.
 //
 // The strategy declares:
 //
 //   - the system prompt that frames the builder as a propose-only
-//     assistant — produce a typed Automation graph DTO (trigger +
-//     conditions + actions) via the F4 tools, do NOT save anything,
+//     assistant: produce a typed Automation graph DTO (trigger +
+//     conditions + actions), do NOT save anything,
 //     NEVER write SQL, refuse cross-vehicle requests, refuse to
 //     disable, suspend, or modify existing automations;
 //   - the two read-only tools the LLM is allowed to call —
@@ -16,8 +15,8 @@
 //     user explicitly clicks Save in the AutomationBuilderPage UI;
 //   - the redaction policy (`PolicyAutomationBuilder`) which allows
 //     nothing — vehicle, place, and channel identifiers flow
-//     through the typed F4 tools, not through prose. Every PII
-//     class is redacted via round-trip tags.
+//     through typed tools, not through prose. Every PII class is
+//     redacted via round-trip tags.
 //
 // The strategy is consumed by the AI HTTP handler at
 // `internal/api/ai_automation_handler.go` which builds a dispatcher,
@@ -32,13 +31,13 @@
 //
 //   - I1 default-off:    feature toggle defaults false in features.Registry.
 //   - I3 baseline intact: this strategy never replaces the typed
-//                         Automation validator or the existing
-//                         AutomationBuilderPage editor. Save path
-//                         is the existing handler; the AI only
-//                         DRAFTS.
+//     Automation validator or the existing
+//     AutomationBuilderPage editor. Save path
+//     is the existing handler; the AI only
+//     DRAFTS.
 //   - I7 per-feature:     the AI route is gated by guard.Wrap("nl-automation-builder").
 //   - I9 redaction:       PolicyAutomationBuilder denies all classes;
-//                         identifiers flow through tools, not prose.
+//     identifiers flow through tools, not prose.
 package nlautomationbuilder
 
 import (
@@ -145,23 +144,20 @@ func (s *Strategy) Tools() []string {
 //
 // Future work: this is where a per-vehicle "current geofence
 // catalog snippet" or "user's existing automations summary" would
-// be injected once automation drafting grows that surface (e.g. for
-// de-duplication). The current slice keeps Context empty so the
-// dispatcher's behaviour is fully determined by [System] + History.
+// be injected once automation drafting grows that surface, for example
+// for de-duplication. For now, [System] plus History fully determines
+// dispatcher behaviour.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyAutomationBuilder wrapped through the F4↔F8 adapter so the
+// PolicyAutomationBuilder through the redaction adapter so the
 // dispatcher's per-request ctx-installation step (dispatch.Run
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyAutomationBuilder from
-// internal/ai/redact/policies.go. Allowed classes: none; vehicle
-// and geofence identifiers flow through tools, not prose". The
-// policy's Allow list is nil, so every PII class — VIN, lat/long,
+// The policy's Allow list is nil, so every PII class — VIN, lat/long,
 // vehicle name, addresses, phone numbers — is redacted to a
 // round-trip tag before the prompt reaches the provider.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {

@@ -9,7 +9,7 @@ afterEach(() => {
 })
 
 describe('SignalConfigModal viewport bounds', () => {
-  // Phase-45 / Prompt 04: SignalConfigModal was a hand-rolled full-viewport
+  // SignalConfigModal was a hand-rolled full-viewport
   // overlay that bypassed <Modal>'s viewport-bounds (max-h-[90vh] desktop /
   // max-h-[100dvh] mobile). It now renders inside the shared <Modal>, which
   // sets role="dialog" + aria-modal="true" via its wrapper. This test asserts

@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 13 — ChartContainer accessibility contract.
+ * ChartContainer accessibility contract.
  *
  * Asserts the figure / figcaption / table fallback wiring that lets
  * screen-reader users + Windows High Contrast users perceive a

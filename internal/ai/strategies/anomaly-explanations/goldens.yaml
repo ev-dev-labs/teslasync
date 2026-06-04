@@ -16,7 +16,7 @@ feature:
     request.
   # Tools MUST mirror internal/ai/strategies/anomaly-explanations/strategy.go's
   # allowedTools whitelist. The narrator ships zero mutating tools — it only
-  # READS already-detected anomaly state via *api.AnomalyHandler.DetectAnomalies
+  # READS already-detected anomaly state via (*apianomaly.Handler).DetectAnomalies
   # (no new SQL written; no detector behaviour changed).
   tools:
     - query_anomaly_context

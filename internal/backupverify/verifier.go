@@ -3,9 +3,7 @@
 // processor uses, verifying its checksum, decoding the table dump,
 // and asserting a small set of invariants over the restored data.
 //
-// Phase-49 / p49-backup-verify.
-//
-// The verifier is a separate package (not a Processor method) for
+// The verifier is a separate package rather than a Processor method for
 // two reasons:
 //
 //  1. It is invoked by an external scheduler (cron / k8s CronJob /
@@ -37,8 +35,9 @@ import (
 	"fmt"
 	"time"
 
+	backupmodel "github.com/ev-dev-labs/teslasync/internal/models/backup"
+
 	"github.com/ev-dev-labs/teslasync/internal/backup"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // Verifier runs the backup drill. Construct via NewVerifier.
@@ -54,12 +53,12 @@ type Verifier struct {
 // BackupRunsLookup is the narrow surface the verifier needs from the
 // backup_runs repo. Kept narrow so tests don't need the full repo.
 type BackupRunsLookup interface {
-	LatestSuccessful(ctx context.Context) (*models.BackupRun, error)
+	LatestSuccessful(ctx context.Context) (*backupmodel.BackupRun, error)
 }
 
 // BackupConfigsLookup mirrors the read needed against backup_configs.
 type BackupConfigsLookup interface {
-	GetByID(ctx context.Context, id int64) (*models.BackupConfig, error)
+	GetByID(ctx context.Context, id int64) (*backupmodel.BackupConfig, error)
 }
 
 // Result summarises a single verification run.
@@ -173,7 +172,7 @@ func (v *Verifier) VerifyLatest(ctx context.Context) (*Result, error) {
 		res.DurationMs = v.now().Sub(start).Milliseconds()
 		return res, err
 	}
-	res.ChecksumOK = true // RestoreBackup already verified checksum and returned error otherwise
+	res.ChecksumOK = true // RestoreBackup returns an error when checksum verification fails.
 
 	res.TablesVerified = make([]TableResult, 0, len(v.criticals))
 	allOK := true

@@ -101,9 +101,8 @@ export function useNotificationListener() {
       const body = [data.vehicle_name, data.message].filter(Boolean).join(' — ')
 
       // Build a drill-through URL so clicking the OS notification deep-links
-      // into the relevant context page (Phase 40 / Prompt 14). When we don't
-      // have enough metadata we fall back to focusing the tab without
-      // navigating.
+      // into the relevant context page. When we don't have enough metadata,
+      // fall back to focusing the tab without navigating.
       const hasContext = !!(data.created_at || data.rule_signal || data.vehicle_id)
       const onClick = hasContext
         ? () => {
@@ -159,8 +158,8 @@ export function useNotificationListener() {
     }
   }, [permission, prefs, sendNotification, navigate])
 
-  // Per-channel notification sounds (Phase-46 / Prompt 29). Lives in its
-  // own effect because audio cues are independent of the OS browser
+  // Per-channel notification sounds live in their own effect because audio
+  // cues are independent of the OS browser
   // notification permission and fire even while the tab is visible —
   // they complement the in-app toast / OS notification, they don't
   // replace them.

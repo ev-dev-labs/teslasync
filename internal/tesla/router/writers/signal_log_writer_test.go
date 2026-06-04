@@ -54,10 +54,9 @@ func assertSignalLogCallShape(t *testing.T, call recordedCall) {
 }
 
 // TestSignalLogWriter_RoutingYAMLCoverage is the reflective coverage
-// gate from phase-42a prompt 0021. It walks router.LoadMap() (which
-// parses the embedded routing.yaml), counts entries with
-// Destination==DestSignalLog, and asserts the count matches the
-// AUDIT_EVIDENCE check from this prompt's log (144 routes today).
+// gate for signal_log routing. It walks router.LoadMap() (which parses
+// the embedded routing.yaml), counts entries with Destination==DestSignalLog,
+// and asserts the count matches the current audited baseline.
 //
 // The exact-count form (rather than >=144) is deliberate: any future
 // addition of a `dest: signal_log` route SHOULD bump the constant

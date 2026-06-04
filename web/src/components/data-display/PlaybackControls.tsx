@@ -13,10 +13,6 @@ import {
 } from './TimelineScrubber';
 import { useShortcut, type ShortcutDefinition } from '@/hooks/useShortcutRegistry';
 
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
-
 export interface PlaybackControlsProps {
   isPlaying: boolean;
   speed: ReplaySpeed;
@@ -48,7 +44,6 @@ export interface PlaybackControlsProps {
   /**
    * Page-scoped keyboard shortcuts (Space, ←/→, J/K/L, etc.). Off by default
    * because global keyboard handlers are noisy if multiple pages mount this.
-   * Phase-40 / Prompt 57.
    */
   enableKeyboardShortcuts?: boolean;
   /** Seek by N seconds — used by keyboard shortcut handlers. */
@@ -74,7 +69,7 @@ interface ShortcutToast {
 /* ------------------------------------------------------------------ */
 
 /**
- * Playback control bar for trip replay (Phase-40 / Prompt 57).
+ * Playback control bar for trip replay.
  *
  * Composes:
  *   - Reset / Play-Pause / Stop buttons
@@ -301,7 +296,7 @@ export function PlaybackControls({
     [t],
   );
 
-  /* ── Cheatsheet registry — Phase-40 / Prompt 64 ──────────────── */
+  /* Keyboard shortcut cheatsheet. */
   const replayShortcutDefs = useMemo<ShortcutDefinition[]>(() => {
     if (!enableKeyboardShortcuts) return [];
     const group = t('shortcuts.groups.replay', 'Trip replay');

@@ -1,6 +1,6 @@
-// Phase-50 / 0039 — G3 Geofence-aware automation suggestions.
+// Geofence-aware automation suggestions.
 //
-// W1 inline wiring (P11/P12):
+// AI streaming contract:
 //   - useAiStream targets POST /ai/geofences/automations/draft (the
 //     backend path after stripping the /api/v1 prefix). vehicle_id +
 //     prompt flow through the JSON body, not the URL — the backend
@@ -8,7 +8,7 @@
 //   - The primary action button is disabled via a COMPUTED expression
 //     (`stream.state === 'streaming' || stream.state === 'paused-confirm'
 //     || (vehicleId ?? 0) <= 0 || prompt.trim().length === 0`),
-//     never a literal `disabled` or `disabled={true}` (Rule W1-A).
+//     never a literal `disabled` or `disabled={true}`.
 //   - tool_result frames carrying a typed Automation envelope are
 //     captured in component state; clicking "Apply to form" copies
 //     the proposed graph (name + description + triggers + conditions

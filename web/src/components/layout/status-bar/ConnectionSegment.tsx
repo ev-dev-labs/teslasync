@@ -6,7 +6,7 @@ import { useApiHealth, type ApiHealthStatus } from '@/api/hooks/useApiHealth';
 import { cn } from '@/lib/cn';
 
 /**
- * ConnectionSegment — Phase-40 / Prompt 59.
+ * Footer status-bar API connection health segment.
  *
  * Footer status-bar segment that pings the backend `/healthz` endpoint and
  * surfaces the current API connection health (latency + ok/degraded/offline).

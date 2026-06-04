@@ -2,11 +2,14 @@ package api
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"time"
 
+	authmodel "github.com/ev-dev-labs/teslasync/internal/models/auth"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 type apiKeyPermCtxKey struct{}
@@ -75,8 +78,8 @@ func APIKeyAuthRequired(db *database.DB) func(next http.Handler) http.Handler {
 	}
 }
 
-func findAPIKeyByHash(db *database.DB, ctx context.Context, hash string) (*models.APIKey, error) {
-	var k models.APIKey
+func findAPIKeyByHash(db *database.DB, ctx context.Context, hash string) (*authmodel.APIKey, error) {
+	var k authmodel.APIKey
 	err := db.Pool.QueryRow(ctx,
 		`SELECT id, name, key_hash, key_prefix, permissions, last_used_at, created_at, expires_at
 		 FROM api_keys WHERE key_hash = $1`, hash).Scan(
@@ -91,4 +94,9 @@ func findAPIKeyByHash(db *database.DB, ctx context.Context, hash string) (*model
 func updateAPIKeyLastUsed(db *database.DB, ctx context.Context, id int64) error {
 	_, err := db.Pool.Exec(ctx, `UPDATE api_keys SET last_used_at = NOW() WHERE id = $1`, id)
 	return err
+}
+
+func sha256Hex(s string) string {
+	h := sha256.Sum256([]byte(s))
+	return hex.EncodeToString(h[:])
 }

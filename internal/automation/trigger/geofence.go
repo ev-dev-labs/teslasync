@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -55,9 +57,9 @@ type geofenceAutoDisabler interface {
 type PlaceDataProvider interface {
 	// FindByCoordinates returns every place whose circle (lat/lon, radius_m)
 	// contains the given point.
-	FindByCoordinates(ctx context.Context, lat, lng float64) ([]*models.Place, error)
+	FindByCoordinates(ctx context.Context, lat, lng float64) ([]*systemmodel.Place, error)
 	// GetByID returns the place with the given id, or nil if not found.
-	GetByID(ctx context.Context, id int64) (*models.Place, error)
+	GetByID(ctx context.Context, id int64) (*systemmodel.Place, error)
 }
 
 // geofenceSnapshot is the JSON payload passed to engine.Evaluate when a
@@ -87,10 +89,9 @@ const dwellDuration = 5 * time.Minute
 // Override in tests for deterministic control.
 type TimerFunc func(d time.Duration, f func()) *time.Timer
 
-// GeofenceTrigger evaluates geofence-based automations when vehicle
-// positions update. It detects enter/exit transitions against the set of
-// places containing the current position, and schedules deferred 'dwell'
-// firings for automations configured with the 'dwell' event.
+// GeofenceTrigger evaluates geofence automations on position updates.
+// First observations seed state without firing; later updates detect
+// enter/exit transitions and schedule deferred dwell firings.
 type GeofenceTrigger struct {
 	mu        sync.Mutex
 	repo      GeofenceRepo
@@ -171,7 +172,6 @@ func (t *GeofenceTrigger) OnPositionUpdate(ctx context.Context, vehicleID int64,
 		return nil
 	}
 
-	// Detect enter transitions: in current but not in previous.
 	var enters []int64
 	for pid := range currentSet {
 		if !previousSet[pid] {
@@ -179,7 +179,6 @@ func (t *GeofenceTrigger) OnPositionUpdate(ctx context.Context, vehicleID int64,
 		}
 	}
 
-	// Detect exit transitions: in previous but not in current.
 	var exits []int64
 	for pid := range previousSet {
 		if !currentSet[pid] {
@@ -187,11 +186,9 @@ func (t *GeofenceTrigger) OnPositionUpdate(ctx context.Context, vehicleID int64,
 		}
 	}
 
-	// Update state.
 	t.insideState[vehicleID] = currentSet
 	t.mu.Unlock()
 
-	// No transitions — nothing to evaluate.
 	if len(enters) == 0 && len(exits) == 0 {
 		return nil
 	}
@@ -228,8 +225,7 @@ func (t *GeofenceTrigger) OnPositionUpdate(ctx context.Context, vehicleID int64,
 			continue
 		}
 
-		// Enter transitions fire 'enter' immediately and start the dwell
-		// timer for 'dwell' triggers.
+		// Enter transitions fire immediately unless a dwell delay is configured.
 		for _, pid := range enters {
 			if pid != placeID {
 				continue
@@ -267,8 +263,7 @@ func (t *GeofenceTrigger) OnPositionUpdate(ctx context.Context, vehicleID int64,
 			}
 		}
 
-		// Exit transitions fire 'exit' immediately and cancel any pending
-		// dwell timer for the automation.
+		// Exit transitions cancel pending dwell timers before firing.
 		for _, pid := range exits {
 			if pid != placeID {
 				continue

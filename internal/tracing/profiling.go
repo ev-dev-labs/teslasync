@@ -16,12 +16,10 @@ import (
 // returned shutdown function is a no-op so callers can defer it
 // unconditionally.
 //
-// Phase-49 / profiling: Pyroscope sits alongside OTel tracing and
-// Prometheus metrics — same data plane (Grafana Cloud or self-hosted
-// Pyroscope), different signal. CPU + alloc_objects + alloc_space +
-// inuse_objects + inuse_space + goroutines + mutex + block profiles are
-// uploaded as godeltaprof deltas so the on-host overhead stays under
-// 1% CPU for the typical TeslaSync workload.
+// Pyroscope sits alongside OTel tracing and Prometheus metrics: the same
+// data plane, but a different signal. CPU, allocation, goroutine, mutex,
+// and block profiles are uploaded as godeltaprof deltas to keep overhead
+// under 1% CPU for typical TeslaSync workloads.
 //
 // Service name follows the same per-binary discipline as
 // tracing.Init+WithServiceName: workers MUST pass their own

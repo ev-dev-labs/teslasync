@@ -1,56 +1,17 @@
-// Phase-50 / 0059 — PU3 Natural-language dashboard composer.
+// Manual dashboard layout JSON composer at /power/dashboards.
 //
-// DashboardsPage is the manual dashboard layout JSON composer
-// surface mounted at /power/dashboards. The page is the
-// deterministic baseline for the Phase-50 / 0059
-// nl-dashboard-composer slice: a manual JSON textarea +
-// curated panel catalog viewer + Copy-to-clipboard target. The
-// optional AI drafter section (AINLDashboardComposer) is
-// rendered alongside via withAiFeature so it is entirely
-// absent in off-mode (ADR-015 §I5 + §I6) and propose-only in
-// on-mode (the user must explicitly click the canonical Apply
-// to editor button to copy the LLM's proposal into the
-// textarea, then must explicitly click the canonical Copy to
-// clipboard button to paste it into their Grafana dashboard).
+// The page provides a JSON textarea, curated panel catalog, and copy-to-
+// clipboard flow. The optional AI drafter is wrapped with withAiFeature so
+// AI-off mode still renders the manual baseline and AI-on mode remains
+// propose-only: users must explicitly apply a draft to the editor and then
+// copy it.
 //
-// The page does NOT push the dashboard to Grafana from the
-// browser — adding a Grafana API integration is out of scope
-// per the Phase-50 / 0059 "Allowed files" list. The Copy to
-// clipboard button uses the standard navigator.clipboard
-// .writeText API and surfaces a deterministic confirmation
-// message; the user then pastes into their Grafana dashboard
-// editor manually. A future slice that ships a typed
-// Grafana-API push handler can swap that branch in without
-// churning this page's structure or the AI drafter's
-// contract.
+// This page never pushes to Grafana directly. Users paste the copied JSON
+// into Grafana manually; a future server-side Grafana integration can replace
+// that branch without changing the drafter contract.
 //
-// State persistence: the JSON textarea contents are persisted
-// to localStorage under the canonical
-// 'ai.dashboardComposer.draft' key the slice prompt's "Client
-// storage keys" section names. That key is the only client-
-// side storage artifact the slice adds.
-//
-// Visual layout:
-//   - Page header (title + AI drafter section conditionally
-//     mounted via withAiFeature)
-//   - Manual JSON editor (Textarea + Copy to clipboard button
-//     + Clear button)
-//   - Curated panel catalog viewer (panel-name + hint copy so
-//     the user can compose a dashboard deterministically
-//     without consulting external docs)
-//
-// ADR-015 alignment:
-//   - I3 baseline intact: this page renders the manual JSON
-//     editor + curated catalog regardless of the AI feature
-//     toggle's state. The AI drafter section is opt-in
-//     propose-only suggestion layered alongside.
-//   - I5 hidden UI:       AINLDashboardComposer is wrapped by
-//     withAiFeature so the entire AI section is absent from
-//     the DOM in off-mode.
-//   - I8 propose-only:    the page never auto-pushes the LLM's
-//     proposal to Grafana. The user must explicitly click
-//     Apply to editor and then explicitly click Copy to
-//     clipboard.
+// State persistence: the JSON textarea is stored in localStorage under
+// 'ai.dashboardComposer.draft'.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -63,27 +24,14 @@ import { Stack } from '@/components/layout';
 import { Button, GlassPanel, PageTitle, PanelTitle, Textarea } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
-// DASHBOARD_COMPOSER_DRAFT_KEY is the canonical localStorage
-// key the Phase-50 / 0059 slice declared in its "Client
-// storage keys" section. Persisted across navigation so a user
-// editing a long JSON envelope doesn't lose progress on
-// accidental reload.
+// Persisted across navigation so a user editing a long JSON envelope
+// doesn't lose progress on accidental reload.
 const DASHBOARD_COMPOSER_DRAFT_KEY = 'ai.dashboardComposer.draft';
 
-// CuratedDashboardPanel mirrors the Go-side
-// AINLDashboardComposerPanelEntry shape declared in
-// internal/api/ai_nl_dashboard_composer_handler.go's
-// nlDashboardComposerCuratedPanels. We duplicate the catalog
-// here (instead of fetching it via a new API hook) for two
-// reasons:
-//
-//   1. The catalog is install-wide-static — it does not vary
-//      per user / per vehicle / per tenant. Fetching it would
-//      add a round-trip without any actual dynamism.
-//   2. Phase-50 / 0059's "Allowed files" list does not include
-//      a new API hook file. A future slice that adds dynamic
-//      catalog gating can swap the static array for a hook
-//      response without churning this page's render tree.
+// CuratedDashboardPanel mirrors the Go-side AINLDashboardComposerPanelEntry
+// shape in internal/api/ai_nl_dashboard_composer_handler.go. The catalog is
+// install-wide static, so fetching it would add a round-trip without any
+// useful dynamism.
 interface CuratedDashboardPanel {
   name: string;
   description: string;

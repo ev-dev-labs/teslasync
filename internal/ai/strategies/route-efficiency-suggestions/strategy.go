@@ -1,5 +1,5 @@
-// Package routeefficiencysuggestions is the Phase-50 / D3 strategy
-// for the LLM-narrated route-efficiency suggestions surface.
+// Package routeefficiencysuggestions implements the LLM-narrated
+// route-efficiency suggestions surface.
 //
 // The strategy declares:
 //
@@ -8,7 +8,7 @@
 //     events, never proposes mutations, never generalises across
 //     vehicles;
 //   - the two read-only tools the LLM is allowed to call —
-//     `retrieve_route_chunks` (F7 RAG retrieval scoped to the calling
+//     `retrieve_route_chunks` (RAG retrieval scoped to the calling
 //     user_subject over an allowlist of corpora
 //     {drive_summary, route_efficiency, weather_context}) and
 //     `query_route_efficiency` (returns SI-canonical aggregates over
@@ -28,11 +28,6 @@
 // cards, kWh/100mi metric bars, and per-route best/worst summaries —
 // is unchanged. Off-mode users never see the AI surface at all
 // (ADR-015 §I3, §I5, §I6).
-//
-// Service-worker chunks: this slice's frontend code is loaded under
-// the page-bundle for /analytics/route-efficiency; the off-mode
-// walker validates code chunks via the `withAiFeature` HOC + the
-// AI_FEATURES map. See the slice log for the documented mapping.
 //
 // ADR-015 alignment:
 //
@@ -114,7 +109,7 @@ const SystemPrompt = `You are the TeslaSync route-efficiency advisor. ` +
 // RegisterRouteEfficiencySuggestionsTools at boot. The dispatcher
 // refuses to mount a strategy that references an unknown tool.
 //
-// This slice ships zero mutating tools: route-efficiency suggestions
+// This feature ships zero mutating tools: route-efficiency suggestions
 // only READ the user's existing route history from the same drives
 // table the deterministic baseline already renders from. A future
 // "create an automation when you take this route in cold weather"
@@ -166,26 +161,16 @@ func (s *Strategy) Tools() []string {
 //
 // Future work: this is where a per-vehicle "user prefers SI vs US
 // units" preference snippet would be injected once route-efficiency
-// suggestions grow that surface. Today's slice keeps Context empty
+// suggestions grow that surface. The current feature keeps Context empty
 // so the dispatcher's behaviour is fully determined by [System] +
 // History.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
 }
 
-// RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyRouteEfficiencySuggestions wrapped through the F4↔F8 adapter
-// so the dispatcher's per-request ctx-installation step
-// (dispatch.Run installs the policy via redact.WithPolicy) sees the
-// concrete policy.
-//
-// Per the slice prompt: "Policy: PolicyDigest from
-// internal/ai/redact/policies.go. Allowed classes: ClassVehicleName
-// only; locations are tagged and restored only to same user".
-// PolicyRouteEfficiencySuggestions is the per-feature constructor
-// with the same allow-list as PolicyDigest — kept as a distinct
-// identifier so a future per-feature change to route-efficiency
-// suggestions's allow-list does not bleed across to the digest or
+// RedactionPolicy implements [strategy.Strategy]. This feature uses
+// the same allow-list as PolicyDigest, but keeps a distinct policy
+// identifier so future route-specific privacy changes do not affect
 // other read-only narrators.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {
 	return redactadapter.Wrap(redact.PolicyRouteEfficiencySuggestions())

@@ -1,15 +1,12 @@
 /**
- * Phase-50 / ADR-014 — TanStack Query hooks for the three helper
- * endpoints that back the Alert Studio message-template editor:
+ * TanStack Query hooks for the Alert Studio message-template helper endpoints:
  *
  *   - GET  /api/v1/alerts/message-presets
  *   - GET  /api/v1/alerts/message-placeholders
  *   - POST /api/v1/alerts/message-preview
  *
- * These hooks live separately from `useAlerts.ts` because the editor
- * components import them in isolation — pulling them in to the main
- * `useNotifications` bundle would inflate the AlertRule mutation
- * surface every time the editor renders.
+ * Kept separate from `useAlerts.ts` so editor-only helpers do not expand the
+ * AlertRule mutation surface for every notification render.
  */
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useMemo } from 'react';

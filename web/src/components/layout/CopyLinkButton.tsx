@@ -8,7 +8,7 @@ import { useToast } from '../feedback/Toast';
  * CopyLinkButton — copies the current URL (path + query string) to the
  * clipboard so users can share a filtered/deep-linked view of the page.
  *
- * Phase 40 / Prompt 33. Pair with `useUrlState` for the actual filter state.
+ * Pair with `useUrlState` for the actual filter state.
  *
  * Use sparingly — only on pages where sharing makes sense
  * (filtered Notifications, a Drives date range, a specific Map view).

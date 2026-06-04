@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 37 — WebhookChannelsSection tests.
+// WebhookChannelsSection tests.
 //
 // Mock surface: the test stubs `request()` from `@/api/client` so the
 // hook layer (`useNotificationChannels`, `useTestWebhookChannel`,

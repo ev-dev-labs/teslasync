@@ -1,6 +1,6 @@
-// Phase-50 / 0006 — F5 SSE Streaming.
+// SSE streaming hook for AI features.
 //
-// useAiStream is the canonical SSE consumer for AI features (Pattern P3).
+// useAiStream is the canonical SSE consumer for AI features.
 // Every AI feature that streams MUST consume this hook — the ESLint
 // rule `teslasync/no-raw-fetch-stream-for-ai` rejects any other code
 // that opens its own `fetch + ReadableStream` for an `/api/v1/ai/...`
@@ -22,14 +22,14 @@
 // stream in a hook keeps cancellation tied to the component lifecycle:
 // AbortController fires on unmount, the producer goroutine on the
 // server observes the closed connection, and the back-end Writer's
-// consumer cancels the upstream provider context. R4 round-trips end-
+// consumer cancels the upstream provider context. Cancellation round-trips end-
 // to-end through this hook.
 //
-// ADR-015
-// -------
+// Off-mode contract
+// -----------------
 // Off-mode: the underlying /api/v1/ai/* route returns 404 (guard.Wrap).
 // `start()` propagates that 404 as `state='error'` with a message; the
-// component is expected to fall back to its non-AI baseline (R8). The
+// component is expected to fall back to its non-AI baseline. The
 // hook itself does NOT consult `useAiEnabled` — that's the caller's
 // responsibility, mirroring the backend pattern where the handler
 // (gated) constructs the Writer.
@@ -68,7 +68,7 @@ export type AiStreamEvent =
   | {
       type: 'error';
       message: string;
-      // F9: structured rate-limit / cost-cap fields. Optional —
+      // Structured rate-limit / cost-cap fields. Optional —
       // legacy plain-error frames still parse cleanly. The frontend
       // AiLimitBanner reads these to render the right banner level
       // and a retry countdown. See [limit.Decision] for the closed

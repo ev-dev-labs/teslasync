@@ -102,8 +102,8 @@ function doConnect() {
     emit('export_status', JSON.parse(e.data))
   })
 
-  // Phase-40 / Prompt 63: real-time achievement unlocks. The lifetime handler
-  // broadcasts one event per locked → unlocked transition; consumers fire a
+  // Real-time achievement unlocks. The lifetime handler broadcasts one event
+  // per locked → unlocked transition; consumers fire a
   // celebration toast + confetti animation in response.
   es.addEventListener('achievement_unlocked', (e) => {
     markServerMessage()

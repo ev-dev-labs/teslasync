@@ -46,9 +46,9 @@ var (
 //
 // SCOPE: This setter only covers OAuth code-grant + refresh exchanges in
 // internal/tesla/auth.go. internal/tesla/client_auth.go::GetPartnerToken
-// and internal/tesla/client.go::doRequest still use Client.httpClient and
-// remain unchanged in this phase (Fleet API rows already flow through
-// SetLogCallback; partner-token migration is out of scope for Prompt 13).
+// and internal/tesla/client.go::doRequest still use Client.httpClient.
+// Fleet API rows already flow through SetLogCallback; partner-token
+// auth logging remains separate.
 func SetAuthSink(sink httputil.APICallSink, timeout time.Duration) {
 	if timeout <= 0 {
 		timeout = teslaAuthClientTimeout
@@ -148,7 +148,6 @@ func (c *Client) tokenRequest(ctx context.Context, form url.Values) (resp *Token
 		return nil, fmt.Errorf("decode token response: %w", decErr)
 	}
 
-	// Update stored tokens
 	expiresAt := time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
 	c.SetTokens(tokenResp.AccessToken, tokenResp.RefreshToken, expiresAt)
 

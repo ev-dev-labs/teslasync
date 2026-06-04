@@ -1,19 +1,19 @@
 #!/usr/bin/env node
-// Phase-46 / Prompt 18 — useDeferredFilter adoption audit.
+// useDeferredFilter adoption audit.
 //
 // Locks in the rule that the configured "heavy filter" pages either:
 //
-//   1. Adopt the deferred-filter pattern — the file imports
-//      `useDeferredFilter` from '@/hooks/useDeferredFilter' OR uses
-//      React's `useDeferredValue` primitive directly. AND, when the
-//      page renders a per-row component in a list, that row component
-//      is wrapped in `memo(...)` so it skips re-render when the
-//      deferred value catches up.
+// 1. Adopt the deferred-filter pattern — the file imports
+// `useDeferredFilter` from '@/hooks/useDeferredFilter' OR uses
+// React's `useDeferredValue` primitive directly. AND, when the
+// page renders a per-row component in a list, that row component
+// is wrapped in `memo(...)` so it skips re-render when the
+// deferred value catches up.
 //
-//   2. OR carry a `// deferred-filter:no <reason>` justification
-//      comment within the file. This is the documented escape hatch
-//      for pages where the filter is server-driven (URL param ⇒ refetch)
-//      and a client-side deferred value would be redundant.
+// 2. OR carry a `// deferred-filter:no <reason>` justification
+// comment within the file. This is the documented escape hatch
+// for pages where the filter is server-driven (URL param ⇒ refetch)
+// and a client-side deferred value would be redundant.
 //
 // Why this exists
 // ---------------
@@ -62,12 +62,12 @@ const TARGETS = [
 
 const JUSTIFICATION = 'deferred-filter:no';
 
-// Match `import { ..., useDeferredFilter, ... } from '...useDeferredFilter...'`
+// Match `import {..., useDeferredFilter,... } from '...useDeferredFilter...'`
 const RE_USE_DEFERRED_FILTER_IMPORT =
   /from\s+['"][^'"]*useDeferredFilter['"]/;
 
 // Match `useDeferredValue` as an imported identifier OR as a call —
-// covers both `import { useDeferredValue } from 'react'` and direct
+// covers both `import {useDeferredValue } from 'react'` and direct
 // usage in the file body (e.g. `const x = useDeferredValue(y)`).
 const RE_USE_DEFERRED_VALUE = /\buseDeferredValue\b/;
 
@@ -85,13 +85,13 @@ function locOfMatch(text, pattern) {
 function memoCallNamesIn(text) {
   // Captures the identifier passed as the first argument to `memo(`.
   // Handles:
-  //   const X = memo(function X() { ... })
-  //   const X = memo((props) => ...)            ← anonymous, not captured
-  //   const X = memo(XInner)                    ← captures `X` via lhs
-  //   const X = memo(XInner, areEqual)
-  //   export const X = memo(...)
+  // const X = memo(function X() {... })
+  // const X = memo((props) =>...) ← anonymous, not captured
+  // const X = memo(XInner) ← captures `X` via lhs
+  // const X = memo(XInner, areEqual)
+  // export const X = memo(...)
   // Captures the LHS const-name first; falls back to the function name
-  // inside `memo(function NAME(...) { ... })`.
+  // inside `memo(function NAME(...) {... })`.
   const found = new Set();
 
   const lhsRe =
@@ -101,7 +101,7 @@ function memoCallNamesIn(text) {
     found.add(m[1]);
   }
 
-  // `memo(function NAME(...) { ... })` — captures the function name.
+  // `memo(function NAME(...) {... })` — captures the function name.
   const fnRe = /(?:React\.)?memo\(\s*function\s+([A-Z][A-Za-z0-9_$]*)/g;
   while ((m = fnRe.exec(text)) !== null) {
     found.add(m[1]);

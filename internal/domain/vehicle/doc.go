@@ -1,4 +1,4 @@
-// Package vehicle models the vehicle domain (state, capabilities, configuration). groups domain entities and value objects shared across bounded contexts.
+// Package vehicle models vehicle state, capabilities, and configuration.
 //
 // Layer: domain
 //

@@ -1,7 +1,7 @@
 /**
  * @module api/hooks/useTOTP
  *
- * Phase-46 / Prompt 35 — per-user TOTP enrollment hooks.
+ * Per-user TOTP enrollment hooks.
  *
  * Mirrors the layered fetch pattern used by useNotifications.ts:
  * a single useQuery for status + a small set of useMutation hooks

@@ -120,7 +120,6 @@ export function getNextCronRuns(parts: string[], count: number): Date[] {
 // field names — without throwing on partial data, since the alternative
 // is the silent-empty-table bug (no UI feedback at all when Tesla's
 // shape drifts).
-//
 // Returns ([], true) for a successful response with zero errors so the
 // caller can distinguish "vehicle is healthy" from "no request made yet".
 export function extractTelemetryErrors(

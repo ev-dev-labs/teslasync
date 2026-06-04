@@ -3,7 +3,7 @@ import { useAiEnabled } from '@/hooks/useAiEnabled'
 import { AI_FEATURES, type AiFeatureId } from '@/ai/features'
 
 /**
- * Phase-50 / F0 — AI-Off Contract (ADR-015).
+ * AI-Off Contract (ADR-015).
  *
  * Higher-order component that wraps an AI feature's UI in the
  * sanctioned visibility gate. The wrapped component returns `null`

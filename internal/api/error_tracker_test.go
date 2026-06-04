@@ -34,7 +34,6 @@ func TestErrorTracker_Track(t *testing.T) {
 	if len(stats.RecentErrors) != 3 {
 		t.Errorf("expected 3 recent errors, got %d", len(stats.RecentErrors))
 	}
-	// Most recent first
 	if stats.RecentErrors[0].Code != "AUTH_INVALID_CREDENTIALS" {
 		t.Errorf("expected most recent error to be AUTH_INVALID_CREDENTIALS, got %s", stats.RecentErrors[0].Code)
 	}
@@ -85,7 +84,6 @@ func TestAppError_WithMessage(t *testing.T) {
 	if err.Status != http.StatusNotFound {
 		t.Errorf("expected 404 status, got %d", err.Status)
 	}
-	// Original should be unchanged
 	if ErrVehicleNotFound.Message != "vehicle not found" {
 		t.Errorf("original error message should not change")
 	}
@@ -96,8 +94,6 @@ func TestErrorCatalog_Complete(t *testing.T) {
 	if len(catalog) < 40 {
 		t.Errorf("expected at least 40 error codes in catalog, got %d", len(catalog))
 	}
-
-	// Verify all have required fields
 	codes := make(map[string]bool)
 	for _, e := range catalog {
 		if e.Code == "" {

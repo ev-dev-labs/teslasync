@@ -1,18 +1,12 @@
-// Phase-50 / 0045 — S4 Log and trace summarization.
-// Phase-50 / W1 inline wiring (per slice prompt 0045) — wired the
-// Summarize button to POST /api/v1/ai/system/logs/summarize via
-// the canonical useAiStream hook. The slice methodology forbids
-// shipping the visual affordance without end-to-end SSE wiring;
-// this component lands both in one commit so the on-mode wiring
-// test (TestLogTraceSummarizationAIOnWiredCallsRoute) can prove
-// the button actually opens an SSE stream against the registered
-// backend route.
+// Visible AI surface for LiveLogsPage. The Summarize button POSTs to
+// /api/v1/ai/system/logs/summarize via useAiStream so the UI and SSE
+// wiring are delivered together.
 //
 // AILogTraceSummarization is the visible AI surface for the
 // LiveLogsPage. It is rendered conditionally via
 // withAiFeature('log-trace-summarization', …) so:
 //
-//   - When ai_mode='off' it does not render at all (ADR-015 §I5 + §I6).
+//   - When ai_mode='off' it does not render at all.
 //   - When ai_mode is 'local'/'cloud' AND the
 //     log-trace-summarization toggle is on, it renders an opt-in
 //     section with a Summarize button that POSTs to
@@ -26,7 +20,7 @@
 // user; this AI section is opt-in read-only summarization layered
 // alongside.
 //
-// Render contract (P11/P12 — Wired-or-absent, No-placeholder-buttons):
+// Render contract:
 //   - useAiStream is called unconditionally at the top of the body
 //     (Hooks-rules safe).
 //   - The Summarize button's disabled prop is a COMPUTED expression
@@ -38,14 +32,12 @@
 //   - The streamed text accumulates into AiOutputPanel which
 //     renders the SSE delta stream as-it-arrives.
 //
-// ADR-015 alignment:
-//   - I3 baseline intact: this component never replaces the
-//     deterministic log tail; it adds an opt-in summary section
-//     alongside.
-//   - I5 hidden UI:       the withAiFeature HOC returns null when
-//     the feature is not enabled, so the section is entirely
-//     absent from the DOM in off mode.
-//   - I6 404 routes:      the backend route is guard-wrapped and
+// AI safety contract:
+//   - Baseline intact: this component never replaces the deterministic
+//     log tail; it adds an opt-in summary section alongside.
+//   - Hidden UI: withAiFeature returns null when the feature is disabled,
+//     so the section is absent from the DOM in off mode.
+//   - Off-mode routes: the backend route is guard-wrapped and
 //     returns 404 in off mode; useAiStream surfaces that as
 //     state='error' for the user, but the component is never
 //     rendered in off mode at all because of I5.

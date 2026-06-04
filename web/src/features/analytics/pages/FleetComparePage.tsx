@@ -67,7 +67,7 @@ function winnerCell(value: string, side: 'a' | 'b', row: ComparisonRow) {
   );
 }
 
-// Phase 40 / Prompt 39 — disambiguation banner dismissal is persisted so users
+// disambiguation banner dismissal is persisted so users
 // who already understand the difference between the two compare pages don't
 // have to dismiss it on every visit.
 const BANNER_DISMISSED_KEY = 'phase40.compareBanner.dismissed.fleet';
@@ -229,7 +229,7 @@ export default function FleetComparePage() {
   const speedUnit = unitPrefs.speed;
   const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
   // backend `useDrivingStats` returns explicit-SI fields:
-  //   totalDistanceKm (km), avgSpeedKmh / topSpeedKmh (km/h), avgEfficiencyWhKm (Wh/km)
+  // totalDistanceKm (km), avgSpeedKmh / topSpeedKmh (km/h), avgEfficiencyWhKm (Wh/km)
   // Legacy toDistanceDisplay/toSpeedDisplay/toEfficiencyDisplay expect mi/mph/Wh-per-mi
   // input so calling them on these km values silently mis-renders for both pref
   // unit choices. Migrate to SI boundary helpers.
@@ -239,10 +239,10 @@ export default function FleetComparePage() {
   const whPerKmToDisplay = (whPerKm: number) =>
     distanceUnit === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
 
-  // Phase-45/23 — reactive chart palette (CB-safe / neon per user pref).
+  // reactive chart palette (CB-safe / neon per user pref).
   const palette = useChartPalette();
 
-  // Phase 40 / Prompt 39 — accept ?leftId= and ?rightId= query params so other
+  // accept ?leftId= and ?rightId= query params so other
   // pages (e.g. VehicleListPage's "Compare vehicles" button) can deep-link
   // straight into a pre-populated comparison.
   const [searchParams] = useSearchParams();
@@ -329,8 +329,8 @@ export default function FleetComparePage() {
   );
 
   /* ── Monthly mileage chart data (merged & aligned) ──
-     Phase-43a / Prompt 0009 (fix/misc-fixes): backend `/mileage/monthly`
-     returns `MonthlyMileageBucket{year_month, total_km, drive_count, …}`.
+     Backend `/mileage/monthly` returns
+     `MonthlyMileageBucket{year_month, total_km, drive_count, …}`.
      Distances stay in km here — the chart axis label already shows km
      elsewhere on the page. */
   const monthlyChartData = useMemo(() => {
@@ -500,7 +500,7 @@ export default function FleetComparePage() {
 
   /* ── Render ── */
 
-  // Phase 40 / Prompt 39 — single-vehicle accounts can't usefully use Fleet
+  // single-vehicle accounts can't usefully use Fleet
   // Comparison. Show a focused EmptyState that explains *why* and offers a
   // path forward (manage vehicles), instead of empty selectors with no data.
   if (!vehiclesLoading && vehicleList.length < 2) {
@@ -536,7 +536,7 @@ export default function FleetComparePage() {
       loading={isLoading}
     >
       {/* Disambiguation banner — points users who wanted the period view to
-          the right page. Persists dismissal in localStorage. */}
+ the right page. Persists dismissal in localStorage. */}
       {bannerVisible && (
         <FadeIn>
           <AlertBanner

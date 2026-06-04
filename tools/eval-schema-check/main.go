@@ -1,7 +1,7 @@
 // Command eval-schema-check validates every goldens.yaml file under
 // internal/ai/strategies. Exits 1 on any structural error.
 //
-// ADR-015: pure offline; never reaches a provider.
+// The check is offline and never reaches a provider.
 package main
 
 import (

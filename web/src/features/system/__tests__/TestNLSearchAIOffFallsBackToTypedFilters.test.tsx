@@ -1,30 +1,9 @@
-// Phase-50 / 0017 — N3 Natural-language search across drives, charges,
-// and alerts.
+// React-side AI-off contract for natural-language search. The AI section is
+// absent when AI is off, while typed filters remain the baseline path.
 //
-// `TestNLSearchAIOffFallsBackToTypedFilters` (the Vitest sibling to
-// the Go test of the same name) is the slice's load-bearing AI-OFF
-// contract proof on the React side. It mounts the AINLSearch
-// component with ai_mode='off' (plus the per-feature toggle on, to
-// defeat the obvious "off because nothing is enabled" path) and
-// asserts:
-//
-//   1. The AI section's rooted test ID is absent from the DOM.
-//   2. The wrapper renders no children (empty container).
-//   3. With ai_mode='cloud' AND nl-search=true, the section IS
-//      present + carries the expected test ID. This is the positive
-//      control that proves the gate actually works (otherwise the
-//      "absent in off mode" assertion is trivially true).
-//
-// The HTTP /api/v1/ai/search/query 404-in-off-mode invariant + the
-// typed GET /api/v1/search baseline-coexistence invariant are proven
-// by the Go-side TestNLSearchAIOffFallsBackToTypedFilters in
-// internal/api/ai_search_handler_test.go — the network layer does
-// not exist in the React unit-test scope.
-//
-// File name MUST stay `TestNLSearchAIOffFallsBackToTypedFilters.test.tsx`
-// — the slice prompt's verification command runs
-// `vitest --run TestNLSearchAIOffFallsBackToTypedFilters`, where the
-// positional pattern is matched against the file PATH.
+// The backend test covers AI 404s and typed-search coexistence; this unit test
+// has no network layer. Keep the file name stable because targeted verification
+// matches it by path.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -77,11 +56,8 @@ describe('TestNLSearchAIOffFallsBackToTypedFilters (nl-search AI-off contract)',
   it('TestNLSearchAIOffFallsBackToTypedFilters: renders nothing when ai_mode=off even with the nl-search toggle on', () => {
     // The toggle is intentionally set to true to defeat the
     // shortcut path "the section hides because the feature flag
-    // is off". The mode='off' check MUST trump the per-feature
-    // toggle (ADR-015 §I7). The typed search filters at /search
-    // are completely unaffected — this assertion only proves that
-    // the AI surface is absent; the typed surface lives outside
-    // the AINLSearch component tree.
+    // is off". mode='off' must trump the per-feature toggle. Typed search
+    // filters at /search are unaffected and live outside AINLSearch.
     mockUseSettings.mockReturnValue(
       settingsPayload({
         ai_mode: 'off',

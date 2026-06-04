@@ -33,12 +33,12 @@ type GasPriceWorker struct {
 	cfg      config.GasPriceConfig
 	provider external.GasPriceProvider
 
-	mu              sync.Mutex
-	pollInterval    string
-	lastPollTime    time.Time
-	lastPrice       float64 // gallon price
-	lastPriceKWhEq  float64 // kWh-equivalent price
-	running         atomic.Bool
+	mu             sync.Mutex
+	pollInterval   string
+	lastPollTime   time.Time
+	lastPrice      float64 // gallon price
+	lastPriceKWhEq float64 // kWh-equivalent price
+	running        atomic.Bool
 
 	// stopCh is used to signal the ticker loop to stop.
 	stopCh chan struct{}
@@ -251,10 +251,10 @@ func (w *GasPriceWorker) Status() GasPriceStatus {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	return GasPriceStatus{
-		Enabled:        w.IsRunning(),
-		PollInterval:   w.pollInterval,
-		LastPollTime:   w.lastPollTime,
-		CurrentPrice:   w.lastPrice,
+		Enabled:           w.IsRunning(),
+		PollInterval:      w.pollInterval,
+		LastPollTime:      w.lastPollTime,
+		CurrentPrice:      w.lastPrice,
 		CurrentPriceKWhEq: w.lastPriceKWhEq,
 	}
 }

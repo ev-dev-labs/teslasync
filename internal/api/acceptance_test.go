@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apitest"
+	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -14,10 +16,8 @@ import (
 func acceptanceRouter() http.Handler {
 	r := chi.NewRouter()
 
-	r.Use(SecurityHeadersMiddleware)
-	r.Use(RecoveryMiddleware)
-
-	// Health endpoints — self-contained, no DB needed
+	r.Use(apimw.SecurityHeaders)
+	r.Use(apimw.Recovery)
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
@@ -25,8 +25,6 @@ func acceptanceRouter() http.Handler {
 	r.Get("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
-
-	// Minimal API v1 routes for acceptance testing
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/auth/status", func(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -46,15 +44,11 @@ func acceptanceRouter() http.Handler {
 	return r
 }
 
-// ---------------------------------------------------------------------------
-// Acceptance: Health endpoints
-// ---------------------------------------------------------------------------
-
 func TestAcceptance_HealthzReturns200(t *testing.T) {
 	r := acceptanceRouter()
-	rec := doRequest(r, "GET", "/healthz", "")
-	assertStatus(t, rec, http.StatusOK)
-	body := assertJSON(t, rec)
+	rec := apitest.DoRequest(r, "GET", "/healthz", "")
+	apitest.AssertStatus(t, rec, http.StatusOK)
+	body := apitest.AssertJSON(t, rec)
 	if body["status"] != "ok" {
 		t.Errorf("expected status ok, got %v", body["status"])
 	}
@@ -62,64 +56,44 @@ func TestAcceptance_HealthzReturns200(t *testing.T) {
 
 func TestAcceptance_ReadyzReturns200(t *testing.T) {
 	r := acceptanceRouter()
-	rec := doRequest(r, "GET", "/readyz", "")
-	assertStatus(t, rec, http.StatusOK)
+	rec := apitest.DoRequest(r, "GET", "/readyz", "")
+	apitest.AssertStatus(t, rec, http.StatusOK)
 }
-
-// ---------------------------------------------------------------------------
-// Acceptance: Auth status returns valid response structure
-// ---------------------------------------------------------------------------
 
 func TestAcceptance_AuthStatusStructure(t *testing.T) {
 	r := acceptanceRouter()
-	rec := doRequest(r, "GET", "/api/v1/auth/status", "")
-	assertStatus(t, rec, http.StatusOK)
-	assertContentType(t, rec, "application/json")
-	body := assertJSON(t, rec)
+	rec := apitest.DoRequest(r, "GET", "/api/v1/auth/status", "")
+	apitest.AssertStatus(t, rec, http.StatusOK)
+	apitest.AssertContentType(t, rec, "application/json")
+	body := apitest.AssertJSON(t, rec)
 	if _, ok := body["authenticated"]; !ok {
 		t.Error("expected 'authenticated' field in response")
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Acceptance: Unknown API paths return 404 (chi default)
-// ---------------------------------------------------------------------------
-
 func TestAcceptance_UnknownPath_Returns404(t *testing.T) {
 	r := acceptanceRouter()
-	rec := doRequest(r, "GET", "/api/v1/nonexistent", "")
-	assertStatus(t, rec, http.StatusNotFound)
+	rec := apitest.DoRequest(r, "GET", "/api/v1/nonexistent", "")
+	apitest.AssertStatus(t, rec, http.StatusNotFound)
 }
 
 func TestAcceptance_UnknownTopLevelPath_Returns404(t *testing.T) {
 	r := acceptanceRouter()
-	rec := doRequest(r, "GET", "/totally-unknown", "")
-	assertStatus(t, rec, http.StatusNotFound)
+	rec := apitest.DoRequest(r, "GET", "/totally-unknown", "")
+	apitest.AssertStatus(t, rec, http.StatusNotFound)
 }
-
-// ---------------------------------------------------------------------------
-// Acceptance: Method not allowed returns 405
-// ---------------------------------------------------------------------------
 
 func TestAcceptance_MethodNotAllowed_Returns405(t *testing.T) {
 	r := acceptanceRouter()
-
-	// /healthz only accepts GET; POST should be 405
-	rec := doRequest(r, "POST", "/healthz", "")
-	assertStatus(t, rec, http.StatusMethodNotAllowed)
+	rec := apitest.DoRequest(r, "POST", "/healthz", "")
+	apitest.AssertStatus(t, rec, http.StatusMethodNotAllowed)
 }
 
 func TestAcceptance_MethodNotAllowed_VehiclesSync(t *testing.T) {
 	r := acceptanceRouter()
-
-	// /api/v1/vehicles/sync only accepts POST; GET should be 405
-	rec := doRequest(r, "GET", "/api/v1/vehicles/sync", "")
-	assertStatus(t, rec, http.StatusMethodNotAllowed)
+	rec := apitest.DoRequest(r, "GET", "/api/v1/vehicles/sync", "")
+	apitest.AssertStatus(t, rec, http.StatusMethodNotAllowed)
 }
-
-// ---------------------------------------------------------------------------
-// Acceptance: Security headers on all responses
-// ---------------------------------------------------------------------------
 
 func TestAcceptance_SecurityHeaders_OnAllResponses(t *testing.T) {
 	r := acceptanceRouter()
@@ -127,7 +101,7 @@ func TestAcceptance_SecurityHeaders_OnAllResponses(t *testing.T) {
 	paths := []string{"/healthz", "/readyz", "/api/v1/auth/status"}
 	for _, path := range paths {
 		t.Run(path, func(t *testing.T) {
-			rec := doRequest(r, "GET", path, "")
+			rec := apitest.DoRequest(r, "GET", path, "")
 			if rec.Header().Get("X-Content-Type-Options") != "nosniff" {
 				t.Error("missing X-Content-Type-Options header")
 			}
@@ -138,13 +112,9 @@ func TestAcceptance_SecurityHeaders_OnAllResponses(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Acceptance: Recovery middleware catches panics in chi router
-// ---------------------------------------------------------------------------
-
 func TestAcceptance_PanicRecovery(t *testing.T) {
 	r := chi.NewRouter()
-	r.Use(RecoveryMiddleware)
+	r.Use(apimw.Recovery)
 	r.Get("/boom", func(w http.ResponseWriter, r *http.Request) {
 		panic("kaboom")
 	})
@@ -153,21 +123,17 @@ func TestAcceptance_PanicRecovery(t *testing.T) {
 	req := httptest.NewRequest("GET", "/boom", nil)
 	r.ServeHTTP(rec, req)
 
-	assertStatus(t, rec, http.StatusInternalServerError)
-	body := assertJSON(t, rec)
+	apitest.AssertStatus(t, rec, http.StatusInternalServerError)
+	body := apitest.AssertJSON(t, rec)
 	if body["error"] != "internal server error" {
 		t.Errorf("expected 'internal server error', got %v", body["error"])
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Acceptance: Content-Type is JSON for API responses
-// ---------------------------------------------------------------------------
-
 func TestAcceptance_ContentTypeJSON(t *testing.T) {
 	r := acceptanceRouter()
 
-	rec := doRequest(r, "GET", "/api/v1/vehicles", "")
-	assertStatus(t, rec, http.StatusOK)
-	assertContentType(t, rec, "application/json")
+	rec := apitest.DoRequest(r, "GET", "/api/v1/vehicles", "")
+	apitest.AssertStatus(t, rec, http.StatusOK)
+	apitest.AssertContentType(t, rec, "application/json")
 }

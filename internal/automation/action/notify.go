@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -27,9 +29,9 @@ var validNotifyChannels = map[string]bool{
 	"pushover": true,
 }
 
-// ChannelRepo is the subset of database.NotificationRepo needed by NotifyExecutor.
+// ChannelRepo is the subset of dbnotif.NotificationRepo needed by NotifyExecutor.
 type ChannelRepo interface {
-	GetAllChannels(ctx context.Context) ([]*models.NotificationChannel, error)
+	GetAllChannels(ctx context.Context) ([]*notificationmodel.NotificationChannel, error)
 }
 
 // NotifySender abstracts notification delivery for testability.
@@ -262,8 +264,8 @@ func resolveTemplate(tmpl string, vars map[string]string) string {
 
 // filterChannels returns enabled channels matching the requested channel filter.
 // "all" matches every enabled channel; a specific type matches only that type.
-func filterChannels(channels []*models.NotificationChannel, filter string) []*models.NotificationChannel {
-	var matched []*models.NotificationChannel
+func filterChannels(channels []*notificationmodel.NotificationChannel, filter string) []*notificationmodel.NotificationChannel {
+	var matched []*notificationmodel.NotificationChannel
 	if strings.HasPrefix(filter, "id:") {
 		id, err := strconv.ParseInt(strings.TrimPrefix(filter, "id:"), 10, 64)
 		if err != nil {

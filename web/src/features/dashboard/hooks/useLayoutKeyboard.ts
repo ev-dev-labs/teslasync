@@ -25,8 +25,8 @@ interface KeyboardOptions {
  * Skips events when focus is inside form inputs (INPUT/TEXTAREA/SELECT
  * or any contenteditable element).
  *
- * Phase-40 / Prompt 64 — also publishes the page-scoped entries to the
- * cheatsheet registry so `?` lists them under "Dashboard".
+ * Also publishes the page-scoped entries to the cheatsheet registry so
+ * `?` lists them under "Dashboard".
  */
 export function useLayoutKeyboard({
   editMode, setEditMode, canUndo, canRedo, onUndo, onRedo,

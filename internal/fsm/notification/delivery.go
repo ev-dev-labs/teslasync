@@ -15,7 +15,7 @@ const (
 	Created   DeliveryState = "created"
 	Sending   DeliveryState = "sending"
 	Delivered DeliveryState = "delivered"
-	Partial   DeliveryState = "partial"  // some channels succeeded, some failed
+	Partial   DeliveryState = "partial" // some channels succeeded, some failed
 	Failed    DeliveryState = "failed"
 	Retrying  DeliveryState = "retrying"
 	Dead      DeliveryState = "dead" // max retries exhausted
@@ -23,10 +23,10 @@ const (
 
 // ChannelStatus tracks delivery status for a single channel.
 type ChannelStatus struct {
-	Type      string    `json:"type"`       // "push", "email", "webhook"
-	Status    string    `json:"status"`     // "pending", "sent", "delivered", "failed"
-	SentAt    time.Time `json:"sent_at,omitempty"`
-	Error     string    `json:"error,omitempty"`
+	Type   string    `json:"type"`   // "push", "email", "webhook"
+	Status string    `json:"status"` // "pending", "sent", "delivered", "failed"
+	SentAt time.Time `json:"sent_at,omitempty"`
+	Error  string    `json:"error,omitempty"`
 }
 
 const MaxRetries = 3

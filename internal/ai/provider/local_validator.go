@@ -82,9 +82,8 @@ func ValidateLocal(cfg ProviderConfig) (pinnedIP string, err error) {
 	return validateLocalWith(context.Background(), DefaultResolver{}, cfg)
 }
 
-// ValidateLocalCtx is the context-aware form, used by tests and by
-// future call sites that want to apply a timeout (e.g. F2's settings
-// save path).
+// ValidateLocalCtx is the context-aware form for callers that need
+// to apply a timeout, including settings-save validation.
 func ValidateLocalCtx(ctx context.Context, cfg ProviderConfig) (pinnedIP string, err error) {
 	return validateLocalWith(ctx, DefaultResolver{}, cfg)
 }
@@ -144,8 +143,7 @@ func validateLocalWith(ctx context.Context, r resolver, cfg ProviderConfig) (str
 
 // CheckPinnedIP re-resolves cfg.BaseURL's host and asserts at least one
 // returned IP matches cfg.PinnedIP. Called by the runtime HTTP layer
-// (slice F2 wires this into the settings save path; F1 exposes the
-// primitive). Returns nil when pin matches, a wrapped
+// Returns nil when pin matches, a wrapped
 // [ErrLocalModeViolation] otherwise.
 //
 // cfg.PinnedIP="" is treated as "no pin required" — used for built-in

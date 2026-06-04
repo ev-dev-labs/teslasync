@@ -12,10 +12,10 @@ import (
 // Uses batched deletes to avoid long-running locks.
 // If days <= 0, cleanup is skipped (opt-in only — 0 means no automatic cleanup).
 //
-// Phase-42 (migration 000182_positions_si) recreated the positions hypertable
-// with SI-canonical columns (lat, lng, altitude_m, speed_mps, odometer_m,
-// est_range_m). The retention pruning predicate keys on `ts` only, which is
-// the hypertable partitioning column and was preserved through the rewrite.
+// Migration 000182_positions_si recreated the positions hypertable with
+// SI-canonical columns (lat, lng, altitude_m, speed_mps, odometer_m,
+// est_range_m). The retention predicate keys on `ts`, the hypertable
+// partitioning column preserved through the rewrite.
 func (db *DB) CleanupOldPositions(ctx context.Context, days int) (int64, error) {
 	if days <= 0 {
 		return 0, nil
@@ -56,13 +56,13 @@ func (db *DB) CleanupOldPositions(ctx context.Context, days int) (int64, error) 
 
 // CleanupOldStates is a no-op stub kept for caller compatibility.
 //
-// Phase-42 / Prompt 0076 covenant #12: the legacy vehicle_states summary
-// table was dropped without a recreate (ADR-004 #4 forward-only). The new
+// The legacy vehicle_states summary table was dropped without a recreate
+// (ADR-004 #4 forward-only). The new
 // FSM vehicle_live_state table (recreated by migration 000187_fsm_live)
 // supersedes it; live state is no longer materialized as a per-event
 // history that needs retention pruning. The function is preserved as a
-// no-op so the maintenance worker (out of allowed-files scope for this
-// prompt) continues to compile and call this entry point harmlessly.
+// no-op so the maintenance worker continues to compile and call this entry
+// point harmlessly.
 func (db *DB) CleanupOldStates(ctx context.Context, days int) (int64, error) {
 	_ = ctx
 	_ = days
@@ -72,8 +72,8 @@ func (db *DB) CleanupOldStates(ctx context.Context, days int) (int64, error) {
 // VacuumAnalyze runs VACUUM ANALYZE on the main data tables to reclaim space
 // and update query planner statistics. This should be run after large deletes.
 //
-// Phase-42 / Prompt 0076: the legacy vehicle_states table is dropped without
-// a recreate, so it has been removed from this list (covenant #12).
+// The legacy vehicle_states table is dropped without a recreate, so it has
+// been removed from this list.
 func (db *DB) VacuumAnalyze(ctx context.Context) error {
 	tables := []string{
 		"positions",
@@ -104,9 +104,9 @@ type PositionStats struct {
 // GetPositionStats returns total position count and the number of
 // compressed (hourly-aggregated) rows older than 30 days.
 //
-// Phase-42 (migration 000182_positions_si) dropped the legacy created_at
-// column from positions. Since `ts` is the canonical event timestamp on
-// the SI hypertable, the compression heuristic now buckets on `ts`.
+// Migration 000182_positions_si dropped the legacy created_at column from
+// positions. Since `ts` is the canonical event timestamp on the SI hypertable,
+// the compression heuristic buckets on `ts`.
 func (db *DB) GetPositionStats(ctx context.Context) (PositionStats, error) {
 	var stats PositionStats
 

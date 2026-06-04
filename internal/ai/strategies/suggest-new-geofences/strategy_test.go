@@ -1,5 +1,3 @@
-// Phase-50 / 0038 — G2 Suggest new geofences.
-//
 // Unit tests for the suggest-new-geofences Strategy. Mirrors the shape
 // of auto-name-unnamed-locations' strategy_test.go (the precedent
 // using draft_*/validate_* tools rather than query_*/retrieve_*). The
@@ -132,7 +130,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract. The
 // dispatcher seeds the user message via StrategyInput.History; the
 // strategy must not contribute extra prefix messages until a future
-// slice that needs preferred-radius preferences ships.
+// change needs preferred-radius preferences.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -147,11 +145,10 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 
 // TestStrategy_RedactionPolicySuggestNewGeofences proves the strategy
 // hands the dispatcher PolicySuggestNewGeofences wrapped through the
-// F4↔F8 adapter. PolicySuggestNewGeofences allows ClassVehicleName so
+// redaction adapter. PolicySuggestNewGeofences allows ClassVehicleName so
 // the proposed name can address the user's car; every other PII class
-// is redacted to a round-trip tag. The slice prompt explicitly
-// mandates a PolicyDigest-shaped allow-list and "coordinates remain
-// tagged until user confirmation".
+// is redacted to a round-trip tag. The allow-list is intentionally
+// PolicyDigest-shaped and keeps coordinates tagged until user confirmation.
 func TestStrategy_RedactionPolicySuggestNewGeofences(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -180,9 +177,8 @@ func TestStrategy_RedactionPolicySuggestNewGeofences(t *testing.T) {
 	}
 	// Defence-in-depth: the allow-list must NOT include lat/long
 	// or street addresses — the proposed geofence's coordinates
-	// flow through the typed F4 envelope, not through prose, and
-	// the slice prompt says "coordinates remain tagged until user
-	// confirmation".
+	// flow through the typed tool envelope, not through prose, and
+	// coordinates remain tagged until user confirmation.
 	for _, c := range want.Allow {
 		switch c {
 		case redact.ClassLatLong, redact.ClassStreetAddr:

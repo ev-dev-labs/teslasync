@@ -46,9 +46,9 @@ interface VisitedLocation {
 // surface the AI auto-name affordance. Three buckets count as
 // "unnamed": empty/whitespace, the literal "Unknown" sentinel the
 // reverse-geocoder emits, and the coordinate-pair fallback shape
-// the geocoder emits when reverse-geocode fails. Documented in the
-// slice prompt — the AI is propose-only and only worth offering
-// when the existing label is unhelpful.
+// the geocoder emits when reverse-geocode fails. The AI is
+// propose-only and only worth offering when the existing label
+// is unhelpful.
 function isUnnamedLocation(addressName: string): boolean {
   const trimmed = (addressName ?? '').trim();
   if (trimmed === '') return true;
@@ -80,7 +80,7 @@ export default function LocationsPage() {
   // an AI proposal, the proposed name is parked here keyed by
   // location.id. The user then writes it into the canonical
   // baseline geofence-create / location-rename UI; the AI panel
-  // never persists. (ADR-015 §I3 + §I8 propose-only contract.)
+  // never persists.
   const [appliedName, setAppliedName] = useState<{ id: number; name: string } | null>(null);
   const { start, end, setRange } = useRangeState({
     persistKey: 'locations.range',

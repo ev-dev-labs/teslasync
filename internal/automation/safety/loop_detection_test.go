@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-// ─── Mock Auto-Disabler ────────────────────────────────
-
 type mockDisabler struct {
 	mu       sync.Mutex
 	disabled map[int64]string // id → reason
@@ -38,8 +36,6 @@ func (m *mockDisabler) wasDisabled(id int64) (string, bool) {
 	return reason, ok
 }
 
-// ─── Helpers ────────────────────────────────────────────
-
 func fixedTime() time.Time {
 	return time.Date(2026, 4, 18, 12, 0, 0, 0, time.UTC)
 }
@@ -49,8 +45,6 @@ func newTestDetector(opts ...LoopDetectorOption) *LoopDetector {
 	ld.nowFunc = fixedTime
 	return ld
 }
-
-// ─── CycleError Tests ──────────────────────────────────
 
 func TestCycleError_Message(t *testing.T) {
 	err := &CycleError{Path: []int64{1, 2, 3, 1}}
@@ -82,8 +76,6 @@ func TestCycleError_TwoElement(t *testing.T) {
 		t.Errorf("got %q, want %q", err.Error(), expected)
 	}
 }
-
-// ─── CheckCycle Tests ──────────────────────────────────
 
 func TestCheckCycle_NoChain(t *testing.T) {
 	ld := newTestDetector()
@@ -222,8 +214,6 @@ func TestCheckCycle_EmptyContext(t *testing.T) {
 	}
 }
 
-// ─── ChainFromContext Tests ────────────────────────────
-
 func TestChainFromContext_NilContext(t *testing.T) {
 	chain := ChainFromContext(context.Background())
 	if chain != nil {
@@ -249,8 +239,6 @@ func TestChainDepth_AfterEntries(t *testing.T) {
 		t.Errorf("expected depth 3, got %d", d)
 	}
 }
-
-// ─── RecordFire / Rapid-Fire Tests ─────────────────────
 
 func TestRecordFire_UnderThreshold(t *testing.T) {
 	ld := newTestDetector()
@@ -361,8 +349,6 @@ func TestRecordFire_CustomWindow(t *testing.T) {
 	}
 }
 
-// ─── CheckRapidFire Tests ──────────────────────────────
-
 func TestCheckRapidFire_ReadOnly(t *testing.T) {
 	ld := newTestDetector()
 
@@ -394,8 +380,6 @@ func TestCheckRapidFire_NoFires(t *testing.T) {
 		t.Errorf("count=%d, want 0", result.Count)
 	}
 }
-
-// ─── BeforeExecute Tests ───────────────────────────────
 
 func TestBeforeExecute_Clean(t *testing.T) {
 	ld := newTestDetector()
@@ -509,8 +493,6 @@ func TestBeforeExecute_ChainPropagated(t *testing.T) {
 	}
 }
 
-// ─── Reset Tests ───────────────────────────────────────
-
 func TestReset_ClearsAllWindows(t *testing.T) {
 	ld := newTestDetector()
 
@@ -549,8 +531,6 @@ func TestResetAutomation_ClearsSingle(t *testing.T) {
 		t.Errorf("automation 2 should be untouched, count=%d", result2.Count)
 	}
 }
-
-// ─── Concurrency Tests ─────────────────────────────────
 
 func TestRecordFire_ConcurrentSafe(t *testing.T) {
 	ld := newTestDetector(WithMaxFires(10000))
@@ -606,8 +586,6 @@ func TestCheckCycle_ConcurrentBranches(t *testing.T) {
 		t.Errorf("unexpected error in concurrent branch: %v", err)
 	}
 }
-
-// ─── Edge Cases ────────────────────────────────────────
 
 func TestRecordFire_ZeroThreshold(t *testing.T) {
 	// maxFires=0 means first fire exceeds.

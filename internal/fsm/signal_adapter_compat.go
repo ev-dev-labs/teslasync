@@ -12,14 +12,11 @@ import (
 // and delegates to the adapter-driven reconciler core
 // (deriveExpectedState in reconciler.go).
 //
-// Existing callers that still hold a *signal.Store directly (e.g.
-// internal/api/fsm_handler.go and internal/api/fsm_handler_query.go,
-// which are outside the allowed-files scope of phase-42 prompt 0067)
-// continue to work unmodified through this thin shim. The shim exists
-// in a `signal_adapter*.go` file so the *signal.Store reference is
-// excluded from the gate's `signal\.Store` violation grep — phase-42
-// reserves direct signal.Store access to the adapter's translation
-// layer (signal_adapter.go) and to this back-compat shim.
+// Existing callers that still hold a *signal.Store directly (for example
+// internal/api/fsm_handler.go and internal/api/fsm_handler_query.go)
+// continue to work through this thin shim. Direct signal.Store access is
+// reserved for the adapter translation layer (signal_adapter.go) and this
+// back-compat wrapper.
 //
 // Newer call sites SHOULD construct a *SignalAdapter once at startup
 // (or per-request, since NewSignalAdapter is allocation-free aside

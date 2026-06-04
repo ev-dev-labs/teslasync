@@ -208,7 +208,7 @@ function handleAuthExpired(): void {
 
 // --- Tesla Third-Party OAuth Grant Expiry Detection ---
 //
-// Phase-45 / Prompt 30 — distinct from the Authentik-session expiry path
+// Distinct from the Authentik-session expiry path
 // above. The Tesla third-party refresh token has a hard 8-week TTL; when
 // it expires, the backend signals { code: 'TESLA_TOKEN_EXPIRED' } in a
 // 401 body for any Tesla-backed call. Non-Tesla data continues to load
@@ -227,7 +227,7 @@ function dispatchTeslaAuthExpired(): void {
   document.dispatchEvent(new CustomEvent('teslasync:tesla-auth-expired'))
 }
 
-// --- Phase-46 / Prompt 05 — ForwardAuth session expiry signal ---
+// --- ForwardAuth session expiry signal ---
 //
 // Dispatched by `resilientFetch` when a non-/auth/session request
 // returns 401 AND the structured-error code is NOT
@@ -268,9 +268,8 @@ interface ResilientOptions extends RequestInit {
   dedupKey?: string       // dedup key for GET requests
 }
 
-// Note: `sleep` was used by the previous resilient retry loop. The Phase-46
-// rewrite uses `abortableSleep` (further down) so retries respond immediately
-// to user navigation. The unused helper is removed to satisfy the lint rule.
+// The retry loop uses `abortableSleep` so retries respond immediately
+// to user navigation.
 
 /** Custom error class for API responses. Includes the HTTP status code. */
 export class ApiError extends Error {
@@ -280,9 +279,9 @@ export class ApiError extends Error {
    * Set when the backend response includes a structured error envelope so
    * the frontend can switch on error type without parsing strings.
    *
-   * Phase-45 / Prompt 30 — used by {@link TeslaAuthExpiredError} to
-   * surface the dedicated reauth banner without conflating with the
-   * Authentik-session 401 path.
+   * Used by {@link TeslaAuthExpiredError} to surface the dedicated
+   * reauth banner without conflating with the Authentik-session 401
+   * path.
    */
   code?: string
 
@@ -314,7 +313,7 @@ export class TeslaAuthExpiredError extends ApiError {
   }
 }
 
-// --- Phase-45 / Prompt 33 — Rate-limit / circuit-breaker UX ---
+// --- Rate-limit / circuit-breaker UX ---
 //
 // When the backend (or its upstream — Tesla Fleet API) returns 429 or
 // 503 with a Retry-After header, the SPA needs to (a) tell the user
@@ -371,7 +370,7 @@ export class UpstreamUnavailableError extends ApiError {
  * → "/vehicles"). The rate-limit cooldown is keyed on this scope so
  * one 429 from `/vehicles/...` short-circuits all in-flight and queued
  * requests under `/vehicles/...` — finer per-resource granularity is
- * out of scope for this prompt.
+ * intentionally out of scope.
  */
 export function pathScope(path: string): string {
   const trimmed = path.startsWith('/') ? path.slice(1) : path
@@ -657,7 +656,7 @@ async function _doFetch<T>(
   const { signal: rawSignal, ...restOpts } = fetchOpts
   const userSignal: AbortSignal | undefined = rawSignal ?? undefined
 
-  // Phase-45 / Prompt 33 — short-circuit any path whose scope is still
+  // Short-circuit any path whose scope is still
   // inside an active Retry-After window. Without this guard, 60 in-flight
   // queries to /vehicles would each independently hit the network during
   // the cooldown and each surface their own "request failed" toast. We
@@ -669,7 +668,7 @@ async function _doFetch<T>(
   }
 
   for (let attempt = 0; attempt <= retries; attempt++) {
-    // Phase-46 / Prompt 02 — if the caller cancelled before this
+    // If the caller cancelled before this
     // attempt (e.g. between a 401 refresh + retry, or after an offline
     // check), bail out without issuing more network work.
     if (userSignal?.aborted) {
@@ -722,7 +721,7 @@ async function _doFetch<T>(
         const errCode = typeof err.code === 'string' ? err.code : undefined
         const apiErr = new ApiError(err.error || `HTTP ${res.status}`, res.status, errCode)
 
-        // Phase-45 / Prompt 30 — Tesla third-party token expiry.
+        // Tesla third-party token expiry.
         // The backend signals this via { code: 'TESLA_TOKEN_EXPIRED' } in
         // a 401 body. Skip the auto-refresh-on-401 path (the Tesla refresh
         // already failed server-side, retrying client-side is pointless),
@@ -747,7 +746,7 @@ async function _doFetch<T>(
           maybeDispatchSessionExpired(path)
         }
 
-        // Phase-45 / Prompt 33 — 429 Rate Limited.
+        // 429 Rate Limited.
         // Read Retry-After (defaults to 60s when missing/invalid), mark
         // the path's scope as cooling down, dispatch the banner event,
         // and throw a typed RateLimitError. The previous behaviour
@@ -765,7 +764,7 @@ async function _doFetch<T>(
           )
         }
 
-        // Phase-45 / Prompt 33 — 503 with UPSTREAM_BREAKER_OPEN.
+        // 503 with UPSTREAM_BREAKER_OPEN.
         // The Tesla upstream breaker has tripped; further calls would
         // be fast-failed. Dispatch the upstream-down banner event and
         // throw a typed UpstreamUnavailableError so the calm waiting
@@ -789,7 +788,7 @@ async function _doFetch<T>(
     } catch (err) {
       if (err instanceof ApiError) throw err
 
-      // Phase-46 / Prompt 02 — distinguish user-cancel from internal timeout.
+      // Distinguish user-cancel from internal timeout.
       // If the caller's signal aborted, propagate the original AbortError
       // unchanged: no retry, no 408 conversion, no CORS probe — the user
       // has navigated away or the query was cancelled by TanStack Query.
@@ -822,7 +821,7 @@ async function _doFetch<T>(
         }
       }
 
-      // Phase-46 / Prompt 02 — DOMException may not extend Error in
+      // DOMException may not extend Error in
       // every runtime (notably some jsdom builds), so check the abort
       // name on the raw thrown value before wrapping it as Error.
       const errName =
@@ -867,8 +866,8 @@ export interface SystemStatus {
   overall: string
   database: { status: string; consecutive_failures?: number }
   /**
-   * Phase-45 / Prompt 33 — `breaker` and `breaker_reset_at` are exposed
-   * by the backend so the SPA can show an accurate breaker-open banner
+   * `breaker` and `breaker_reset_at` are exposed by the backend so the
+   * SPA can show an accurate breaker-open banner
    * with a real countdown rather than re-deriving the reset window
    * client-side. `breaker_reset_at` is RFC3339 and only present while
    * the breaker is in the "open" state.

@@ -39,14 +39,15 @@ import { fromUrlSafeBase64 } from '../hooks/validateImport';
 import { getWidgetDef } from '../widgets/registry';
 import { markCustomizeDashboardCompleted } from '@/features/onboarding/checklist';
 import type { Vehicle, Alert } from '../types';
-import type { WidgetConfig, SavedDashboard } from '../widgets/types';
+import type { WidgetConfig, SavedDashboard } from '../widgets/types';
+
 import { Icons } from '@/lib/icons';
 
 const THEME_FIRST_RUN_KEY = 'teslasync:themeFirstRunDismissed:v1';
 
 /**
- * Phase-45 / Prompt 25 — widget ids in the seeded `DEFAULT_DASHBOARD` layout
- * (see `useDashboardLayout.ts:182`). Used to detect "user hasn't customized
+ * Widget ids in the seeded `DEFAULT_DASHBOARD` layout (see
+ * `useDashboardLayout.ts:182`). Used to detect "user hasn't customized
  * yet" so the soft hint banner can encourage discovery. Kept in sync manually
  * with the seed so we don't pull state through a re-export cycle.
  */
@@ -65,7 +66,7 @@ const CUSTOMIZE_HINT_DISMISSED_KEY = 'teslasync:dashboard:customizeHintDismissed
 const CUSTOMIZE_HINT_DELAY_MS = 5_000;
 
 /**
- * Phase-40 / Prompt 60 — first-run theme prompt.
+ * First-run theme prompt.
  *
  * Renders once at the top of the dashboard for users who haven't picked a
  * theme yet (still on the `neon-cyan` default) AND haven't dismissed the
@@ -157,7 +158,7 @@ export default function DashboardPage() {
   });
   const [settingsWidgetId, setSettingsWidgetId] = useState<string | null>(null);
 
-  /* ——— Phase-45 / Prompt 25 — widget-add discovery ——— */
+  /* ——— Widget-add discovery ——— */
   const [catalogueOpen, setCatalogueOpen] = useState(false);
   const [hintDismissed, setHintDismissed] = useState<boolean>(() => {
     try {
@@ -273,7 +274,7 @@ export default function DashboardPage() {
     }
   }, []);
 
-  /* ——— Command-palette bridge (Phase 40 / Prompt 30) ——— */
+  /* ——— Command-palette bridge ——— */
   // The command palette dispatches `dashboard:*` CustomEvents because it lives
   // outside the dashboard's React tree and can't call hooks directly.
   useEffect(() => {
@@ -327,7 +328,7 @@ export default function DashboardPage() {
     <div data-print-hide className="flex items-center gap-2 flex-wrap">
       {editMode ? (
         <>
-          <div className="flex items-center gap-1 mr-1">
+          <div className="flex items-center gap-1 me-1">
             <Button
               variant="ghost"
               size="sm"
@@ -355,19 +356,19 @@ export default function DashboardPage() {
             )}
           </div>
           <Button variant="ghost" size="sm" onClick={() => setShowPicker(true)}>
-            <Icons.add className="h-3.5 w-3.5 sm:mr-1" />
+            <Icons.add className="h-3.5 w-3.5 sm:me-1" />
             <span className="hidden sm:inline">{t('dashboard.addWidget', 'Add Widget')}</span>
           </Button>
           <Button variant="ghost" size="sm" onClick={autoArrange}>
-            <Icons.layoutGrid className="h-3.5 w-3.5 sm:mr-1" />
+            <Icons.layoutGrid className="h-3.5 w-3.5 sm:me-1" />
             <span className="hidden sm:inline">{t('dashboard.autoArrange', 'Auto Arrange')}</span>
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setShowTemplates(true)} className="hidden sm:flex">
-            <Icons.layoutTemplate className="h-3.5 w-3.5 mr-1" />
+            <Icons.layoutTemplate className="h-3.5 w-3.5 me-1" />
             {t('dashboard.templates', 'Templates')}
           </Button>
           <Button variant="ghost" size="sm" onClick={resetToDefault} className="hidden sm:flex">
-            <Icons.undo className="h-3.5 w-3.5 mr-1" />
+            <Icons.undo className="h-3.5 w-3.5 me-1" />
             {t('dashboard.reset', 'Reset')}
           </Button>
           <Button size="sm" onClick={() => setEditMode(false)}>
@@ -386,11 +387,11 @@ export default function DashboardPage() {
             <Icons.upload className="h-3.5 w-3.5" />
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setShowKioskSettings(true)} className="hidden sm:flex">
-            <Icons.tv className="h-3.5 w-3.5 mr-1" />
+            <Icons.tv className="h-3.5 w-3.5 me-1" />
             {t('dashboard.kiosk', 'Kiosk')}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setEditMode(true)} data-tour="edit-mode-btn">
-            <Icons.settings className="h-3.5 w-3.5 sm:mr-1" />
+            <Icons.settings className="h-3.5 w-3.5 sm:me-1" />
             <span className="hidden sm:inline">{t('dashboard.customize', 'Customize')}</span>
           </Button>
         </>
@@ -419,13 +420,13 @@ export default function DashboardPage() {
       actions={headerActions}
     >
       <div className="space-y-4">
-        {/* Phase-40 / Prompt 60 — first-run prompt to surface the theme picker. */}
+        {/* First-run prompt to surface the theme picker. */}
         <ThemeFirstRunBanner />
 
         {/* Live-pipe stale-data warning (only shows after >2 min disconnected) */}
         <LiveStaleDataBanner />
 
-        {/* Phase-45 / Prompt 25 — soft hint that the dashboard is customizable.
+        {/* Soft hint that the dashboard is customizable.
             Shows after CUSTOMIZE_HINT_DELAY_MS for users still on the seeded
             default layout, and disappears the moment they add a widget or
             dismiss the banner. */}
@@ -480,7 +481,7 @@ export default function DashboardPage() {
           </FadeIn>
         )}
 
-        {/* Phase-46 / Prompt 51 — Recently viewed widget. Renders an empty
+        {/* Recently viewed widget. Renders an empty
             placeholder until the user navigates around the app, so first-run
             users still see the affordance and learn what it does. */}
         <FadeIn>
@@ -626,7 +627,7 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* Phase-45 / Prompt 25 — discoverable add-widget surface. The FAB is
+      {/* Discoverable add-widget surface. The FAB is
           hidden in kiosk mode and edit mode; the catalogue is the lightweight
           alternative to the full WidgetPicker drawer. */}
       {!isKiosk && (
@@ -642,8 +643,7 @@ export default function DashboardPage() {
       {/* Kiosk Mode — portaled to document.body to escape all app chrome */}
       {isKiosk && createPortal(
         <div
-          // Phase-45 / Prompt 04: NOT migrated to <Modal>.
-          // Rationale: kiosk root is a full-screen mounting point for the
+          // Not a <Modal>: kiosk root is a full-screen mounting point for the
           // dashboard grid in kiosk mode, not a dialog. It hosts the live
           // dashboard, not user-dismissable content. New interactive dialogs
           // MUST use <Modal>.
@@ -709,7 +709,7 @@ function EmptyOnboarding({ authenticated, onSync, isSyncing }: {
           ) : (
             <Link to="/settings">
               <Button variant="primary">
-                {t('onboarding.connect', 'Connect Tesla Account')} <Icons.drillThrough className="h-4 w-4 ml-1 inline-block" />
+                {t('onboarding.connect', 'Connect Tesla Account')} <Icons.drillThrough className="h-4 w-4 ms-1 inline-block" />
               </Button>
             </Link>
           )}

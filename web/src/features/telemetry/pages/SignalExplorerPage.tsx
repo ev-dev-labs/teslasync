@@ -161,11 +161,9 @@ export default function SignalExplorerPage() {
   const hasHistorical = exploreKey !== null;
   const anyError = (signalsError ?? historicalError) as Error | undefined;
 
-  // Phase-50 / 0044 — wire the optional AI natural-language filter
-  // into the deterministic page state. The AI section is opt-in
-  // and entirely absent in off mode (withAiFeature gates it). The
-  // LLM never writes; this callback is invoked only when the user
-  // explicitly clicks "Apply to filters" on a typed proposal.
+  // Wires the optional AI natural-language filter into deterministic page state.
+  // The AI section is opt-in and absent in off mode. The LLM never writes; this
+  // callback runs only when the user clicks "Apply to filters" on a typed proposal.
   const handleApplyAiDraft = useCallback(
     (draft: SignalFilterDraft) => {
       const next = draft.signals

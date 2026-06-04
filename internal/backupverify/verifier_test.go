@@ -7,24 +7,24 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	backupmodel "github.com/ev-dev-labs/teslasync/internal/models/backup"
 )
 
 type fakeRuns struct {
-	run *models.BackupRun
+	run *backupmodel.BackupRun
 	err error
 }
 
-func (f *fakeRuns) LatestSuccessful(_ context.Context) (*models.BackupRun, error) {
+func (f *fakeRuns) LatestSuccessful(_ context.Context) (*backupmodel.BackupRun, error) {
 	return f.run, f.err
 }
 
 type fakeConfigs struct {
-	cfg *models.BackupConfig
+	cfg *backupmodel.BackupConfig
 	err error
 }
 
-func (f *fakeConfigs) GetByID(_ context.Context, _ int64) (*models.BackupConfig, error) {
+func (f *fakeConfigs) GetByID(_ context.Context, _ int64) (*backupmodel.BackupConfig, error) {
 	return f.cfg, f.err
 }
 
@@ -41,10 +41,10 @@ func TestVerifyLatest_NoSuccessfulBackup(t *testing.T) {
 func TestVerifyLatest_StaleBackupRejected(t *testing.T) {
 	t.Parallel()
 	cid := int64(1)
-	old := &models.BackupRun{ID: 1, ConfigID: &cid, CreatedAt: time.Now().Add(-30 * 24 * time.Hour)}
+	old := &backupmodel.BackupRun{ID: 1, ConfigID: &cid, CreatedAt: time.Now().Add(-30 * 24 * time.Hour)}
 	v := &Verifier{
 		runsRepo:    &fakeRuns{run: old},
-		configsRepo: &fakeConfigs{cfg: &models.BackupConfig{ID: 1, Provider: "local"}},
+		configsRepo: &fakeConfigs{cfg: &backupmodel.BackupConfig{ID: 1, Provider: "local"}},
 		criticals:   []string{"vehicles"},
 		maxAge:      7 * 24 * time.Hour,
 		now:         time.Now,

@@ -2,7 +2,6 @@ package trip
 
 import "github.com/ev-dev-labs/teslasync/internal/domain/fsm"
 
-// Trip FSM states.
 const (
 	StateStarted    fsm.State = "started"
 	StateInProgress fsm.State = "in_progress"
@@ -11,7 +10,6 @@ const (
 	StateCancelled  fsm.State = "cancelled"
 )
 
-// Trip FSM events.
 const (
 	EventBegin    fsm.Event = "begin"
 	EventPause    fsm.Event = "pause"
@@ -20,7 +18,6 @@ const (
 	EventCancel   fsm.Event = "cancel"
 )
 
-// NewTripFSM creates the trip state machine definition.
 func NewTripFSM() *fsm.Definition {
 	return fsm.NewDefinition("trip").
 		InitialState(StateStarted).

@@ -6,18 +6,18 @@ import { WIDGET_REGISTRY } from '../widgets/registry';
 import type { WidgetCategory, WidgetDef } from '../widgets/types';
 
 /**
- * Phase-45 / Prompt 25 — categorized widget catalogue.
+ * categorized widget catalogue.
  *
  * Replaces the "drop the user into raw edit mode" affordance with a
  * discoverable, grouped picker that:
- *   - Lists every widget in the registry, grouped by category.
- *   - Disables widgets that are already on the active dashboard (badge them
- *     "Added"), so the catalogue advertises every widget's existence even
- *     when most are taken — first-run users see what they're missing.
- *   - Calls `onAdd(widgetId)` and immediately closes when the user picks one.
- *     Each "Add" insertion goes through the existing `addWidgets` reducer in
- *     `useDashboardLayout` so layout reconciliation, undo/redo, and persistence
- *     all keep working.
+ * - Lists every widget in the registry, grouped by category.
+ * - Disables widgets that are already on the active dashboard (badge them
+ * "Added"), so the catalogue advertises every widget's existence even
+ * when most are taken — first-run users see what they're missing.
+ * - Calls `onAdd(widgetId)` and immediately closes when the user picks one.
+ * Each "Add" insertion goes through the existing `addWidgets` reducer in
+ * `useDashboardLayout` so layout reconciliation, undo/redo, and persistence
+ * all keep working.
  *
  * The richer multi-add `<WidgetPicker>` drawer is still reachable from edit
  * mode — this dialog is intentionally lightweight for first-time discovery.
@@ -83,10 +83,10 @@ export interface WidgetCatalogueDialogProps {
   open: boolean;
   onClose: () => void;
   /** Called when the user picks a widget from the catalogue. The dialog
-   *  closes after invoking. */
+ * closes after invoking. */
   onAdd: (widgetId: string) => void;
   /** Widget ids already present on the active dashboard. Used to disable
-   *  duplicate adds. */
+ * duplicate adds. */
   activeWidgetIds: string[];
 }
 

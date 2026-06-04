@@ -5,37 +5,38 @@
 //
 // What it validates
 // ─────────────────
+//
 //  1. fleet-telemetry-config.json
 //     - Parses as JSON (no trailing comma, no comment, no BOM).
 //     - host is present and non-empty.
 //     - port is in [1024, 65535] (privileged ports refused — Tesla's
-//       reference manifest uses 4443 and our docker-compose binds it).
+//     reference manifest uses 4443 and our docker-compose binds it).
 //     - tls.server_cert + tls.server_key are non-empty paths;
-//       additionally, when --check-paths is passed, validates that
-//       the files exist on the local filesystem.
+//     additionally, when --check-paths is passed, validates that
+//     the files exist on the local filesystem.
 //     - mqtt.broker matches /^[a-z0-9.-]+:[0-9]+$/ — a non-URL
-//       host:port string. Catches the classic "tcp://mosquitto:1883"
-//       mistake that Fleet Telemetry silently rejects.
+//     host:port string. Catches the classic "tcp://mosquitto:1883"
+//     mistake that Fleet Telemetry silently rejects.
 //     - mqtt.qos is 0, 1, or 2.
 //     - records.V exists and lists at least "mqtt". This is the
-//       routing key our PipelineSubscriber depends on; misnaming it
-//       (e.g. "v" lowercase, or omitting it) silently disables the
-//       entire ingest pipeline.
+//     routing key our PipelineSubscriber depends on; misnaming it
+//     (e.g. "v" lowercase, or omitting it) silently disables the
+//     entire ingest pipeline.
 //
 //  2. internal/tesla/router/routing.yaml
 //     - Parses as YAML.
 //     - Every entry has both `field:` and `dest:`.
 //     - No duplicate `field:` entries (would crash the router at
-//       Load anyway, but we'd rather catch it pre-deploy).
+//     Load anyway, but we'd rather catch it pre-deploy).
 //     - Every `dest:` is one of the closed set in
-//       internal/tesla/router/types.go.
+//     internal/tesla/router/types.go.
 //
 //  3. Cross-validation
 //     - When --strict is passed, requires that every routing.yaml
-//       destination has at least ONE field routed to it. A
-//       destination with zero entries usually indicates a forgotten
-//       migration from one writer to another (e.g. positions →
-//       location_snapshot).
+//     destination has at least ONE field routed to it. A
+//     destination with zero entries usually indicates a forgotten
+//     migration from one writer to another (e.g. positions →
+//     location_snapshot).
 //
 // Exit codes
 // ──────────

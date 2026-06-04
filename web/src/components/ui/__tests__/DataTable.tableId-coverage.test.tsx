@@ -3,7 +3,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, sep } from 'node:path'
 
 /**
- * Phase-46 / Prompt 03 — defense-in-depth contract test.
+ * Defense-in-depth contract test.
  *
  * Mirrors `web/scripts/audit-datatable-tableid.mjs` so the
  * coverage rule is enforced both at lint-time (audit script) and at

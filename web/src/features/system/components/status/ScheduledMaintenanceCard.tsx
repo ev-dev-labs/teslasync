@@ -1,5 +1,5 @@
 /**
- * ScheduledMaintenanceCard — Phase-2 self-hosted maintenance scheduling.
+ * ScheduledMaintenanceCard for self-hosted maintenance scheduling.
  *
  * Surfaces upcoming + active maintenance windows on /system-status and
  * lets the operator schedule a new one inline.

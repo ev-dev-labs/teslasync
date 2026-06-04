@@ -20,7 +20,6 @@ export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
    * callers. Pass `'auto'` to follow the user's `ui_density` setting
    * via density-aware Tailwind utilities (`min-h-d-row px-d-pad-x
    * text-d-base`); see `useDensitySync` and `index.css`.
-   * (Phase 40 / Prompt 44.)
    */
   size?: 'sm' | 'md' | 'lg' | 'auto';
 }

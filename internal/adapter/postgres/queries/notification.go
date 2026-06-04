@@ -1,6 +1,5 @@
 package queries
 
-// Notification SQL queries.
 const (
 	GetNotificationByID = `
 		SELECT id, user_id, type, title, body, fsm_state, channel,

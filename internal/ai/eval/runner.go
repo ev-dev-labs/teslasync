@@ -35,7 +35,7 @@ type Runner struct {
 	JudgeModel string
 
 	// JudgeSeed is the deterministic seed surfaced in the judge
-	// prompt template (R6 mitigation per the F6 prompt). Defaults
+	// prompt template to keep judged runs repeatable. Defaults
 	// to 42.
 	JudgeSeed int
 
@@ -140,9 +140,8 @@ func (r *Runner) RunGolden(ctx context.Context, set *GoldenSet, g Golden) Result
 
 	if runErr != nil {
 		// ErrConfirmationDenied is expected for goldens that
-		// explicitly test the deny path; F6 doesn't ship such a
-		// golden but we surface the dispatcher error verbatim so
-		// future goldens can assert on the message.
+		// explicitly test the deny path. Surface dispatcher errors
+		// verbatim so future goldens can assert on the message.
 		res.Err = runErr
 		res.Reasons = append(res.Reasons, fmt.Sprintf("dispatcher run error: %v", runErr))
 	}
@@ -201,10 +200,8 @@ func (r *Runner) judgeSeed() int {
 	return r.JudgeSeed
 }
 
-// autoApproveConfirm is the dispatch.ConfirmFn the runner installs
-// for every golden. F6 only ships happy-path goldens; future goldens
-// that test the deny path can override this via a per-golden field
-// (not yet wired).
+// autoApproveConfirm approves every golden by default. Future
+// deny-path goldens can override this through per-golden wiring.
 func autoApproveConfirm(ctx context.Context, req dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
 	return dispatch.ConfirmApproved, nil
 }

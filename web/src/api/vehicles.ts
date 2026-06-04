@@ -30,8 +30,8 @@ export const getVehicle = (id: number) => request<Vehicle>(`/vehicles/${id}`)
 export const syncVehicles = () => request<{ synced: number; vehicles: Vehicle[] }>('/vehicles/sync', { method: 'POST' })
 /** Fetches the live state (location, battery, climate, etc.) for a vehicle.
  *  The backend returns two formats:
- *  - Live/telemetry: { state: VehicleState, live: true }
- *  - Cached (no token): { vehicle: Vehicle, position: Position, live: false }
+ *  Live/telemetry: { state: VehicleState, live: true }
+ *  Cached (no token): { vehicle: Vehicle, position: Position, live: false }
  *  This function normalises both into { state?: VehicleState; live: boolean }.
  */
 export const getVehicleState = async (id: number): Promise<{ state?: VehicleState; live: boolean }> => {

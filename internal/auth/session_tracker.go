@@ -1,16 +1,15 @@
-// Package auth — session tracker middleware (Phase-46 / Prompt 42).
+// Package auth provides session tracker middleware.
 //
 // The tracker mints a TeslaSync-issued opaque cookie on the first
 // authenticated request from a browser, persists the (subject, cookie
-// hash) tuple via [database.AuthSessionsRepo], and validates the cookie
+// hash) tuple via [dbauth.AuthSessionsRepo], and validates the cookie
 // on every subsequent request. Revoking a row in `auth_sessions` causes
 // the next request bearing the cookie to be rejected with HTTP 401 and
 // the cookie cleared on the browser — independently of the upstream
 // ForwardAuth provider's session state.
 //
-// The package is deliberately a sibling of `internal/api` so the future
-// auth-mode contract (prompt 57) can land helpers like `subject.go`
-// here without churning the API package's import graph.
+// The package is deliberately a sibling of `internal/api` so auth-mode
+// helpers can live here without churning the API package's import graph.
 //
 // Open-mode policy
 // ----------------
@@ -28,7 +27,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 )
 
 // SessionCookieName is the cookie name TeslaSync uses for its own
@@ -55,7 +54,7 @@ const (
 )
 
 // SessionStore is the storage seam for the tracker. Production wires
-// this to *database.AuthSessionsRepo; tests substitute an in-memory fake.
+// this to *dbauth.AuthSessionsRepo; tests substitute an in-memory fake.
 //
 // The interface is intentionally minimal — every method maps 1-to-1 to
 // a state transition the tracker needs — so a future swap to a Redis
@@ -65,7 +64,7 @@ type SessionStore interface {
 	HashCookie(token string) []byte
 	MintCookieToken() (token string, hash []byte, err error)
 	Create(ctx context.Context, subject string, cookieHash []byte, userAgent, ip string) (uuid.UUID, error)
-	GetByCookieHash(ctx context.Context, cookieHash []byte) (*database.AuthSessionRow, error)
+	GetByCookieHash(ctx context.Context, cookieHash []byte) (*dbauth.AuthSessionRow, error)
 	BumpLastSeen(ctx context.Context, id uuid.UUID) error
 }
 
@@ -122,7 +121,7 @@ func Middleware(headerName string, store SessionStore, opts SessionTrackerOption
 	if now == nil {
 		now = time.Now
 	}
-	bumper := database.NewDebouncedBumper(opts.BumpInterval)
+	bumper := dbauth.NewDebouncedBumper(opts.BumpInterval)
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

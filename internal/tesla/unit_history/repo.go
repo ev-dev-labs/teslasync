@@ -17,8 +17,8 @@ import (
 )
 
 // unitHistoryTracerName is the OpenTelemetry tracer name for spans
-// emitted by Repo.Record. The Phase-10 trace-coverage audit greps for
-// this exact constant.
+// emitted by Repo.Record. The trace-coverage audit greps for this
+// exact constant.
 const unitHistoryTracerName = "tesla.unit_history"
 
 // Repo is the unit-history persistence contract. It is an interface so

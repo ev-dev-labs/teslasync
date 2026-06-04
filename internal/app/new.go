@@ -8,24 +8,38 @@ import (
 	"sync/atomic"
 	"time"
 
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/api"
+	apiopenapi "github.com/ev-dev-labs/teslasync/internal/api/openapi"
+	apisystem "github.com/ev-dev-labs/teslasync/internal/api/system"
+	apitelem "github.com/ev-dev-labs/teslasync/internal/api/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/apilog"
 	"github.com/ev-dev-labs/teslasync/internal/audit"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
+	dbgdpr "github.com/ev-dev-labs/teslasync/internal/database/gdpr"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
+	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
+	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
+	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
+	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
+	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/dataquality"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/flags"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	hadiscovery "github.com/ev-dev-labs/teslasync/internal/integrations/homeassistant"
-	"github.com/ev-dev-labs/teslasync/internal/jobs"
+	embeddingsjobs "github.com/ev-dev-labs/teslasync/internal/jobs/embeddings"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
@@ -62,12 +76,9 @@ const appBackgroundTracerName = "internal/app/background"
 
 func appBackgroundTracer() oteltrace.Tracer { return otel.Tracer(appBackgroundTracerName) }
 
-// New constructs the App in the SAME order as the legacy
-// cmd/teslasync/main.go body (lines 78-889 prior to phase-47/04). Each
-// init* method is a verbatim relocation of the corresponding source
-// region; no behavioural change. Closers are registered immediately
-// after a resource is constructed so the LIFO unwind in [App.Close]
-// matches the original `defer` ordering.
+// New constructs the App in startup order. Closers are registered
+// immediately after each resource is constructed so the LIFO unwind in
+// [App.Close] matches the original defer ordering.
 //
 // Returns (a, ErrMigrateOnly) when MIGRATE_ONLY=true so that
 // callers can run a.Close on already-opened resources (database,
@@ -224,8 +235,7 @@ func (a *App) initCache() {
 	})
 }
 
-// initFlagStore wires the dynamic feature-flag store + change audit
-// repo. Phase-44 / observability-batch / Prompt F8.
+// initFlagStore wires the dynamic feature-flag store and change audit repo.
 //
 // The store gracefully degrades to in-process cache + defaults when
 // Redis is disabled (a.Cache.Underlying() returns nil). The audit repo
@@ -241,7 +251,7 @@ func (a *App) initFlagStore(ctx context.Context) {
 		return nil
 	})
 	if a.DB != nil {
-		a.FeatureFlagChangesRepo = database.NewFeatureFlagChangesRepo(a.DB)
+		a.FeatureFlagChangesRepo = auditdb.NewFeatureFlagChangesRepo(a.DB)
 	}
 	log.Info().
 		Bool("redis_backed", rdb != nil).
@@ -257,8 +267,8 @@ func (a *App) initEventBus() {
 	}
 }
 
-// initObservabilityPhase45 wires the Phase-45 operator-confidence
-// subsystems: hash-chained audit recorder, schema-fingerprint seed,
+// initObservabilityPhase45 wires the operator-confidence subsystems:
+// hash-chained audit recorder, schema-fingerprint seed,
 // slow-query / disk-forecast / per-vehicle-cost / GDPR-artifact repos,
 // and secret rotation tracker. All are best-effort — when a backing
 // dependency is missing (DB not up, pg_stat_statements absent,
@@ -278,11 +288,11 @@ func (a *App) initObservabilityPhase45(ctx context.Context) {
 		log.Warn().Msg("phase-45: database not initialised — observability surface unavailable")
 		return
 	}
-	a.AuditLogQueryRepo = database.NewAuditLogQueryRepo(a.DB)
-	a.SlowQueriesRepo = database.NewSlowQueriesRepo(a.DB)
-	a.HypertableMetricsRepo = database.NewHypertableMetricsRepo(a.DB)
-	a.IngestXRayRepo = database.NewIngestXRayRepo(a.DB.Pool)
-	a.GDPRArtifactRepo = database.NewGDPRArtifactRepo(a.DB)
+	a.AuditLogQueryRepo = auditdb.NewAuditLogQueryRepo(a.DB)
+	a.SlowQueriesRepo = dbobs.NewSlowQueriesRepo(a.DB)
+	a.HypertableMetricsRepo = dbobs.NewHypertableMetricsRepo(a.DB)
+	a.IngestXRayRepo = dbobs.NewIngestXRayRepo(a.DB.Pool)
+	a.GDPRArtifactRepo = dbgdpr.NewArtifactRepo(a.DB)
 
 	// Audit recorder is the unified hash-chained writer. Falls back
 	// to deny-all redactor; callers pass an explicit redactor when
@@ -314,7 +324,7 @@ func (a *App) initObservabilityPhase45(ctx context.Context) {
 		Msg("phase-45 operator confidence initialised")
 }
 
-// initObservabilityPhase46 wires the Phase-46 SOTA observability batch:
+// initObservabilityPhase46 wires observability subsystems:
 //
 //	SLO catalog + tracker — slo/catalog.yaml + Prometheus-backed
 //	  live tier evaluation. Catalog load failure surfaces 503 on
@@ -402,8 +412,8 @@ func buildSyntheticProbes(raw string) []synthetic.Probe {
 	return probes
 }
 
-// initHomeAssistantPublisher wires the Phase-47 HomeAssistant MQTT
-// discovery publisher when HOMEASSISTANT_ENABLED=true and the MQTT
+// initHomeAssistantPublisher wires the HomeAssistant MQTT discovery
+// publisher when HOMEASSISTANT_ENABLED=true and the MQTT
 // client is available. The publisher reasserts the full per-vehicle
 // entity catalog on PublishInterval (default 1h); HA's discovery
 // listener caches retained config topics so the interval primarily
@@ -428,7 +438,7 @@ func (a *App) initHomeAssistantPublisher(ctx context.Context) {
 		a.Cfg.HomeAssistant.DiscoveryPrefix,
 		a.MQTT.Prefix(),
 	)
-	vehicleRepo := database.NewVehicleRepo(a.DB)
+	vehicleRepo := vehicledb.NewVehicleRepo(a.DB)
 	interval := a.Cfg.HomeAssistant.PublishInterval
 	if interval <= 0 {
 		interval = time.Hour
@@ -527,7 +537,7 @@ func (a *App) initTeslaClient() {
 }
 
 func (a *App) initAPILogging() {
-	a.APILogRepo = database.NewAPICallLogRepo(a.DB)
+	a.APILogRepo = systemdb.NewAPICallLogRepo(a.DB)
 
 	if a.Cfg.APILogs.Enabled {
 		a.InboundAPILogger = apilog.NewAsync(a.APILogRepo, apilog.AsyncOptions{
@@ -547,7 +557,7 @@ func (a *App) initAPILogging() {
 	}
 
 	a.TeslaClient.SetLogCallback(func(method, url string, statusCode int, reqBody, respBody []byte, durationMs int, callErr error) {
-		logEntry := &models.APICallLog{
+		logEntry := &teslamodel.APICallLog{
 			HTTPMethod: method,
 			Endpoint:   url,
 			DurationMs: int32(durationMs),
@@ -598,14 +608,14 @@ func (a *App) initOutboundSinks() {
 		Msg("outbound api_call_logs sink ready")
 	var _ httputil.APICallSink = a.OutboundAPILogSink
 
-	api.SetOutboundSink(a.OutboundAPILogSink)
+	apisystem.SetOutboundSink(a.OutboundAPILogSink)
 	notification.SetSink(a.OutboundAPILogSink)
 	geocoding.SetSink(a.OutboundAPILogSink)
 	tesla.SetAuthSink(a.OutboundAPILogSink, a.Cfg.Tesla.Timeout)
 }
 
 func (a *App) initWebPush() {
-	pushSubsRepo := database.NewPushSubscriptionsRepo(a.DB)
+	pushSubsRepo := dbnotif.NewPushSubscriptionsRepo(a.DB)
 	webpushSvc := webpush.NewService(pushSubsRepo, a.Cfg.WebPush.PublicKey, a.Cfg.WebPush.PrivateKey, a.Cfg.WebPush.Subject)
 	webpush.SetDefault(webpushSvc)
 	if !webpushSvc.IsEnabled() {
@@ -636,8 +646,8 @@ func (a *App) initStateReader() {
 // signal_history flush + cleanup loops, recovers active sessions,
 // hydrates AlertEvaluator prevSignals, starts the FSM reconcile loop,
 // optionally wires the MongoDB raw-telemetry capture, and starts the
-// phase-42a/0050 MQTT PipelineSubscriber + 12 writers + side-effects
-// observer. Returns an error only for fatal misconfigurations
+// MQTT PipelineSubscriber, its writers, and side-effects observer.
+// Returns an error only for fatal misconfigurations
 // (invalid LIVE_SIGNAL_STORE_MODE, router.New writer-coverage failure,
 // MQTT pipeline construction failure when MQTT is configured).
 func (a *App) initTelemetryHandler(ctx context.Context) error {
@@ -645,7 +655,7 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 		return nil
 	}
 
-	a.TelemetryHandler = api.NewTelemetryHandler(
+	a.TelemetryHandler = apitelem.NewHandler(
 		a.DB,
 		a.MQTT,
 		nil,
@@ -680,7 +690,7 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 		Bool("redis_l2", redisSignalCache != nil).
 		Msg("live signal store initialized")
 
-	vehicleRepo := database.NewVehicleRepo(a.DB)
+	vehicleRepo := vehicledb.NewVehicleRepo(a.DB)
 	vehicles, err := vehicleRepo.GetAll(ctx)
 	if err != nil {
 		log.Warn().Err(err).Msg("live signal store: vehicle list unavailable during warmup")
@@ -697,7 +707,7 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 		log.Info().Int("vehicles", len(vehicles)).Msg("live signal store warmed from Redis")
 	}
 
-	a.SignalHistoryWriter = database.NewSignalHistoryWriter(a.DB)
+	a.SignalHistoryWriter = signaldb.NewSignalHistoryWriter(a.DB)
 	a.TelemetryHandler.SetSignalHistoryWriter(a.SignalHistoryWriter)
 
 	for _, v := range vehicles {
@@ -721,7 +731,7 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 	log.Info().Msg("signal store initialized")
 
 	sessionTracker := a.TelemetryHandler.SessionTracker()
-	signalLogReader := database.NewSignalLogReader(a.DB)
+	signalLogReader := signaldb.NewSignalLogReader(a.DB)
 	if sessionTracker != nil {
 		sessionTracker.SetSignalLogReader(signalLogReader)
 		sessionTracker.RecoverSessions(ctx)
@@ -732,8 +742,8 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 
 	alertEvaluator := a.TelemetryHandler.AlertEvaluator()
 	if alertEvaluator != nil {
-		// Phase-49 / Slice 0002: rebuild the in-memory latch cache from
-		// alert_rule_state so once-mode rules don't re-fire on pod restart
+		// Rebuild the in-memory latch cache from alert_rule_state so
+		// once-mode rules don't re-fire on pod restart
 		// while their condition is still true. Idempotent + best-effort —
 		// repo errors are logged inside HydrateFromDB and do not abort boot.
 		alertEvaluator.RuleEngine().HydrateFromDB(ctx)
@@ -759,15 +769,15 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 				mongoClient.Close()
 				return nil
 			})
-			rawRepo := database.NewRawTelemetryRepo(mongoClient)
+			rawRepo := telemetrydb.NewRawTelemetryRepo(mongoClient)
 			a.TelemetryHandler.SetRawTelemetryRepo(rawRepo)
 
-			signalLogRepo := database.NewSignalLogRepo(mongoClient)
+			signalLogRepo := signaldb.NewSignalLogRepo(mongoClient)
 			a.TelemetryHandler.SetSignalLogRepo(signalLogRepo)
 
 			log.Info().Str("database", a.Cfg.MongoDB.Database).Int("ttl_days", a.Cfg.MongoDB.TTLDays).Msg("MongoDB raw telemetry capture + signal log available")
 
-			settingsRepo := database.NewSettingsRepo(a.DB)
+			settingsRepo := settingsdb.NewSettingsRepo(a.DB)
 			if _, err := settingsRepo.GetPollingConfig(ctx); err == nil {
 				log.Debug().Msg("polling config loaded (telemetry capture toggle removed)")
 			}
@@ -786,12 +796,12 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 	return nil
 }
 
-// initPipelineSubscriber wires the phase-42a/0050 hard-cutover stack:
+// initPipelineSubscriber wires the telemetry ingest stack:
 // 12 writers → router.New → unit-history cache+repo → SideEffectsObserver
 // + SoftwareUpdateObserver → normalize.Pipeline → MQTT PipelineSubscriber.
 // Any missing writer or invalid routing rule fails the process at startup;
 // per ADR-004 #12 there is no feature flag and no parallel pipeline.
-func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.VehicleRepo) error {
+func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *vehicledb.VehicleRepo) error {
 	pipelineLogger := log.With().Str("component", "tesla_pipeline").Logger()
 
 	pipelineWriters := map[router.Destination]router.Writer{
@@ -838,7 +848,7 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.
 	// Without this, the Software Updates page goes stale the moment the
 	// vehicle installs a new firmware after the deploy that ripped out
 	// the legacy ingest path.
-	swUpdateRepo := database.NewSoftwareUpdateRepo(a.DB)
+	swUpdateRepo := systemdb.NewSoftwareUpdateRepo(a.DB)
 	swUpdateObserver := teslapipeline.NewSoftwareUpdateObserver(swUpdateRepo, pipelineLogger)
 
 	normPipeline := normalize.New(unitRepo, pipelineRouter, pipelineLogger, sideEffects, swUpdateObserver)
@@ -992,8 +1002,8 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.
 		Dur("stale_timeout", a.Cfg.FleetTelemetry.StaleTimeout).
 		Msg("phase-42a: fleet-telemetry PipelineSubscriber active")
 
-	// Phase-44 / observability-batch / Prompt F4 — DLQ Inspector.
-	// Subscribes to {dlqTopic}/# on the SAME paho client the pipeline
+	// Subscribes the DLQ inspector to {dlqTopic}/# on the SAME paho client
+	// the pipeline
 	// already uses, keeping connection count + DLQ topic semantics
 	// single-sourced. Inspector failures degrade /system/dlq* to 503
 	// but MUST NOT halt the pipeline — best-effort observability.
@@ -1009,7 +1019,7 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.
 			Msg("phase-44: DLQInspector subscribe failed; /system/dlq endpoints will be 503")
 	} else {
 		a.DLQInspector = dlqInspector
-		a.DLQReplayAuditRepo = database.NewDLQReplayAuditRepo(a.DB)
+		a.DLQReplayAuditRepo = auditdb.NewDLQReplayAuditRepo(a.DB)
 		a.addCloser("dlq-inspector", func(_ context.Context) error {
 			dlqInspector.Stop()
 			return nil
@@ -1120,7 +1130,7 @@ func runSignalHistoryCleanupTick(ctx context.Context, writer signalHistoryCleane
 }
 
 func (a *App) initTripGenerator(ctx context.Context) {
-	tripRepo := database.NewTripRepo(a.DB)
+	tripRepo := tripdb.NewTripRepo(a.DB)
 	go func() {
 		runTripGeneratorTick(ctx, tripRepo, "backfill")
 
@@ -1185,7 +1195,7 @@ func (a *App) initGasPriceWorker(ctx context.Context) {
 }
 
 func (a *App) initUnitDriftValidator(ctx context.Context) {
-	driftVehicleRepo := database.NewVehicleRepo(a.DB)
+	driftVehicleRepo := vehicledb.NewVehicleRepo(a.DB)
 	driftValidator := worker.NewUnitDriftValidator(a.DB, driftVehicleRepo)
 	resilience.SafeGoLoop(ctx, "unit-drift-validator", func(loopCtx context.Context) {
 		driftValidator.Start(loopCtx, worker.Options{})
@@ -1196,10 +1206,10 @@ func (a *App) initUnitDriftValidator(ctx context.Context) {
 // initAIBackgroundJobs schedules cross-cutting AI maintenance jobs.
 // Currently only embeddings TTL — re-runs every hour to delete
 // expired rows from both embeddings tables (see internal/jobs/
-// embeddings_ttl.go).
+// embeddings/ttl.go).
 //
 // ADR-015 §I12 contract: the cron is started UNCONDITIONALLY. Each
-// tick re-checks ai_mode via [jobs.RunEmbeddingsTTL]; when mode='off'
+// tick re-checks ai_mode via [embeddingsjobs.RunTTL]; when mode='off'
 // the function returns immediately without touching the DB. The
 // rationale for unconditional start (vs gating here on AIMode):
 //
@@ -1214,7 +1224,7 @@ func (a *App) initUnitDriftValidator(ctx context.Context) {
 //     zero embeddings rows are written or deleted in off-mode, which
 //     is the user-visible contract.
 func (a *App) initAIBackgroundJobs(ctx context.Context) {
-	settingsRepo := database.NewSettingsRepo(a.DB)
+	settingsRepo := settingsdb.NewSettingsRepo(a.DB)
 
 	// Run once at boot so a long-running tick interval doesn't leave
 	// expired rows visible immediately after a restart.
@@ -1237,7 +1247,7 @@ func (a *App) initAIBackgroundJobs(ctx context.Context) {
 	log.Info().Msg("ai background jobs scheduled (embeddings_ttl re-checks ai_mode per ADR-015 §I12)")
 }
 
-func runEmbeddingsTTLTick(ctx context.Context, db *database.DB, settingsRepo *database.SettingsRepo, reason string) {
+func runEmbeddingsTTLTick(ctx context.Context, db *database.DB, settingsRepo *settingsdb.SettingsRepo, reason string) {
 	tickCtx, span := appBackgroundTracer().Start(ctx, "ai.background_tick",
 		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
 		oteltrace.WithAttributes(
@@ -1246,7 +1256,7 @@ func runEmbeddingsTTLTick(ctx context.Context, db *database.DB, settingsRepo *da
 		),
 	)
 	defer span.End()
-	result, err := jobs.RunEmbeddingsTTL(tickCtx, db, settingsRepo)
+	result, err := embeddingsjobs.RunTTL(tickCtx, db, settingsRepo)
 	span.SetAttributes(
 		attribute.Int64("ai.embeddings_ttl.deleted_768", result.Deleted768),
 		attribute.Int64("ai.embeddings_ttl.deleted_1536", result.Deleted1536),
@@ -1259,7 +1269,7 @@ func runEmbeddingsTTLTick(ctx context.Context, db *database.DB, settingsRepo *da
 }
 
 func (a *App) initHealthWatchdog(ctx context.Context) {
-	a.notifRepo = database.NewNotificationRepo(a.DB)
+	a.notifRepo = dbnotif.NewNotificationRepo(a.DB)
 	resilience.SafeGo("health-watchdog", func() {
 		ticker := time.NewTicker(60 * time.Second)
 		defer ticker.Stop()
@@ -1360,7 +1370,7 @@ func (a *App) loadOpenAPISpec() {
 	for _, p := range specPaths {
 		if specBytes, err := os.ReadFile(p); err == nil {
 			a.openAPISpec = specBytes
-			api.SetOpenAPISpec(specBytes)
+			apiopenapi.SetOpenAPISpec(specBytes)
 			break
 		}
 	}

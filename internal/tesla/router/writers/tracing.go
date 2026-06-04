@@ -27,7 +27,7 @@ const writersTracerName = "tesla.writers"
 //   - destination: the routing.yaml destination string (e.g. "signal_log")
 //   - field:       the codec.Atomic.Field name
 //   - write.role:  primary | dual (when the router propagated it via ctx;
-//                  omitted when called directly from a test)
+//     omitted when called directly from a test)
 //
 // The writer is expected to ADD attributes that describe the DB
 // operation it just performed:

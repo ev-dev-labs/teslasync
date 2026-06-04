@@ -4,7 +4,7 @@ import { Avatar, type AvatarSize } from './Avatar';
 import { cn } from '@/lib/cn';
 
 /**
- * Phase-46 / Prompt 15 — drop-in cell for user-attributed columns
+ * Drop-in cell for user-attributed columns
  * (audit log "actor", feedback queue "reporter", notification log
  * "delivered to", etc.).
  *

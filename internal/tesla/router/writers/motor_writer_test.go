@@ -27,8 +27,7 @@ func newMotorTestWriter(t *testing.T, rec *recorder) *snapshotWriter {
 }
 
 // TestMotorWriter_ColumnMapMatchesRoutingYAML is the reflective
-// coverage gate from phase-42a prompt 0013 Decision #4. It walks
-// router.LoadMap() (which parses the embedded routing.yaml), filters
+// coverage gate. It walks router.LoadMap() (which parses the embedded routing.yaml), filters
 // to entries with Destination == DestMotorSnapshot, and asserts the
 // motorColumnByField map in motor_writer.go matches the routing
 // layer entry-for-entry — same field set, same column for each field.
@@ -91,9 +90,9 @@ func TestMotorWriter_ColumnMapMatchesRoutingYAML(t *testing.T) {
 	}
 }
 
-// TestMotorWriter_TypeMatrix exercises one positive write per kind
-// from phase-42a prompt 0013 Decision #5(b). The motor_snapshots
-// schema (migration 000183 lines 125-166) has only TWO scalar kinds:
+// TestMotorWriter_TypeMatrix exercises one positive write per routed
+// scalar kind. The motor_snapshots schema (migration 000183 lines 125-166)
+// has only TWO scalar kinds:
 // 33 DOUBLE PRECISION columns (covered by float64 atomics) and 5 TEXT
 // columns (covered by string atomics). There are NO BOOLEAN or
 // INTEGER columns — bool/int64 cases are intentionally omitted
@@ -155,8 +154,8 @@ func TestMotorWriter_TypeMatrix(t *testing.T) {
 	}
 }
 
-// TestMotorWriter_UnknownFieldReturnsError covers phase-42a prompt
-// 0013 Decision #5(c): a Field that is NOT routed to motor_snapshot
+// TestMotorWriter_UnknownFieldReturnsError covers the unrouted-field
+// contract: a Field that is NOT routed to motor_snapshot
 // must produce a "no column mapping" error and MUST NOT touch the DB.
 //
 // VehicleSpeed is a deliberate choice — it IS a routed field
@@ -193,7 +192,7 @@ func TestMotorWriter_UnknownFieldReturnsError(t *testing.T) {
 }
 
 // TestNewMotorWriter_NilPoolPanics locks the constructor's
-// fail-fast contract from phase-42a prompt 0013 Decision #1. A nil
+// fail-fast contract. A nil
 // pool is a wiring bug and panics so the failure surfaces at process
 // start, not at the first payload.
 func TestNewMotorWriter_NilPoolPanics(t *testing.T) {

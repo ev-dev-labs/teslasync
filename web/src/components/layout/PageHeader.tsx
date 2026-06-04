@@ -19,7 +19,7 @@ export function PageHeader({
    * Show a "Copy link" button that copies the current URL (with all query
    * params baked in). Use on pages where users would reasonably share a
    * filtered view — Notifications with severity=critical, a specific
-   * Drives date range, etc. Phase 40 / Prompt 33.
+   * Drives date range, etc.
    */
   copyLink?: boolean
 }) {

@@ -1,8 +1,8 @@
 /**
- * Phase-49 / Slice 0006 — VehicleMultiSelect unit tests.
+ * VehicleMultiSelect unit tests.
  *
- * Covers the prompt's acceptance criteria + rubber-duck-identified
- * blind spots (D10 unknown IDs, D13 toggle restoration).
+ * Covers acceptance criteria and blind spots (D10 unknown IDs,
+ * D13 toggle restoration).
  */
 
 import { describe, expect, it, vi } from 'vitest';

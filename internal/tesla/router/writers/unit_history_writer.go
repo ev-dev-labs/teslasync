@@ -70,16 +70,15 @@ var _ router.Writer = (*unitHistoryWriter)(nil)
 // See the unitHistoryWriter type godoc for the full rationale and the
 // invariant this writer defends.
 //
-// Returns the router.Writer (constructor signature is locked by
-// phase-42a prompt 0022 Decision #1).
+// Returns the router.Writer so callers can wire it like the other
+// destination writers.
 func NewUnitHistoryWriter() router.Writer {
 	return &unitHistoryWriter{}
 }
 
-// Write implements router.Writer for destination unit_history. Per
-// phase-42a prompt 0022 Decision #2 the method logs a WARN-level
-// structured event and returns nil — it does NOT touch the database
-// and does NOT return an error.
+// Write implements router.Writer for destination unit_history. It logs
+// a WARN-level structured event and returns nil — it does NOT touch the
+// database and does NOT return an error.
 //
 // Reaching this method means normalize.Pipeline.processOne's
 // IsSettingUnit short-circuit failed: either a code regression has

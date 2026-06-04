@@ -1,4 +1,4 @@
-// Phase-50 / 0063 — ML2 Range-prediction model.
+// Range-prediction trainer tests.
 //
 // trainer_test.go pins the deterministic statistical trainer's
 // contract:

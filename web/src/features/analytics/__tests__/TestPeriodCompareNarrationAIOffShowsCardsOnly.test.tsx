@@ -1,11 +1,8 @@
-// Phase-50 / 0040 — X1 Period compare narration.
+// Period compare narration AI-off contract test.
 //
-// `TestPeriodCompareNarrationAIOffShowsCardsOnly` (the Vitest sibling
-// to the Go test of the same name) is the slice's load-bearing
-// AI-OFF contract proof on the React side. It mounts the
-// AIPeriodCompareNarration component with ai_mode='off' (plus the
-// per-feature toggle on, to defeat the obvious "off because nothing
-// is enabled" path) and asserts:
+// `TestPeriodCompareNarrationAIOffShowsCardsOnly` is the React-side
+// AI-off contract proof. It mounts AIPeriodCompareNarration with
+// ai_mode='off' plus the per-feature toggle on, then asserts:
 //
 //   1. The AI section's rooted test ID is absent from the DOM.
 //   2. The wrapper renders no children (empty container).
@@ -26,10 +23,8 @@
 // insights panel regardless of this AI section's visibility.
 //
 // File name MUST stay
-// `TestPeriodCompareNarrationAIOffShowsCardsOnly.test.tsx`
-// — the slice prompt's verification command runs
-// `vitest --run TestPeriodCompareNarrationAIOffShowsCardsOnly`,
-// where the positional pattern is matched against the file PATH.
+// `TestPeriodCompareNarrationAIOffShowsCardsOnly.test.tsx` because
+// Vitest's positional pattern is matched against the file path.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';

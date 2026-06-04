@@ -1,5 +1,4 @@
-// Package stream is the canonical SSE writer for AI feature responses
-// (Phase-50 / F5).
+// Package stream is the canonical SSE writer for AI feature responses.
 //
 // It is the single sanctioned way an AI handler emits token-by-token,
 // tool-call, tool-result, confirm-request, and terminal-frame events
@@ -10,7 +9,7 @@
 // endpoint, and aivet rejects any backend AI handler that writes
 // `text/event-stream` headers without going through this package.
 //
-// Back-pressure (R4)
+// Back-pressure
 // ------------------
 // The Writer holds a bounded channel (cap=64) between the producer
 // (the dispatcher / handler goroutine) and the consumer (an internal
@@ -18,7 +17,7 @@
 // BLOCKS the producer until the consumer drains a slot. We do NOT
 // drop frames: a dropped delta corrupts the user-visible text; a
 // dropped tool_call corrupts the conversation; a dropped done event
-// strands the SPA in the streaming state. R4 prefers an explicit
+// strands the SPA in the streaming state. Prefer an explicit
 // stall failure over silent corruption.
 //
 // If the consumer cannot drain a slot within the configured stall
@@ -32,18 +31,19 @@
 //  3. Closes the producer channel. Subsequent Send calls return
 //     [ErrWriterClosed].
 //  4. Returns [ErrStallTimeout] from the offending Send so the
-//     handler can surface a baseline-fallback (R8) banner.
+//     handler can surface a baseline fallback banner.
 //
 // ADR-015 invariants
 // ------------------
-//   - I4 (zero egress): the Writer never touches an upstream provider
-//     directly. It is a sink for the dispatcher, which itself is gated
-//     by guard.Wrap. In off-mode no Writer is ever constructed.
-//   - I6 (404 routes): the handler that owns the Writer is wrapped by
-//     guard.Wrap. The Writer is only reached after the gate opens.
-//   - I12 #4 (baseline routes byte-identical): the Writer is mounted
-//     ONLY on /api/v1/ai/* routes. No baseline endpoint imports this
-//     package.
+//
+//	I4 (zero egress): the Writer never touches an upstream provider
+//	  directly. It is a sink for the dispatcher, which itself is gated
+//	  by guard.Wrap. In off-mode no Writer is ever constructed.
+//	I6 (404 routes): the handler that owns the Writer is wrapped by
+//	  guard.Wrap. The Writer is only reached after the gate opens.
+//	I12 #4 (baseline routes byte-identical): the Writer is mounted
+//	  ONLY on /api/v1/ai/* routes. No baseline endpoint imports this
+//	  package.
 //
 // Layer: platform
 package stream

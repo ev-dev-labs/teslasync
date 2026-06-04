@@ -1,15 +1,15 @@
 /**
- * Phase-50 / 0003 — F2 Settings UI for AI.
+ * Lightweight Helix usage card for Settings.
  *
  * Live "Usage today" card on the Helix settings panel. Reads the
- * `/ai/usage/today` endpoint via the F3 `useAiUsageToday()` hook
+ * `/ai/usage/today` endpoint via `useAiUsageToday()`
  * (TanStack Query, polled at INTERVALS.STANDARD) and renders the
  * three top-line metrics (tokens in, tokens out, estimated cost in
  * the user's locale currency).
  *
  * Empty / loading / error states all degrade to the long-em-dash
  * placeholder so the visual layout stays stable while the data
- * arrives. The "no per-feature toggle" rule (§I6) is enforced
+ * arrives. The "no per-feature toggle" rule is enforced
  * server-side by the `__usage__` meta-feature guard, so this card
  * does NOT need its own withAiFeature wrapper.
  *

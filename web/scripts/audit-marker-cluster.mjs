@@ -1,14 +1,14 @@
 #!/usr/bin/env node
-// Phase-46 / Prompt 17 — MarkerCluster adoption audit.
+// MarkerCluster adoption audit.
 //
 // Walks `web/src/**/*.tsx` and fails if any `<Marker>` or `<CircleMarker>`
 // JSX element is rendered inside an `Array#map(...)` arrow callback
 // without either:
 //
-//   1. The same file rendering `<MarkerCluster>` somewhere (which means
-//      the loop is feeding the `points` prop and is fine), OR
-//   2. A `// marker-cluster:no <reason>` justification comment on one
-//      of the 10 lines preceding the offending JSX.
+// 1. The same file rendering `<MarkerCluster>` somewhere (which means
+// the loop is feeding the `points` prop and is fine), OR
+// 2. A `// marker-cluster:no <reason>` justification comment on one
+// of the 10 lines preceding the offending JSX.
 //
 // Why this exists
 // ---------------
@@ -23,9 +23,9 @@
 //
 // Allowed escape hatch
 // --------------------
-//   - `// marker-cluster:no heatmap — density visualization`
-//   - `// marker-cluster:no trail — sub-second drive playback`
-//   - `// marker-cluster:no waypoints — low-cardinality (<10) trip stops`
+// - `// marker-cluster:no heatmap — density visualization`
+// - `// marker-cluster:no trail — sub-second drive playback`
+// - `// marker-cluster:no waypoints — low-cardinality (<10) trip stops`
 //
 // Run via `npm run audit:marker-cluster` (chained from `npm run lint`).
 

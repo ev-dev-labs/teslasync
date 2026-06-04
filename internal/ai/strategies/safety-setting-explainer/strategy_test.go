@@ -1,12 +1,7 @@
-// Phase-50 / 0054 — P3 Helix safety setting explainer.
-//
-// Unit tests for the safety-setting-explainer Strategy. Mirrors
-// the shape of quiet-hours-suggestion's strategy_test.go (the
-// immediate precedent slice). The Strategy is a pure value (no
-// internal state, no IO) so the tests are tight: pin the feature
-// ID + system prompt + tool whitelist + redaction policy shape so
-// a future edit that breaks the contract surfaces here before the
-// dispatcher silently changes behaviour.
+// Unit tests for the safety-setting-explainer strategy.
+// The strategy is a pure value, so these tests pin the feature ID,
+// system prompt, tool whitelist, and redaction policy before a
+// contract break can reach the dispatcher.
 
 package safetysettingexplainer
 
@@ -167,11 +162,7 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 // HH:MM time strings) and is PII-free by construction so no class
 // needs to be allowed in cleartext.
 //
-// The slice prompt explicitly mandates:
-//
-//	"Policy:              PolicyChatbot from internal/ai/redact/policies.go
-//	 Allowed classes:     none; current settings are redacted and no provider sees secrets
-//	 Round-trip required: yes"
+// Current settings remain redacted, and no provider sees secrets.
 func TestStrategy_RedactionPolicyChatbot(t *testing.T) {
 	t.Parallel()
 	s := New()

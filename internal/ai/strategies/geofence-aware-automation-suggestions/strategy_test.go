@@ -1,4 +1,4 @@
-// Phase-50 / 0039 — G3 Geofence-aware automation suggestions.
+// Geofence-aware automation suggestion strategy tests.
 //
 // Unit tests for the geofence-aware-automation-suggestions Strategy.
 // Mirrors the shape of nl-automation-builder's strategy_test.go (the
@@ -77,8 +77,7 @@ func TestStrategy_System(t *testing.T) {
 // sync with internal/ai/strategies/geofence-aware-automation-suggestions/goldens.yaml's
 // tools block (the eval harness loads tool names from the YAML; the
 // dispatcher loads them from here). The two tools are the same
-// process-wide instances slice 0016 (nl-automation-builder)
-// registers; this strategy DOES NOT re-register them.
+// process-wide instances registered by nl-automation-builder; this strategy DOES NOT re-register them.
 func TestStrategy_Tools(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -141,8 +140,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 
 // TestStrategy_ContextReturnsNil pins the empty-context contract. The
 // dispatcher seeds the user message via StrategyInput.LastMessage; the
-// strategy must not contribute extra prefix messages until a future
-// slice that needs per-vehicle automation summaries ships.
+// strategy must not contribute extra prefix messages until a future feature needs per-vehicle automation summaries.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -156,11 +154,10 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 }
 
 // TestStrategy_RedactionPolicyAlertBuilder proves the strategy hands
-// the dispatcher PolicyAlertBuilder wrapped through the F4↔F8 adapter.
+// the dispatcher PolicyAlertBuilder wrapped through the redaction adapter.
 // PolicyAlertBuilder denies every PII class — vehicle, place, and
-// channel identifiers flow through the typed F4 envelope, NOT through
-// prose. The slice prompt mandates "Allowed classes: none; geofence
-// IDs flow through tools".
+// channel identifiers flow through the typed envelope, not through
+// prose. Geofence IDs flow through tools, so no PII class is allowed in cleartext.
 func TestStrategy_RedactionPolicyAlertBuilder(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -175,9 +172,9 @@ func TestStrategy_RedactionPolicyAlertBuilder(t *testing.T) {
 	if want.Mode != redact.ModeRedactedTags {
 		t.Errorf("redact.PolicyAlertBuilder Mode = %v, want ModeRedactedTags", want.Mode)
 	}
-	// The slice prompt is explicit: "Allowed classes: none". A
-	// future edit that adds an allow-list class would silently
-	// degrade the trust posture of every geofence-aware draft.
+	// No PII class is allowed in cleartext. A future edit that adds
+	// an allow-list class would silently degrade the trust posture of
+	// every geofence-aware draft.
 	if len(want.Allow) != 0 {
 		t.Errorf("redact.PolicyAlertBuilder.Allow = %v, want empty (slice prompt: 'Allowed classes: none')", want.Allow)
 	}

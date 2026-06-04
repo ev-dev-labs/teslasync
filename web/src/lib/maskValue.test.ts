@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 32 — maskValue helper tests.
+ * maskValue helper tests.
  *
  * Covers the five MaskVariant strategies, edge cases (empty input,
  * very short strings, unicode), and the showLast override.

@@ -1,7 +1,7 @@
 /**
  * @module components/feedback/RequiresAuth
  *
- * Phase-46 / Prompt 57 — auth-gated section wrapper.
+ * Auth-gated section wrapper.
  *
  * Wrap any section that has no useful behaviour without an upstream
  * identity provider configured. In open mode (or while the
@@ -146,7 +146,6 @@ function RequiresAuthPlaceholder({
     // <reason>` annotation — neither fits naturally here, and the
     // placeholder needs a stable per-capability data-testid that
     // <EmptyState> doesn't expose. Mirrors the pattern used by the
-    // Phase-46/Prompt-44 RBAC placeholder.
     <div
       role="status"
       data-testid={requiresAuthEmptyTestId(capability)}

@@ -12,8 +12,8 @@ func TestDeriveExpectedState(t *testing.T) {
 	// store's Update path. We call Update just before tests, so this
 	// is effectively time.Now(). Freshness is controlled by the `now`
 	// parameter passed to DeriveExpectedState.
-	fresh := time.Now()                                    // "now" for fresh signals
-	stale := time.Now().Add(3 * time.Minute)               // "now" that makes signals 3 min old → stale
+	fresh := time.Now()                                       // "now" for fresh signals
+	stale := time.Now().Add(3 * time.Minute)                  // "now" that makes signals 3 min old → stale
 	slightlyStale := time.Now().Add(SignalFreshnessThreshold) // exactly at threshold boundary
 
 	tests := []struct {
@@ -145,12 +145,12 @@ func TestDeriveExpectedState(t *testing.T) {
 			wantReason: "Gear=D",
 		},
 		{
-			// Phase-42a: codec canonicalizes proto enum variants to
-			// the short form ("Charging", "Starting", ...). The legacy
-			// long-form ("DetailedChargeStateCharging") is no longer
-			// a valid producer output — protomodel.DecodeValue strips
-			// the per-enum prefix at the SINGLE conversion point
-			// before the value reaches signal.Store.
+			// The codec canonicalizes proto enum variants to the short
+			// form ("Charging", "Starting", ...). The legacy long-form
+			// ("DetailedChargeStateCharging") is no longer a valid
+			// producer output; protomodel.DecodeValue strips the per-enum
+			// prefix at the single conversion point before the value
+			// reaches signal.Store.
 			//
 			// This case verifies the reconciler treats the canonical
 			// short form via the adapter the same way as the
@@ -163,11 +163,11 @@ func TestDeriveExpectedState(t *testing.T) {
 			wantReason: "charge state active (no gear)",
 		},
 		{
-			// Phase-42: the SignalAdapter recognises only the canonical
-			// proto enum suffixes ("Charging", "Starting") for the
-			// DetailedChargeState / ChargeState fields. The legacy
-			// "Enable" string emitted by older code paths is no longer
-			// in the typed enum (DetailedChargeStateValue ∈ {Unknown,
+			// SignalAdapter recognises only canonical proto enum suffixes
+			// ("Charging", "Starting") for DetailedChargeState and
+			// ChargeState. The legacy "Enable" string emitted by older
+			// code paths is no longer in the typed enum
+			// (DetailedChargeStateValue ∈ {Unknown,
 			// Disconnected, NoPower, Starting, Charging, Complete,
 			// Stopped}) and is therefore treated as "not charging" —
 			// with no Gear, no ChargeAmps, and no VehicleSpeed signal,
@@ -311,10 +311,9 @@ func (f *fakeReconcileSource) IsCharging(_ int64) (bool, bool) {
 	return f.charging, f.chargingOk
 }
 
-// TestDeriveExpectedState_SeamFakeSource exercises the
-// adapter-driven core (deriveExpectedState) via a hand-rolled fake
-// reconcileSignalSource, without any signal store dependency. This
-// is the interface seam introduced in phase-42 prompt 0067.
+// TestDeriveExpectedState_SeamFakeSource exercises the adapter-driven
+// core (deriveExpectedState) via a hand-rolled fake reconcileSignalSource,
+// without any signal store dependency.
 func TestDeriveExpectedState_SeamFakeSource(t *testing.T) {
 	now := time.Date(2026, 5, 4, 12, 0, 0, 0, time.UTC)
 	fresh := now.Add(-30 * time.Second)

@@ -14,6 +14,7 @@ import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import type { ChargingSession } from '@/api/types';
+import { convertEnergyFromSI } from '@/lib/unitConversion';
 
 /** Classify a charging session into a charger-type bucket for color-coding. */
 function classifyChargerType(session: ChargingSession): string {
@@ -55,7 +56,7 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
         label: s.started_at
           ? formatDateShort(s.started_at)
           : `#${i + 1}`,
-        energy: s.total_energy_added_wh ?? 0,
+        energy: convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh'),
         type: classifyChargerType(s),
       }))
       .reverse(),

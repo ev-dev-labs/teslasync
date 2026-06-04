@@ -95,34 +95,33 @@ func TestSmoke_Store_UnknownVehicle(t *testing.T) {
 	}
 }
 
-
 func TestLastSeenAt_EmptyVehicle(t *testing.T) {
-s := New()
-if got := s.LastSeenAt(999); !got.IsZero() {
-t.Fatalf("LastSeenAt(unknown) = %v, want zero", got)
-}
+	s := New()
+	if got := s.LastSeenAt(999); !got.IsZero() {
+		t.Fatalf("LastSeenAt(unknown) = %v, want zero", got)
+	}
 }
 
 func TestLastSeenAt_ReturnsNewest(t *testing.T) {
-s := New()
-s.Update(1, map[string]interface{}{"A": 1.0})
-first := s.Get(1, "A").Timestamp
+	s := New()
+	s.Update(1, map[string]interface{}{"A": 1.0})
+	first := s.Get(1, "A").Timestamp
 
-// Sleep enough for distinct timestamps; the store stamps each Update
-// with a fresh time.Now().UTC() so two Updates in sequence diverge.
-time.Sleep(2 * time.Millisecond)
+	// Sleep enough for distinct timestamps; the store stamps each Update
+	// with a fresh time.Now().UTC() so two Updates in sequence diverge.
+	time.Sleep(2 * time.Millisecond)
 
-s.Update(1, map[string]interface{}{"B": 2.0})
-second := s.Get(1, "B").Timestamp
+	s.Update(1, map[string]interface{}{"B": 2.0})
+	second := s.Get(1, "B").Timestamp
 
-if !second.After(first) {
-t.Fatalf("test setup invalid: second %v not after first %v", second, first)
-}
+	if !second.After(first) {
+		t.Fatalf("test setup invalid: second %v not after first %v", second, first)
+	}
 
-got := s.LastSeenAt(1)
-if !got.Equal(second) {
-t.Fatalf("LastSeenAt() = %v, want newest %v (first=%v)", got, second, first)
-}
+	got := s.LastSeenAt(1)
+	if !got.Equal(second) {
+		t.Fatalf("LastSeenAt() = %v, want newest %v (first=%v)", got, second, first)
+	}
 }
 
 // TestSet_TypedPrimitives covers the per-field Set method that the new

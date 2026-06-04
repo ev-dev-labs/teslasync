@@ -4,10 +4,10 @@ import "fmt"
 
 // Definition is an immutable FSM definition with a transition table.
 type Definition struct {
-	Name         string
-	InitialSt    State
-	transitions  map[transitionKey]State
-	allStates    map[State]bool
+	Name        string
+	InitialSt   State
+	transitions map[transitionKey]State
+	allStates   map[State]bool
 }
 
 type transitionKey struct {

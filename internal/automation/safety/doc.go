@@ -1,4 +1,4 @@
-// Package safety enforces safety guards on automation execution. implements the user-defined automation engine.
+// Package safety enforces safety guards on automation execution.
 //
 // Layer: platform
 package safety

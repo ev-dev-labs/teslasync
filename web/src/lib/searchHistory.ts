@@ -1,8 +1,6 @@
 /**
  * Per-scope recent-search history.
  *
- * Phase-46 / Prompt 09.
- *
  * Backs the "recent searches" dropdown surfaced by `<SearchInput>` when it is
  * focused with an empty value. The store is a tiny localStorage envelope:
  *

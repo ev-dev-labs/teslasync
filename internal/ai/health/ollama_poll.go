@@ -1,5 +1,5 @@
-// Package health is the per-provider liveness poller. F9 ships with
-// one consumer — the Ollama poller — that watches the user-configured
+// Package health contains per-provider liveness pollers. The Ollama
+// poller watches the user-configured
 // local Ollama server and signals the [limit.Limiter] to suspend
 // dispatch to the provider when the server goes unhealthy (typically
 // the model OOM'd and the daemon is restarting).
@@ -37,9 +37,8 @@ import (
 )
 
 // DefaultInterval is the time between health probes when no override
-// is supplied. 30s matches the F9 prompt design D10.6 and is a
-// compromise between "react fast to an OOM" and "do not load the
-// daemon with a probe storm".
+// is supplied. 30s balances quick OOM detection against avoiding a
+// probe storm on the daemon.
 const DefaultInterval = 30 * time.Second
 
 // DefaultFailureThreshold is the number of consecutive failed probes
@@ -119,7 +118,7 @@ type Config struct {
 	Clock Clock
 }
 
-// OllamaPoller is the F9 health watcher for a local Ollama server.
+// OllamaPoller watches a local Ollama server.
 // Run it on the app background context; it exits when the context
 // cancels. Safe for concurrent observation via [LastStatus] /
 // [ConsecutiveFailures].

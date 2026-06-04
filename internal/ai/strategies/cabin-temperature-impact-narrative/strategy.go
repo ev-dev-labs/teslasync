@@ -1,5 +1,5 @@
-// Package cabintemperatureimpactnarrative is the Phase-50 / 0032 T2
-// strategy for the LLM-narrated cabin temperature impact explainer.
+// Package cabintemperatureimpactnarrative implements the LLM-narrated
+// cabin temperature impact explainer.
 //
 // The strategy declares:
 //
@@ -39,11 +39,6 @@
 // line, and the temperature tips — is unchanged. The deterministic
 // aggregates remain the canonical baseline; off-mode users never
 // see the AI surface at all (ADR-015 §I3, §I5, §I6).
-//
-// Service-worker chunks: this slice's frontend code is loaded
-// under the page-bundle for /temperature-impact; the off-mode
-// walker validates code chunks via the `withAiFeature` HOC + the
-// AI_FEATURES map. See the slice log for the documented mapping.
 //
 // ADR-015 alignment:
 //
@@ -172,27 +167,17 @@ func (s *Strategy) Tools() []string {
 //
 // Future work: this is where a per-vehicle "preferred bucket
 // granularity" preference snippet would be injected once the
-// surface grows that knob. Today's slice keeps Context empty so
+// surface grows that knob. The current feature keeps Context empty so
 // the dispatcher's behaviour is fully determined by [System] +
 // History.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
 }
 
-// RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyCabinTemperatureImpactNarrative wrapped through the F4↔F8
-// adapter so the dispatcher's per-request ctx-installation step
-// (dispatch.Run installs the policy via redact.WithPolicy) sees
-// the concrete policy.
-//
-// Per the slice prompt: "Allowed classes: ClassVehicleName only;
-// trip and location details remain tagged. Round-trip required:
-// yes". PolicyCabinTemperatureImpactNarrative is the per-feature
-// constructor with the same allow-list as PolicyDigest /
-// PolicyCostForecastNarration / PolicyVampireDrainExplanation —
-// kept as a distinct identifier so a future per-feature change to
-// cabin-temperature-impact-narrative's allow-list does not bleed
-// across the other read-only narrators.
+// RedactionPolicy implements [strategy.Strategy]. The policy allows
+// only vehicle names in cleartext; trip and location details remain
+// tagged so this feature can evolve without changing other narrators'
+// privacy posture.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {
 	return redactadapter.Wrap(redact.PolicyCabinTemperatureImpactNarrative())
 }

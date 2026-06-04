@@ -5,7 +5,7 @@ import { Button } from '../ui/Button'
 import { useVersionWatcher } from '@/hooks/useVersionWatcher'
 
 /**
- * Phase-45 / Prompt 11 — Soft "new version available" banner.
+ * Soft "new version available" banner.
  *
  * Surfaced when {@link useVersionWatcher} detects that the backend has
  * been redeployed since the SPA first booted. The user can either:

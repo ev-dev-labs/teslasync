@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Phase-46 / Prompt 69 — Touch-target audit (WCAG 2.5.5).
+ * Touch-target audit (WCAG 2.5.5).
  *
  * Forward-looking guard against cramped clickable controls. WCAG 2.5.5
  * (Target Size, AAA) and the Mobile Accessibility Task Force baseline
@@ -13,42 +13,42 @@
  * Detection algorithm — for every JSX element matching
  * `<Button|<button|<a|<IconButton` followed by `\s|/|>`:
  *
- *  1. Extract the opening tag (bracket-aware so JSX expression children
- *     like `<Btn props={{…}}>` don't confuse the tag boundary).
- *  2. Skip the element when it lacks any "interactive" prop —
- *     `onClick`, `onPress`, `onPointerDown`, `formAction`, `href=`,
- *     `to=`, or `type="submit"`. Decorative buttons and presentational
- *     anchors aren't touch targets.
- *  3. Skip the element when the file/name pair appears in
- *     `web/src/lib/touchTargetAllowlist.ts`.
- *  4. PASS when the opening tag's text contains a known SAFE class —
- *     `min-h-11|12|14|16|20|24`, `h-11|12|14|16|20|24|d-row`,
- *     arbitrary-value variants like `h-[44px]`/`min-h-[44px]`,
- *     `p-3|4|5|6|7|8|10|12`, `py-…`, `px-…`, `size-11|12|14|16|20|24`,
- *     or the new `touch-target` utility — OR a Button `size="lg|md|auto"`
- *     prop. (`md` is the Button default and resolves to `h-10` = 40 px,
- *     which exceeds WCAG 2.5.5 AA 24 × 24.)
- *  5. PASS for `<Button>` with NO `size=` prop at all (default `md`).
- *  6. FAIL when the opening tag has an explicitly tiny dimension
- *     (`h-3|4|5|6|7|8|w-3|4|5|6|7|8|min-h-…|min-w-…|size-…`) on the
- *     element itself with no SAFE class to compensate.
- *  7. FAIL when the element wraps a single icon-only child (a self-
- *     closing JSX tag whose className contains `h-3|4|5|6` or
- *     `w-3|4|5|6`, the typical `<Icon h-4 w-4 />` shape) AND the
- *     opening tag has padding strictly below `p-2` (i.e. no padding,
- *     `p-0`, `p-0.5`, `p-1`, `p-1.5`, or only horizontal/vertical
- *     padding below `2`). 16 + 4 + 4 = 24 px is the AA floor.
- *  8. PASS otherwise.
+ * 1. Extract the opening tag (bracket-aware so JSX expression children
+ * like `<Btn props={{…}}>` don't confuse the tag boundary).
+ * 2. Skip the element when it lacks any "interactive" prop —
+ * `onClick`, `onPress`, `onPointerDown`, `formAction`, `href=`,
+ * `to=`, or `type="submit"`. Decorative buttons and presentational
+ * anchors aren't touch targets.
+ * 3. Skip the element when the file/name pair appears in
+ * `web/src/lib/touchTargetAllowlist.ts`.
+ * 4. PASS when the opening tag's text contains a known SAFE class —
+ * `min-h-11|12|14|16|20|24`, `h-11|12|14|16|20|24|d-row`,
+ * arbitrary-value variants like `h-[44px]`/`min-h-[44px]`,
+ * `p-3|4|5|6|7|8|10|12`, `py-…`, `px-…`, `size-11|12|14|16|20|24`,
+ * or the new `touch-target` utility — OR a Button `size="lg|md|auto"`
+ * prop. (`md` is the Button default and resolves to `h-10` = 40 px,
+ * which exceeds WCAG 2.5.5 AA 24 × 24.)
+ * 5. PASS for `<Button>` with NO `size=` prop at all (default `md`).
+ * 6. FAIL when the opening tag has an explicitly tiny dimension
+ * (`h-3|4|5|6|7|8|w-3|4|5|6|7|8|min-h-…|min-w-…|size-…`) on the
+ * element itself with no SAFE class to compensate.
+ * 7. FAIL when the element wraps a single icon-only child (a self-
+ * closing JSX tag whose className contains `h-3|4|5|6` or
+ * `w-3|4|5|6`, the typical `<Icon h-4 w-4 />` shape) AND the
+ * opening tag has padding strictly below `p-2` (i.e. no padding,
+ * `p-0`, `p-0.5`, `p-1`, `p-1.5`, or only horizontal/vertical
+ * padding below `2`). 16 + 4 + 4 = 24 px is the AA floor.
+ * 8. PASS otherwise.
  *
  * Why a regex/heuristic walker rather than a JSX parser:
- *  • The audit needs to run as a fast, dependency-free `node` script in
- *    pre-commit / CI. Bringing in `@babel/parser` for one audit doubles
- *    cold-start cost and adds yet another transitive dependency to
- *    track for CVE alerts.
- *  • The patterns we care about (`<button onClick><X h-4 w-4/></button>`
- *    versus `<button className="h-11 w-11" onClick><X/></button>`) are
- *    cleanly captured by bracket-aware text scanning.
- *  • False positives can be silenced via the explicit allowlist.
+ * • The audit needs to run as a fast, dependency-free `node` script in
+ * pre-commit / CI. Bringing in `@babel/parser` for one audit doubles
+ * cold-start cost and adds yet another transitive dependency to
+ * track for CVE alerts.
+ * • The patterns we care about (`<button onClick><X h-4 w-4/></button>`
+ * versus `<button className="h-11 w-11" onClick><X/></button>`) are
+ * cleanly captured by bracket-aware text scanning.
+ * • False positives can be silenced via the explicit allowlist.
  *
  * Exit 0 on success, 1 with per-file FAIL lines (file:line) on regression.
  */
@@ -96,14 +96,14 @@ const SAFE_CLASS_PATTERNS = [
   // 6 + 16 + 6 = 28 px (clears AA). `p-2` (8 px) ⇒ 32 px. `p-3`+ gives
   // ≥ 40 px (clears AAA).
   /\b(p|px|py)-(1\.5|[2-9]|1[0-9]|2[0-4]|d-pad-[xy])\b/,
-  // Density-aware padding tokens (Phase 40 / Prompt 44).
+  // Density-aware padding tokens.
   /\b(p|px|py)-d-pad-[xy]\b/,
-  // The `touch-target` utilities we add in this prompt:
-  //  • `touch-target`         — direct min-h/min-w 44 px (good for
-  //                              elements that can grow).
-  //  • `touch-target-overlay` — invisible ::before hit-extender for
-  //                              elements that must stay visually small
-  //                              (timeline markers, chip-X glyphs).
+  // The `touch-target` utilities we add here:
+  // • `touch-target` — direct min-h/min-w 44 px (good for
+  // elements that can grow).
+  // • `touch-target-overlay` — invisible::before hit-extender for
+  // elements that must stay visually small
+  // (timeline markers, chip-X glyphs).
   /\btouch-target(-overlay)?\b/,
 ];
 

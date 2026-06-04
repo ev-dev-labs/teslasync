@@ -1,5 +1,3 @@
-// Phase-50 / 0040 — X1 Period compare narration.
-//
 // Unit tests for the period-compare-narration Strategy. Mirrors the
 // shape of cost-forecast-narration's strategy_test.go (the closest
 // precedent: single read-only narrator strategy with no RAG). The
@@ -144,9 +142,8 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
-// the strategy must not contribute extra prefix messages until a
-// future slice that needs preferred-period-comparison preferences
-// ships.
+// the strategy must not contribute extra prefix messages until
+// preferred-period-comparison preferences need them.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -161,11 +158,10 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 
 // TestStrategy_RedactionPolicyPeriodCompareNarration proves the
 // strategy hands the dispatcher PolicyPeriodCompareNarration
-// wrapped through the F4↔F8 adapter.
+// wrapped through the redaction adapter.
 // PolicyPeriodCompareNarration allows ClassVehicleName so the
 // narration can address the user's car; every other PII class is
-// redacted to a round-trip tag. The slice prompt explicitly
-// mandates a PolicyDigest-shaped allow-list with round-trip tags.
+// redacted to a round-trip tag.
 func TestStrategy_RedactionPolicyPeriodCompareNarration(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -217,8 +213,6 @@ func TestStrategy_EvalGoldensReturnsNil(t *testing.T) {
 		t.Fatalf("EvalGoldens() = %v, want nil (goldens live in YAML)", g)
 	}
 }
-
-// --- helpers ---------------------------------------------------------
 
 func contains(s, sub string) bool {
 	return len(s) >= len(sub) && (s == sub || indexOf(s, sub) >= 0)

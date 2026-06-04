@@ -17,8 +17,7 @@ import { CodeBlock } from './CodeBlock';
  * Links open in a new tab with `rel="noopener noreferrer"` so the chatbot
  * surface can't be used as a redirect vector.
  *
- * Code blocks delegate to `<CodeBlock>` (Phase 40 / Prompt 56) which adds
- * a copy-to-clipboard affordance and a language tag.
+ * Code blocks delegate to `<CodeBlock>` for copy-to-clipboard and language tags.
  */
 
 const ReactMarkdownLazy = lazy(async () => {

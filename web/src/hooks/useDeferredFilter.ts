@@ -2,8 +2,6 @@
  * useDeferredFilter — keep an input field responsive while a heavy list
  * re-renders in the background.
  *
- * Phase-46 / Prompt 18.
- *
  * Pairs an "instant" controlled input value (`value`) with a "deferred"
  * value (`deferred`) that React 18 lags behind during expensive renders
  * via `useDeferredValue`. Bind the input to `value`; feed `deferred`

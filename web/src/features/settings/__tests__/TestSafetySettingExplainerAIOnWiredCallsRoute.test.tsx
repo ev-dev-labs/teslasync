@@ -1,48 +1,14 @@
-// Phase-50 / 0054 — P3 Helix safety setting explainer.
-// Phase-50 / W1 inline wiring (per slice prompt 0054) — on-mode
-// wiring test proving the "Explain my settings" button opens an
-// SSE stream against the registered backend route POST
-// /api/v1/ai/settings/safety/explain.
+// Positive wiring test for the safety setting explainer. It mounts the feature
+// in cloud mode, stubs fetch with an SSE stream, clicks "Explain my settings",
+// and verifies exactly one POST to /api/v1/ai/settings/safety/explain.
 //
-// `TestSafetySettingExplainerAIOnWiredCallsRoute` is the
-// load-bearing positive wiring proof for slice 0054's W1 inline
-// addendum. It mounts the AISafetySettingExplainer component
-// with ai_mode='cloud' + the per-feature toggle on, stubs global
-// fetch with a deterministic SSE byte stream, clicks the action
-// button, and asserts:
+// The path must match the backend registry; off-mode tests only prove absence
+// and would not catch a production 404. The second click while streaming must
+// be ignored by the double-submit guard.
 //
-//   1. Exactly ONE POST against the registered backend route
-//      `/api/v1/ai/settings/safety/explain` is enqueued with
-//      `Content-Type: application/json` and an empty-object body.
-//      The path MUST match the registry entry verbatim — a typo
-//      here is invisible to the off-mode test (which only
-//      asserts absence) and would silently 404 in production.
-//   2. The first `delta` event's text renders inside the gated
-//      wrapper `data-testid="ai-feature-safety-setting-explainer-root"`.
-//   3. A second click while `state === 'streaming'` is a no-op —
-//      the second fetch call is NOT enqueued (the double-submit
-//      guard inside useAiStream + the visual `disabled` mirror
-//      it from canStart). This proves W1 Rule A — the disabled
-//      prop is a computed expression that reacts to state.
-//   4. The existing off-mode test
-//      (`TestSafetySettingExplainerAIOffShowsStaticHelpOnly`)
-//      continues to pass unchanged — wiring MUST NOT regress
-//      the off-mode absence invariant. That assertion lives in
-//      the sibling file and is exercised independently by the
-//      npm test runner.
-//
-// HX (Helix UX) addendum compliance:
-//   - The CTA is located via `getByRole('button', { name:
-//     /Explain my settings/i })` — UNANCHORED regex because
-//     AIFeatureCard composes the accessible name as
-//     "Ask Helix · Explain my settings". An anchored regex
-//     would not match.
-//
-// Render contract is NARRATIVE — the strategy never proposes a
-// setting change, never emits a typed tool_result that the
-// component would copy into a form. There is no "Apply to form"
-// button on this surface. The "first delta renders" assertion
-// is the full handoff this slice ships.
+// Use an unanchored button-name regex because AIFeatureCard composes the
+// accessible name as "Ask Helix · Explain my settings". This surface is
+// narrative only; it never proposes or applies settings changes.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {

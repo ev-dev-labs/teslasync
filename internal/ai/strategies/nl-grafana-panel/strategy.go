@@ -1,5 +1,4 @@
-// Package nlgrafanapanel is the Phase-50 / 0058 PU2 strategy for
-// the LLM-backed nl-grafana-panel surface.
+// Package nlgrafanapanel contains the LLM-backed nl-grafana-panel strategy.
 //
 // The strategy declares:
 //
@@ -20,7 +19,7 @@
 //     {prompt, panel, rationale} input and return a normalised +
 //     validated GrafanaPanelDraft envelope. The tool is per-request
 //     scope-bound to the curated catalog the handler installed via
-//     tools.WithGrafanaPanelScope; the LLM CANNOT propose a panel
+//     nlq.WithGrafanaPanelScope; the LLM CANNOT propose a panel
 //     type, datasource type, or postgres table that is not in the
 //     catalog. Defence-in-depth against prompt injection in
 //     operator-authored prompts.
@@ -217,9 +216,7 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyAlertBuilder from
-// internal/ai/redact/policies.go. Allowed classes: none; schema
-// and metric metadata are sufficient. Round-trip required: no."
+// Schema and metric metadata are sufficient for this strategy.
 // PolicyAlertBuilder's deny-by-default stance keeps every PII
 // class round-tripped to a tag before the message ever reaches
 // the provider — defence in depth against an operator-authored

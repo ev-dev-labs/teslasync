@@ -17,6 +17,7 @@ import { fmtNumber } from '@/lib/numberFormat';
 import { hasMeaningfulRoute, firstValidIndex } from '@/lib/geo';
 import type { DriveDetail } from '@/types/driving';
 import type { SpeedSegment } from './types';
+import { SPEED_SEGMENT_LOW_MPS, SPEED_SEGMENT_MED_MPS, SPEED_SEGMENT_HIGH_MPS } from './constants';
 import { convertSpeedFromSI } from '@/lib/unitConversion';
 
 /* Auto-fit map bounds to trail. Special-cases two cluster degeneracies that
@@ -138,10 +139,10 @@ export function RouteMapSection({ drive, trail, startPos, endPos, centerPos, spe
               <span className="flex items-center gap-1.5 text-green-400"><Flag className="h-3 w-3" /> {t('driveDetail.start', 'Start')}: {formatTime(drive.startTs)}</span>
               {hasRoute && trail.length > 1 && (
                 <div className="flex items-center gap-3 text-[var(--text-muted)]">
-                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-emerald-500" /> &lt;{fmtNumber(toSpeedDisplay(30))}</span>
-                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-cyan-400" /> {fmtNumber(toSpeedDisplay(30))}–{fmtNumber(toSpeedDisplay(60))}</span>
-                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-amber-500" /> {fmtNumber(toSpeedDisplay(60))}–{fmtNumber(toSpeedDisplay(100))}</span>
-                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-red-500" /> &gt;{fmtNumber(toSpeedDisplay(100))}</span>
+                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-emerald-500" /> &lt;{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_LOW_MPS))}</span>
+                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-cyan-400" /> {fmtNumber(toSpeedDisplay(SPEED_SEGMENT_LOW_MPS))}–{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_MED_MPS))}</span>
+                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-amber-500" /> {fmtNumber(toSpeedDisplay(SPEED_SEGMENT_MED_MPS))}–{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_HIGH_MPS))}</span>
+                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-red-500" /> &gt;{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_HIGH_MPS))}</span>
                   <span>{speedUnit}</span>
                 </div>
               )}

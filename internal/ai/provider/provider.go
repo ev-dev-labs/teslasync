@@ -31,13 +31,13 @@ const (
 // Assistant messages that propose a tool call set Tool to the parsed
 // proposal; Content may be empty in that case.
 type Message struct {
-	Role    string    `json:"role"`
-	Content string    `json:"content"`
-	Name    string    `json:"name,omitempty"`
-	ToolID  string    `json:"tool_id,omitempty"`
+	Role    string `json:"role"`
+	Content string `json:"content"`
+	Name    string `json:"name,omitempty"`
+	ToolID  string `json:"tool_id,omitempty"`
 	// Tool is the legacy single-tool-call carrier kept for callers
 	// that built provider.Message values by hand (test fixtures and
-	// pre-Phase-50 code). New code should use [ToolCalls] (plural)
+	// older code). New code should use [ToolCalls] (plural)
 	// because OpenAI / Azure / Anthropic all allow an assistant
 	// message to propose multiple tool calls in one turn, and the
 	// dispatcher must round-trip every one of them through the
@@ -56,8 +56,7 @@ type Message struct {
 
 // ToolCall is the structural representation of a model-proposed tool
 // invocation. Arguments is the raw JSON the model emitted; the dispatcher
-// (slice F4) validates it against the registered tool's input schema
-// before executing anything.
+// validates it against the registered tool's input schema before executing anything.
 type ToolCall struct {
 	ID        string          `json:"id"`
 	Name      string          `json:"name"`
@@ -67,8 +66,7 @@ type ToolCall struct {
 // ToolSpec is the feature → provider declaration of an available tool.
 // Parameters MUST be a JSON Schema document the underlying provider
 // accepts unchanged. The schema is generated from the handler DTO via
-// reflection (R2 mitigation, slice F4) so the validator is the same
-// code the live handler runs.
+// reflection so the validator is the same code the live handler runs.
 type ToolSpec struct {
 	Name        string          `json:"name"`
 	Description string          `json:"description"`
@@ -94,7 +92,7 @@ type ChatRequest struct {
 //
 // Token counts are best-effort: adapters that do not surface usage
 // (e.g. some self-hosted runtimes) return zero. The audit decorator
-// (slice F3) treats zero as "unknown" and records it without failing.
+// treats zero as "unknown" and records it without failing.
 type ChatResponse struct {
 	Message      Message
 	ToolCalls    []ToolCall

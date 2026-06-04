@@ -21,6 +21,12 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/automation/trigger"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbauto "github.com/ev-dev-labs/teslasync/internal/database/automation"
+	energydb "github.com/ev-dev-labs/teslasync/internal/database/energy"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
+	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	tsmqtt "github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
@@ -70,7 +76,7 @@ func main() {
 			Msg("OpenTelemetry tracing enabled")
 	}
 
-	// Pyroscope continuous profiling — non-fatal (Phase-49 / p49-profiling).
+	// Pyroscope continuous profiling is optional and non-fatal.
 	profilerShutdown, err := tracing.StartProfiler(ctx, cfg, "teslasync-automation-worker")
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to initialize pyroscope profiler, continuing without it")
@@ -103,7 +109,7 @@ func main() {
 	// (LoggedTransport then logs zerolog only).
 	var inboundAPILogger apilog.Logger
 	if cfg.APILogs.Enabled {
-		apiLogRepo := database.NewAPICallLogRepo(db)
+		apiLogRepo := systemdb.NewAPICallLogRepo(db)
 		inboundAPILogger = apilog.NewAsync(apiLogRepo, apilog.AsyncOptions{
 			QueueCapacity: cfg.APILogs.QueueCapacity,
 			BatchSize:     cfg.APILogs.BatchSize,
@@ -150,13 +156,13 @@ func main() {
 	log.Info().Msg("Tesla client initialised")
 
 	// ── Repositories ──────────────────────────────────────────────────
-	automationRepo := database.NewAutomationRepo(db)
-	historyRepo := database.NewAutomationHistoryRepo(db)
-	vehicleRepo := database.NewVehicleRepo(db)
-	commandLogRepo := database.NewCommandLogRepo(db)
-	settingsRepo := database.NewSettingsRepo(db)
-	notifRepo := database.NewNotificationRepo(db)
-	varRepo := database.NewAutomationVariableRepo(db)
+	automationRepo := dbauto.NewAutomationRepo(db)
+	historyRepo := dbauto.NewAutomationHistoryRepo(db)
+	vehicleRepo := vehicledb.NewVehicleRepo(db)
+	commandLogRepo := energydb.NewCommandLogRepo(db)
+	settingsRepo := settingsdb.NewSettingsRepo(db)
+	notifRepo := dbnotif.NewNotificationRepo(db)
+	varRepo := dbauto.NewAutomationVariableRepo(db)
 
 	// ── Action Chain Executor ─────────────────────────────────────────
 	chainExecutor := action.NewChainExecutor(vehicleRepo)
@@ -355,9 +361,9 @@ func safePrefix(token string) string {
 	return token[:8] + "***"
 }
 
-// variableRepoAdapter wraps database.AutomationVariableRepo to satisfy action.VariableRepo.
+// variableRepoAdapter wraps dbauto.AutomationVariableRepo to satisfy action.VariableRepo.
 type variableRepoAdapter struct {
-	repo *database.AutomationVariableRepo
+	repo *dbauto.AutomationVariableRepo
 }
 
 func (a *variableRepoAdapter) Get(ctx context.Context, key string) (*action.VariableEntry, error) {

@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 //
-// TeslaSync custom service worker (Phase 40 / Prompt 52).
+// TeslaSync custom service worker.
 //
 // vite-plugin-pwa is configured with strategies: 'injectManifest' so this
 // file is bundled by the plugin and registered as the production SW.
@@ -114,13 +114,10 @@ registerRoute(
 interface PushPayload {
   title?: string
   body?: string
-  // Phase-49 / Slice 0010 — `icon` was removed from the wire payload
-  // (the duplicate-icon bug). The interface intentionally drops it too
-  // so a future contributor cannot start populating `data.icon` from
-  // the SW side without first re-introducing the contract on the
-  // backend's webpush.Payload struct (which has its own regression
-  // test pinning the absence). Per-event contextual icons are tracked
-  // as future work; see prompt 0010 for the rationale.
+  // `icon` is intentionally absent from the wire payload to avoid duplicate
+  // notification icons. The interface also omits it so the service worker
+  // cannot populate `data.icon` unless the backend webpush.Payload contract is
+  // updated first. Per-event contextual icons are future work.
   badge?: string
   tag?: string
   url?: string
@@ -143,15 +140,12 @@ self.addEventListener('push', (event: PushEvent) => {
   const title = data.title ?? 'TeslaSync'
   const options: NotificationOptions = {
     body: data.body ?? '',
-    // Phase-49 / Slice 0010 — `icon` is intentionally NOT set. The PWA
-    // manifest icon (web/vite.config.ts) already populates the left
-    // thumbnail slot of the Android notification card. Setting `icon`
-    // here populates the OPTIONAL right-hand large-image slot too,
-    // which on Android Chrome renders the SAME teal lightning bolt as
-    // the manifest icon and produces the user-reported "duplicate
-    // icon" appearance. Leaving it unset matches the Macy's / Yahoo
-    // notification style (icon on left only). Per-event contextual
-    // icons are tracked as future work; see prompt 0010.
+    // `icon` is intentionally NOT set. The PWA manifest icon
+    // (web/vite.config.ts) already populates the left thumbnail slot of the
+    // Android notification card. Setting `icon` here also populates the
+    // optional right-hand large-image slot, creating a duplicate icon. Leaving
+    // it unset matches common notification styling. Per-event contextual icons
+    // are future work.
     //
     // `badge` is the small monochrome status-bar icon on Android. The
     // OS discards colour data and re-tints the alpha channel, so this

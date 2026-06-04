@@ -8,7 +8,7 @@ import { maskFor, type MaskVariant } from '@/lib/maskValue'
 import { cn } from '@/lib/cn'
 
 /**
- * Phase-46 / Prompt 32 — `<MaskedValue>` privacy primitive.
+ * `<MaskedValue>` privacy primitive.
  *
  * Renders a sensitive string in masked form by default with a
  * click-to-reveal affordance. Used wherever the cleartext value is
@@ -44,12 +44,10 @@ import { cn } from '@/lib/cn'
  *
  * Why default `auditOnReveal=false`:
  *
- *   - This prompt ships the privacy primitive ahead of the route
- *     wiring for `POST /audit/reveal`. The Blocked Path in the prompt
- *     spec authorises shipping the visible mask (the primary
- *     protection) and toggling audit-on-reveal to true in a follow-up
- *     once the route is registered. The default is conservative so we
- *     never silently 404 on every reveal in the meantime.
+ *   - The privacy primitive shipped before the `POST /audit/reveal`
+ *     route. The visible mask is the primary protection; audit-on-reveal
+ *     should only be enabled once that route exists. The default is
+ *     conservative so every reveal does not silently 404 in the meantime.
  */
 
 export type MaskedValueVariant = MaskVariant

@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 26 — UnitInput integration tests.
+ * UnitInput integration tests.
  *
  * Locks in:
  *   1. Renders an <input> with the user's display unit symbol as suffix.
@@ -166,7 +166,7 @@ describe('UnitInput — commit on blur / Enter', () => {
     fireEvent.focus(input)
     fireEvent.change(input, { target: { value: '100' } })
     fireEvent.blur(input)
-    // 100 km/h → ~62.137 mph (canonical)
+    // Km/h → ~62.137 mph (canonical)
     expect(onCommit).toHaveBeenCalledTimes(1)
     const arg = onCommit.mock.calls[0][0]
     expect(arg).not.toBeNull()
@@ -272,7 +272,7 @@ describe('UnitInput — strict & required', () => {
     )
     const input = screen.getByLabelText(/energy/i) as HTMLInputElement
     fireEvent.focus(input)
-    // "0,5" in de-DE non-strict would be 0.5; strict goes through Number() → NaN → null
+    // "0,5" in de-DE non-strict would be 0.5; strict goes through Number → NaN → null
     fireEvent.change(input, { target: { value: '0,5' } })
     fireEvent.blur(input)
     expect(onCommit).toHaveBeenCalledWith(null)

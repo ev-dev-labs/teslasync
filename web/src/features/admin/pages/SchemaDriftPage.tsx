@@ -1,5 +1,5 @@
 /**
- * Schema Drift Page — Phase-45 admin observability surface.
+ * Schema Drift admin observability surface.
  *
  * Renders the current schema fingerprint vs the recorded seed
  * fingerprint, with deltas for table/column/index counts. The seed
@@ -61,6 +61,7 @@ export default function SchemaDriftPage() {
 
           {!query.isLoading && !query.data && !subsystemMissing && (
             <GlassPanel className="p-6">
+              {/* no-action: the schema fingerprint is seeded by an API restart, which is an ops action not exposed in the UI */}
               <EmptyState
                 icon={<Fingerprint className="h-8 w-8" />}
                 title={t('admin.schemaDrift.emptyTitle', 'No fingerprint available')}
@@ -181,8 +182,8 @@ function FingerprintCard({
 }: FingerprintCardProps) {
   const { t } = useTranslation();
   return (
-    <div className="rounded-md border border-white/10 bg-white/5 p-4">
-      <Text variant="bodySm" className="mb-2 font-medium text-white/90">
+    <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
+      <Text variant="bodySm" className="mb-2 font-medium text-[var(--text-primary)]">
         {title}
       </Text>
       <Caption className="mb-3 break-all font-mono">{sha256 || '—'}</Caption>
@@ -205,7 +206,7 @@ function FingerprintCard({
 function FingerprintStat({ label, value }: { label: string; value: number }) {
   return (
     <div>
-      <div className="text-lg font-semibold text-white/90">{fmtNumber(value)}</div>
+      <div className="text-lg font-semibold text-[var(--text-primary)]">{fmtNumber(value)}</div>
       <Caption>{label}</Caption>
     </div>
   );

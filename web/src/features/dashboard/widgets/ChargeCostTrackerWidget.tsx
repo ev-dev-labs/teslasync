@@ -9,6 +9,7 @@ import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
 import { request } from '@/api/client';
 import { fmtNumber } from '@/lib/numberFormat';
+import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import type { ChargingSession } from '@/api/types';
@@ -33,7 +34,7 @@ function computeMetrics(
   let totalDistanceMi = 0;
 
   for (const s of sessions) {
-    const energy = s.total_energy_added_wh ?? 0;
+    const energy = convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh');
     totalKwh += energy;
     // Prefer session cost if recorded, otherwise estimate from kWh
     totalCost += s.cost != null ? s.cost : energy * costPerKwh;

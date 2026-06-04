@@ -58,12 +58,8 @@ export function useFleetAnalytics(
 }
 
 /**
- * GET /mileage/stats — Phase-43a / Prompt 0004 restored the endpoint
- * deleted by Phase-42 / 0077. Returns a `MileageStats` snake_case
- * lifetime + window rollup; distances are kilometres (SI in DB,
- * converted at the SELECT list). Phase-43a / Prompt 0009 (fix/misc-fixes)
- * dropped the stale `@deprecated` banner that pointed at the now-restored
- * endpoint family.
+ * GET /mileage/stats returns a `MileageStats` snake_case lifetime +
+ * window rollup. Distances are kilometres, converted from SI at the SELECT list.
  */
 export function useMileageStats(vehicleId: string) {
   return useQuery({
@@ -74,11 +70,8 @@ export function useMileageStats(vehicleId: string) {
 }
 
 /**
- * GET /mileage/monthly — Phase-43a / Prompt 0004 restoration. Unwraps
- * the `{vehicle_id, months}` envelope so callers receive a plain array
- * of `MonthlyMileageBucket` and don't have to know the envelope shape.
- * Phase-43a / Prompt 0009 (fix/misc-fixes) corrected the response shape
- * (previously typed as the legacy camelCase `MonthlyStat[]`).
+ * GET /mileage/monthly unwraps the `{vehicle_id, months}` envelope so
+ * callers receive a plain `MonthlyMileageBucket` array.
  */
 export function useMonthlyMileage(vehicleId: string) {
   return useQuery({
@@ -90,10 +83,8 @@ export function useMonthlyMileage(vehicleId: string) {
 }
 
 /**
- * GET /mileage/daily — Phase-43a / Prompt 0009 (fix/misc-fixes) added
- * the per-day endpoint so MileagePage's Odometer Over Time and Daily
- * Distance charts can render again. Unwraps the `{vehicle_id, days}`
- * envelope into a plain array.
+ * GET /mileage/daily unwraps the `{vehicle_id, days}` envelope into a
+ * plain array for daily distance charts.
  */
 export function useDailyMileage(vehicleId: string, days = 90) {
   return useQuery({

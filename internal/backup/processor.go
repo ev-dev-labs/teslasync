@@ -12,13 +12,15 @@ import (
 	"strings"
 	"time"
 
+	backupmodel "github.com/ev-dev-labs/teslasync/internal/models/backup"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	dbbackup "github.com/ev-dev-labs/teslasync/internal/database/backup"
 )
 
 var backupTables = []string{
@@ -53,20 +55,20 @@ var (
 // Processor handles backup creation and restoration.
 type Processor struct {
 	pool    *pgxpool.Pool
-	runRepo *database.BackupRunRepo
-	cfgRepo *database.BackupConfigRepo
+	runRepo *dbbackup.BackupRunRepo
+	cfgRepo *dbbackup.BackupConfigRepo
 }
 
 func NewProcessor(db *database.DB) *Processor {
 	return &Processor{
 		pool:    db.Pool,
-		runRepo: database.NewBackupRunRepo(db),
-		cfgRepo: database.NewBackupConfigRepo(db),
+		runRepo: dbbackup.NewBackupRunRepo(db),
+		cfgRepo: dbbackup.NewBackupConfigRepo(db),
 	}
 }
 
 // RunBackup executes a backup for the given config and run.
-func (p *Processor) RunBackup(ctx context.Context, cfg *models.BackupConfig, run *models.BackupRun) {
+func (p *Processor) RunBackup(ctx context.Context, cfg *backupmodel.BackupConfig, run *backupmodel.BackupRun) {
 	start := time.Now()
 
 	// Mark running
@@ -244,7 +246,7 @@ func (p *Processor) verifyUpload(ctx context.Context, provider StorageProvider, 
 }
 
 // VerifyBackup checks integrity of an existing backup by re-downloading and verifying checksum.
-func (p *Processor) VerifyBackup(ctx context.Context, run *models.BackupRun, providerType string, providerConfig json.RawMessage) error {
+func (p *Processor) VerifyBackup(ctx context.Context, run *backupmodel.BackupRun, providerType string, providerConfig json.RawMessage) error {
 	if run.FilePath == nil || run.Checksum == nil {
 		return fmt.Errorf("backup has no file path or checksum")
 	}
@@ -256,7 +258,7 @@ func (p *Processor) VerifyBackup(ctx context.Context, run *models.BackupRun, pro
 }
 
 // RestoreBackup downloads and decompresses a backup, returning the parsed table data.
-func (p *Processor) RestoreBackup(ctx context.Context, run *models.BackupRun, providerType string, providerConfig json.RawMessage) (map[string]json.RawMessage, error) {
+func (p *Processor) RestoreBackup(ctx context.Context, run *backupmodel.BackupRun, providerType string, providerConfig json.RawMessage) (map[string]json.RawMessage, error) {
 	if run.FilePath == nil {
 		return nil, fmt.Errorf("backup has no file path")
 	}

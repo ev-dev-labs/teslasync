@@ -1,13 +1,7 @@
-// Phase-50 / 0062 — ML1 Learned per-vehicle anomaly baselines.
-//
 // Unit tests for the learned-per-vehicle-anomaly-baselines Strategy.
-// Mirrors the shape of charging-curve-fingerprint-clustering /
-// battery-health-forecast-narrative strategy_test.go (the two-tool
-// query+train precedent). The Strategy is a pure value (no internal
-// state, no IO) so the tests are tight: pin the feature ID + system
-// prompt + tool whitelist + redaction policy shape so a future edit
-// that breaks the contract surfaces here before the dispatcher
-// silently changes behaviour.
+// They pin the feature ID, system prompt, tool whitelist, and redaction
+// policy so contract changes fail before dispatcher behavior changes
+// silently.
 
 package learnedpervehicleanomalybaselines
 
@@ -65,11 +59,10 @@ func TestStrategy_System(t *testing.T) {
 
 // TestStrategy_Tools pins the exact whitelist AND the prescribed
 // order: train_anomaly_baseline FIRST, then query_anomaly_baseline.
-// The slice prompt's Action Steps list the tools in this exact order
-// ("train_anomaly_baseline;query_anomaly_baseline"). Reversing them
-// silently produces a confused narration that quotes the fallback as
-// if it were the learned proposal — the eval harness loads the same
-// list from goldens.yaml.
+// Tool order matters: train_anomaly_baseline must run before
+// query_anomaly_baseline. Reversing them can make the narration quote
+// the fallback as if it were the learned proposal; the eval harness
+// loads the same list from goldens.yaml.
 func TestStrategy_Tools(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -131,7 +124,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs preferred-window preferences ships.
+// future version needs preferred-window preferences.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -145,11 +138,11 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 }
 
 // TestStrategy_RedactionPolicyChatbot proves the strategy hands the
-// dispatcher PolicyChatbot wrapped through the F4↔F8 adapter.
+// dispatcher PolicyChatbot wrapped through the strategy redaction adapter.
 // PolicyChatbot is the project-wide deny-all-tagged policy: every
 // PII class is converted into a round-trip tag before the LLM call
-// (Allow: nil, Mode: ModeRedactedTags). The slice prompt explicitly
-// mandates "Allowed classes: none; model training uses local stored
+// (Allow: nil, Mode: ModeRedactedTags). The strategy contract
+// requires "Allowed classes: none; model training uses local stored
 // data and no provider call in off mode".
 func TestStrategy_RedactionPolicyChatbot(t *testing.T) {
 	t.Parallel()

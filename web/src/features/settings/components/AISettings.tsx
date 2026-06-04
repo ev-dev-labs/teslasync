@@ -1,5 +1,5 @@
 /**
- * Phase-50 / 0003 — F2 Settings UI for AI.
+ * Settings UI for AI.
  *
  * This is the **only** place in the SPA where AI ever turns on. Per
  * ADR-015 (the AI-Off Contract):
@@ -532,8 +532,8 @@ export function AISettings() {
         {showProviderSection && <AIUsageCard />}
 
         {/*
-          Phase-50 / 0010 — F9 cost-cap spend bar. Lives only in cloud
-          mode (local providers don't bill per token) and only when
+          Cost-cap spend bar. Lives only in cloud mode (local providers
+          don't bill per token) and only when
           the user has set a non-zero cap. Reads today's spend from
           the same /ai/usage/today endpoint as AIUsageCard so the
           numbers match exactly. The bar is a passive read — it does
@@ -609,7 +609,7 @@ function ModeRadio(props: {
 }
 
 /**
- * AICostCapSpendBar — Phase-50 / 0010 (F9) live "today" spend bar.
+ * AICostCapSpendBar live "today" spend bar.
  *
  * Shows the user how close they are to their daily $ cap. The
  * cost-cap decorator on the backend rejects new calls once the cap

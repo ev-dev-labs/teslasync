@@ -1,12 +1,12 @@
 /**
- * Phase-46 / Prompt 51 — Privacy section.
+ * Privacy section.
  *
  * Surfaces user-controllable client-side privacy switches:
  *
  *   1. "Clear recently viewed pages" — wipes the LRU maintained by
  *      `lib/recentPages` for the current browser.
- *   2. (Phase-46 / Prompt 70) Cookie / GDPR consent management —
- *      shows the user's current consent state and lets them
+ *   2. Cookie / GDPR consent management — shows the user's current
+ *      consent state and lets them
  *      withdraw, re-grant, or fully reset to "unknown" so the banner
  *      appears again on the next reload. Always rendered (even when
  *      the deployment-wide `require_cookie_consent` flag is off) so
@@ -156,10 +156,10 @@ export function PrivacySection() {
           </div>
         </div>
 
-        {/* Phase-46 / Prompt 70 — Cookie / GDPR consent management.
-            Always rendered so operators can preview the user-facing
-            flow even on installs where the consent banner is gated
-            off via TESLASYNC_REQUIRE_COOKIE_CONSENT=false. */}
+        {/* Cookie / GDPR consent management. Always rendered so operators
+            can preview the user-facing flow even on installs where the
+            consent banner is gated off via
+            TESLASYNC_REQUIRE_COOKIE_CONSENT=false. */}
         <div
           className="mt-4 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-4"
           data-testid="privacy-consent-section"

@@ -11,17 +11,17 @@ import (
 )
 
 // softwareUpdateInsertTimeout caps the per-payload InsertIfChanged call.
-// The legacy trackVehicleConfig used 5s inside a goroutine; per the
-// rubber-duck critique we keep this synchronous (matches SideEffectsObserver
-// pattern, no unbounded goroutine fan-out) but shorten the timeout so a
-// slow DB cannot stall ingest. 99% of payloads hit ON CONFLICT DO NOTHING
+// The legacy trackVehicleConfig used 5s inside a goroutine. Keep this
+// synchronous, matching SideEffectsObserver and avoiding unbounded goroutine
+// fan-out, but shorten the timeout so a slow DB cannot stall ingest. Most
+// payloads hit ON CONFLICT DO NOTHING
 // (no row inserted) so the call is cheap; the timeout is a safety belt
 // against pool exhaustion or lock contention.
 const softwareUpdateInsertTimeout = 2 * time.Second
 
 // SoftwareUpdateRecorder is the narrow write interface the
 // SoftwareUpdateObserver depends on. It is implemented in production by
-// *database.SoftwareUpdateRepo and mocked in tests. Keeping the surface to
+// *systemdb.SoftwareUpdateRepo and mocked in tests. Keeping the surface to
 // a single method avoids pulling the full repo into observer unit tests.
 //
 // The status argument is forwarded verbatim ("installed" for the observer's
@@ -35,15 +35,11 @@ type SoftwareUpdateRecorder interface {
 // SoftwareUpdateObserver is the AtomicsObserver that bridges
 // normalize.Pipeline payload completion to the software_updates table.
 //
-// Background: prior to Phase-42 the legacy ingest path (deleted in
-// f31a1736 "delete dead legacy ingest code") called
-// (*TelemetryHandler).trackVehicleConfig which inserted firmware version
-// changes via SoftwareUpdateRepo.InsertIfChanged. That helper was then
-// itself deleted in fa7440a0 ("lint: delete pre-existing dead helpers")
-// because it had no remaining callers — the Phase-42 rewrite never
-// re-wired this write path, so the software_updates table stopped
-// receiving new versions even though the SoftwareUpdateVersion signal is
-// being emitted by Fleet Telemetry (visible in /signals/{id}/live).
+// Background: the legacy ingest path recorded firmware version changes
+// via SoftwareUpdateRepo.InsertIfChanged. When ingest moved to the
+// normalize pipeline, that write path was not reconnected, so the
+// software_updates table stopped receiving new versions even though
+// Fleet Telemetry emits SoftwareUpdateVersion (visible in /signals/{id}/live).
 //
 // This observer restores the write path through the new pipeline. It is
 // registered against normalize.New as a second AtomicsObserver alongside
@@ -91,8 +87,8 @@ func NewSoftwareUpdateObserver(recorder SoftwareUpdateRecorder, logger zerolog.L
 // "" and the observer is a no-op without ever touching the database.
 //
 // When a version IS present, the call is synchronous but capped by
-// softwareUpdateInsertTimeout (2s). Per the rubber-duck critique we
-// deliberately do NOT fire-and-forget via a goroutine: unbounded
+// softwareUpdateInsertTimeout (2s). We deliberately do NOT
+// fire-and-forget via a goroutine: unbounded
 // goroutine fan-out under a DB stall would pile up faster than the GC
 // can drain it, and the sync call still completes in microseconds on
 // the common-case ON CONFLICT DO NOTHING path.
@@ -179,7 +175,4 @@ func PickFirmwareVersionFromSignals(signals map[string]any) string {
 	return ""
 }
 
-// Compile-time assertion that *SoftwareUpdateObserver satisfies
-// normalize.AtomicsObserver. Triggers a build error if the interface
-// ever drifts under either package.
 var _ normalize.AtomicsObserver = (*SoftwareUpdateObserver)(nil)

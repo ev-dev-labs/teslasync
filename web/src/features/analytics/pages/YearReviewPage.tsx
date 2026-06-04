@@ -107,7 +107,7 @@ export default function YearReviewPage() {
   return (
     <div className="fixed inset-0 z-50 bg-black select-none">
       {/* Progress bar */}
-      <div className="absolute top-0 left-0 right-0 flex gap-0.5 px-4 pt-3 z-20">
+      <div className="absolute top-0 start-0 end-0 flex gap-0.5 px-4 pt-3 z-20">
         {slides.map((_, i) => (
           <div key={i} className="flex-1 h-0.5 rounded-full bg-[var(--surface-2)] overflow-hidden">
             <div
@@ -124,7 +124,7 @@ export default function YearReviewPage() {
 
       {/* Vehicle selector (if multiple) */}
       {vehicleList.length > 1 && (
-        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20">
+        <div className="absolute top-6 start-1/2 -translate-x-1/2 z-20">
           <ControlSelect
             aria-label={t('yearReview.selectVehicle', 'Select vehicle')}
             options={vehicleOptions}
@@ -159,7 +159,7 @@ export default function YearReviewPage() {
           variant="ghost"
           size="sm"
           onClick={goPrev}
-          className="absolute left-4 top-1/2 z-20 hidden h-auto -translate-y-1/2 rounded-full bg-[var(--surface-2)] p-2 hover:bg-[var(--surface-2)] md:inline-flex"
+          className="absolute start-4 top-1/2 z-20 hidden h-auto -translate-y-1/2 rounded-full bg-[var(--surface-2)] p-2 hover:bg-[var(--surface-2)] md:inline-flex"
           aria-label={t('yearReview.prev', 'Previous')}
         >
           <ChevronLeft className="h-5 w-5 text-[var(--text-muted)]" />
@@ -171,7 +171,7 @@ export default function YearReviewPage() {
           variant="ghost"
           size="sm"
           onClick={goNext}
-          className="absolute right-14 top-1/2 z-20 hidden h-auto -translate-y-1/2 rounded-full bg-[var(--surface-2)] p-2 hover:bg-[var(--surface-2)] md:inline-flex"
+          className="absolute end-14 top-1/2 z-20 hidden h-auto -translate-y-1/2 rounded-full bg-[var(--surface-2)] p-2 hover:bg-[var(--surface-2)] md:inline-flex"
           aria-label={t('yearReview.next', 'Next')}
         >
           <ChevronRight className="h-5 w-5 text-[var(--text-muted)]" />
@@ -184,26 +184,25 @@ export default function YearReviewPage() {
         variant="ghost"
         size="sm"
         onClick={() => navigate(-1)}
-        className="absolute right-4 top-3 z-20 h-auto rounded-full bg-[var(--surface-2)] p-2 hover:bg-[var(--surface-2)]"
+        className="absolute end-4 top-3 z-20 h-auto rounded-full bg-[var(--surface-2)] p-2 hover:bg-[var(--surface-2)]"
         aria-label={t('yearReview.close', 'Close')}
       >
         <X className="h-5 w-5 text-[var(--text-secondary)]" />
       </ControlButton>
 
       {/* Slide counter */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 text-xs text-[var(--text-muted)]">
+      <div className="absolute bottom-4 start-1/2 -translate-x-1/2 z-20 text-xs text-[var(--text-muted)]">
         {slideIndex + 1} / {slides.length}
       </div>
 
       {/*
-        Phase-50 / 0013 — U3 yir-narration AI surface.
         Renders nothing when ai_mode='off' or the yir-narration toggle
         is off (the withAiFeature HOC returns null), so the baseline
-        slide deck is visually unchanged for off-mode users
-        (ADR-015 §I3 + §I5). On-mode users see an opt-in narration
-        affordance overlaid above the slide counter.
+        slide deck is visually unchanged for off-mode users. On-mode
+        users see an opt-in narration affordance overlaid above the
+        slide counter.
       */}
-      <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20 w-full max-w-md px-4 sm:px-0">
+      <div className="absolute bottom-12 start-1/2 -translate-x-1/2 z-20 w-full max-w-md px-4 sm:px-0">
         <AIYearReviewNarration
           vehicleId={vehicleIdParam ? Number(vehicleIdParam) : undefined}
         />

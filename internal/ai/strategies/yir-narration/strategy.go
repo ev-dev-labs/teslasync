@@ -1,5 +1,5 @@
-// Package yirnarration is the Phase-50 / U3 strategy for the
-// LLM-narrated year-in-review slides.
+// Package yirnarration implements the LLM-narrated year-in-review
+// slides.
 //
 // The strategy declares:
 //
@@ -29,7 +29,7 @@
 //   - I3 baseline intact: this strategy never replaces the template slides.
 //   - I7 per-feature:     the AI route is gated by guard.Wrap("yir-narration").
 //   - I9 redaction:       PolicyYearInReview restricts cleartext to vehicle
-//                         name only (mirrors PolicyDigest's posture).
+//     name only (mirrors PolicyDigest's posture).
 package yirnarration
 
 import (
@@ -56,7 +56,7 @@ const FeatureID = "yir-narration"
 // (the dispatcher refuses to expose any tool the strategy did not
 // declare in Tools()). It also asks for short per-slide captions so
 // the rendered narration fits the existing slide deck without a
-// dedicated layout slice.
+// dedicated layout feature.
 const SystemPrompt = `You are the TeslaSync year-in-review narrator. ` +
 	`Produce a short, upbeat, factual annual recap of the user's year based STRICTLY on the data returned by query_year_in_review_context. ` +
 	`Format the response as a sequence of brief slide captions (one short sentence per slide) covering: total drives, total distance, total energy, charging summary, and a closing recap. ` +
@@ -70,8 +70,8 @@ const SystemPrompt = `You are the TeslaSync year-in-review narrator. ` +
 // at dispatcher construction time — the dispatcher refuses to mount
 // a strategy that references an unknown tool.
 //
-// This slice ships zero mutating tools: year-in-review narration only
-// READS state. A future slice that needs to mutate state (e.g.
+// This feature ships zero mutating tools: year-in-review narration
+// only reads state. Future work that needs to mutate state (e.g.
 // publishing the narration to a shareable URL) will add its own
 // strategy with mutating tools + a confirm hook.
 var allowedTools = []string{
@@ -118,24 +118,20 @@ func (s *Strategy) Tools() []string {
 //
 // Future work: this is where a per-vehicle preferences snippet (e.g.
 // "user prefers metric units") would be injected once year-in-review
-// narration grows that surface. Today's slice keeps Context empty so
-// the dispatcher's behaviour is fully determined by [System] +
-// History — the simplest path that satisfies the slice's "no hidden
-// state" requirement.
+// narration grows that surface. The current feature keeps Context
+// empty so the dispatcher's behaviour is fully determined by [System]
+// + History, satisfying the no-hidden-state requirement.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
 }
 
-// RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyYearInReview wrapped through the F4↔F8 adapter so the
-// dispatcher's per-request ctx-installation step (dispatch.Run
-// installs the policy via redact.WithPolicy) sees the concrete policy.
+// RedactionPolicy implements [strategy.Strategy].
 //
 // PolicyYearInReview allows ClassVehicleName because the narration's
 // value proposition includes naming the user's car ("This year, Roadie
 // covered 12,500 km"). Every other PII class — VIN, lat/long, address,
 // email, etc. — is redacted to a round-trip tag like `<vin id='1'/>`;
-// the F8 redact decorator restores the original value before delivering
+// the redaction decorator restores the original value before delivering
 // the LLM's response back to the user.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {
 	return redactadapter.Wrap(redact.PolicyYearInReview())

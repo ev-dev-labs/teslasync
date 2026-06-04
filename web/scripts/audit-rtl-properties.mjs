@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Phase-46 / Prompt 48 — RTL physical-direction utility audit.
+// RTL physical-direction utility audit.
 //
 // Walks every `.tsx` file under `web/src` and counts occurrences of
 // Tailwind utilities whose meaning is hard-coded to LTR layout —
@@ -14,20 +14,20 @@
 // captured at the time RTL support landed; if a future change pushes
 // the count above the budget the audit fails so the regression is
 // caught at lint time. The budget should be ratcheted DOWN each time
-// a follow-up sweep migrates utilities.
+// physical utilities are migrated.
 //
 // Run via `npm run audit:rtl` (also chained from CI).
 //
 // Detection details:
-//   - Only files matching `*.tsx` are scanned (logical properties
-//     are a JSX layout concern; `.ts` / `.json` are ignored).
-//   - The regex matches the utility followed by either a digit
-//     (`ml-3`, `pr-12`) or `auto` (`ml-auto`) or `px` / arbitrary
-//     bracket value (`pl-[3px]`) so that semantic-only matches like
-//     `mr-` inside a string are kept out.
-//   - Non-direction-sensitive utilities (`mx-*`, `my-*`, `inset-*`,
-//     `start-*`, `end-*`, `ms-*`, `me-*`, `ps-*`, `pe-*`) are NOT
-//     counted — they are already RTL-safe.
+// - Only files matching `*.tsx` are scanned (logical properties
+// are a JSX layout concern; `.ts` / `.json` are ignored).
+// - The regex matches the utility followed by either a digit
+// (`ml-3`, `pr-12`) or `auto` (`ml-auto`) or `px` / arbitrary
+// bracket value (`pl-[3px]`) so that semantic-only matches like
+// `mr-` inside a string are kept out.
+// - Non-direction-sensitive utilities (`mx-*`, `my-*`, `inset-*`,
+// `start-*`, `end-*`, `ms-*`, `me-*`, `ps-*`, `pe-*`) are NOT
+// counted — they are already RTL-safe.
 //
 // Per-file escape hatch: a file may add `// rtl-audit:no-physical
 // <reason>` near the top. The audit then ignores that file's count
@@ -44,14 +44,19 @@ const globSync = globPkg.globSync ?? globPkg.sync;
 const ROOT = path.resolve(process.cwd(), 'src');
 const FILES_GLOB = '**/*.tsx';
 
-// Baseline budget captured when RTL support landed (Phase-46 / Prompt
-// 48). The current count is just under this ceiling; any new physical
+// Baseline budget captured when RTL support landed. The current count
+// is just under this ceiling; any new physical
 // utility added without a corresponding logical-property migration
 // will trip the audit.
 //
-// Ratchet this number DOWN every time a follow-up sweep replaces
-// physical utilities with logical equivalents. Never raise it.
-const MAX_PHYSICAL = 395;
+// Ratchet this number DOWN every time physical utilities are replaced
+// with logical equivalents. Never raise it.
+//
+// History:
+// • 395 — RTL support landing.
+// • 393 — chore/repo-reorganization A1.8 (YearReviewPage + DashboardPage
+// migrated 16 utilities to ms-/me-/start-/end-).
+const MAX_PHYSICAL = 393;
 
 const WAIVER_RE = /\/\/\s*rtl-audit:no-physical\b/;
 

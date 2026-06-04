@@ -27,9 +27,9 @@ import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 import { AICabinTemperatureImpactNarrative } from '@/components/ai/AICabinTemperatureImpactNarrative';
 
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
+/* ----------------------------------------------------------------*/
+/*  Types */
+/* ----------------------------------------------------------------*/
 
 interface TempEfficiencyPoint {
   outside_temp: number;
@@ -52,13 +52,13 @@ interface BucketAvg {
   color: string;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Constants                                                          */
-/* ------------------------------------------------------------------ */
+/* ----------------------------------------------------------------*/
+/*  Constants */
+/* ----------------------------------------------------------------*/
 
 /* Wh/km -> Wh/mi conversion factor.
-   Per Phase-43/0025 precedent (no convertEfficiencyFromSI helper exists in
-   lib/unitConversion.ts), we keep the inline km-per-mile factor here. */
+   No convertEfficiencyFromSI helper exists in
+   lib/unitConversion.ts, so we keep the inline km-per-mile factor here. */
 const KM_PER_MILE = 1.609344;
 
 const TEMP_BUCKETS_C = [
@@ -85,22 +85,22 @@ function bucketLabel(
   return `${Math.round(toTemperatureDisplay(b.min))}–${Math.round(toTemperatureDisplay(b.max))}${tempUnit}`;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Component                                                          */
-/* ------------------------------------------------------------------ */
+/* ----------------------------------------------------------------*/
+/*  Component */
+/* ----------------------------------------------------------------*/
 
 export default function TemperatureImpactPage() {
   const { t } = useTranslation();
   usePageTitle(t('temperature.title', 'Temperature Impact'));
 
-  /* ---- unit conversion (Phase-43 SI-floor display) ----
+  /* --- unit conversion (SI display) ---
      Backend `/analytics/temperature-impact` emits points with:
-       outside_temp:      °C SI (from ambient_temp_c_avg)
-       efficiency_wh_km:  Wh/km (already derived in SQL)
-       distance_km:       km (already derived in SQL)
+       outside_temp: °C SI (from ambient_temp_c_avg)
+       efficiency_wh_km: Wh/km (already derived in SQL)
+       distance_km: km (already derived in SQL)
      We convert outside_temp via convertTempFromSI (mathematically
      identical to legacy toTemperatureDisplay) and Wh/km -> Wh/mi inline using
-     KM_PER_MILE per Phase-43/0025 (no convertEfficiencyFromSI helper). */
+     KM_PER_MILE because there is no convertEfficiencyFromSI helper. */
   const { unitPrefs } = useUnits();
   const tempUnit = unitPrefs.temperature;
   const isMiles = unitPrefs.distance === 'mi';
@@ -128,11 +128,11 @@ export default function TemperatureImpactPage() {
     [toTemperatureDisplay, tempUnit],
   );
 
-  /* ---- vehicles ---- */
+  /* --- vehicles ---*/
   const { vehicleId: selectedId } = useSelectedVehicle();
   const vehicleId = selectedId != null ? String(selectedId) : '';
 
-  /* ---- temperature data ---- */
+  /* --- temperature data ---*/
   const { data: points, isLoading, error: dataError } = useQuery({
     queryKey: ['temperature-impact', vehicleId],
     queryFn: async () => {
@@ -146,7 +146,7 @@ export default function TemperatureImpactPage() {
 
   const anyError = dataError as Error | undefined;
 
-  /* ---- derived stats ---- */
+  /* --- derived stats ---*/
   const stats = useMemo(() => {
     if (!points?.length) return null;
 
@@ -182,7 +182,7 @@ export default function TemperatureImpactPage() {
     return { avgEff: toDispEff(avgEff), bucketAvgs, best, worst, total: points.length };
   }, [points, tempBuckets, toDispEff]);
 
-  /* ---- scatter data with colour per point ---- */
+  /* --- scatter data with colour per point ---*/
   const scatterData = useMemo(
     () =>
       (points ?? []).map((p) => ({
@@ -194,7 +194,7 @@ export default function TemperatureImpactPage() {
     [points, toTemperatureDisplay, toDispEff],
   );
 
-  /* ---- contextual tips ---- */
+  /* --- contextual tips ---*/
   const tips = useMemo(() => {
     const items: { icon: React.ElementType; text: string; variant: 'info' | 'warning' | 'success' }[] = [];
     if (!stats) return items;
@@ -227,14 +227,14 @@ export default function TemperatureImpactPage() {
     return items;
   }, [stats, t]);
 
-  /* ---- vehicle selector action ---- */
+  /* --- vehicle selector action ---*/
   const vehicleSelector = <VehicleSelect />;
 
   // hasData removed
   const bestLabel = stats?.best?.label;
 
   /* ================================================================ */
-  /*  Render                                                           */
+  /*  Render */
   /* ================================================================ */
 
   return (
@@ -251,12 +251,12 @@ export default function TemperatureImpactPage() {
           </AlertBanner>
         )}
 
-        {/* ── Phase-50 / 0032 AI cabin-temperature-impact narrator ── */}
-        {/* Rendered ABOVE the deterministic charts so the narration   */}
-        {/* contextualises the bucketed-efficiency chart and seasonal  */}
-        {/* trend the user is about to read. The withAiFeature HOC     */}
-        {/* gates visibility — in ai_mode='off' this section is        */}
-        {/* entirely absent from the DOM (ADR-015 §I5 + §I6).          */}
+        {/* AI cabin-temperature-impact narrator */}
+        {/* Rendered ABOVE the deterministic charts so the narration */}
+        {/* contextualises the bucketed-efficiency chart and seasonal */}
+        {/* trend the user is about to read. The withAiFeature HOC */}
+        {/* gates visibility — in ai_mode='off' this section is */}
+        {/* entirely absent from the DOM (ADR-015 §I5 + §I6). */}
         <AICabinTemperatureImpactNarrative vehicleId={vehicleId !== '' ? vehicleId : undefined} />
 
         {/* ── Summary MetricCards ───────────────────────────────── */}

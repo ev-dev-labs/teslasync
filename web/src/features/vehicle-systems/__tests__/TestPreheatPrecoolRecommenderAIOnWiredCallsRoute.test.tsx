@@ -1,12 +1,9 @@
-// Phase-50 / 0031 — T1 Preheat and precool recommender.
-// Phase-50 / W1 inline wiring (per slice prompt 0031) — on-mode
-// wiring test proving the Draft button opens an SSE stream
-// against the registered backend route POST
-// /api/v1/ai/climate/schedule/draft.
+// Preheat and precool recommender on-mode wiring test.
+// Proves the Draft button opens an SSE stream against the registered
+// backend route POST /api/v1/ai/climate/schedule/draft.
 //
-// `TestPreheatPrecoolRecommenderAIOnWiredCallsRoute` is the
-// load-bearing positive wiring proof for slice 0031's W1 inline
-// addendum. It mounts the AIPreheatPrecoolRecommender component
+// `TestPreheatPrecoolRecommenderAIOnWiredCallsRoute` is the positive
+// wiring proof. It mounts the AIPreheatPrecoolRecommender component
 // with ai_mode='cloud' + the per-feature toggle on, stubs global
 // fetch with a deterministic SSE byte stream, clicks the Draft
 // button, and asserts:
@@ -273,8 +270,8 @@ describe('TestPreheatPrecoolRecommenderAIOnWiredCallsRoute (preheat-precool-reco
   });
 
   it('TestPreheatPrecoolRecommenderAIOnWiredCallsRoute: Draft button is disabled when no vehicleId is available (computed, not literal)', () => {
-    // This test guards W1 Rule A from the slice prompt: the
-    // primary action button's `disabled` prop MUST be a computed
+    // This guards the contract that the primary action button's
+    // `disabled` prop MUST be a computed
     // expression (here: `!canGenerate`), not a literal
     // `disabled` / `disabled={true}`. We prove the dynamic
     // behaviour by rendering the component without a vehicleId

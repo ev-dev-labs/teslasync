@@ -1,7 +1,7 @@
 /**
- * QueueStatusPanel — Phase-46 / Prompt 41.
+ * Operator-facing view of the background worker fleet.
  *
- * Operator-facing view of the background worker fleet. Renders one
+ * Renders one
  * card per known worker (notification, export, automation) with:
  *
  *   • heartbeat-staleness severity badge (ok / warn / critical / down)

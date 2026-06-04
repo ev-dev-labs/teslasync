@@ -8,7 +8,7 @@ import type {
   FeedbackUpdateInput,
 } from '../types'
 
-// Phase-46 / Prompt 08 — In-app feedback widget hooks.
+// In-app feedback widget hooks.
 //
 // Three surfaces:
 //  - useSubmitFeedback   — public POST /feedback (called from <FeedbackModal>)

@@ -8,3 +8,75 @@ api/proto/tesla/vehicle_data.proto binary
 # every `go generate` and trips the phase-42 prompt 0015 drift gate.
 internal/tesla/protomodel/*_gen.go text eol=lf
 cmd/protogen-tesla/testdata/golden/*_gen.go text eol=lf
+
+# Phase A2.3 (chore/repo-reorganization) — defend against Windows
+# CRLF artifacts in text source files. The repo is gofmt-clean on
+# Linux (where CI runs), but Windows checkouts with the default
+# PowerShell Out-File behaviour, and any Windows IDE/tool that writes
+# without explicitly opting into LF, would leave the working tree in
+# CRLF while the blob stays LF. That made `gofmt -l` falsely report
+# ~900 "needing formatting" because gofmt reads CRLF from disk and
+# writes LF. Forcing eol=lf on every text source language we ship
+# eliminates the false positive without touching the blobs.
+*.go         text eol=lf
+*.mod        text eol=lf
+*.sum        text eol=lf
+*.ts         text eol=lf
+*.tsx        text eol=lf
+*.js         text eol=lf
+*.jsx        text eol=lf
+*.mjs        text eol=lf
+*.cjs        text eol=lf
+*.json       text eol=lf
+*.jsonc      text eol=lf
+*.yml        text eol=lf
+*.yaml       text eol=lf
+*.toml       text eol=lf
+*.md         text eol=lf
+*.sql        text eol=lf
+*.sh         text eol=lf
+*.bash       text eol=lf
+*.py         text eol=lf
+*.css        text eol=lf
+*.scss       text eol=lf
+*.html       text eol=lf
+*.svg        text eol=lf
+Makefile     text eol=lf
+*.mk         text eol=lf
+Dockerfile*  text eol=lf
+.editorconfig text eol=lf
+.gitignore   text eol=lf
+.gitattributes text eol=lf
+.env*        text eol=lf
+
+# Windows-shipped artifacts: keep native line endings.
+*.ps1        text eol=crlf
+*.cmd        text eol=crlf
+*.bat        text eol=crlf
+
+# Pure binaries: never normalise.
+*.png        binary
+*.jpg        binary
+*.jpeg       binary
+*.gif        binary
+*.ico        binary
+*.webp       binary
+*.woff       binary
+*.woff2      binary
+*.ttf        binary
+*.eot        binary
+*.pdf        binary
+*.zip        binary
+*.tar        binary
+*.tar.gz     binary
+*.gz         binary
+*.exe        binary
+*.dll        binary
+*.so         binary
+*.dylib      binary
+# .proto files: marked binary so they stay byte-exact. The vendored
+# Tesla proto at api/proto/tesla/vehicle_data.proto is also explicitly
+# marked above (top of file) for clarity; the rule below covers the
+# generic case for any other proto we may vendor.
+*.proto      binary
+

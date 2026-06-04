@@ -1,8 +1,8 @@
 /**
  * Safety enum normalization helpers.
  *
- * Phase-42a (per-field MQTT cutover) the backend serializes raw
- * signal.SignalValue (`interface{}`) directly via /api/v1/safety/latest
+ * The backend serializes raw signal.SignalValue (`interface{}`) directly
+ * via /api/v1/safety/latest
  * and /api/v1/safety. Several "string"-typed enum fields can therefore
  * arrive as:
  *   - native `boolean` — when the protomodel emits an ADAS toggle the

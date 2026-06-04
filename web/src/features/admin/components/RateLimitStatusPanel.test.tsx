@@ -1,5 +1,5 @@
 /**
- * RateLimitStatusPanel — Phase-46 / Prompt 40 contract tests.
+ * RateLimitStatusPanel contract tests.
  *
  * Covers:
  *  1. Loading state spinner.

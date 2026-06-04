@@ -1,42 +1,42 @@
-// Phase-50 / 0036 — A3 Cross-rule conflict detection.
-//
+// Cross-rule conflict detection.
+
 // `TestCrossRuleConflictAIOffHidesConflictPanel` (the Vitest sibling
-// to the Go test of the same name) is the slice's load-bearing
+// to the Go test of the same name) is load-bearing
 // AI-OFF contract proof on the React side. It mounts the
 // AICrossRuleConflictDetection component with ai_mode='off' (plus
 // the per-feature toggle on, to defeat the obvious "off because
 // nothing is enabled" path) and asserts:
-//
-//   1. The AI section's rooted test ID is absent from the DOM.
-//   2. The wrapper renders no children (empty container).
-//   3. With ai_mode='cloud' AND cross-rule-conflict-detection=true,
-//      the section IS present + carries the expected test ID.
-//      This is the positive control that proves the gate
-//      actually works (otherwise the "absent in off mode"
-//      assertion is trivially true).
-//
-// W1 inline wiring — also asserts the on-mode wiring contract:
-//   - clicking "Detect conflicts" POSTs exactly one request to
-//     `/api/v1/ai/alerts/rules/conflicts`.
-//   - the first delta event's text renders inside the gated
-//     wrapper.
-//   - a second click while streaming is a no-op (double-submit
-//     guard).
-//   - the conflict cards render after a tool_result frame and
-//     clicking a "Review rule {id}" button calls onSelectRule
-//     with the offending rule_id (proves the typed envelope →
-//     baseline editor selection copy path; the AI panel never
-//     persists state directly).
-//
+
+// 1. The AI section's rooted test ID is absent from the DOM.
+// 2. The wrapper renders no children (empty container).
+// 3. With ai_mode='cloud' AND cross-rule-conflict-detection=true,
+// the section IS present + carries the expected test ID.
+// This is the positive control that proves the gate
+// actually works (otherwise the "absent in off mode"
+// assertion is trivially true).
+
+// Also asserts the on-mode wiring contract:
+// - clicking "Detect conflicts" POSTs exactly one request to
+// `/api/v1/ai/alerts/rules/conflicts`.
+// - the first delta event's text renders inside the gated
+// wrapper.
+// - a second click while streaming is a no-op (double-submit
+// guard).
+// - the conflict cards render after a tool_result frame and
+// clicking a "Review rule {id}" button calls onSelectRule
+// with the offending rule_id (proves the typed envelope →
+// baseline editor selection copy path; the AI panel never
+// persists state directly).
+
 // The HTTP /api/v1/ai/alerts/rules/conflicts 404-in-off-mode
 // invariant is proven by the Go-side
 // TestCrossRuleConflictAIOffHidesConflictPanel in
 // internal/api/ai_cross_rule_conflict_handler_test.go — the
 // network layer does not exist in the React unit-test scope.
-//
+
 // File name MUST stay
 // `TestCrossRuleConflictAIOffHidesConflictPanel.test.tsx` — the
-// slice prompt's verification command runs
+// the targeted verification command runs
 // `vitest --run TestCrossRuleConflictAIOffHidesConflictPanel`,
 // where the positional pattern is matched against the file PATH.
 

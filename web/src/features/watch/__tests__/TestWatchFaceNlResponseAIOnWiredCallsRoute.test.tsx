@@ -1,11 +1,9 @@
-// Phase-50 / 0056 — V2 Helix watch face natural-language response.
-// Phase-50 / W1 inline wiring (per slice prompt 0056) — on-mode
-// wiring test proving the Ask button opens an SSE stream against
+// Helix watch face natural-language response.
+// On-mode wiring test proving the Ask button opens an SSE stream against
 // the registered backend route POST /api/v1/ai/watch/respond.
 //
 // `TestWatchFaceNlResponseAIOnWiredCallsRoute` is the
-// load-bearing positive wiring proof for slice 0056 V2's W1
-// inline addendum. It mounts the AIWatchFaceNLResponse component
+// load-bearing positive wiring proof. It mounts the AIWatchFaceNLResponse component
 // with ai_mode='cloud' + the per-feature toggle on, stubs
 // global fetch with a deterministic SSE byte stream, clicks the
 // Ask button, and asserts:

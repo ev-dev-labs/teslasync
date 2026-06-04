@@ -6,8 +6,8 @@
 // The values that follow (Odometer, BatteryRange, OutsideTemp, Tpms*,
 // VehicleSpeed, ...) are emitted in the wire-format unit that was active
 // at sample time. Downstream consumers — the units.ToSI converter, the
-// normalize pipeline (prompt 0028), analytics, and replay — therefore
-// need to know which unit was active for a given (vehicle, sample-time).
+// normalize pipeline, analytics, and replay — therefore need to know
+// which unit was active for a given (vehicle, sample-time).
 // That mapping lives in the vehicle_unit_history table; this package is
 // the only writer and the only reader.
 //
@@ -91,13 +91,13 @@ const (
 	// pipeline routed here.
 	SourceTelemetry Source = "telemetry"
 	// SourceRESTBootstrap is the cold-start path: at process boot, the
-	// REST bootstrap (prompt 0023) calls Tesla's /vehicle_data endpoint
-	// for every known vehicle to seed unit_history before live
+	// REST bootstrap calls Tesla's /vehicle_data endpoint for every known
+	// vehicle to seed unit_history before live
 	// telemetry begins. The effective_from is time.Now() at boot since
 	// REST has no per-sample timestamp.
 	SourceRESTBootstrap Source = "rest_bootstrap"
-	// SourceManual is for operator-injected rows (e.g. backfill scripts
-	// resolving a known vehicle's pre-Phase-42 history). Should be rare
+	// SourceManual is for operator-injected rows, such as backfills that
+	// resolve a known vehicle's legacy telemetry history. Should be rare
 	// in production.
 	SourceManual Source = "manual"
 )

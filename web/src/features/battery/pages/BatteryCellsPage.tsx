@@ -218,7 +218,7 @@ export default function BatteryCellsPage() {
 
   /* ── Queries ─── */
 
-  // Phase 40 / Prompt 16: header picker is the source of truth for vehicle scope.
+  // Header picker is the source of truth for vehicle scope.
   const { vehicleId } = useSelectedVehicle();
   const activeId = vehicleId != null ? String(vehicleId) : '';
 

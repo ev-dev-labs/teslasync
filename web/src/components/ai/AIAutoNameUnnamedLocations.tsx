@@ -1,23 +1,11 @@
-// Phase-50 / 0037 — G1 Auto-name unnamed locations.
-//
-// W1 inline wiring (P11/P12):
-//   - useAiStream targets POST /ai/locations/{locationID}/name/draft
-//     (the backend path after stripping the /api/v1 prefix).
-//   - The primary action button is disabled via a COMPUTED expression
-//     (`stream.state === 'streaming' || stream.state === 'paused-confirm' || locationId <= 0`),
-//     never a literal `disabled` or `disabled={true}` (Rule W1-A).
-//   - tool_result frames carrying a typed location-name draft envelope
-//     are captured in component state; clicking "Apply to form" copies
-//     the proposed name into the parent's state via the onApplyName
-//     callback. The AI panel NEVER persists state directly — the
-//     baseline geofence-create / location-rename UI's existing Save
-//     button remains the sole write path (ADR-015 §I3 + §I8
-//     propose-only contract).
-//   - cancel() runs on unmount AND on locationId change (dedicated
-//     useEffect with explicit deps).
-//   - Component is wrapped with withAiFeature so it is ABSENT (returns
-//     null) when ai_mode='off' or the per-feature toggle is off
-//     (ADR-015 §I5 hidden UI).
+// Auto-name unnamed locations with a propose-only Helix draft.
+// useAiStream targets POST /ai/locations/{locationID}/name/draft
+// after the API client strips the /api/v1 prefix. The action button
+// stays disabled from live state, never from a hardcoded disabled prop.
+// tool_result frames are captured locally; "Apply to form" copies the
+// proposed name to the parent, and the existing Save flow remains the
+// only API write path. Streams are cancelled on unmount and location
+// changes, and withAiFeature hides this component when the feature is off.
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -62,7 +50,7 @@ export interface AIAutoNameUnnamedLocationsProps {
    * name into the canonical baseline geofence-create / location-
    * rename UI's selection state. The AI panel never writes to
    * the API directly — the user reviews and saves via the
-   * canonical baseline flow.
+   * existing form flow.
    */
   onApplyName: (name: string) => void
 }

@@ -15,9 +15,9 @@ const (
 
 // SessionFSM manages the lifecycle of a single charge session.
 type SessionFSM struct {
-	mu    sync.Mutex
-	state State
-	ctx   *Context
+	mu     sync.Mutex
+	state  State
+	ctx    *Context
 	logger zerolog.Logger
 }
 

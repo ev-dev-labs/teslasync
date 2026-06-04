@@ -2,9 +2,8 @@ package models
 
 import "time"
 
-// Phase-46 / Prompt 19 — per-user notification Do-Not-Disturb windows.
-//
-// QuietHoursWindow mirrors a row in the notification_quiet_hours table.
+// QuietHoursWindow mirrors a per-user Do-Not-Disturb window in the
+// notification_quiet_hours table.
 // Multiple windows per user are allowed; the dispatcher considers any
 // enabled window when deciding whether to defer a notification.
 //
@@ -34,12 +33,12 @@ type QuietHoursWindow struct {
 // Quiet-hours weekday bitmask constants. Matches Go's time.Weekday so the
 // dispatcher can compute (1 << weekday) directly without remapping.
 const (
-	QuietHoursWeekdaySun  = 1 << 0
-	QuietHoursWeekdayMon  = 1 << 1
-	QuietHoursWeekdayTue  = 1 << 2
-	QuietHoursWeekdayWed  = 1 << 3
-	QuietHoursWeekdayThu  = 1 << 4
-	QuietHoursWeekdayFri  = 1 << 5
-	QuietHoursWeekdaySat  = 1 << 6
-	QuietHoursWeekdayAll  = QuietHoursWeekdaySun | QuietHoursWeekdayMon | QuietHoursWeekdayTue | QuietHoursWeekdayWed | QuietHoursWeekdayThu | QuietHoursWeekdayFri | QuietHoursWeekdaySat
+	QuietHoursWeekdaySun = 1 << 0
+	QuietHoursWeekdayMon = 1 << 1
+	QuietHoursWeekdayTue = 1 << 2
+	QuietHoursWeekdayWed = 1 << 3
+	QuietHoursWeekdayThu = 1 << 4
+	QuietHoursWeekdayFri = 1 << 5
+	QuietHoursWeekdaySat = 1 << 6
+	QuietHoursWeekdayAll = QuietHoursWeekdaySun | QuietHoursWeekdayMon | QuietHoursWeekdayTue | QuietHoursWeekdayWed | QuietHoursWeekdayThu | QuietHoursWeekdayFri | QuietHoursWeekdaySat
 )

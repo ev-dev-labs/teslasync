@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
- * Phase 40 / Prompt 35 — Bundle-size guard.
+ * Bundle-size guard.
  *
  * Walks dist/assets/, computes gzipped size of each JS chunk, prints a
  * report, and (with `--strict`) fails the build when the entry chunk
  * exceeds ENTRY_LIMIT_KB or any vendor/route chunk exceeds CHUNK_LIMIT_KB.
  *
  * Wired in two places:
- *   - `npm run build` runs `postbuild` → this script in **report-only** mode,
- *     so local builds always print sizes but never fail.
- *   - CI calls `npm run perf:check` (= `--strict`) so regressions fail PRs.
+ * - `npm run build` runs `postbuild` → this script in **report-only** mode,
+ * so local builds always print sizes but never fail.
+ * - CI calls `npm run perf:check` (= `--strict`) so regressions fail PRs.
  *
  * Limits intentionally start generous (entry 350 KB / chunk 600 KB gzip)
  * so the gate ships without flapping; tighten via env vars

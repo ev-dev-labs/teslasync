@@ -1,5 +1,5 @@
 /**
- * Phase-49 / Slice 0006 — AlertStudioPage integration tests for the
+ * AlertStudioPage integration tests for the
  * multi-vehicle picker wiring.
  *
  * Component-level tests (sticky-all toggling, unknown-id rendering,
@@ -201,7 +201,7 @@ describe('AlertStudioPage — multi-vehicle picker integration (Phase-49 / Slice
 });
 
 /**
- * Phase-49 / Slice 0008 — Smart Defaults + Force-Choose for Alert Behavior.
+ * Smart Defaults + Force-Choose for Alert Behavior.
  *
  * Decisions covered:
  *   D2: smart default by op (recommendedTriggerMode)
@@ -377,7 +377,7 @@ describe('AlertStudioPage — two-tier severity escalation (Phase-49 / Slice 000
   });
 
   function getEscalationCheckbox(): HTMLElement | null {
-    // Toggle (Phase-49 / Slice 0009) wraps a button[role="switch"]
+    // Toggle wraps a button[role="switch"]
     // inside a div whose id is the prop we passed. Walk to find the
     // actual switch button so click() and aria-checked are observable.
     const wrapper = document.getElementById('alert-escalation-enabled')

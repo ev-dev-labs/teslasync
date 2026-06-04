@@ -38,10 +38,8 @@ export interface PopoverProps {
 /**
  * Lightweight popover primitive. Portals content to <body>, positions it
  * relative to `anchorRef`, and closes on Esc / click-outside / blur-out.
- *
  * Intentionally NOT a focus trap (popovers should let users tab back to the
  * trigger and beyond). When you need a focus trap, use {@link Modal}.
- *
  * Auto-flips `side` when the requested side overflows the viewport, and
  * shifts horizontally to keep the content within the viewport.
  */

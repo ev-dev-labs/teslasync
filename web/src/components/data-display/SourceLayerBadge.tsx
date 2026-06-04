@@ -3,8 +3,7 @@ import { cn } from '@/lib/cn';
 import { Tooltip } from '@/components/ui';
 
 /**
- * Phase 40 / Prompt 58 — debugger-only badge for "where did this signal value
- * come from?".
+ * Debugger-only badge showing where a signal value came from.
  *
  * The layered live-state contract documented in `.github/copilot-instructions.md`
  * requires power-user diagnostics surfaces (FSM debugger, signal diff) to be

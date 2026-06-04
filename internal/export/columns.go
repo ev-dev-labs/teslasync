@@ -72,8 +72,8 @@ func SupportsColumnSelection(jobType string) bool {
 // resolveColumnSelection validates a caller-supplied column allowlist
 // against the catalog for jobType and returns the effective ordered list
 // of columns to emit. When the caller requested no columns (nil/empty),
-// all catalog columns are returned in catalog order — preserving the
-// pre-Phase-46/62 default behaviour byte-for-byte.
+// all catalog columns are returned in catalog order to preserve the
+// legacy default.
 //
 // AlwaysIncluded columns are silently appended (in catalog order) when
 // missing from the request, so primary keys / vehicle ID can never be

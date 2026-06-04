@@ -114,7 +114,7 @@ export default function DriveDetailPage() {
             </SectionErrorBoundary>
           )}
           {/*
-            Phase-50 / 0018 — Per-drive coaching narrative (AI, opt-in).
+            Per-drive coaching narrative (AI, opt-in).
 
             This is the AI surface for the drive detail page. It is
             wrapped in withAiFeature('drive-coaching', …) so it
@@ -162,8 +162,8 @@ export default function DriveDetailPage() {
             <JourneyDetailsPanel drive={drive} />
           </SectionErrorBoundary>
           {/*
-            Phase 40 / Prompt 26: every chart in this block reads `chartData`
-            from the same `useDriveDetailData()` source, so they share row
+            Every chart in this block reads `chartData`
+            from the same `useDriveDetailData` source, so they share row
             indices. Wrapping in `<ChartTimeRangeProvider>` lets recharts'
             native syncId mechanism mirror the hover cursor across all charts;
             the `<ChartBrush>` rendered inside `<DriveOverviewChart>` then

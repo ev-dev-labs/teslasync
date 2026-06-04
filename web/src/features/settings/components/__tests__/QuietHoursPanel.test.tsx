@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 19 — QuietHoursPanel contract.
+ * QuietHoursPanel contract.
  *
  * Asserts the CRUD UI hooked up to /notifications/quiet-hours:
  *   1. Loads existing windows from useQuietHours() and renders one row per window.

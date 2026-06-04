@@ -15,11 +15,8 @@ import (
 )
 
 // pgxPool is the tiny subset of *pgxpool.Pool that snapshotWriter
-// depends on. Production wiring passes a *pgxpool.Pool; the package's
-// tests pass a recording fake. The interface stays minimal because the
-// project does NOT vendor pgxmock or any equivalent SQL recorder, and
-// the prompt's escape hatch (phase-42a/0010) explicitly allows an
-// in-file recorder of just the Exec method the helper calls — see
+// depends on. Production wiring passes a *pgxpool.Pool; tests use an
+// in-file recorder for only the Exec method this helper calls — see
 // snapshot_base_test.go.
 type pgxPool interface {
 	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
@@ -39,10 +36,8 @@ var safeIdentRE = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
 // snapshotWriter is the shared INSERT helper for the seven snapshot
 // destinations declared in router.types.go (climate_snapshot,
 // motor_snapshot, tire_pressure_snapshot, media_snapshot,
-// safety_snapshot, location_snapshot, security_event). Per phase-42a
-// prompt 0010 the struct shape is LOCKED — db, table, columnFor —
-// and the per-destination wrappers in 0012-0018 supply only the
-// table name and the columnFor mapping callback.
+// safety_snapshot, location_snapshot, security_event). Per-destination
+// wrappers supply only the table name and columnFor mapping callback.
 //
 // columnFor maps codec.Atomic.Field to the destination column name
 // (e.g. "InsideTemp" -> "inside_temp_c" for climate_snapshot). The
@@ -68,11 +63,9 @@ type snapshotWriter struct {
 // fail the build here rather than the first integration test.
 var _ router.Writer = (*snapshotWriter)(nil)
 
-// newSnapshotWriter is the unexported constructor consumed by the
-// per-destination wrappers in 0012-0018. The validation pass refuses
-// nil dependencies and rejects table identifiers that don't match
-// safeIdentRE so a typo at wiring time fails at process start
-// rather than the first Write call.
+// newSnapshotWriter validates dependencies and table identifiers at
+// wiring time so typos fail at process start rather than the first
+// Write call.
 func newSnapshotWriter(db pgxPool, table string, columnFor func(field string) (col string, ok bool)) (*snapshotWriter, error) {
 	if db == nil {
 		return nil, fmt.Errorf("snapshotWriter: db must be non-nil")
@@ -116,9 +109,9 @@ func newSnapshotWriter(db pgxPool, table string, columnFor func(field string) (c
 //     drift, returns error so the router increments
 //     writer_failures_total and the operator alert fires.
 //
-//   - atom.Value is not one of the four LOCKED scalar types
-//     (float64, int64, bool, string): producer/codec contract
-//     drift, returns error.
+//   - atom.Value is not one of the supported scalar types
+//     (numeric, bool, string): producer/codec contract drift,
+//     returns error.
 //
 //   - db.Exec returns an error: backend transient or schema drift,
 //     wrapped with the snapshotWriter[<table>].<field> prefix so
@@ -133,10 +126,9 @@ func newSnapshotWriter(db pgxPool, table string, columnFor func(field string) (c
 // dst is part of the Writer interface contract but the snapshot
 // helper deliberately does NOT consult dst.Column — the columnFor
 // callback supplied at construction is the single source of truth
-// for the field-to-column mapping per phase-42a prompt 0010
-// decision #2. Wrappers that want to reuse routing.yaml's column
-// declaration can compose a columnFor that closes over the loaded
-// router.Entry map.
+// for the field-to-column mapping. Wrappers that want to reuse
+// routing.yaml's column declaration can compose a columnFor that
+// closes over the loaded router.Entry map.
 func (w *snapshotWriter) Write(ctx context.Context, atom codec.Atomic, dst router.Entry) error {
 	_ = dst // see godoc above — column is sourced from columnFor, not dst.
 
@@ -193,14 +185,13 @@ func (w *snapshotWriter) Write(ctx context.Context, atom codec.Atomic, dst route
 // TireLocation per-corner values) are NOT routed to snapshot tables —
 // they go to positions / signal_log via different writers.
 //
-// Per Phase-42 / Rule 12 (.github/instructions/tesla-pipeline.instructions.md
-// §12) ALL numeric narrowing of signal-derived values goes through
-// signal.Float64 — the SINGLE canonical converter. The helper covers
-// every numeric kind the codec emits (float64, float32, int, int8,
-// int16, int32, int64 plus unsigned counterparts) so this writer does
-// not duplicate the type switch. Adding fresh `case float32:` /
-// `case int32:` arms here would re-introduce the
-// type-switch-divergence bug that Rule 12 was created to eliminate.
+// All numeric narrowing of signal-derived values goes through
+// signal.Float64, the canonical converter. The helper covers every
+// numeric kind the codec emits (float64, float32, int, int8, int16,
+// int32, int64 plus unsigned counterparts) so this writer does not
+// duplicate the type switch. Adding fresh `case float32:` /
+// `case int32:` arms here would re-introduce divergent conversion
+// behavior.
 //
 // Numeric snapshot columns are uniformly DOUBLE PRECISION (per
 // migrations 000003 / 000016 / 000017 / 000183) so the canonical

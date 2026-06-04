@@ -131,7 +131,7 @@ export default function SoftwareUpdatesPage() {
       </FadeIn>
 
       {/*
-        AI software-update-changelog-summarizer (Phase-50 / 0051).
+        AI software-update changelog summarizer.
         Conditionally renders an opt-in Helix narrator above the
         deterministic update timeline. Returns null in off mode
         (per ADR-015 §I5 + §I6) so the section is entirely absent

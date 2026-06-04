@@ -1,7 +1,7 @@
-// Phase-50 / 0056 — V2 Helix watch face natural-language response.
+// Helix watch face natural-language response AI-off contract tests.
 //
-// `TestWatchFaceNLAIOffUsesFixedCardsOnly` is the slice's
-// load-bearing AI-OFF contract proof on the React side. It mounts
+// `TestWatchFaceNLAIOffUsesFixedCardsOnly` is the React-side
+// AI-off contract proof. It mounts
 // the AIWatchFaceNLResponse panel with `ai_mode='off'` (plus the
 // per-feature toggle on, to defeat the trivial path) and asserts:
 //
@@ -14,7 +14,7 @@
 //   3. The textarea / input slot is absent — defence-in-depth
 //      (the whole subtree is unmounted, not just the panel
 //      header).
-//   4. NO localStorage write (ADR-015 §I12 — the slice's
+//   4. NO localStorage write (ADR-015 §I12 — the
 //      registry entry intentionally has no ClientStorageKey, and
 //      no write site should exist in the absent subtree).
 //   5. Positive control: with `ai_mode='cloud'` AND the
@@ -43,7 +43,7 @@
 //
 // File name MUST stay
 // `TestWatchFaceNLAIOffUsesFixedCardsOnly.test.tsx` —
-// the slice prompt's verification command runs
+// the verification command runs
 // `vitest --run TestWatchFaceNLAIOffUsesFixedCardsOnly`,
 // where the positional pattern is matched against the file PATH.
 
@@ -115,7 +115,7 @@ describe('TestWatchFaceNLAIOffUsesFixedCardsOnly (watch-face-nl-response AI-off 
 
     // Spy on localStorage.setItem so we can prove the panel
     // never writes any client storage key in off mode. The
-    // slice's registry entry intentionally has no
+    // registry entry intentionally has no
     // ClientStorageKey, so any write that happens to land in the
     // ai.watch.* namespace from inside the wrapped subtree would
     // violate ADR-015 §I12.
@@ -143,7 +143,7 @@ describe('TestWatchFaceNLAIOffUsesFixedCardsOnly (watch-face-nl-response AI-off 
       screen.queryByLabelText(/Your question for Helix/i),
     ).not.toBeInTheDocument()
 
-    // 4) The slice's registry entry has no ClientStorageKey, so
+    // 4) The registry entry has no ClientStorageKey, so
     // no `ai.watch.*` write should ever happen — and in off mode
     // no write of any kind from the AI subtree should happen.
     const aiWatchWrites = setItemSpy.mock.calls.filter(([key]) =>

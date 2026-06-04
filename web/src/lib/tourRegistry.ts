@@ -1,12 +1,12 @@
 import type { TourStep } from '@/hooks/useTour'
 
 /**
- * Tour registry — Phase-40 / Prompt 65.
+ * Tour registry.
  *
  * Per-feature onboarding tours. Each definition declares its identity, the
  * route it is most relevant on (used by the launcher to highlight
  * "recommended for this page"), a version (bump to silently invalidate any
- * previously stored completion flag — same trick as Prompt 55 form drafts),
+ * previously stored completion flag — same trick as form drafts),
  * and the ordered list of {@link TourStep} entries the user is walked
  * through.
  *

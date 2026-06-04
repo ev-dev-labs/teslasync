@@ -4,7 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
@@ -40,7 +41,7 @@ type Logger interface {
 	// the caller; on queue full the entry is dropped and DropsCounter
 	// is incremented. After Shutdown returns, Enqueue is a silent
 	// no-op (still counts as a drop).
-	Enqueue(*models.APICallLog)
+	Enqueue(*teslamodel.APICallLog)
 
 	// Shutdown closes the input channel, drains pending entries to the
 	// underlying inserter (subject to ctx deadline), and from then on
@@ -51,10 +52,10 @@ type Logger interface {
 
 // BatchInserter is the database port the async writer uses to flush a
 // batch of entries. Production wiring uses
-// (*database.APICallLogRepo).CreateBatch which is implemented via
+// (*systemdb.APICallLogRepo).CreateBatch which is implemented via
 // pgx.CopyFrom for low-overhead insertion.
 type BatchInserter interface {
-	CreateBatch(ctx context.Context, batch []*models.APICallLog) error
+	CreateBatch(ctx context.Context, batch []*teslamodel.APICallLog) error
 }
 
 // nullLogger is the disabled-mode logger used when the async writer was
@@ -62,7 +63,7 @@ type BatchInserter interface {
 // All operations are silent no-ops.
 type nullLogger struct{}
 
-func (n *nullLogger) Enqueue(*models.APICallLog)     {}
+func (n *nullLogger) Enqueue(*teslamodel.APICallLog) {}
 func (n *nullLogger) Shutdown(context.Context) error { return nil }
 
 // NewNoop returns a Logger whose Enqueue and Shutdown are no-ops. Useful

@@ -1,9 +1,8 @@
 /**
- * Phase-46 / Prompt 51 — recentPages contract.
+ * recentPages contract tests.
  *
- * Co-located NOT under `__tests__/` because the prompt's allowed-files
- * regex is a substring match on `lib/recentPages` and an intervening
- * `__tests__/` segment breaks it.
+ * Co-located next to the source because path-scoped checks match
+ * `lib/recentPages` as a contiguous substring.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'

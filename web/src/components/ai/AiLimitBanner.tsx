@@ -1,7 +1,5 @@
-// Phase-50 / 0010 — F9: Rate Limiter + Cost Cap.
-//
 // AiLimitBanner renders a user-facing notice when the AI rate-limiter
-// or cost-cap rejected a call. The banner is the SPA's R8 surface:
+// or cost-cap rejected a call:
 // AI is exhausted, the page should pivot to its non-AI baseline, and
 // the user should be told why + when they can try again.
 //
@@ -22,7 +20,7 @@
 //                                never calls useAiStream never sees a
 //                                limit error and never renders the
 //                                banner.
-//   §I9  Provenance visible   — the reason taxonomy is rendered as a
+//   §I9  Reason visible       — the reason taxonomy is rendered as a
 //                                short, stable phrase (i18n) so the
 //                                user can search for it in docs.
 //

@@ -2,12 +2,10 @@ package models
 
 // This file defines typed string enums for vehicle_live_state columns so
 // callers cannot pass arbitrary strings. Values mirror the Postgres CHECK
-// constraints declared in
-// .github/prompts/db-refactor/phase-3-schema/02-create-vehicle-live-state.prompt.md
-// (charging_state, hvac_state, shift_state).
+// constraints for charging_state, hvac_state, and shift_state.
 //
-// ADR-001 (typed-by-default), ADR-002 (single source of truth for current
-// state lives in vehicle_live_state), ADR-004 (no JSONB carve-outs).
+// ADR-001 keeps these fields typed by default, and ADR-004 keeps them out of
+// JSONB carve-outs.
 
 // ChargingStateKind enumerates the value of vehicle_live_state.charging_state.
 // Mirrors the CHECK constraint:

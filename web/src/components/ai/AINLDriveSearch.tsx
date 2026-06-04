@@ -1,8 +1,6 @@
-// Phase-50 / 0018 — N4 Natural-language drive search & replay.
-// Phase-50 / W1 (slice 0065) — wired the Search button to
-// POST /api/v1/ai/drives/search (feature id: nl-drive-search-replay).
-// Phase-50 / refactor — switched to AIFeatureCard scaffold for
-// visual + behavioural consistency across all AI features.
+// Natural-language drive search and replay.
+// The Search button posts to /api/v1/ai/drives/search.
+// Uses AIFeatureCard for visual and behavioral consistency across AI features.
 
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'

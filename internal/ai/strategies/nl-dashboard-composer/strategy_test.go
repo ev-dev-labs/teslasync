@@ -1,5 +1,3 @@
-// Phase-50 / 0059 — PU3 Natural-language dashboard composer.
-//
 // Unit tests for the nl-dashboard-composer Strategy. Mirrors the
 // shape of nl-grafana-panel's strategy_test.go (the closest
 // precedent: a propose-only DTO drafter strategy with a deny-all
@@ -103,10 +101,7 @@ func TestStrategy_Tools(t *testing.T) {
 	}
 }
 
-// TestStrategy_ToolsIsDefensiveCopy proves Tools() returns a
-// copy — a caller that mutates the slice does NOT leak the
-// mutation back into the strategy. Dispatcher safety relies on
-// this.
+// TestStrategy_ToolsIsDefensiveCopy proves Tools() returns a defensive copy.
 func TestStrategy_ToolsIsDefensiveCopy(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -144,7 +139,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs preferred-greeting or per-vehicle
+// future feature that needs preferred-greeting or per-vehicle
 // preferences ships.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
@@ -163,7 +158,7 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 // F4↔F8 adapter. PolicyAlertBuilder is a DENY-BY-DEFAULT policy:
 // Allow == nil so EVERY PII class — VIN, lat/long, addresses,
 // place names, AND vehicle-name — is tagged round-trip. The
-// slice prompt explicitly mandates "Allowed classes: none;
+// feature requirements explicitly mandates "Allowed classes: none;
 // widget catalog and aggregate metadata only."
 func TestStrategy_RedactionPolicyAlertBuilder(t *testing.T) {
 	t.Parallel()

@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 37 — useNotificationChannels hook tests.
+// useNotificationChannels hook tests.
 //
 // The hook layer re-exports generic channel CRUD from
 // `useNotifications` and adds three webhook-specific helpers:

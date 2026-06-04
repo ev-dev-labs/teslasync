@@ -4,26 +4,24 @@ import (
 	"context"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
+
+	positiondb "github.com/ev-dev-labs/teslasync/internal/database/position"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
 )
 
-// SignalStateReader is the minimal interface { State(...) } that
-// VehicleService consults to backfill state fields the live signal store left
-// at their Go zero value after a pod restart. The concrete production type is
-// signal.LogStateReader (any signal.StateReader satisfies this); tests inject
-// an in-memory fake. Per ADR-002, signal_log read via the canonical
-// StateReader contract is the only durable read path — no snapshot tables.
-//
-// Phase-39 migration: this interface replaced the legacy SignalSnapshotReader
-// (which exposed *database.SignalLogReader.SnapshotAt). The two methods are
-// semantically identical — both forward-fold via DISTINCT ON (signal) at-or-
-// before `at` and apply unpackLocationCompounds — but State carries the
-// canonical signal.State return type and at != zero validation.
+// SignalStateReader backfills fields that the live signal store left at
+// their Go zero value after a pod restart. The production implementation is
+// signal.LogStateReader; tests inject an in-memory fake. Per ADR-002,
+// signal_log reads through the StateReader contract are the only durable
+// point-in-time state path — no snapshot tables.
 type SignalStateReader interface {
 	State(ctx context.Context, vehicleID int64, at time.Time) (signal.State, error)
 }
@@ -33,36 +31,30 @@ type SignalStateReader interface {
 // interacting with repositories directly for complex operations.
 type VehicleService struct {
 	db            *database.DB
-	vehicleRepo   *database.VehicleRepo
-	positionRepo  *database.PositionRepo
-	settingsRepo  *database.SettingsRepo
+	vehicleRepo   *vehicledb.VehicleRepo
+	positionRepo  *positiondb.PositionRepo
+	settingsRepo  *settingsdb.SettingsRepo
 	stateProvider *vehicleStateProvider
 	state         SignalStateReader
 }
 
 // NewVehicleService creates a VehicleService with all required repos.
-//
-// Phase-42 (prompt 0077): the legacy securityRepo and stateRepo fields
-// were removed when their backing tables (security_events, vehicle_states)
-// were dropped. Current vehicle state is now derived from the FSM (see
-// internal/api/fsm_handler.go) + signal.StateReader; the new
-// vehicleStateProvider field exposes a thin fsm_transitions-backed
-// "since when" lookup for handlers that still need it.
+// Current vehicle state is derived from the FSM plus signal.StateReader;
+// vehicleStateProvider exposes a thin fsm_transitions-backed "since when"
+// lookup for handlers that still need it.
 func NewVehicleService(db *database.DB) *VehicleService {
 	return &VehicleService{
 		db:            db,
-		vehicleRepo:   database.NewVehicleRepo(db),
-		positionRepo:  database.NewPositionRepo(db),
-		settingsRepo:  database.NewSettingsRepo(db),
+		vehicleRepo:   vehicledb.NewVehicleRepo(db),
+		positionRepo:  positiondb.NewPositionRepo(db),
+		settingsRepo:  settingsdb.NewSettingsRepo(db),
 		stateProvider: &vehicleStateProvider{db: db},
 	}
 }
 
-// WithStateReader wires a SignalStateReader (typically signal.LogStateReader
-// or any signal.StateReader implementation) used by BuildStateFromSignalStore
-// as a durable backstop for fields the live store left at zero (e.g., after
-// a pod restart). When unset the fallback is skipped and behavior matches the
-// pre-Phase-38 baseline.
+// WithStateReader wires the durable fallback used by BuildStateFromSignalStore
+// for fields the live store left at zero, such as after a pod restart. When
+// unset, the fallback is skipped.
 func (s *VehicleService) WithStateReader(reader SignalStateReader) *VehicleService {
 	s.state = reader
 	return s
@@ -70,24 +62,23 @@ func (s *VehicleService) WithStateReader(reader SignalStateReader) *VehicleServi
 
 // PositionRepo returns the underlying position repository for simple CRUD
 // operations that don't warrant a service method (e.g. paginated listing).
-func (s *VehicleService) PositionRepo() *database.PositionRepo {
+func (s *VehicleService) PositionRepo() *positiondb.PositionRepo {
 	return s.positionRepo
 }
 
 // VehicleRepo returns the underlying vehicle repository for simple CRUD.
-func (s *VehicleService) VehicleRepo() *database.VehicleRepo {
+func (s *VehicleService) VehicleRepo() *vehicledb.VehicleRepo {
 	return s.vehicleRepo
 }
 
 // SettingsRepo returns the underlying settings repository for simple lookups.
-func (s *VehicleService) SettingsRepo() *database.SettingsRepo {
+func (s *VehicleService) SettingsRepo() *settingsdb.SettingsRepo {
 	return s.settingsRepo
 }
 
 // StateRepo returns a vehicleStateProvider that derives current vehicle state
-// + transition timestamp from fsm_transitions (000187). This replaces the
-// legacy *database.VehicleStateRepo accessor that was removed when the
-// vehicle_states snapshot table was dropped (Phase-42 prompt 0077).
+// and transition timestamp from fsm_transitions (000187), without reading the
+// dropped vehicle_states snapshot table.
 func (s *VehicleService) StateRepo() *vehicleStateProvider {
 	return s.stateProvider
 }
@@ -131,8 +122,8 @@ func (p *vehicleStateProvider) GetCurrentStateSince(ctx context.Context, vehicle
 // SignalStore, with comprehensive DB fallbacks for every field.
 // NEVER returns nil — always builds a complete state from whatever data
 // is available (SignalStore → snapshot tables → zero defaults).
-func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle *models.Vehicle) *models.VehicleState {
-	state := &models.VehicleState{
+func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle *vehiclemodel.Vehicle) *vehiclemodel.VehicleState {
+	state := &vehiclemodel.VehicleState{
 		VehicleID: vehicle.ID,
 	}
 
@@ -145,12 +136,12 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 		all = make(map[string]*signal.Value)
 	}
 
-	// --- Phase 1: Read every field from SignalStore ---
+	// Read every field from SignalStore.
 	//
 	// Every numeric extraction below MUST go through signal.Float64Value
-	// (or signal.Float64 for nested map members). Phase-42 codec stores
-	// Float5 as float32 and Int3/Int4 as int32; a direct `.(float64)`
-	// assertion silently drops every such value. See coerce.go contract.
+	// (or signal.Float64 for nested map members). The codec stores Float5 as
+	// float32 and Int3/Int4 as int32; a direct `.(float64)` assertion silently
+	// drops those values. See the coerce.go contract.
 
 	if f, ok := signal.Float64Value(all["VehicleSpeed"]); ok {
 		state.Speed = f
@@ -278,19 +269,19 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 		case string:
 			state.IsClimateOn = enums.ParseHvacPower(hv)
 		default:
-			// Phase-42 codec stores numeric HvacPower variants as
-			// float32/int32 — route through the canonical converter.
+			// Numeric HvacPower variants may be float32 or int32; route them
+			// through the canonical converter.
 			if f, ok := signal.Float64(v.Raw); ok {
 				state.IsClimateOn = f > 0
 			}
 		}
 	}
 
-	// --- Phase 2: signal_log fallback for fields the live store left at
-	// their Go zero value. signal_log is the durable, ADR-001-blessed
-	// last-value-per-signal store; reading from snapshot tables (positions,
-	// state_snapshots, battery_snapshots, climate_snapshots, etc.) is
-	// forbidden. Live values always win — the fallback only fills holes.
+	// Fall back to signal_log for fields the live store left at their Go zero
+	// value. signal_log is the durable, ADR-001-blessed last-value-per-signal
+	// store; reading from snapshot tables (positions, state_snapshots,
+	// battery_snapshots, climate_snapshots, etc.) is forbidden. Live values
+	// always win — the fallback only fills holes.
 	ctx := context.Background()
 	if s.state != nil {
 		snap, err := s.state.State(ctx, vehicle.ID, time.Now().UTC())
@@ -301,12 +292,9 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 		}
 	}
 
-	// --- Phase 3: Vehicle state — fallback from fsm_transitions.
-	//
-	// Phase-42 (prompt 0077): the legacy s.stateRepo.GetCurrentState read
-	// against vehicle_states was removed. The state-from-FSM lookup is
-	// retained via stateProvider so handlers that build a state from a cold
-	// SignalStore still get a non-empty State string after a pod restart.
+	// Fall back to fsm_transitions for the vehicle state string so handlers
+	// that build state from a cold SignalStore still get a non-empty State after
+	// a pod restart.
 	if state.State == "" && s.stateProvider != nil {
 		if currentState, _, err := s.stateProvider.GetCurrentStateSince(ctx, vehicle.ID); err == nil && currentState != "" {
 			state.State = currentState
@@ -321,12 +309,12 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 
 // fillStateFromSnapshot backfills VehicleState fields that are still at their
 // Go zero value from the signal_log snapshot map. The signal-name → field
-// mapping mirrors Phase 1 of BuildStateFromSignalStore so the merged state is
+// mapping mirrors BuildStateFromSignalStore so the merged state is
 // consistent regardless of which layer supplied each value. Live data is
 // always preferred — boolean fields are only filled when the live store had
 // no entry for the corresponding signal name (avoiding false-vs-unset
 // ambiguity).
-func fillStateFromSnapshot(state *models.VehicleState, live map[string]*signal.Value, snap signal.State) {
+func fillStateFromSnapshot(state *vehiclemodel.VehicleState, live map[string]*signal.Value, snap signal.State) {
 	if state.Odometer == 0 {
 		if f, ok := snapFloat(snap, "Odometer"); ok {
 			state.Odometer = f
@@ -437,7 +425,7 @@ func snapString(snap signal.State, key string) (string, bool) {
 }
 
 // snapBool extracts a boolean value from a signal_log snapshot map. Strings
-// "true"/"1" are accepted to mirror Phase 1 of BuildStateFromSignalStore.
+// "true"/"1" are accepted to mirror BuildStateFromSignalStore.
 func snapBool(snap signal.State, key string) (bool, bool) {
 	v, ok := snap[key]
 	if !ok || v == nil {
@@ -454,13 +442,13 @@ func snapBool(snap signal.State, key string) (bool, bool) {
 
 // SyncFromTesla discovers vehicles via the Tesla API and upserts them
 // into the database. Returns the list of synced vehicles (existing + new).
-func (s *VehicleService) SyncFromTesla(ctx context.Context, teslaClient *tesla.Client) ([]*models.Vehicle, error) {
+func (s *VehicleService) SyncFromTesla(ctx context.Context, teslaClient *tesla.Client) ([]*vehiclemodel.Vehicle, error) {
 	vehicles, err := teslaClient.ListVehicles(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var synced []*models.Vehicle
+	var synced []*vehiclemodel.Vehicle
 	for _, tv := range vehicles {
 		existing, _ := s.vehicleRepo.GetByID(ctx, tv.VehicleID)
 		if existing != nil {
@@ -468,7 +456,7 @@ func (s *VehicleService) SyncFromTesla(ctx context.Context, teslaClient *tesla.C
 			continue
 		}
 
-		v := &models.Vehicle{
+		v := &vehiclemodel.Vehicle{
 			TeslaID:     tv.VehicleID,
 			VIN:         tv.VIN,
 			DisplayName: tv.DisplayName,

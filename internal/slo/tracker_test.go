@@ -67,7 +67,7 @@ func TestSnapshot_FastBurnTierFires_WhenBothWindowsAboveThreshold(t *testing.T) 
 		// Short window (5m) bad ratio = 0.4 > 0.144 -> firing leg
 		"1 - ((sum(rate(good[5m]))) / clamp_min((sum(rate(valid[5m]))), 1))": 0.4,
 		// Slow tier windows: 6h + 30m; below threshold so slow burn does NOT fire
-		"1 - ((sum(rate(good[6h]))) / clamp_min((sum(rate(valid[6h]))), 1))":  0.001,
+		"1 - ((sum(rate(good[6h]))) / clamp_min((sum(rate(valid[6h]))), 1))":   0.001,
 		"1 - ((sum(rate(good[30m]))) / clamp_min((sum(rate(valid[30m]))), 1))": 0.001,
 		// Current ratio (good/valid over 30d) — used for error budget remaining
 		"(sum(rate(good[30d]))) / clamp_min((sum(rate(valid[30d]))), 1)": 0.6,

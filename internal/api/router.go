@@ -14,8 +14,209 @@ import (
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
+
+	apiadminfb "github.com/ev-dev-labs/teslasync/internal/api/adminfeedback"
+	apiadminls "github.com/ev-dev-labs/teslasync/internal/api/adminlogstream"
+	apiadminmnt "github.com/ev-dev-labs/teslasync/internal/api/adminmaintenance"
+	aialert "github.com/ev-dev-labs/teslasync/internal/api/aialert"
+	aialerttune "github.com/ev-dev-labs/teslasync/internal/api/aialerttune"
+	aianomaly "github.com/ev-dev-labs/teslasync/internal/api/aianomaly"
+	aiautomation "github.com/ev-dev-labs/teslasync/internal/api/aiautomation"
+	aiautoname "github.com/ev-dev-labs/teslasync/internal/api/aiautoname"
+	aiautotripname "github.com/ev-dev-labs/teslasync/internal/api/aiautotripname"
+	aibatthealth "github.com/ev-dev-labs/teslasync/internal/api/aibatthealth"
+	aichargcurve "github.com/ev-dev-labs/teslasync/internal/api/aichargcurve"
+	aichargdiag "github.com/ev-dev-labs/teslasync/internal/api/aichargdiag"
+	aichatbot "github.com/ev-dev-labs/teslasync/internal/api/aichatbot"
+	aiclimate "github.com/ev-dev-labs/teslasync/internal/api/aiclimate"
+	aicostfcst "github.com/ev-dev-labs/teslasync/internal/api/aicostfcst"
+	aicrossrule "github.com/ev-dev-labs/teslasync/internal/api/aicrossrule"
+	aidatarep "github.com/ev-dev-labs/teslasync/internal/api/aidatarep"
+	aidigest "github.com/ev-dev-labs/teslasync/internal/api/aidigest"
+	aidrivecoach "github.com/ev-dev-labs/teslasync/internal/api/aidrivecoach"
+	aidrivesearch "github.com/ev-dev-labs/teslasync/internal/api/aidrivesearch"
+	aifeedtri "github.com/ev-dev-labs/teslasync/internal/api/aifeedtri"
+	aifsmnar "github.com/ev-dev-labs/teslasync/internal/api/aifsmnar"
+	aigeofautom "github.com/ev-dev-labs/teslasync/internal/api/aigeofautom"
+	aiinboxcat "github.com/ev-dev-labs/teslasync/internal/api/aiinboxcat"
+	aiincident "github.com/ev-dev-labs/teslasync/internal/api/aiincident"
+	ailifetime "github.com/ev-dev-labs/teslasync/internal/api/ailifetime"
+	"github.com/ev-dev-labs/teslasync/internal/api/ailogtrace"
+	aimlanom "github.com/ev-dev-labs/teslasync/internal/api/aimlanom"
+	aimlchargcv "github.com/ev-dev-labs/teslasync/internal/api/aimlchargcv"
+	aimlrange "github.com/ev-dev-labs/teslasync/internal/api/aimlrange"
+	aimqttsse "github.com/ev-dev-labs/teslasync/internal/api/aimqttsse"
+	ainldash "github.com/ev-dev-labs/teslasync/internal/api/ainldash"
+	ainlgrafana "github.com/ev-dev-labs/teslasync/internal/api/ainlgrafana"
+	ainlsql "github.com/ev-dev-labs/teslasync/internal/api/ainlsql"
+	aiperiodcmp "github.com/ev-dev-labs/teslasync/internal/api/aiperiodcmp"
+	aipiiredact "github.com/ev-dev-labs/teslasync/internal/api/aipiiredact"
+	aipostcard "github.com/ev-dev-labs/teslasync/internal/api/aipostcard"
+	aipredmaint "github.com/ev-dev-labs/teslasync/internal/api/aipredmaint"
+	aiquiethrs "github.com/ev-dev-labs/teslasync/internal/api/aiquiethrs"
+	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
+	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
+	aisafetyexp "github.com/ev-dev-labs/teslasync/internal/api/aisafetyexp"
+	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
+	"github.com/ev-dev-labs/teslasync/internal/api/aisettingsvalidate"
+	aisignalnl "github.com/ev-dev-labs/teslasync/internal/api/aisignalnl"
+	aismartcharge "github.com/ev-dev-labs/teslasync/internal/api/aismartcharge"
+	aispeedprof "github.com/ev-dev-labs/teslasync/internal/api/aispeedprof"
+	aisuggeo "github.com/ev-dev-labs/teslasync/internal/api/aisuggeo"
+	aiswupd "github.com/ev-dev-labs/teslasync/internal/api/aiswupd"
+	aitconar "github.com/ev-dev-labs/teslasync/internal/api/aitconar"
+	aitempimpact "github.com/ev-dev-labs/teslasync/internal/api/aitempimpact"
+	aitirepress "github.com/ev-dev-labs/teslasync/internal/api/aitirepress"
+	aitripplanllm "github.com/ev-dev-labs/teslasync/internal/api/aitripplanllm"
+	"github.com/ev-dev-labs/teslasync/internal/api/aiusage"
+	aivampire "github.com/ev-dev-labs/teslasync/internal/api/aivampire"
+	"github.com/ev-dev-labs/teslasync/internal/api/aivehpaint"
+	aivoice "github.com/ev-dev-labs/teslasync/internal/api/aivoice"
+	aiwatchnl "github.com/ev-dev-labs/teslasync/internal/api/aiwatchnl"
+	aiyir "github.com/ev-dev-labs/teslasync/internal/api/aiyir"
+	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
+	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
+	apianalytics "github.com/ev-dev-labs/teslasync/internal/api/analytics"
+	apianomaly "github.com/ev-dev-labs/teslasync/internal/api/anomaly"
+	apicalllog "github.com/ev-dev-labs/teslasync/internal/api/apicalllog"
+	apiflagsh "github.com/ev-dev-labs/teslasync/internal/api/apiflagsh"
+	apikeyh "github.com/ev-dev-labs/teslasync/internal/api/apikey"
+	"github.com/ev-dev-labs/teslasync/internal/api/apperror"
+	apiaudit "github.com/ev-dev-labs/teslasync/internal/api/audit"
+	apiauth "github.com/ev-dev-labs/teslasync/internal/api/auth"
+	apiauths "github.com/ev-dev-labs/teslasync/internal/api/authsession"
+	apiautomation "github.com/ev-dev-labs/teslasync/internal/api/automation"
+	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
+	apibattery "github.com/ev-dev-labs/teslasync/internal/api/battery"
+	"github.com/ev-dev-labs/teslasync/internal/api/batterycells"
+	"github.com/ev-dev-labs/teslasync/internal/api/batterydegradation"
+	apichargeheatmap "github.com/ev-dev-labs/teslasync/internal/api/chargeheatmap"
+	apichargeopt "github.com/ev-dev-labs/teslasync/internal/api/chargeopt"
+	"github.com/ev-dev-labs/teslasync/internal/api/chargeplanner"
+	apichargetelem "github.com/ev-dev-labs/teslasync/internal/api/chargetelem"
+	apicharging "github.com/ev-dev-labs/teslasync/internal/api/charging"
+	apiannot "github.com/ev-dev-labs/teslasync/internal/api/chartannotation"
+	apichatbot "github.com/ev-dev-labs/teslasync/internal/api/chatbot"
+	apiclimate "github.com/ev-dev-labs/teslasync/internal/api/climate"
+	apicommand "github.com/ev-dev-labs/teslasync/internal/api/command"
+	"github.com/ev-dev-labs/teslasync/internal/api/costforecast"
+	apidash "github.com/ev-dev-labs/teslasync/internal/api/dashboardlayout"
+	apidq "github.com/ev-dev-labs/teslasync/internal/api/dataquality"
+	apidatarepair "github.com/ev-dev-labs/teslasync/internal/api/datarepair"
+	apidevtools "github.com/ev-dev-labs/teslasync/internal/api/devtools"
+	apidiag "github.com/ev-dev-labs/teslasync/internal/api/diagnostic"
+	apidlq "github.com/ev-dev-labs/teslasync/internal/api/dlq"
+	apidrived "github.com/ev-dev-labs/teslasync/internal/api/drivediagnostic"
+	apidrivedyn "github.com/ev-dev-labs/teslasync/internal/api/drivedyn"
+	apidrives "github.com/ev-dev-labs/teslasync/internal/api/drives"
+	apidrivetrain "github.com/ev-dev-labs/teslasync/internal/api/drivetrain"
+	apidrivingcoach "github.com/ev-dev-labs/teslasync/internal/api/drivingcoach"
+	apienergy "github.com/ev-dev-labs/teslasync/internal/api/energy"
+	apienergyflow "github.com/ev-dev-labs/teslasync/internal/api/energyflow"
+	apienergysite "github.com/ev-dev-labs/teslasync/internal/api/energysite"
+	apiexpcol "github.com/ev-dev-labs/teslasync/internal/api/exportcolumns"
+	apiexports "github.com/ev-dev-labs/teslasync/internal/api/exports"
+	apifb "github.com/ev-dev-labs/teslasync/internal/api/feedback"
+	apifleettelem "github.com/ev-dev-labs/teslasync/internal/api/fleettelemetry"
+	apigas "github.com/ev-dev-labs/teslasync/internal/api/gasprice"
+	apigeocode "github.com/ev-dev-labs/teslasync/internal/api/geocode"
+	apigeo "github.com/ev-dev-labs/teslasync/internal/api/geofence"
+	apiguard "github.com/ev-dev-labs/teslasync/internal/api/guard"
+	apiimpers "github.com/ev-dev-labs/teslasync/internal/api/impersonate"
+	apixray "github.com/ev-dev-labs/teslasync/internal/api/ingestxray"
+	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
+	apilocsnap "github.com/ev-dev-labs/teslasync/internal/api/locsnap"
+	"github.com/ev-dev-labs/teslasync/internal/api/maintenance"
+	apimedia "github.com/ev-dev-labs/teslasync/internal/api/media"
+	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
+	apimileage "github.com/ev-dev-labs/teslasync/internal/api/mileage"
+	apimotor "github.com/ev-dev-labs/teslasync/internal/api/motor"
+	apinotif "github.com/ev-dev-labs/teslasync/internal/api/notification"
+	apionboard "github.com/ev-dev-labs/teslasync/internal/api/onboarding"
+	apiopenapi "github.com/ev-dev-labs/teslasync/internal/api/openapi"
+	apiperiod "github.com/ev-dev-labs/teslasync/internal/api/periodstats"
+	apipinned "github.com/ev-dev-labs/teslasync/internal/api/pinned"
+	apipolling "github.com/ev-dev-labs/teslasync/internal/api/polling"
+	apipush "github.com/ev-dev-labs/teslasync/internal/api/push"
+	apiqueue "github.com/ev-dev-labs/teslasync/internal/api/queuestatus"
+	apiquiet "github.com/ev-dev-labs/teslasync/internal/api/quiethours"
+	apirangeproj "github.com/ev-dev-labs/teslasync/internal/api/rangeproj"
+	apiratelim "github.com/ev-dev-labs/teslasync/internal/api/ratelimit"
+	apirbac "github.com/ev-dev-labs/teslasync/internal/api/rbac"
+	apiregen "github.com/ev-dev-labs/teslasync/internal/api/regen"
+	apirouteeff "github.com/ev-dev-labs/teslasync/internal/api/routeeff"
+	apisafety "github.com/ev-dev-labs/teslasync/internal/api/safety"
+	apisaved "github.com/ev-dev-labs/teslasync/internal/api/savedviews"
+	apischedexp "github.com/ev-dev-labs/teslasync/internal/api/scheduledexports"
+	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
+	apisecurity "github.com/ev-dev-labs/teslasync/internal/api/security"
+	apisess "github.com/ev-dev-labs/teslasync/internal/api/session"
+	apisettings "github.com/ev-dev-labs/teslasync/internal/api/settings"
+	apisetreset "github.com/ev-dev-labs/teslasync/internal/api/settingsreset"
+	apishare "github.com/ev-dev-labs/teslasync/internal/api/share"
+	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
+	apisigcat "github.com/ev-dev-labs/teslasync/internal/api/signalscatalog"
+	apisleep "github.com/ev-dev-labs/teslasync/internal/api/sleep"
+	apislo "github.com/ev-dev-labs/teslasync/internal/api/slo"
+	apisoftupd "github.com/ev-dev-labs/teslasync/internal/api/softwareupdate"
+	apispeedprof "github.com/ev-dev-labs/teslasync/internal/api/speedprofile"
+	"github.com/ev-dev-labs/teslasync/internal/api/sse"
+	apistatus "github.com/ev-dev-labs/teslasync/internal/api/status"
+	apisynthetic "github.com/ev-dev-labs/teslasync/internal/api/synthetic"
+	apiauthmode "github.com/ev-dev-labs/teslasync/internal/api/sysauthmode"
+	apisystem "github.com/ev-dev-labs/teslasync/internal/api/system"
+	apitco "github.com/ev-dev-labs/teslasync/internal/api/tco"
+	apitelem "github.com/ev-dev-labs/teslasync/internal/api/telemetry"
+	"github.com/ev-dev-labs/teslasync/internal/api/tempimpact"
+	apiteslachargehist "github.com/ev-dev-labs/teslasync/internal/api/teslachargehist"
+	apiteslachargesess "github.com/ev-dev-labs/teslasync/internal/api/teslachargesess"
+	apiteslaenergyhist "github.com/ev-dev-labs/teslasync/internal/api/teslaenergyhist"
+	apitels "github.com/ev-dev-labs/teslasync/internal/api/teslaenergylivestatus"
+	apituc "github.com/ev-dev-labs/teslasync/internal/api/teslauserconfig"
+	apituo "github.com/ev-dev-labs/teslasync/internal/api/teslauserorder"
+	apitup "github.com/ev-dev-labs/teslasync/internal/api/teslauserprofile"
+	apitirepressure "github.com/ev-dev-labs/teslasync/internal/api/tirepressure"
+	apitotp "github.com/ev-dev-labs/teslasync/internal/api/totp"
+	apitrip "github.com/ev-dev-labs/teslasync/internal/api/trip"
+	apitripplanner "github.com/ev-dev-labs/teslasync/internal/api/tripplanner"
+	apitripsd "github.com/ev-dev-labs/teslasync/internal/api/tripsdetail"
+	apiuserpref "github.com/ev-dev-labs/teslasync/internal/api/userpref"
+	apivamp "github.com/ev-dev-labs/teslasync/internal/api/vampiredrain"
+	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
+	apivehaccess "github.com/ev-dev-labs/teslasync/internal/api/vehicleaccess"
+	apivehconfig "github.com/ev-dev-labs/teslasync/internal/api/vehicleconfig"
+	apivehinfo "github.com/ev-dev-labs/teslasync/internal/api/vehicleinfo"
+	apivehphoto "github.com/ev-dev-labs/teslasync/internal/api/vehiclephoto"
+	apivehsettings "github.com/ev-dev-labs/teslasync/internal/api/vehiclesettings"
+	apivehstates "github.com/ev-dev-labs/teslasync/internal/api/vehiclestates"
+	apivisloc "github.com/ev-dev-labs/teslasync/internal/api/visitedlocation"
+	"github.com/ev-dev-labs/teslasync/internal/api/watch"
+	apiwerr "github.com/ev-dev-labs/teslasync/internal/api/weberrors"
+	apiwhrx "github.com/ev-dev-labs/teslasync/internal/api/webhookreceiver"
+	apivitals "github.com/ev-dev-labs/teslasync/internal/api/webvitals"
+	apiweekly "github.com/ev-dev-labs/teslasync/internal/api/weeklydigest"
+	"github.com/ev-dev-labs/teslasync/internal/api/yearreview"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	aidb "github.com/ev-dev-labs/teslasync/internal/database/ai"
+	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
+	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
+	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
+	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
+	energydb "github.com/ev-dev-labs/teslasync/internal/database/energy"
+	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
+	geofencedb "github.com/ev-dev-labs/teslasync/internal/database/geofence"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
+	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
+	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
+	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
+	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
+	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
+	workerdb "github.com/ev-dev-labs/teslasync/internal/database/worker"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/integrations"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -26,7 +227,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/webpush"
 
-	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -35,27 +235,30 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
+
 	"github.com/ev-dev-labs/teslasync/internal/automation"
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
 
-	// Phase-50 / 0001 — F0 AI-Off Contract (ADR-015). The guard
+	// F0 AI-Off Contract (ADR-015). The guard
 	// package is the only sanctioned mount point for /api/v1/ai/*
 	// routes; tools/aivet refuses to merge a router change that
 	// introduces an AI route via a bare HandlerFunc.
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/feedback"
 
-	// Phase-50 / 0009 — F8 Redaction Layer. The decorator is the
+	// F8 Redaction Layer. The decorator is the
 	// innermost wire-side wrap so every cloud call is sanitized
 	// before audit/trace see the post-redaction text. PolicyFromContext
 	// is the resolver — dispatcher.Run installs the strategy's
-	// RedactionPolicy() into ctx via the redactadapter bridge.
+	// RedactionPolicy into ctx via the redactadapter bridge.
 	"github.com/ev-dev-labs/teslasync/internal/ai/redact"
 
-	// Phase-50 / 0002 — F1 Provider Abstraction. The registry +
+	// F1 Provider Abstraction. The registry +
 	// adapters live behind the same hexagonal port so feature code
 	// imports only "internal/ai/provider", never the concrete
 	// adapter packages. The four concrete adapter imports below are
-	// the package-init equivalents — Register() is called explicitly
+	// the package-init equivalents — Register is called explicitly
 	// in NewRouter so a fresh build cannot accidentally enable a
 	// provider by virtue of an unintended import.
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
@@ -65,77 +268,104 @@ import (
 	aiollama "github.com/ev-dev-labs/teslasync/internal/ai/provider/ollama"
 	aiopenai "github.com/ev-dev-labs/teslasync/internal/ai/provider/openai"
 
-	// Phase-50 / 0011 — U1 Chatbot LLM upgrade. The chatbot strategy +
+	// U1 Chatbot LLM upgrade. The chatbot strategy +
 	// the shared tool registry are constructed at boot and shared with
 	// the AI chatbot HTTP handler.
-	chatbotllm "github.com/ev-dev-labs/teslasync/internal/ai/strategies/chatbot-llm"
-	digestnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/digest-narration"
-	yirnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration"
+	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	alerttuningsuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/alert-tuning-suggestions"
 	anomalyexplanations "github.com/ev-dev-labs/teslasync/internal/ai/strategies/anomaly-explanations"
+	autonameunnamedlocations "github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-name-unnamed-locations"
+	autotripnaming "github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-trip-naming"
+	batteryhealthforecastnarrative "github.com/ev-dev-labs/teslasync/internal/ai/strategies/battery-health-forecast-narrative"
+	cabintemperatureimpactnarrative "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cabin-temperature-impact-narrative"
+	chargingcurvefingerprintclustering "github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-curve-fingerprint-clustering"
+	chargingdiagnosis "github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-diagnosis"
+	chatbotllm "github.com/ev-dev-labs/teslasync/internal/ai/strategies/chatbot-llm"
+	costforecastnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cost-forecast-narration"
+	crossruleconflictdetection "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cross-rule-conflict-detection"
+	datarepairsuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/data-repair-suggestions"
+	digestnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/digest-narration"
+	drivecoaching "github.com/ev-dev-labs/teslasync/internal/ai/strategies/drive-coaching"
+	feedbackqueuetriage "github.com/ev-dev-labs/teslasync/internal/ai/strategies/feedback-queue-triage"
+	geofenceawareautomationsuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/geofence-aware-automation-suggestions"
+	inboxautocategorization "github.com/ev-dev-labs/teslasync/internal/ai/strategies/inbox-auto-categorization"
+	incidenttimelinesummarizer "github.com/ev-dev-labs/teslasync/internal/ai/strategies/incident-timeline-summarizer"
+	learnedanomalybaselines "github.com/ev-dev-labs/teslasync/internal/ai/strategies/learned-per-vehicle-anomaly-baselines"
+	lifetimestatsqa "github.com/ev-dev-labs/teslasync/internal/ai/strategies/lifetime-stats-qa"
+	logtracesummarization "github.com/ev-dev-labs/teslasync/internal/ai/strategies/log-trace-summarization"
+	mlchargingcurveclustering "github.com/ev-dev-labs/teslasync/internal/ai/strategies/ml-charging-curve-clustering"
+	mqttsseinspectorexplanations "github.com/ev-dev-labs/teslasync/internal/ai/strategies/mqtt-sse-inspector-explanations"
 	nlalertbuilder "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-alert-builder"
 	nlautomationbuilder "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-automation-builder"
-	nlsearch "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-search"
-	drivecoaching "github.com/ev-dev-labs/teslasync/internal/ai/strategies/drive-coaching"
-	chargingdiagnosis "github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-diagnosis"
-	raghelp "github.com/ev-dev-labs/teslasync/internal/ai/strategies/rag-help"
+	nldashboardcomposer "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-dashboard-composer"
 	nldrivesearchreplay "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-drive-search-replay"
-	speedprofileinsights "github.com/ev-dev-labs/teslasync/internal/ai/strategies/speed-profile-insights"
-	routeefficiencysuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/route-efficiency-suggestions"
-	autotripnaming "github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-trip-naming"
-	tripplannerllmagent "github.com/ev-dev-labs/teslasync/internal/ai/strategies/trip-planner-llm-agent"
-	smartchargeschedulesuggestion "github.com/ev-dev-labs/teslasync/internal/ai/strategies/smart-charge-schedule-suggestion"
-	batteryhealthforecastnarrative "github.com/ev-dev-labs/teslasync/internal/ai/strategies/battery-health-forecast-narrative"
-	chargingcurvefingerprintclustering "github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-curve-fingerprint-clustering"
-	costforecastnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cost-forecast-narration"
+	nlgrafanapanel "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-grafana-panel"
+	nlsearch "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-search"
+	nlsqlplayground "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-sql-playground"
 	periodcomparenarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/period-compare-narration"
-	lifetimestatsqa "github.com/ev-dev-labs/teslasync/internal/ai/strategies/lifetime-stats-qa"
-	incidenttimelinesummarizer "github.com/ev-dev-labs/teslasync/internal/ai/strategies/incident-timeline-summarizer"
-	datarepairsuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/data-repair-suggestions"
-	signalexplorernlfilter "github.com/ev-dev-labs/teslasync/internal/ai/strategies/signal-explorer-nl-filter"
-	logtracesummarization "github.com/ev-dev-labs/teslasync/internal/ai/strategies/log-trace-summarization"
-	feedbackqueuetriage "github.com/ev-dev-labs/teslasync/internal/ai/strategies/feedback-queue-triage"
-	mqttsseinspectorexplanations "github.com/ev-dev-labs/teslasync/internal/ai/strategies/mqtt-sse-inspector-explanations"
-	statemachinedebuggernarrator "github.com/ev-dev-labs/teslasync/internal/ai/strategies/state-machine-debugger-narrator"
-	predictivemaintenance "github.com/ev-dev-labs/teslasync/internal/ai/strategies/predictive-maintenance"
-	tconarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/tco-narration"
-	softwareupdatechangelogsummarizer "github.com/ev-dev-labs/teslasync/internal/ai/strategies/software-update-changelog-summarizer"
 	piiredactionsharedexports "github.com/ev-dev-labs/teslasync/internal/ai/strategies/pii-redaction-shared-exports"
+	predictivemaintenance "github.com/ev-dev-labs/teslasync/internal/ai/strategies/predictive-maintenance"
+	preheatprecoolrecommender "github.com/ev-dev-labs/teslasync/internal/ai/strategies/preheat-precool-recommender"
 	quiethourssuggestion "github.com/ev-dev-labs/teslasync/internal/ai/strategies/quiet-hours-suggestion"
+	raghelp "github.com/ev-dev-labs/teslasync/internal/ai/strategies/rag-help"
+	rangepredictionmodel "github.com/ev-dev-labs/teslasync/internal/ai/strategies/range-prediction-model"
+	routeefficiencysuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/route-efficiency-suggestions"
 	safetysettingexplainer "github.com/ev-dev-labs/teslasync/internal/ai/strategies/safety-setting-explainer"
+	signalexplorernlfilter "github.com/ev-dev-labs/teslasync/internal/ai/strategies/signal-explorer-nl-filter"
+	smartchargeschedulesuggestion "github.com/ev-dev-labs/teslasync/internal/ai/strategies/smart-charge-schedule-suggestion"
+	softwareupdatechangelogsummarizer "github.com/ev-dev-labs/teslasync/internal/ai/strategies/software-update-changelog-summarizer"
+	speedprofileinsights "github.com/ev-dev-labs/teslasync/internal/ai/strategies/speed-profile-insights"
+	statemachinedebuggernarrator "github.com/ev-dev-labs/teslasync/internal/ai/strategies/state-machine-debugger-narrator"
+	suggestnewgeofences "github.com/ev-dev-labs/teslasync/internal/ai/strategies/suggest-new-geofences"
+	tconarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/tco-narration"
+	tirepressuretrendreasoning "github.com/ev-dev-labs/teslasync/internal/ai/strategies/tire-pressure-trend-reasoning"
+	tripplannerllmagent "github.com/ev-dev-labs/teslasync/internal/ai/strategies/trip-planner-llm-agent"
+	trippostcardsharecardimagegeneration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/trip-postcard-share-card-image-generation"
+	vampiredrainexplanation "github.com/ev-dev-labs/teslasync/internal/ai/strategies/vampire-drain-explanation"
+	vehiclepaintpreview "github.com/ev-dev-labs/teslasync/internal/ai/strategies/vehicle-paint-preview"
 	voicemode "github.com/ev-dev-labs/teslasync/internal/ai/strategies/voice-mode"
 	watchfacenlresponse "github.com/ev-dev-labs/teslasync/internal/ai/strategies/watch-face-nl-response"
-	nlsqlplayground "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-sql-playground"
-	nlgrafanapanel "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-grafana-panel"
-	nldashboardcomposer "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-dashboard-composer"
-	trippostcardsharecardimagegeneration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/trip-postcard-share-card-image-generation"
-	vehiclepaintpreview "github.com/ev-dev-labs/teslasync/internal/ai/strategies/vehicle-paint-preview"
-	vampiredrainexplanation "github.com/ev-dev-labs/teslasync/internal/ai/strategies/vampire-drain-explanation"
-	preheatprecoolrecommender "github.com/ev-dev-labs/teslasync/internal/ai/strategies/preheat-precool-recommender"
-	cabintemperatureimpactnarrative "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cabin-temperature-impact-narrative"
-	tirepressuretrendreasoning "github.com/ev-dev-labs/teslasync/internal/ai/strategies/tire-pressure-trend-reasoning"
-	alerttuningsuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/alert-tuning-suggestions"
-	inboxautocategorization "github.com/ev-dev-labs/teslasync/internal/ai/strategies/inbox-auto-categorization"
-	crossruleconflictdetection "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cross-rule-conflict-detection"
-	autonameunnamedlocations "github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-name-unnamed-locations"
-	suggestnewgeofences "github.com/ev-dev-labs/teslasync/internal/ai/strategies/suggest-new-geofences"
-	geofenceawareautomationsuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/geofence-aware-automation-suggestions"
-	learnedanomalybaselines "github.com/ev-dev-labs/teslasync/internal/ai/strategies/learned-per-vehicle-anomaly-baselines"
-	rangepredictionmodel "github.com/ev-dev-labs/teslasync/internal/ai/strategies/range-prediction-model"
-	mlchargingcurveclustering "github.com/ev-dev-labs/teslasync/internal/ai/strategies/ml-charging-curve-clustering"
-	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	yirnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/alert"
+	anomalytool "github.com/ev-dev-labs/teslasync/internal/ai/tools/anomaly"
+	automationtool "github.com/ev-dev-labs/teslasync/internal/ai/tools/automation"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/charge"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/coaching"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/curve"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/diagnosis"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/diagnostic"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/digest"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/export"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/lifetime"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/location"
+	maintenancetool "github.com/ev-dev-labs/teslasync/internal/ai/tools/maintenance"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nlq"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/paint"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/predict"
+	routetool "github.com/ev-dev-labs/teslasync/internal/ai/tools/route"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/safety"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/schedule"
+	speedtool "github.com/ev-dev-labs/teslasync/internal/ai/tools/speed"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/summary"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/trip"
+	tripplantool "github.com/ev-dev-labs/teslasync/internal/ai/tools/tripplan"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/voice"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/yir"
 	"github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
-	mlrange "github.com/ev-dev-labs/teslasync/internal/ml/range"
 	mlchargingcurves "github.com/ev-dev-labs/teslasync/internal/ml/chargingcurves"
+	mlrange "github.com/ev-dev-labs/teslasync/internal/ml/range"
 
-	// New hexagonal architecture packages
+	// Hexagonal adapters used by legacy route composition.
 	pgadapter "github.com/ev-dev-labs/teslasync/internal/adapter/postgres"
 	"github.com/ev-dev-labs/teslasync/internal/app/adminobssvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/auditviewersvc"
-	"github.com/ev-dev-labs/teslasync/internal/app/gdprexportsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/chargingsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/exportsvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/gdprexportsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc"
 	handlermw "github.com/ev-dev-labs/teslasync/internal/handler/middleware"
 	v1handlers "github.com/ev-dev-labs/teslasync/internal/handler/v1"
@@ -147,44 +377,39 @@ import (
 // a static file server for the SPA frontend. It wires up handler dependencies
 // and returns the ready-to-serve http.Handler.
 //
-// stateReader is the new signal-log-backed cold-path reader (ADR-002 / phase-39).
-// It is threaded through here so that handler migrations in phases 10–36 can
-// take it as a constructor dependency one file at a time. The legacy
-// *database.SignalLogReader (signalLogReader below) is intentionally preserved
-// alongside it during the migration window so the build stays green between
-// prompts; both readers will coexist until the deletion prompts (phases 37–40).
+// stateReader is the signal-log-backed cold-path reader (ADR-002).
+// It is threaded through here so handlers can adopt it one file at a time.
+// The legacy *signaldb.SignalLogReader (signalLogReader below) is preserved
+// alongside it during the migration window so the build stays green.
 func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Client, cfg *config.Config, health *resilience.HealthMonitor, stateReader signal.StateReader, opts ...RouterOptions) http.Handler {
 	r := chi.NewRouter()
-	// stateReader is intentionally not wired into individual handlers in this
-	// prompt — handler-migration prompts (phases 10–36) consume it one file at
-	// a time. The reference below keeps it visible to readers and lets static
-	// analyzers see it as a live dependency rather than a dead parameter.
+	// stateReader is intentionally not wired into individual handlers here.
+	// Handlers adopt it one file at a time; the reference below keeps it visible
+	// to readers and lets static analyzers see it as a live dependency.
 	_ = stateReader
 
 	var opt RouterOptions
 	if len(opts) > 0 {
 		opt = opts[0]
 	}
+	eventHub := sse.NewEventHub()
 
-	// SSE event hub for real-time updates
-	eventHub := NewEventHub()
-
-	// Error tracker for centralized error aggregation
+	// Error tracker for centralized error aggregation. apperror.Write
+	// (and the writeAppError parent wrapper) routes structured errors
+	// into this tracker via apperror.SetTracker; see internal/api/apperror.
 	errorTracker := NewErrorTracker(200)
-	globalErrorTracker = errorTracker
-
-	// Global middleware
+	apperror.SetTracker(errorTracker)
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
-	r.Use(TracingMiddleware)
-	r.Use(LoggerMiddleware)
-	r.Use(RecoveryMiddleware)                    // Enhanced recovery that logs panics as structured errors
+	r.Use(apimw.Tracing)
+	r.Use(apimw.Logger)
+	r.Use(apimw.Recovery)                        // Enhanced recovery that logs panics as structured errors
 	r.Use(ErrorTrackingMiddleware(errorTracker)) // Centralized error aggregation
-	r.Use(PrometheusMiddleware)                  // Legacy {method,path,status} HTTP metrics (kept for back-compat dashboards)
-	r.Use(MetricsMiddleware)                     // RED metrics: http_requests_total / http_request_errors_total / http_request_duration_seconds with status_class
+	r.Use(apimw.Prometheus)                      // Legacy {method,path,status} HTTP metrics (kept for back-compat dashboards)
+	r.Use(apimw.Metrics)                         // RED metrics: http_requests_total / http_request_errors_total / http_request_duration_seconds with status_class
 	// Conditionally apply chi's Compress middleware. We MUST bypass it for
 	// Server-Sent Events: chi v5.0.12's compressor wraps the response writer
-	// and calls .Flush() on its internal encoder. When the response Content-
+	// and calls .Flush on its internal encoder. When the response Content-
 	// Type is text/event-stream the encoder is never engaged (per chi's
 	// default content-type allowlist), but the wrapper still dereferences
 	// the nil encoder on Flush, triggering a nil-pointer panic in the
@@ -221,9 +446,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		AllowCredentials: cfg.CORSOrigins != "",
 		MaxAge:           300,
 	}))
-
-	// Security headers (clickjacking, MIME sniffing, CSP, HSTS, etc.)
-	r.Use(SecurityHeadersMiddleware)
+	r.Use(apimw.SecurityHeaders)
 
 	// Request body size limit (1 MB default). The vehicle photo
 	// upload endpoint legitimately ships up to ~12 MB (8 MB image
@@ -234,15 +457,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			limit := int64(1 << 20)
-			if isVehiclePhotoUploadPath(req.Method, req.URL.Path) {
+			if apivehphoto.IsUploadPath(req.Method, req.URL.Path) {
 				limit = 12 << 20
 			}
 			req.Body = http.MaxBytesReader(w, req.Body, limit)
 			next.ServeHTTP(w, req)
 		})
 	})
-
-	// Services
 	vehicleSvc := service.NewVehicleService(db)
 	energySvc := service.NewEnergyService(db)
 
@@ -250,12 +471,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// L1 signal.Store + L2 Redis HSET (LiveSignalStore) with the cold-path
 	// signal_log StateReader as fallback. /latest handlers and any "current
 	// state" code path MUST go through this boundary so that:
-	//   * fields routed to typed snapshot tables (climate, motor, tire
-	//     pressure, media, security, vehicle_config, safety, etc.) are
-	//     served from L1+L2 instead of returning empty maps from
-	//     signal_log; and
-	//   * infrequent fields like Latitude / Longitude on a parked vehicle
-	//     still surface from signal_log when L1+L2 has no entry.
+	// * fields routed to typed snapshot tables (climate, motor, tire
+	// pressure, media, security, vehicle_config, safety, etc.) are
+	// served from L1+L2 instead of returning empty maps from
+	// signal_log; and
+	// * infrequent fields like Latitude / Longitude on a parked vehicle
+	// still surface from signal_log when L1+L2 has no entry.
 	// When TelemetryHandler is nil (test wiring), a NoopLiveSignalStore is
 	// used so the StateReader fallback alone serves the request.
 	var liveSignalStore signal.LiveSignalStore
@@ -266,22 +487,24 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		liveSignalStore = signal.NewNoopLiveSignalStore()
 	}
 	liveStateReader := signal.MustNewLiveStateReader(liveSignalStore, stateReader)
-
-	// Handlers
-	vehicleHandler := NewVehicleHandler(vehicleSvc, teslaClient, stateReader)
-	driveHandler := NewDriveDetail(db, stateReader, liveStateReader)
-	chargingHandler := NewChargingHandler(db, stateReader, liveStateReader)
-	geofenceHandler := NewGeofenceHandler(db)
-	authHandler := NewAuthHandler(db, teslaClient, opt.Encryptor)
-	// Phase-46 / Prompt 31 — Sudo step-up. Construct the in-memory
+	vehicleHandler := apiveh.NewHandler(vehicleSvc, teslaClient, stateReader)
+	driveHandler := apidrives.NewDriveDetail(db, stateReader, liveStateReader)
+	chargingHandler := apicharging.NewChargingHandler(db, stateReader, liveStateReader)
+	geofenceHandler := apigeo.NewHandler(db, apigeo.WithAuditFunc(
+		func(r *http.Request, action string, entityID *int64, detail string) {
+			logAuditFromRequest(db, r, "", action, "geofence", entityID, detail)
+		},
+	))
+	authHandler := apiauth.NewHandler(db, teslaClient, opt.Encryptor)
+	// Sudo step-up. Construct the in-memory
 	// token store and the reauth HTTP handler once and share them
 	// across the route table. The store is the source of truth for
 	// step-up authorisation; the middleware reads from it on every
 	// gated request, the handler writes to it on a successful
 	// /auth/reauth.
 	sudoCfg := LoadSudoConfig(cfg)
-	sudoStore := database.NewSudoTokenStore(sudoCfg.TTL)
-	// Phase-46 / Prompt 35 — wire the real RFC 6238 verifier so the
+	sudoStore := dbauth.NewSudoTokenStore(sudoCfg.TTL)
+	// wire the real RFC 6238 verifier so the
 	// shared TESLASYNC_SUDO_TOTP_SECRET path validates for real (and
 	// not just NULL-on-arrival as it did before). We pass a thin
 	// closure rather than a bare totp.Validate reference so any future
@@ -295,14 +518,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 	sudoHandler := NewSudoHandler(sudoCfg, sudoStore, sudoTOTPVerifier)
 
-	// Phase-46 / Prompt 35 — per-user TOTP enrollment. Owns its own
+	// per-user TOTP enrollment. Owns its own
 	// pending/active tables; mints sudo tokens via the shared sudoStore
-	// from prompt 31 so a successful per-user TOTP step-up is
-	// indistinguishable downstream from a successful password step-up.
-	totpRepo := database.NewTOTPRepo(db)
-	totpHandler := NewTOTPHandler(totpRepo, opt.Encryptor, sudoStore, cfg.Auth.ForwardAuthHeader)
+	// so a successful per-user TOTP step-up is indistinguishable downstream
+	// from a successful password step-up.
+	totpRepo := dbauth.NewTOTPRepo(db)
+	totpHandler := apitotp.NewTOTPHandler(totpRepo, opt.Encryptor, sudoStore, cfg.Auth.ForwardAuthHeader)
 
-	// Phase-46 / Prompt 42 — active sessions / device management.
+	// active sessions / device management.
 	// TeslaSync mints its OWN per-device cookie on the first
 	// authenticated request from a browser (auth.Middleware below)
 	// and persists the (subject, cookie hash) tuple here so the
@@ -311,10 +534,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// secret is freshly generated on every restart — desired
 	// semantics for a "local session" primitive; operators wanting
 	// cross-restart persistence already get it from the upstream IdP.
-	authSessionsRepo := database.NewAuthSessionsRepo(db)
-	sessionHandler := NewSessionHandler(authSessionsRepo, cfg.Auth.ForwardAuthHeader)
+	authSessionsRepo := dbauth.NewAuthSessionsRepo(db)
+	sessionHandler := apisess.NewSessionHandler(authSessionsRepo, cfg.Auth.ForwardAuthHeader)
 
-	// Phase-46 / Prompt 57 — Auth-mode contract.
+	// Auth-mode contract.
 	//
 	// The auth_subjects materialisation table is the single source
 	// of truth for "every distinct subject this deployment has ever
@@ -329,12 +552,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// wrapped in RequireSubjectMiddleware so it stays reachable in
 	// open mode AND when the upstream proxy strips the header on a
 	// specific request.
-	authSubjectsRepo := database.NewAuthSubjectsRepo(db)
-	subjectRecorder := tsauth.NewSubjectRecorder(authSubjectsStoreAdapter{repo: authSubjectsRepo}, tsauth.SubjectRecorderOptions{})
-	systemAuthModeHandler := NewSystemAuthModeHandler(cfg.Auth.ForwardAuthHeader, cfg.Auth.ProviderHint)
+	authSubjectsRepo := dbauth.NewAuthSubjectsRepo(db)
+	subjectRecorder := tsauth.NewSubjectRecorder(apiauthmode.NewAuthSubjectsStore(authSubjectsRepo), tsauth.SubjectRecorderOptions{})
+	systemAuthModeHandler := apiauthmode.NewHandler(cfg.Auth.ForwardAuthHeader, cfg.Auth.ProviderHint)
 	_ = authSubjectsRepo // referenced via subjectRecorder; held for future per-user tables.
 
-	// Phase-46 / Prompt 34 — Live log tail. Build a process-wide
+	// Live log tail. Build a process-wide
 	// pub/sub registry for zerolog events and tee the global logger
 	// through it so every Info/Warn/Error/etc. fans out to any
 	// connected SSE subscriber. The tee is idempotent: installAdminLogStreamTap
@@ -342,10 +565,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// than once in the same process (e.g. parallel router tests).
 	logTap := platform.NewLogSubscriberRegistry()
 	installAdminLogStreamTap(logTap)
-	logStreamHandler := NewAdminLogStreamHandler(logTap)
-	settingsHandler := NewSettingsHandler(db)
+	logStreamHandler := apiadminls.NewAdminLogStreamHandler(logTap)
+	settingsHandler := apisettings.NewSettingsHandler(db)
 
-	// Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
+	// F0 AI-Off Contract (ADR-015).
 	//
 	// The guard is built once here and shared across every
 	// /api/v1/ai/* route so the per-request feature-gate logic
@@ -353,39 +576,23 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// place. Settings is the same SettingsRepo the rest of the
 	// app uses; the AIMode/AIFeatureEnabled methods on it are
 	// fail-closed (return "off"/false on any error).
-	aiSettingsRepo := database.NewSettingsRepo(db)
+	aiSettingsRepo := settingsdb.NewSettingsRepo(db)
 	aiGuard := guard.New(aiSettingsRepo)
 
-	// Phase-50 / 0002 — F1 Provider Abstraction.
-	//
-	// The provider registry composes adapter factories with the
-	// standard decorator chain (currently only OTel WithTrace; F3
-	// adds audit, F8 adds redaction, F9 adds rate/cost cap). The
-	// registry reads settings on every For() call so a Settings
-	// save takes effect on the next request without restart.
-	//
-	// SettingsReader is satisfied by aiSettingsReader below — the
-	// existing *database.SettingsRepo already implements
-	// AIMode + AIFeatureEnabled but does not yet expose a typed
-	// AIProviderConfig accessor; the inline adapter pulls the
-	// JSONB column out of Get() so F1 does not have to mutate
-	// the repo (R5 mitigation — keep settings repo single-purpose).
-	//
-	// Phase-50 / 0004 — F3 inserts the audit decorator into the
-	// chain. The async writer wraps the AICallLogRepo (which
-	// satisfies provider.AuditSink) and survives for the lifetime
-	// of the process; a buffer of 1024 absorbs short bursts and
-	// drops the oldest entry on overflow with a Prometheus counter.
-	aiCallLogRepo := database.NewAICallLogRepo(db)
+	// F1 Provider Abstraction.
+	// The registry composes adapter factories with decorators and rereads settings
+	// on each For call so saves take effect without restart. aiSettingsReader
+	// adapts SettingsRepo without widening the repo surface; F3 adds async audit.
+	aiCallLogRepo := aidb.NewAICallLogRepo(db)
 	aiAuditWriter := provider.NewAsyncAuditWriter(context.Background(), aiCallLogRepo, 1024)
 	aiRegistry := provider.NewRegistry(
 		aiSettingsReader{repo: aiSettingsRepo},
-		// Phase-50 / 0009 — F8 redaction sits INNERMOST in the
+		// F8 redaction sits INNERMOST in the
 		// chain: WithRedaction is applied first so audit/trace
 		// (above it in source order, outer at runtime) observe
 		// the post-redaction request text. The resolver
 		// (redact.PolicyFromContext) reads the per-request policy
-		// installed by dispatch.Run from Strategy.RedactionPolicy().
+		// installed by dispatch.Run from Strategy.RedactionPolicy.
 		// A missing policy means deny-all — see redact.DefaultPolicy.
 		provider.WithRedaction(redact.PolicyFromContext),
 		provider.WithAudit(aiAuditWriter),
@@ -404,93 +611,101 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			Tools: true, Streaming: true, Embeddings: true, MaxContext: 4096,
 		}), nil
 	})
-	// Phase-46 / Prompt 36 — settings export/import. The serializer
+	// settings export/import. The serializer
 	// fans out across four repos (settings, alert_rules, geofences,
 	// notification_quiet_hours); construct it once + share between
 	// the export + import handlers so future repos can be added in a
 	// single place. Apply is sudo-gated by RequireSudo on the import
 	// route below; export is read-only and runs unguarded.
-	settingsSerializer := database.NewSettingsSerializer(
-		database.NewSettingsRepo(db),
-		database.NewAlertRuleRepo(db),
-		database.NewGeofenceRepo(db),
-		database.NewQuietHoursRepo(db),
+	settingsSerializer := settingsdb.NewSettingsSerializer(
+		settingsdb.NewSettingsRepo(db),
+		dbalert.NewAlertRuleRepo(db),
+		geofencedb.NewGeofenceRepo(db),
+		quiethoursdb.NewQuietHoursRepo(db),
 	)
-	settingsExportHandler := NewSettingsExportHandler(settingsSerializer, cfg.Auth.ForwardAuthHeader)
-	settingsImportHandler := NewSettingsImportHandler(settingsSerializer, cfg.Auth.ForwardAuthHeader)
-	// Phase-46 / Prompt 50 — per-section + global "Reset to defaults".
+	settingsExportHandler := apisettings.NewSettingsExportHandler(settingsSerializer, cfg.Auth.ForwardAuthHeader)
+	settingsImportHandler := apisettings.NewSettingsImportHandler(settingsSerializer, cfg.Auth.ForwardAuthHeader)
+	// per-section + global "Reset to defaults".
 	// Sudo-gated at the route below so the SPA's <ReauthDialog>
 	// always pops on the danger-zone "Reset ALL settings" button.
-	settingsResetRepo := database.NewSettingsResetRepo(db)
-	settingsResetHandler := NewSettingsResetHandler(settingsResetRepo, cfg.Auth.ForwardAuthHeader)
-	// Phase-46 / Prompt 65 — recurring scheduled exports.
+	settingsResetRepo := settingsdb.NewSettingsResetRepo(db)
+	settingsResetHandler := apisetreset.NewSettingsResetHandler(settingsResetRepo, cfg.Auth.ForwardAuthHeader)
+	// recurring scheduled exports.
 	//
 	// Owner identity comes from the configured FORWARD_AUTH_HEADER on
 	// every read/write — the handler NEVER trusts owner_subject in the
 	// request body. The repo's per-row UPDATE/DELETE statements scope
 	// by (id, owner_subject) so cross-user mutations collapse to 404.
-	scheduledExportRepo := database.NewScheduledExportRepo(db)
-	scheduledExportsHandler := NewScheduledExportsHandler(scheduledExportRepo, cfg.Auth.ForwardAuthHeader, nil)
-	// Phase-46 / Prompt 43 — per-vehicle settings layer.
+	scheduledExportRepo := exportdb.NewScheduledExportRepo(db)
+	scheduledExportsHandler := apischedexp.NewScheduledExportsHandler(scheduledExportRepo, cfg.Auth.ForwardAuthHeader, nil)
+	// per-vehicle settings layer.
 	//
 	// The resolver layers vehicle-scoped overrides on top of the
 	// existing install-global SettingsRepo and the vehicles base
 	// table. Construct here so the same SettingsRepo + VehicleRepo
 	// instances back both the global settings handler above and
 	// the per-vehicle resolver below.
-	vehicleSettingsRepo := database.NewVehicleSettingsRepo(db)
-	vehicleSettingsRepoForRouter := database.NewVehicleRepo(db)
-	vehicleSettingsResolver := database.NewVehicleSettingsResolver(
+	vehicleSettingsRepo := settingsdb.NewVehicleSettingsRepo(db)
+	vehicleSettingsRepoForRouter := vehicledb.NewVehicleRepo(db)
+	vehicleSettingsResolver := settingsdb.NewVehicleSettingsResolver(
 		vehicleSettingsRepo,
-		database.NewVehicleNameLookup(vehicleSettingsRepoForRouter),
-		database.NewUserSettingsLookup(database.NewSettingsRepo(db)),
+		vehicledb.NewNameLookup(vehicleSettingsRepoForRouter),
+		settingsdb.NewUserSettingsLookup(settingsdb.NewSettingsRepo(db)),
 	)
-	vehicleSettingsHandler := NewVehicleSettingsHandler(
+	vehicleSettingsHandler := apivehsettings.NewHandler(
 		vehicleSettingsRepo,
 		vehicleSettingsResolver,
-		NewVehicleExistenceChecker(vehicleSettingsRepoForRouter),
+		apivehsettings.NewVehicleExistenceChecker(vehicleSettingsRepoForRouter),
 	)
 
-	// Phase-46 / Prompt 54 — vehicle photo upload. The handler
+	// vehicle photo upload. The handler
 	// owns the on-disk write/read pipeline plus the per-vehicle
 	// upload mutex; the repo is a thin SQL facade that persists
 	// the rendered paths in vehicle_photos.
-	vehiclePhotoRepo := database.NewVehiclePhotoRepo(db)
-	vehiclePhotoHandler := NewVehiclePhotoHandler(
+	vehiclePhotoRepo := vehicledb.NewVehiclePhotoRepo(db)
+	vehiclePhotoHandler := apivehphoto.NewHandler(
 		vehiclePhotoRepo,
-		NewVehicleExistenceChecker(vehicleSettingsRepoForRouter),
+		apivehsettings.NewVehicleExistenceChecker(vehicleSettingsRepoForRouter),
 		cfg.VehiclePhotoDir,
 	)
 
-	// Phase-46 / Prompt 44 — RBAC matrix admin handler.
+	// RBAC matrix admin handler.
 	// Matrix bindings live in role_permissions; permissions are a
 	// hand-maintained catalog in internal/auth. The handler is
 	// auth-mode aware (501 AUTH_MODE_OPEN in open mode) and the PUT
 	// route is wrapped in RequireSudo below.
-	rolePermissionsRepo := database.NewRolePermissionsRepo(db)
-	rbacHandler := NewRBACHandler(rolePermissionsRepo, cfg.Auth.ForwardAuthHeader)
+	rolePermissionsRepo := dbauth.NewRolePermissionsRepo(db)
+	rbacHandler := apirbac.NewRBACHandler(rolePermissionsRepo, cfg.Auth.ForwardAuthHeader)
 
-	// Phase-46 / Prompt 46 — admin impersonation. The store mints
+	// admin impersonation. The store mints
 	// HMAC-signed cookies (15-min TTL) carrying the original-admin /
 	// target pair; the middleware mounted further down rewrites the
 	// principal header so downstream handlers see the impersonation
 	// target as the request principal. The audit repo doubles as the
 	// candidates store via its ListDistinctActiveSubjects helper —
 	// see audit_repo.go for the rationale on co-locating that query.
-	auditRepo := database.NewAuditRepoWithDB(db)
+	auditRepo := auditdb.NewAuditRepoWithDB(db)
 	impersonationStore := tsauth.MustNewImpersonationStore()
-	impersonationHandler := NewImpersonationHandler(
+	impersonationHandler := apiimpers.NewHandler(
 		impersonationStore,
 		auditRepo,
 		auditRepo,
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	dashboardLayoutHandler := NewDashboardLayoutHandler(db)
-	chartAnnotationHandler := NewChartAnnotationHandler(db)
-	pinnedHandler := NewPinnedHandler(db)
-	savedViewsHandler := NewSavedViewsHandler(db, cfg.Auth.ForwardAuthHeader)
-	pushHandler := NewPushHandler(db, webpush.Default(), cfg.Auth.ForwardAuthHeader)
+	dashboardLayoutHandler := apidash.NewDashboardLayoutHandler(db)
+	chartAnnotationHandler := apiannot.NewChartAnnotationHandler(db)
+	pinnedHandler := apipinned.NewHandler(db)
+	savedViewsHandler := apisaved.NewHandler(db, cfg.Auth.ForwardAuthHeader, apisaved.WithAuditFunc(
+		func(r *http.Request, headerName, action, resource string, entityID *int64, detail string) {
+			logAuditFromRequest(db, r, headerName, action, resource, entityID, detail)
+		},
+	))
+	pushHandler := apipush.NewPushHandler(db, webpush.Default(), cfg.Auth.ForwardAuthHeader, apipush.WithAuditFunc(
+		func(r *http.Request, headerName, action, resource string, entityID *int64, detail string) {
+			logAuditFromRequest(db, r, headerName, action, resource, entityID, detail)
+		},
+	))
 	var pahoForAlerts pahomqtt.Client
 	if mqttClient != nil {
 		pahoForAlerts = mqttClient.Underlying()
@@ -499,156 +714,157 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// (above) when TelemetryHandler is set; we keep the local for clarity
 	// at the AlertHandler call site, which has its own narrow contract.
 	alertLiveSignalStore := liveSignalStore
-	alertHandler := NewAlertHandler(db, eventHub, pahoForAlerts, alertLiveSignalStore)
-	alertMessageHandler := NewAlertMessageHandler()
-	commandHandler := NewCommandHandler(db, teslaClient)
-	guardHandler := NewGuardHandler(database.NewGuardRepo(db.Pool), database.NewVehicleRepo(db), teslaClient, cfg)
-	energyHandler := NewEnergyHandler(energySvc)
-	signalLogReader := database.NewSignalLogReader(db)
-	batteryHandler := NewBatteryHandler(db, stateReader)
-	analyticsHandler := NewAnalyticsHandler(db, stateReader)
-	notificationHandler := NewNotificationHandler(db)
-	notificationChannelHandler := NewNotificationChannelHandler(db)
-	notifScheduleHandler := NewNotificationScheduleHandler(db)
-	quietHoursHandler := NewQuietHoursHandler(database.NewQuietHoursRepo(db), cfg)
-	chatbotHandler := NewChatbotHandler(db, vehicleSvc, stateReader, liveStateReader)
+	alertHandler := apialerts.NewAlertHandler(db, eventHub, pahoForAlerts, alertLiveSignalStore)
+	alertMessageHandler := apialertmsg.NewAlertMessageHandler()
+	commandHandler := apicommand.NewCommandHandler(db, teslaClient)
+	guardHandler := apiguard.NewGuardHandler(systemdb.NewGuardRepo(db.Pool), vehicledb.NewVehicleRepo(db), teslaClient, cfg)
+	energyHandler := apienergy.NewEnergyHandler(energySvc)
+	signalLogReader := signaldb.NewSignalLogReader(db)
+	batteryHandler := apibattery.NewBatteryHandler(db, stateReader)
+	analyticsHandler := apianalytics.NewAnalyticsHandler(db, stateReader)
+	notificationHandler := apinotif.NewHandler(db)
+	notificationChannelHandler := apinotif.NewChannelHandler(db)
+	notifScheduleHandler := apinotif.NewScheduleHandler(db)
+	// Wire the dynamic outbound-sink lookup into carved subpackages so
+	// notification adapters and devtools probes keep recording to api_call_logs
+	// through SetOutboundSink hot-reloads.
+	apinotif.SinkProvider = apisystem.CurrentOutboundSink
+	apidevtools.SinkProvider = apisystem.CurrentOutboundSink
+	quietHoursHandler := apiquiet.NewHandler(quiethoursdb.NewQuietHoursRepo(db), cfg)
+	chatbotHandler := apichatbot.NewChatbotHandler(db, vehicleSvc, stateReader, liveStateReader)
 
-	// Phase-50 / 0011 — U1 Chatbot LLM upgrade. Construct the
-	// shared tool registry + the chatbot strategy + the AI HTTP
-	// handler. The tool registry is process-wide (one per boot)
-	// and shared across every future AI feature handler; the
-	// strategy is per-feature and is paired with the dispatcher
-	// inside the AI handler.
-	//
-	// Sources are the existing typed repos. ai/tools.VehicleStateSource
-	// expects SignalAt(...) (any, error); signal.StateReader returns
-	// (signal.SignalValue, error) and signal.SignalValue is a defined
-	// type whose underlying type is any — Go interface satisfaction is
-	// by identity, so a small wrapping adapter (aiToolsStateAdapter
-	// below) bridges the two without leaking types across packages.
+	// U1 Chatbot LLM upgrade.
+	// The tool registry is process-wide; the chatbot strategy is per-feature and
+	// paired with its dispatcher in the handler. aiToolsStateAdapter bridges the
+	// SignalAt return type without leaking signal types into ai/tools.
 	aiToolRegistry := tools.NewRegistry()
 	tools.Register12Builtins(aiToolRegistry, tools.Sources{
-		Vehicles:      database.NewVehicleRepo(db),
+		Vehicles:      vehicledb.NewVehicleRepo(db),
 		VehicleState:  aiToolsStateAdapter{r: stateReader},
-		Drives:        database.NewDriveRepo(db),
-		Charges:       database.NewChargingRepo(db),
-		AlertRules:    database.NewAlertRuleRepo(db),
-		Notifications: database.NewNotificationRepo(db),
-		Geofences:     database.NewGeofenceRepo(db),
-		Efficiency:    database.NewDriveRepo(db),
+		Drives:        drivedb.NewDriveRepo(db),
+		Charges:       chargingdb.NewChargingRepo(db),
+		AlertRules:    dbalert.NewAlertRuleRepo(db),
+		Notifications: dbnotif.NewNotificationRepo(db),
+		Geofences:     geofencedb.NewGeofenceRepo(db),
+		Efficiency:    drivedb.NewDriveRepo(db),
 	})
-	// Phase-50 / U2 (slice 0012) — register the digest-narration
+	// register the digest-narration
 	// slice's read-only tool on the SAME process-wide registry so
 	// the dispatcher can resolve `query_weekly_digest_context` for
 	// the digest-narration strategy. Register12Builtins must run
 	// FIRST so the BuiltinNames-pin test continues to see the 12
 	// canonical builtins; this call extends the registry beyond
 	// that pinned set.
-	tools.RegisterDigestTools(aiToolRegistry, tools.DigestSources{
-		Drives:  database.NewDriveRepo(db),
-		Charges: database.NewChargingRepo(db),
+	digest.RegisterDigestTools(aiToolRegistry, digest.DigestSources{
+		Drives:  drivedb.NewDriveRepo(db),
+		Charges: chargingdb.NewChargingRepo(db),
 	})
-	// Phase-50 / U3 (slice 0013) — register the yir-narration
+	// register the yir-narration
 	// slice's read-only tool on the SAME process-wide registry so
 	// the dispatcher can resolve `query_year_in_review_context`
 	// for the yir-narration strategy. Same ordering rule: the
 	// builtins + digest tools above must register first so the
 	// pin tests continue to see the canonical sets unchanged.
-	tools.RegisterYearReviewTools(aiToolRegistry, tools.YearReviewSources{
-		Drives:  database.NewDriveRepo(db),
-		Charges: database.NewChargingRepo(db),
+	yir.RegisterYearReviewTools(aiToolRegistry, yir.YearReviewSources{
+		Drives:  drivedb.NewDriveRepo(db),
+		Charges: chargingdb.NewChargingRepo(db),
 	})
-	aiChatbotHandler := NewAIChatbotHandler(
-		database.NewChatRepo(db),
+	aiChatbotHandler := aichatbot.NewHandler(
+		dbnotif.NewChatRepo(db),
 		aiRegistry,
 		aiToolRegistry,
 		chatbotllm.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / U2 (slice 0012) — Weekly digest narration handler.
+	// Weekly digest narration handler.
 	// One per process; stateless beyond constructor inputs.
-	aiDigestHandler := NewAIDigestHandler(
+	aiDigestHandler := aidigest.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		digestnarration.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / U3 (slice 0013) — Year-in-review narration handler.
+	// Year-in-review narration handler.
 	// One per process; stateless beyond constructor inputs.
-	aiYIRHandler := NewAIYearReviewHandler(
+	aiYIRHandler := aiyir.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		yirnarration.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	tirePressureHandler := NewTirePressureHandler(stateReader, liveStateReader)
-	motorHandler := NewMotorHandler(stateReader, liveStateReader)
-	driveDynamicsHandler := NewDriveDynamicsHandler(stateReader, liveStateReader)
-	climateHandler := NewClimateHandler(stateReader, liveStateReader)
-	securityHandler := NewSecurityHandler(stateReader, liveStateReader)
-	chargingTelemetryHandler := NewChargingTelemetryHandler(stateReader, liveStateReader)
-	mediaHandler := NewMediaHandler(stateReader, liveStateReader)
-	vehicleConfigHandler := NewVehicleConfigHandler(stateReader, liveStateReader)
-	locationSnapshotHandler := NewLocationSnapshotHandler(stateReader, liveStateReader)
-	safetyHandler := NewSafetyHandler(stateReader, liveStateReader)
-	userPreferenceHandler := NewUserPreferenceHandler(stateReader, liveStateReader)
-	softwareUpdateHandler := NewSoftwareUpdateHandler(db)
-	tcoHandler := NewTCOHandler(db)
-	sleepHandler := NewSleepHandler(db)
-	// Phase-42 (prompt 0077): VampireDrainHandler deleted (vampire_drain_events).
-	visitedLocationHandler := NewVisitedLocationHandler(db)
-	// Phase-42 (prompt 0077): MileageHandler deleted (daily_mileage); TCO derives
+	tirePressureHandler := apitirepressure.NewTirePressureHandler(stateReader, liveStateReader)
+	motorHandler := apimotor.NewMotorHandler(stateReader, liveStateReader)
+	driveDynamicsHandler := apidrivedyn.NewDriveDynamicsHandler(stateReader, liveStateReader)
+	climateHandler := apiclimate.NewClimateHandler(stateReader, liveStateReader)
+	securityHandler := apisecurity.NewSecurityHandler(stateReader, liveStateReader)
+	chargingTelemetryHandler := apichargetelem.NewChargingTelemetryHandler(stateReader, liveStateReader)
+	mediaHandler := apimedia.NewMediaHandler(stateReader, liveStateReader)
+	vehicleConfigHandler := apivehconfig.NewHandler(stateReader, liveStateReader)
+	locationSnapshotHandler := apilocsnap.NewLocationSnapshotHandler(stateReader, liveStateReader)
+	safetyHandler := apisafety.NewSafetyHandler(stateReader, liveStateReader)
+	userPreferenceHandler := apiuserpref.NewUserPreferenceHandler(stateReader, liveStateReader)
+	softwareUpdateHandler := apisoftupd.NewHandler(db)
+	tcoHandler := apitco.NewHandler(db)
+	sleepHandler := apisleep.NewSleepHandler(db)
+	//: VampireDrainHandler deleted (vampire_drain_events).
+	visitedLocationHandler := apivisloc.NewHandler(db)
+	//: legacy mileage handler deleted (daily_mileage); TCO derives
 	// distance via SUM(distance_m) FROM drives.
-	tripHandler := NewTripHandler(db)
-	// Phase-42 (prompt 0077): VehicleStateHandler deleted (vehicle_states);
+	tripHandler := apitrip.NewHandler(db)
+	//: VehicleStateHandler deleted (vehicle_states);
 	// current state is sourced from fsm_transitions / signal.StateReader.
-	backupHandler := NewBackupHandler(db)
-	backupRestoreHandler := NewBackupRestoreHandler(db)
-	regenHandler := NewRegenHandler(db)
-	batteryDegradationHandler := NewBatteryDegradationHandler(db, stateReader, signalLogReader)
-	auditHandler := NewAuditHandler(db, cfg.Auth.ForwardAuthHeader)
-	apiCallLogHandler := NewAPICallLogHandler(db)
-	apiKeyHandler := NewAPIKeyHandler(db, cfg.Auth.ForwardAuthHeader)
-	// Phase-42 (prompt 0077): SignalCatalogHandler deleted (signal_catalog +
+	backupHandler := apibackup.NewHandler(db)
+	backupRestoreHandler := apibackup.NewRestoreHandler(db)
+	regenHandler := apiregen.NewRegenHandler(db)
+	batteryDegradationHandler := batterydegradation.NewHandler(db, stateReader, signalLogReader)
+	auditHandler := apiaudit.NewAuditHandler(db, cfg.Auth.ForwardAuthHeader)
+	maskedRevealHandler := apiaudit.NewMaskedRevealHandler(auditRepo, cfg.Auth.ForwardAuthHeader)
+	apiCallLogHandler := apicalllog.NewHandler(db)
+	apiKeyHandler := apikeyh.NewHandler(db, cfg.Auth.ForwardAuthHeader, apikeyh.WithAuditFunc(
+		func(r *http.Request, headerName, action, resource string, entityID *int64, detail string) {
+			logAuditFromRequest(db, r, headerName, action, resource, entityID, detail)
+		},
+	))
+	//: SignalCatalogHandler deleted (signal_catalog +
 	// signal_observations); the typed signal_log pipeline (000167+) is the
 	// authoritative catalog/observation surface.
-	chargingHeatmapHandler := NewChargingHeatmapHandler(db)
-	speedProfileHandler := NewSpeedProfileHandler(db)
-	dataRepairHandler := NewDataRepairHandler(db)
-	tempImpactHandler := NewTempImpactHandler(db)
-	routeEfficiencyHandler := NewRouteEfficiencyHandler(db)
-	batteryCellsHandler := NewBatteryCellsHandler(db, alertLiveSignalStore, stateReader, signalLogReader)
-	rangeProjectionHandler := NewRangeProjectionHandler(db, stateReader)
-	drivetrainHealthHandler := NewDrivetrainHealthHandler(db, stateReader)
-	maintenanceHandler := NewMaintenanceHandler(db)
-	periodStatsHandler := NewPeriodStatsHandler(db)
-	drivingCoachHandler := NewDrivingCoachHandler(db)
-	costForecastHandler := NewCostForecastHandler(db)
-	chargingOptimizerHandler := NewChargingOptimizerHandler(db)
-	anomalyHandler := NewAnomalyHandler(db)
-	// Phase-50 / U4 (slice 0014) — register the anomaly-explanations
+	chargingHeatmapHandler := apichargeheatmap.NewChargingHeatmapHandler(db)
+	speedProfileHandler := apispeedprof.NewSpeedProfileHandler(db)
+	dataRepairHandler := apidatarepair.NewDataRepairHandler(db)
+	tempImpactHandler := tempimpact.NewHandler(db)
+	routeEfficiencyHandler := apirouteeff.NewRouteEfficiencyHandler(db)
+	batteryCellsHandler := batterycells.NewHandler(db, alertLiveSignalStore, stateReader, signalLogReader)
+	rangeProjectionHandler := apirangeproj.NewRangeProjectionHandler(db, stateReader)
+	drivetrainHealthHandler := apidrivetrain.NewDrivetrainHealthHandler(db, stateReader)
+	maintenanceHandler := maintenance.NewHandler(db)
+	periodStatsHandler := apiperiod.NewHandler(db)
+	drivingCoachHandler := apidrivingcoach.NewDrivingCoachHandler(db)
+	costForecastHandler := costforecast.NewHandler(db)
+	chargingOptimizerHandler := apichargeopt.NewChargingOptimizerHandler(db)
+	anomalyHandler := apianomaly.NewHandler(db)
+	// register the anomaly-explanations
 	// slice's read-only tool on the SAME process-wide registry so
 	// the dispatcher can resolve `query_anomaly_context` for the
 	// anomaly-explanations strategy. Must register AFTER
 	// Register12Builtins + RegisterDigestTools + RegisterYearReviewTools
 	// so the BuiltinNames-pin test continues to see the canonical
 	// builtins; this call extends the registry beyond the pinned set.
-	// AnomalyHandler implements aitools.AnomalySource via
-	// (*AnomalyHandler).DetectAnomalies — see anomaly_handler.go.
-	tools.RegisterAnomalyTools(aiToolRegistry, tools.AnomalySources{
+	// apianomaly.Handler implements aitools.AnomalySource via
+	// (*apianomaly.Handler).DetectAnomalies — see internal/api/anomaly/handler.go.
+	anomalytool.RegisterAnomalyTools(aiToolRegistry, anomalytool.AnomalySources{
 		Anomaly: anomalyHandler,
 	})
-	// Phase-50 / U4 (slice 0014) — Anomaly explanation handler.
+	// Anomaly explanation handler.
 	// One per process; stateless beyond constructor inputs. Must
 	// be constructed AFTER the tool registration above so the
 	// dispatcher can resolve the strategy's allowedTools at boot.
-	aiAnomalyHandler := NewAIAnomalyHandler(
+	aiAnomalyHandler := aianomaly.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		anomalyexplanations.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / N1 (slice 0015) — Natural-language alert builder.
+	// Natural-language alert builder.
 	// Register the slice's PROPOSE-only typed tools on the SAME
 	// process-wide registry so the dispatcher can resolve
 	// `draft_alert_rule` + `validate_alert_rule` for the
@@ -656,44 +872,42 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// RegisterAnomalyTools so the registry's alphabetical Names
 	// list grows deterministically.
 	//
-	// AIAlertRuleValidator is a thin wrapper around the unexported
-	// validateAlertRule function in alert_handler_rules.go — same
-	// code path the canonical POST /api/v1/alerts/rules handler
-	// uses. Drafts accepted by the AI tool are byte-equivalent to
-	// drafts accepted by the canonical handler (ADR-015 §I3
-	// baseline-intact).
-	tools.RegisterAlertBuilderTools(aiToolRegistry, tools.AlertBuilderSources{
-		Validator: NewAIAlertRuleValidator(),
+	// aialert.RuleValidator delegates to the canonical validation path in
+	// the non-AI alerts subpackage. Drafts accepted by the AI tool are
+	// byte-equivalent to drafts accepted by the canonical handler (ADR-015
+	// §I3 baseline-intact).
+	alert.RegisterAlertBuilderTools(aiToolRegistry, alert.AlertBuilderSources{
+		Validator: aialert.NewRuleValidator(),
 	})
-	aiAlertHandler := NewAIAlertHandler(
+	aiAlertHandler := aialert.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		nlalertbuilder.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / N2 (slice 0016) nl-automation-builder. Mirrors the
-	// alert-builder wiring above. AIAutomationGraphValidator is a
-	// thin wrapper around the unexported decodeAutomationInputDTO
-	// function in automation_handler_decode.go — same code path the
-	// canonical POST /api/v1/automations handler uses. Drafts
+	// Natural-language automation-builder wiring mirrors the
+	// alert-builder wiring above. aiautomation.GraphValidator is a
+	// thin wrapper around the automation subpackage validator in
+	// internal/api/automation/decode.go — same code path the canonical
+	// POST /api/v1/automations handler uses. Drafts
 	// accepted by the AI tool are byte-equivalent to drafts accepted
 	// by the canonical handler (ADR-015 §I3 baseline-intact).
-	tools.RegisterAutomationBuilderTools(aiToolRegistry, tools.AutomationBuilderSources{
-		Validator: NewAIAutomationGraphValidator(),
+	automationtool.RegisterAutomationBuilderTools(aiToolRegistry, automationtool.AutomationBuilderSources{
+		Validator: aiautomation.NewGraphValidator(),
 	})
-	aiAutomationHandler := NewAIAutomationHandler(
+	aiAutomationHandler := aiautomation.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		nlautomationbuilder.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / N3 (slice 0017) nl-search. Mirrors the
+	// Natural-language search wiring mirrors the
 	// alert-builder / automation-builder wiring above. The
 	// retriever is constructed via rag.New (the F7 single
 	// retrieval entry point) which fail-closes to NoopRetriever
 	// when ai_mode='off' (ADR-015 §I1, §I4 — zero outbound egress
-	// in off mode). The Hydrator is the in-package adapter
-	// aiSearchHydrator, which delegates per-source-type lookups
+	// in off mode). The Hydrator is the aisearch package adapter,
+	// which delegates per-source-type lookups
 	// to the existing canonical pgSearcher — same code path the
 	// typed GET /api/v1/search baseline uses (ADR-015 §I3
 	// baseline-intact: no duplicate read path is introduced by
@@ -715,17 +929,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// than silently boot with a half-wired AI search surface.
 		log.Fatal().Err(err).Msg("ai search: rag.New failed during boot wiring")
 	}
-	tools.RegisterSearchTools(aiToolRegistry, tools.SearchSources{
-		Retriever: aiSearchRetriever,
-		Hydrator:  newAISearchHydrator(newPGSearcher(db)),
-	})
-	aiSearchHandler := NewAISearchHandler(
+	aisearch.RegisterTools(aiToolRegistry, aiSearchRetriever, apisearch.NewPGSearcher(db))
+	aiSearchHandler := aisearch.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		nlsearch.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / N4 (slice 0018) — Per-drive coaching narrative.
+	// Per-drive coaching narrative.
 	// Register the slice's read-only tool on the SAME process-wide
 	// registry so the dispatcher can resolve
 	// `query_drive_telemetry_summary` for the drive-coaching
@@ -735,40 +946,40 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// deterministically (the new tool sorts AFTER
 	// `query_drive_detail` / `query_drives_recent` /
 	// `query_anomaly_context` / `query_year_in_review_context`).
-	tools.RegisterDriveCoachingTools(aiToolRegistry, tools.DriveCoachingSources{
-		Drives: database.NewDriveRepo(db),
+	coaching.RegisterDriveCoachingTools(aiToolRegistry, coaching.DriveCoachingSources{
+		Drives: drivedb.NewDriveRepo(db),
 	})
 	// Per-drive coaching handler. One per process; stateless beyond
 	// constructor inputs. Must be constructed AFTER the tool
 	// registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiDriveCoachHandler := NewAIDriveCoachHandler(
+	aiDriveCoachHandler := aidrivecoach.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		drivecoaching.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// charging-diagnosis tools (Phase-50 / N5, slice 0019). Adds
+	// charging-diagnosis tools. Adds
 	// `query_charge_session` + `query_charging_aggregation` to the
 	// shared tool registry so the dispatcher can resolve them for
 	// the charging-diagnosis strategy. Same ordering rule as the
 	// other slice tools above: must be registered before the
 	// handler constructor below so the strategy's allowedTools
 	// resolve at boot.
-	tools.RegisterChargingDiagnosisTools(aiToolRegistry, tools.ChargingDiagnosisSources{
-		Charges: database.NewChargingRepo(db),
+	diagnosis.RegisterChargingDiagnosisTools(aiToolRegistry, diagnosis.ChargingDiagnosisSources{
+		Charges: chargingdb.NewChargingRepo(db),
 	})
 	// Per-charging-session diagnosis handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiChargingDiagnosisHandler := NewAIChargingDiagnosisHandler(
+	aiChargingDiagnosisHandler := aichargdiag.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		chargingdiagnosis.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / N6 (slice 0020) — RAG-backed app help.
+	// RAG-backed app help.
 	//
 	// Reuse the F7 retriever pattern from nl-search: rag.New
 	// returns a NoopRetriever when ai_mode='off' so retrieve_docs
@@ -796,7 +1007,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai rag-help: rag.New failed during boot wiring")
 	}
-	// rag-help tools (Phase-50 / N6, slice 0020). Adds
+	// rag-help tools. Adds
 	// `retrieve_docs` + `cite_help_chunk` to the shared tool
 	// registry so the dispatcher can resolve them for the rag-help
 	// strategy. Same ordering rule as the other slice tools above:
@@ -809,13 +1020,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// beyond constructor inputs. Must be constructed AFTER the
 	// tool registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiRagHelpHandler := NewAIRAGHelpHandler(
+	aiRagHelpHandler := airaghelp.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		raghelp.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / D1 (slice 0021) — Natural-language drive search and
+	// Natural-language drive search and
 	// replay.
 	//
 	// Reuse the F7 retriever pattern from nl-search / rag-help:
@@ -831,7 +1042,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// retriever scopes by user_subject at the SQL boundary). The
 	// drive_summary corpus is populated today; route_segment +
 	// location_summary are forward-compat reservations per the
-	// slice prompt — the gated background job `ai_drive_indexer`
+	// request — the gated background job `ai_drive_indexer`
 	// is the future fan-out point and is registered in
 	// features.Registry as a fail-closed gate stub today.
 	aiDriveSearchRetriever, err := rag.New(
@@ -845,33 +1056,33 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai drive search: rag.New failed during boot wiring")
 	}
-	// nl-drive-search-replay tools (Phase-50 / D1, slice 0021).
+	// nl-drive-search-replay tools.
 	// Adds `retrieve_drive_chunks` + `hydrate_drive_replay` to the
 	// shared tool registry so the dispatcher can resolve them for
 	// the nl-drive-search-replay strategy. Same ordering rule as
 	// the other slice tools above: must be registered before the
 	// handler constructor below so the strategy's allowedTools
-	// resolve at boot. The Hydrator is the in-package adapter
-	// aiDriveSearchHydrator, which delegates per-source-type
+	// resolve at boot. The Hydrator is the aidrivesearch adapter,
+	// which delegates per-source-type
 	// lookups to the existing canonical pgSearcher — same code
 	// path the typed GET /api/v1/search baseline uses (ADR-015 §I3
 	// baseline-intact: no duplicate read path is introduced by
 	// this slice).
-	tools.RegisterDriveSearchTools(aiToolRegistry, tools.DriveSearchSources{
+	trip.RegisterDriveSearchTools(aiToolRegistry, trip.DriveSearchSources{
 		Retriever: aiDriveSearchRetriever,
-		Hydrator:  newAIDriveSearchHydrator(newPGSearcher(db)),
+		Hydrator:  aidrivesearch.NewHydrator(apisearch.NewPGSearcher(db)),
 	})
 	// Natural-language drive search and replay handler. One per
 	// process; stateless beyond constructor inputs. Must be
 	// constructed AFTER the tool registration above so the
 	// dispatcher can resolve the strategy's allowedTools at boot.
-	aiDriveSearchHandler := NewAIDriveSearchHandler(
+	aiDriveSearchHandler := aidrivesearch.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		nldrivesearchreplay.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / D2 (slice 0022) — Speed-profile insights.
+	// Speed-profile insights.
 	// Register the slice's two read-only tools on the SAME
 	// process-wide registry so the dispatcher can resolve
 	// `query_speed_profile` + `query_drive_context` for the
@@ -881,20 +1092,20 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// resolve at boot. Both tools call DriveRepo.GetByID and
 	// derive their envelopes in-memory; no new SQL is written by
 	// this slice.
-	tools.RegisterSpeedProfileInsightsTools(aiToolRegistry, tools.SpeedProfileInsightsSources{
-		Drives: database.NewDriveRepo(db),
+	speedtool.RegisterSpeedProfileInsightsTools(aiToolRegistry, speedtool.SpeedProfileInsightsSources{
+		Drives: drivedb.NewDriveRepo(db),
 	})
 	// Per-drive speed-profile insights handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiSpeedProfileInsightsHandler := NewAISpeedProfileInsightsHandler(
+	aiSpeedProfileInsightsHandler := aispeedprof.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		speedprofileinsights.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / D3 (slice 0023) — Route-efficiency suggestions.
+	// Route-efficiency suggestions.
 	// Build the per-feature F7 retriever scoped to the
 	// route-efficiency-suggestions feature id. The retriever
 	// embeds queries with the local nomic-embed-text model and
@@ -902,7 +1113,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// (the embedding store; the retriever scopes by user_subject
 	// at the SQL boundary). Only the drive_summary corpus is
 	// populated today; route_efficiency + weather_context are
-	// forward-compat reservations per the slice prompt — the
+	// forward-compat reservations per the request — the
 	// gated background job `ai_route_indexer` is the future
 	// fan-out point and is registered in features.Registry as a
 	// fail-closed gate stub today.
@@ -917,7 +1128,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai route-efficiency suggestions: rag.New failed during boot wiring")
 	}
-	// route-efficiency-suggestions tools (Phase-50 / D3, slice 0023).
+	// route-efficiency-suggestions tools.
 	// Adds `retrieve_route_chunks` + `query_route_efficiency` to
 	// the shared tool registry so the dispatcher can resolve them
 	// for the route-efficiency-suggestions strategy. Same ordering
@@ -928,22 +1139,22 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// in-memory mirroring the deterministic
 	// /api/v1/analytics/route-efficiency baseline shape — no new
 	// SQL is written by this slice.
-	tools.RegisterRouteEfficiencySuggestionsTools(aiToolRegistry, tools.RouteEfficiencySuggestionsSources{
+	routetool.RegisterRouteEfficiencySuggestionsTools(aiToolRegistry, routetool.RouteEfficiencySuggestionsSources{
 		Retriever: aiRouteEfficiencyRetriever,
-		Drives:    database.NewDriveRepo(db),
+		Drives:    drivedb.NewDriveRepo(db),
 	})
 	// Route-efficiency-suggestions handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiRouteEfficiencySuggestionsHandler := NewAIRouteEfficiencySuggestionsHandler(
+	aiRouteEfficiencySuggestionsHandler := airouteeff.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		routeefficiencysuggestions.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// Phase-50 / D4 (slice 0024) — Auto trip naming.
+	// Auto trip naming.
 	// Construct the shared TripsDetailRepo once so both the
 	// auto-trip-naming AI tool path and (eventually) the
 	// canonical /api/v1/trips/{trip_id} handler share a single
@@ -951,8 +1162,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// canonical handler still builds its own repo inline at the
 	// mount point; the duplicate is intentional and short-lived —
 	// a future cleanup slice can consolidate.
-	aiAutoTripNamingDetailRepo := database.NewTripsDetailRepo(db.Pool)
-	// auto-trip-naming tools (Phase-50 / D4, slice 0024).
+	aiAutoTripNamingDetailRepo := tripdb.NewTripsDetailRepo(db.Pool)
+	// auto-trip-naming tools.
 	// Adds `draft_trip_name` + `validate_trip_name` to the shared
 	// tool registry. Both tools are PROPOSE-only — they construct
 	// or validate trip-name DTOs but do NOT touch the database;
@@ -960,74 +1171,73 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// triggered. The actual trip-name persistence flows through
 	// an explicit user confirmation in the TripDetailPage UI
 	// (out of scope for this slice).
-	tools.RegisterAutoTripNamingTools(aiToolRegistry, tools.AutoTripNamingSources{
-		Trips:     NewAITripSourceAdapter(aiAutoTripNamingDetailRepo),
+	trip.RegisterAutoTripNamingTools(aiToolRegistry, trip.AutoTripNamingSources{
+		Trips:     aiautotripname.NewAITripSourceAdapter(aiAutoTripNamingDetailRepo),
 		Details:   aiAutoTripNamingDetailRepo,
-		Validator: NewAITripNameValidator(),
+		Validator: aiautotripname.NewAITripNameValidator(),
 	})
 	// Auto-trip-naming handler. One per process; stateless beyond
 	// constructor inputs. Must be constructed AFTER the tool
 	// registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiAutoTripNameHandler := NewAIAutoTripNameHandler(
+	aiAutoTripNameHandler := aiautotripname.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		autotripnaming.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	lifetimeHandler := NewLifetimeHandler(db, eventHub)
-	yearReviewHandler := NewYearReviewHandler(db)
-	chargePlannerHandler := NewChargePlannerHandler(db, teslaClient, cfg, stateReader)
-	energyFlowHandler := NewEnergyFlowHandler(db, stateReader, liveStateReader)
-	weeklyDigestHandler := NewWeeklyDigestHandler(db)
-	teslaChargingHistoryHandler := NewTeslaChargingHistoryHandler(teslaClient, db)
-	teslaChargingSessionHandler := NewTeslaChargingSessionHandler(teslaClient, db)
-	teslaEnergyHistoryHandler := NewTeslaEnergyHistoryHandler(teslaClient, db)
-	teslaEnergyLiveStatusHandler := NewTeslaEnergyLiveStatusHandler(teslaClient, db)
-	energySiteHandler := NewEnergySiteHandler(teslaClient, db)
-	fleetTelemetryErrorHandler := NewFleetTelemetryErrorHandler(teslaClient, db)
-	// Phase-43a/0002 — wire the package-derived Fleet Telemetry coverage
-	// handler authored by Phase-42 prompt 0068. It is intentionally
-	// DB-free: the routing snapshot comes from the embedded routing.yaml
-	// via router.LoadMap() and the subscription view comes from
+	lifetimeHandler := apilifetime.NewHandler(db, eventHub)
+	chargePlannerHandler := chargeplanner.NewHandler(db, teslaClient, cfg, stateReader)
+	yearReviewHandler := yearreview.NewHandler(db)
+	energyFlowHandler := apienergyflow.NewEnergyFlowHandler(db, stateReader, liveStateReader)
+	weeklyDigestHandler := apiweekly.NewHandler(db)
+	teslaChargingHistoryHandler := apiteslachargehist.NewTeslaChargingHistoryHandler(teslaClient, db)
+	teslaChargingSessionHandler := apiteslachargesess.NewTeslaChargingSessionHandler(teslaClient, db)
+	teslaEnergyHistoryHandler := apiteslaenergyhist.NewTeslaEnergyHistoryHandler(teslaClient, db)
+	teslaEnergyLiveStatusHandler := apitels.NewHandler(teslaClient, db)
+	energySiteHandler := apienergysite.NewEnergySiteHandler(teslaClient, db)
+	fleetTelemetryErrorHandler := apifleettelem.NewFleetTelemetryErrorHandler(teslaClient, db)
+	// Wire the package-derived Fleet Telemetry coverage handler.
+	// It is intentionally DB-free: the routing snapshot comes from the embedded routing.yaml
+	// via router.LoadMap and the subscription view comes from
 	// teslaconfig.Builder. The handler is mounted inside the existing
 	// /tesla/fleet-telemetry route block below.
-	fleetTelemetryHandler := NewFleetTelemetryHandler(cfg)
-	teslaUserConfigHandler := NewTeslaUserConfigHandler(teslaClient, db)
-	teslaUserOrderHandler := NewTeslaUserOrderHandler(teslaClient, db)
-	teslaUserProfileHandler := NewTeslaUserProfileHandler(teslaClient, db)
-	vehicleAccessHandler := NewVehicleAccessHandler(teslaClient, db)
-	vehicleInfoHandler := NewVehicleInfoHandler(teslaClient, db)
-	tripPlannerHandler := NewTripPlannerHandler(db, opt.CacheStore, stateReader)
+	fleetTelemetryHandler := apifleettelem.NewFleetTelemetryHandler(cfg)
+	teslaUserConfigHandler := apituc.NewHandler(teslaClient, db)
+	teslaUserOrderHandler := apituo.NewHandler(teslaClient, db)
+	teslaUserProfileHandler := apitup.NewHandler(teslaClient, db)
+	vehicleAccessHandler := apivehaccess.NewHandler(teslaClient, db)
+	vehicleInfoHandler := apivehinfo.NewHandler(teslaClient, db)
+	tripPlannerHandler := apitripplanner.NewTripPlannerHandler(db, opt.CacheStore, stateReader)
 
-	// trip-planner-llm-agent tools (Phase-50 / D5, slice 0025).
+	// trip-planner-llm-agent tools.
 	// Adds `query_chargers_along_route`, `query_user_charge_dwells`,
 	// and `draft_trip_plan` to the shared tool registry. All three
 	// are PROPOSE-only / READ-only — the first two read the existing
 	// charging_sessions table via the shared ChargeSource port; the
-	// third delegates to the canonical TripPlannerHandler.computePlan
+	// third delegates to the canonical tripplanner ComputePlan
 	// path via a narrow TripPlanComputer port satisfied by
 	// AITripPlanComputer. The dispatcher's deny-all confirm gate is
 	// therefore never triggered; the actual trip-plan persistence
 	// flows through the existing canonical Plan button in the
 	// TripPlannerPage UI (unchanged baseline).
-	tools.RegisterTripPlannerLLMAgentTools(aiToolRegistry, tools.TripPlannerLLMAgentSources{
-		Chargers: database.NewChargingRepo(db),
-		Planner:  NewAITripPlanComputer(tripPlannerHandler),
+	tripplantool.RegisterTripPlannerLLMAgentTools(aiToolRegistry, tripplantool.TripPlannerLLMAgentSources{
+		Chargers: chargingdb.NewChargingRepo(db),
+		Planner:  aitripplanllm.NewAITripPlanComputer(tripPlannerHandler),
 	})
 	// trip-planner-llm-agent handler. One per process; stateless
 	// beyond constructor inputs. Must be constructed AFTER the
 	// tool registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiTripPlannerLLMHandler := NewAITripPlannerLLMHandler(
+	aiTripPlannerLLMHandler := aitripplanllm.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		tripplannerllmagent.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// smart-charge-schedule-suggestion tools (Phase-50 / C1, slice
-	// 0026). Adds `draft_charge_schedule` and
+	// smart-charge-schedule-suggestion tools
+	// Adds `draft_charge_schedule` and
 	// `validate_charge_schedule` to the shared tool registry. Both
 	// are PROPOSE-only / READ-only — draft_charge_schedule delegates
 	// to the canonical ChargePlannerHandler.computeSchedule path
@@ -1038,21 +1248,21 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// schedule persistence flows through the existing canonical
 	// Schedule button in the SmartChargePage UI (unchanged
 	// baseline).
-	tools.RegisterSmartChargeScheduleSuggestionTools(aiToolRegistry, tools.SmartChargeScheduleSuggestionSources{
-		Planner: NewAIChargeScheduleComputer(chargePlannerHandler),
+	schedule.RegisterSmartChargeScheduleSuggestionTools(aiToolRegistry, schedule.SmartChargeScheduleSuggestionSources{
+		Planner: aismartcharge.NewAIChargeScheduleComputer(chargePlannerHandler),
 	})
 	// smart-charge-schedule-suggestion handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiSmartChargeScheduleHandler := NewAISmartChargeScheduleHandler(
+	aiSmartChargeScheduleHandler := aismartcharge.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		smartchargeschedulesuggestion.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// battery-health-forecast-narrative (Phase-50 / C2, slice
-	// 0027). Registers `query_battery_health_forecast` to the
+	// battery-health-forecast-narrative
+	// Registers `query_battery_health_forecast` to the
 	// shared tool registry. The tool is READ-only — it composes
 	// the same package-level helpers (synthesizeBatterySnapshots,
 	// predictDegradation, computeRiskFactors,
@@ -1064,22 +1274,22 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// deterministic chart / hero-cards / recommendations panel
 	// on /battery (BatteryHealthPage) remain the canonical
 	// baseline.
-	tools.RegisterBatteryHealthForecastNarrativeTools(aiToolRegistry, tools.BatteryHealthForecastNarrativeSources{
-		Forecaster: NewAIBatteryHealthForecaster(db, stateReader, signalLogReader),
+	predict.RegisterBatteryHealthForecastNarrativeTools(aiToolRegistry, predict.BatteryHealthForecastNarrativeSources{
+		Forecaster: aibatthealth.NewAIBatteryHealthForecaster(db, stateReader, signalLogReader),
 	})
 	// battery-health-forecast-narrative handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiBatteryHealthHandler := NewAIBatteryHealthHandler(
+	aiBatteryHealthHandler := aibatthealth.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		batteryhealthforecastnarrative.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// charging-curve-fingerprint-clustering (Phase-50 / C3, slice
-	// 0028). The shared rag.Retriever is constructed per-feature
+	// charging-curve-fingerprint-clustering
+	// The shared rag.Retriever is constructed per-feature
 	// so the rate-limit + cost-cap decorators on the embedding
 	// provider apply per-strategy. The retriever uses the same
 	// nomic-embed-text 768-dim physical table as the other RAG
@@ -1101,36 +1311,34 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai charging-curve-fingerprint-clustering: rag.New failed during boot wiring")
 	}
-	// charging-curve-fingerprint-clustering tools (Phase-50 / C3,
-	// slice 0028). Adds `retrieve_charge_curve_chunks` +
+	// charging-curve-fingerprint-clustering tools.
+	// Adds `retrieve_charge_curve_chunks` +
 	// `query_charge_curve_features` to the shared tool registry so
 	// the dispatcher can resolve them for the
-	// charging-curve-fingerprint-clustering strategy. Same
-	// ordering rule as the other slice tools above: must be
+	// charging-curve-fingerprint-clustering strategy. Must be
 	// registered before the handler constructor below so the
 	// strategy's allowedTools resolve at boot.
 	// query_charge_curve_features calls ChargingRepo.GetByVehicle
 	// and derives the per-cluster fingerprint envelope in-memory
 	// mirroring the deterministic L1/L2/DC bucketing the SPA's
-	// helpers.ts already applies — no new SQL is written by this
-	// slice.
-	tools.RegisterChargingCurveFingerprintClusteringTools(aiToolRegistry, tools.ChargingCurveFingerprintClusteringSources{
+	// helpers.ts already applies — no new SQL is written.
+	curve.RegisterChargingCurveFingerprintClusteringTools(aiToolRegistry, curve.ChargingCurveFingerprintClusteringSources{
 		Retriever: aiChargeCurveRetriever,
-		Charges:   database.NewChargingRepo(db),
+		Charges:   chargingdb.NewChargingRepo(db),
 	})
 	// charging-curve-fingerprint-clustering handler. One per
 	// process; stateless beyond constructor inputs. Must be
 	// constructed AFTER the tool registration above so the
 	// dispatcher can resolve the strategy's allowedTools at boot.
-	aiChargingCurveClusteringHandler := NewAIChargingCurveClusteringHandler(
+	aiChargingCurveClusteringHandler := aichargcurve.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		chargingcurvefingerprintclustering.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// cost-forecast-narration tools (Phase-50 / C4, slice
-	// 0029). Adds `query_cost_forecast` to the shared tool
+	// cost-forecast-narration tools
+	// Adds `query_cost_forecast` to the shared tool
 	// registry so the dispatcher can resolve it for the
 	// cost-forecast-narration strategy. Same ordering rule as
 	// the other slice tools above: must be registered before the
@@ -1141,47 +1349,47 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// GET /api/v1/analytics/cost-forecast handler — the AI
 	// narrator quotes the SAME deterministic forecast the chart
 	// renders (no duplicated SQL).
-	tools.RegisterCostForecastNarrationTools(aiToolRegistry, tools.CostForecastNarrationSources{
-		Forecaster: NewAICostForecaster(db),
+	forecast.RegisterCostForecastNarrationTools(aiToolRegistry, forecast.CostForecastNarrationSources{
+		Forecaster: costforecast.NewAICostForecaster(db),
 	})
 	// cost-forecast-narration handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiCostForecastNarrationHandler := NewAICostForecastNarrationHandler(
+	aiCostForecastNarrationHandler := aicostfcst.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		costforecastnarration.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// period-compare-narration tools (Phase-50 / X1, slice
-	// 0040). Adds `query_period_compare` to the shared tool
+	// period-compare-narration tools
+	// Adds `query_period_compare` to the shared tool
 	// registry so the dispatcher can resolve it for the
 	// period-compare-narration strategy. Must be registered
 	// before the handler constructor below so the strategy's
 	// allowedTools resolve at boot. The PeriodComparator adapter
-	// delegates to the same package-level api.ComputePeriodStats
+	// delegates to the same package-level apiperiod.ComputePeriodStats
 	// helper that also backs the canonical
 	// GET /api/v1/analytics/period-stats handler — the AI
 	// narrator quotes the SAME deterministic per-period
 	// envelope the chart on /period-compare (and its alias
 	// /analytics/compare) renders (no duplicated SQL).
-	tools.RegisterPeriodCompareNarrationTools(aiToolRegistry, tools.PeriodCompareNarrationSources{
-		Comparator: NewAIPeriodCompareSource(db),
+	forecast.RegisterPeriodCompareNarrationTools(aiToolRegistry, forecast.PeriodCompareNarrationSources{
+		Comparator: aiperiodcmp.NewPeriodCompareSource(db),
 	})
 	// period-compare-narration handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiPeriodCompareNarrationHandler := NewAIPeriodCompareNarrationHandler(
+	aiPeriodCompareNarrationHandler := aiperiodcmp.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		periodcomparenarration.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// lifetime-stats-qa (Phase-50 / X2, slice 0041).
+	// lifetime-stats-qa.
 	// The shared rag.Retriever is constructed per-feature so the
 	// rate-limit + cost-cap decorators on the embedding provider
 	// apply per-strategy. The retriever uses the same
@@ -1203,7 +1411,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai lifetime-stats-qa: rag.New failed during boot wiring")
 	}
-	// lifetime-stats-qa tools (Phase-50 / X2, slice 0041).
+	// lifetime-stats-qa tools.
 	// Adds `query_lifetime_stats` + `retrieve_analytics_chunks` to
 	// the shared tool registry so the dispatcher can resolve them
 	// for the lifetime-stats-qa strategy. Same ordering rule as
@@ -1213,22 +1421,22 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// api.ComputeLifetimeStats helper that backs the canonical
 	// baseline GET /api/v1/analytics/lifetime handler — no new
 	// SQL is written by this slice.
-	tools.RegisterLifetimeStatsQATools(aiToolRegistry, tools.LifetimeStatsQASources{
+	lifetime.RegisterLifetimeStatsQATools(aiToolRegistry, lifetime.LifetimeStatsQASources{
 		Retriever:     aiAnalyticsRetriever,
-		LifetimeStats: NewAILifetimeStatsSource(db),
+		LifetimeStats: ailifetime.NewLifetimeStatsSource(db),
 	})
 	// lifetime-stats-qa handler. One per process; stateless beyond
 	// constructor inputs. Must be constructed AFTER the tool
 	// registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiLifetimeStatsQAHandler := NewAILifetimeStatsQAHandler(
+	aiLifetimeStatsQAHandler := ailifetime.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		lifetimestatsqa.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// incident-timeline-summarizer (Phase-50 / S1, slice 0042).
+	// incident-timeline-summarizer.
 	// The shared rag.Retriever is constructed per-feature so the
 	// rate-limit + cost-cap decorators on the embedding provider
 	// apply per-strategy. The retriever uses the same
@@ -1249,32 +1457,32 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai incident-timeline-summarizer: rag.New failed during boot wiring")
 	}
-	// incident-timeline-summarizer tools (Phase-50 / S1, slice 0042).
+	// incident-timeline-summarizer tools.
 	// Adds `query_incident_timeline` + `retrieve_system_chunks` to
 	// the shared tool registry so the dispatcher can resolve them
 	// for the incident-timeline-summarizer strategy. Same ordering
 	// rule as the other slice tools above: must be registered
 	// before the handler constructor below so the strategy's
 	// allowedTools resolve at boot. query_incident_timeline composes
-	// the SAME database.IncidentRepo.Get path that backs the
+	// the SAME dbobs.IncidentRepo.Get path that backs the
 	// canonical baseline GET /api/v1/status/incidents/{id} handler
 	// — no new SQL is written by this slice.
-	tools.RegisterIncidentTimelineSummarizerTools(aiToolRegistry, tools.IncidentTimelineSummarizerSources{
+	summary.RegisterIncidentTimelineSummarizerTools(aiToolRegistry, summary.IncidentTimelineSummarizerSources{
 		Retriever:        aiSystemRetriever,
-		IncidentTimeline: NewAIIncidentTimelineSource(database.NewIncidentRepo(db)),
+		IncidentTimeline: aiincident.NewIncidentTimelineSource(dbobs.NewIncidentRepo(db)),
 	})
 	// incident-timeline-summarizer handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiIncidentTimelineSummarizerHandler := NewAIIncidentTimelineSummarizerHandler(
+	aiIncidentTimelineSummarizerHandler := aiincident.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		incidenttimelinesummarizer.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// data-repair-suggestions (Phase-50 / S2, slice 0043).
+	// data-repair-suggestions.
 	// Adds `draft_data_repair_plan` + `validate_data_repair_plan`
 	// to the shared tool registry so the dispatcher can resolve
 	// them for the data-repair-suggestions strategy. Same
@@ -1289,21 +1497,21 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// new SQL is written by this slice — the source port
 	// composes the SAME ChargingRepo.GetStale + DriveRepo.GetStale
 	// paths that back the baseline DataRepairHandler.GetStaleSessions.
-	tools.RegisterDataRepairSuggestionsTools(aiToolRegistry, tools.DataRepairSuggestionsSources{
-		Validator: NewAIDataRepairPlanValidator(),
+	diagnostic.RegisterDataRepairSuggestionsTools(aiToolRegistry, diagnostic.DataRepairSuggestionsSources{
+		Validator: aidatarep.NewPlanValidator(),
 	})
 	// data-repair-suggestions handler. Constructed after the tool
 	// registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiDataRepairSuggestionsHandler := NewAIDataRepairSuggestionsHandler(
+	aiDataRepairSuggestionsHandler := aidatarep.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		datarepairsuggestions.New(),
-		NewAIDataRepairSource(db),
+		aidatarep.NewSource(db),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// signal-explorer-nl-filter (Phase-50 / S3, slice 0044).
+	// signal-explorer-nl-filter.
 	// Adds `draft_signal_filter` + `validate_signal_filter` to
 	// the shared tool registry so the dispatcher can resolve them
 	// for the signal-explorer-nl-filter strategy. Same ordering
@@ -1317,21 +1525,21 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// port composes the SAME proto-derived AvailableSignals
 	// catalog that backs the baseline
 	// GET /api/v1/signals/{vehicleID}/available endpoint.
-	tools.RegisterSignalExplorerNlFilterTools(aiToolRegistry, tools.SignalExplorerNlFilterSources{
-		Validator: NewAISignalFilterValidator(),
+	nl.RegisterSignalExplorerNlFilterTools(aiToolRegistry, nl.SignalExplorerNlFilterSources{
+		Validator: aisignalnl.NewSignalFilterValidator(),
 	})
 	// signal-explorer-nl-filter handler. Constructed after the
 	// tool registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiSignalExplorerNlFilterHandler := NewAISignalExplorerNlFilterHandler(
+	aiSignalExplorerNlFilterHandler := aisignalnl.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		signalexplorernlfilter.New(),
-		NewAISignalCatalogSource(),
+		aisignalnl.NewSignalCatalogSource(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// log-trace-summarization (Phase-50 / S4, slice 0045).
+	// log-trace-summarization.
 	// The shared rag.Retriever is constructed per-feature so the
 	// rate-limit + cost-cap decorators on the embedding provider
 	// apply per-strategy. The retriever uses the same
@@ -1353,7 +1561,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai log-trace-summarization: rag.New failed during boot wiring")
 	}
-	// log-trace-summarization tools (Phase-50 / S4, slice 0045).
+	// log-trace-summarization tools.
 	// Adds `query_trace_window` + `retrieve_log_chunks` to the
 	// shared tool registry so the dispatcher can resolve them for
 	// the log-trace-summarization strategy. Same ordering rule as
@@ -1363,23 +1571,23 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// EMPTY adapter — the operator-facing log surface is
 	// stream-only and has no historical reader yet; the strategy's
 	// goldens cover the zero-data path.
-	tools.RegisterLogTraceSummarizerTools(aiToolRegistry, tools.LogTraceSummarizerSources{
+	summary.RegisterLogTraceSummarizerTools(aiToolRegistry, summary.LogTraceSummarizerSources{
 		Retriever:   aiLogTraceRetriever,
-		TraceWindow: NewAILogTraceWindowSource(),
+		TraceWindow: ailogtrace.NewTraceWindowSource(),
 	})
 	// log-trace-summarization handler. One per process; stateless
 	// beyond constructor inputs. Must be constructed AFTER the
 	// tool registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiLogTraceSummarizationHandler := NewAILogTraceSummarizationHandler(
+	aiLogTraceSummarizationHandler := ailogtrace.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		logtracesummarization.New(),
-		NewAILogTraceWindowSource(),
+		ailogtrace.NewTraceWindowSource(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// vampire-drain-explanation (Phase-50 / C5, slice 0030).
+	// vampire-drain-explanation.
 	// The shared rag.Retriever is constructed per-feature so the
 	// rate-limit + cost-cap decorators on the embedding provider
 	// apply per-strategy. The retriever uses the same
@@ -1402,7 +1610,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai vampire-drain-explanation: rag.New failed during boot wiring")
 	}
-	// vampire-drain-explanation tools (Phase-50 / C5, slice 0030).
+	// vampire-drain-explanation tools.
 	// Adds `retrieve_idle_drain_chunks` + `query_vampire_drain_windows`
 	// to the shared tool registry so the dispatcher can resolve
 	// them for the vampire-drain-explanation strategy. Same
@@ -1410,25 +1618,25 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// registered before the handler constructor below so the
 	// strategy's allowedTools resolve at boot.
 	// query_vampire_drain_windows composes the SAME
-	// *database.VampireDrainRepo.Events + .Stats methods that
+	// *drivedb.VampireDrainRepo.Events + .Stats methods that
 	// back the canonical baseline GET /vampire-drain + GET
 	// /vampire-drain/stats handlers — no new SQL is written by
 	// this slice.
-	tools.RegisterVampireDrainExplanationTools(aiToolRegistry, tools.VampireDrainExplanationSources{
+	lifetime.RegisterVampireDrainExplanationTools(aiToolRegistry, lifetime.VampireDrainExplanationSources{
 		Retriever: aiIdleDrainRetriever,
-		Drains:    NewAIVampireDrainSource(database.NewVampireDrainRepo(db.Pool)),
+		Drains:    aivampire.NewSource(drivedb.NewVampireDrainRepo(db.Pool)),
 	})
 	// vampire-drain-explanation handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiVampireDrainExplanationHandler := NewAIVampireDrainHandler(
+	aiVampireDrainExplanationHandler := aivampire.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		vampiredrainexplanation.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// preheat-precool-recommender tools (Phase-50 / T1, slice 0031).
+	// preheat-precool-recommender tools.
 	// Adds `draft_climate_schedule` + `validate_climate_schedule`
 	// to the shared tool registry so the dispatcher can resolve
 	// them for the preheat-precool-recommender strategy. Same
@@ -1439,42 +1647,42 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// deterministic departure heuristic the SPA's manual
 	// climate-controls baseline runs — no parallel SQL path,
 	// no parallel write path; the LLM never persists.
-	tools.RegisterPreheatPrecoolRecommenderTools(aiToolRegistry, tools.PreheatPrecoolRecommenderSources{
-		Advisor: NewAIClimateScheduleAdvisor(),
+	schedule.RegisterPreheatPrecoolRecommenderTools(aiToolRegistry, schedule.PreheatPrecoolRecommenderSources{
+		Advisor: aiclimate.NewAdvisor(),
 	})
 	// preheat-precool-recommender handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiPreheatPrecoolRecommenderHandler := NewAIClimateScheduleHandler(
+	aiPreheatPrecoolRecommenderHandler := aiclimate.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		preheatprecoolrecommender.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// Phase-50 / 0032 — T2 cabin-temperature-impact-narrative
+	// T2 cabin-temperature-impact-narrative
 	// tool registration. The single read-only tool
 	// `query_temperature_impact` is registered on the process-wide
 	// tool registry so the dispatcher can resolve the strategy's
 	// allowedTools at boot. The AITemperatureImpactSource adapter
 	// runs the SAME bucket / monthly-trend SQL the canonical
-	// TempImpactHandler.Get already runs — no parallel write
+	// tempImpactHandler.Get already runs — no parallel write
 	// path; the LLM never persists.
-	tools.RegisterCabinTemperatureImpactNarrativeTools(aiToolRegistry, tools.CabinTemperatureImpactNarrativeSources{
-		Source: NewAITemperatureImpactSource(db),
+	forecast.RegisterCabinTemperatureImpactNarrativeTools(aiToolRegistry, forecast.CabinTemperatureImpactNarrativeSources{
+		Source: aitempimpact.NewAITemperatureImpactSource(db),
 	})
 	// cabin-temperature-impact-narrative handler. One per
 	// process; stateless beyond constructor inputs. Must be
 	// constructed AFTER the tool registration above so the
 	// dispatcher can resolve the strategy's allowedTools at boot.
-	aiCabinTemperatureImpactNarrativeHandler := NewAICabinTemperatureImpactHandler(
+	aiCabinTemperatureImpactNarrativeHandler := aitempimpact.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		cabintemperatureimpactnarrative.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / 0033 — T3 tire-pressure-trend-reasoning tool
+	// T3 tire-pressure-trend-reasoning tool
 	// registration. The single read-only tool
 	// `query_tire_pressure_trend` is registered on the
 	// process-wide tool registry so the dispatcher can resolve
@@ -1483,192 +1691,184 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// signal.StateReader.Timeline projection the canonical
 	// TirePressureHandler.List already runs — no parallel write
 	// path; the LLM never persists.
-	tools.RegisterTirePressureTrendReasoningTools(aiToolRegistry, tools.TirePressureTrendReasoningSources{
-		Source: NewAITirePressureTrendSource(stateReader),
+	maintenancetool.RegisterTirePressureTrendReasoningTools(aiToolRegistry, maintenancetool.TirePressureTrendReasoningSources{
+		Source: aitirepress.NewAITirePressureTrendSource(stateReader),
 	})
 	// tire-pressure-trend-reasoning handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiTirePressureTrendReasoningHandler := NewAITirePressureTrendHandler(
+	aiTirePressureTrendReasoningHandler := aitirepress.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		tirepressuretrendreasoning.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / 0034 — A1 alert-tuning-suggestions tool
+	// A1 alert-tuning-suggestions tool
 	// registration. The single read-only tool
 	// `draft_alert_rule_patch` is registered on the
 	// process-wide tool registry so the dispatcher can resolve
 	// the strategy's allowedTools at boot. The `validate_alert_rule`
 	// tool used by this strategy was already registered by N1
-	// (slice 0015) above; the dispatcher resolves both at boot
+	// (tool group) above; the dispatcher resolves both at boot
 	// from the SAME registry. AIAlertTuningSource adapts the
 	// canonical AlertRuleRepo + NotificationRepo so the LLM
 	// reads the SAME rows the manual AlertStudio path reads —
 	// no parallel write path; the LLM never persists.
-	tools.RegisterAlertTuningSuggestionsTools(aiToolRegistry, tools.AlertTuningSuggestionsSources{
-		Source: NewAIAlertTuningSource(database.NewAlertRuleRepo(db), database.NewNotificationRepo(db)),
+	alert.RegisterAlertTuningSuggestionsTools(aiToolRegistry, alert.AlertTuningSuggestionsSources{
+		Source: aialerttune.NewAIAlertTuningSource(dbalert.NewAlertRuleRepo(db), dbnotif.NewNotificationRepo(db)),
 	})
 	// alert-tuning-suggestions handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiAlertTuningHandler := NewAIAlertTuningHandler(
+	aiAlertTuningHandler := aialerttune.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		alerttuningsuggestions.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / 0035 — A2 inbox-auto-categorization tool
+	// A2 inbox-auto-categorization tool
 	// registration. The two read-only tools
 	// `draft_alert_categories` + `validate_alert_category`
 	// are registered on the process-wide tool registry so
 	// the dispatcher can resolve the strategy's allowedTools
-	// at boot. AIInboxCategorizationSource adapts the
+	// at boot. aiinboxcat.Source adapts the
 	// canonical NotificationRepo + AlertRuleRepo so the LLM
 	// reads the SAME rows the manual InboxBody path reads —
 	// no parallel write path; the LLM never persists.
-	tools.RegisterInboxAutoCategorizationTools(aiToolRegistry, tools.InboxAutoCategorizationSources{
-		Source: NewAIInboxCategorizationSource(database.NewNotificationRepo(db), database.NewAlertRuleRepo(db)),
+	nl.RegisterInboxAutoCategorizationTools(aiToolRegistry, nl.InboxAutoCategorizationSources{
+		Source: aiinboxcat.NewSource(dbnotif.NewNotificationRepo(db), dbalert.NewAlertRuleRepo(db)),
 	})
 	// inbox-auto-categorization handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiInboxCategorizationHandler := NewAIInboxCategorizationHandler(
+	aiInboxCategorizationHandler := aiinboxcat.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		inboxautocategorization.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / 0036 — A3 cross-rule-conflict-detection tool
+	// A3 cross-rule-conflict-detection tool
 	// registration. The two read-only tools
 	// `query_alert_rules` + `detect_rule_conflicts` are
 	// registered on the process-wide tool registry so the
 	// dispatcher can resolve the strategy's allowedTools at
-	// boot. AICrossRuleConflictSource adapts the canonical
+	// boot. aicrossrule.Source adapts the canonical
 	// AlertRuleRepo so the LLM reads the SAME rows the manual
 	// AlertStudio path reads — no parallel write path; the
 	// LLM never persists. The pure-functional structural
 	// detector lives in internal/ai/tools/cross_rule_conflict.go
 	// (DetectRuleConflicts) and is exercised in unit tests
 	// without IO.
-	tools.RegisterCrossRuleConflictDetectionTools(aiToolRegistry, tools.CrossRuleConflictDetectionSources{
-		Source: NewAICrossRuleConflictSource(database.NewAlertRuleRepo(db)),
+	diagnostic.RegisterCrossRuleConflictDetectionTools(aiToolRegistry, diagnostic.CrossRuleConflictDetectionSources{
+		Source: aicrossrule.NewSource(dbalert.NewAlertRuleRepo(db)),
 	})
 	// cross-rule-conflict-detection handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiCrossRuleConflictHandler := NewAICrossRuleConflictHandler(
+	aiCrossRuleConflictHandler := aicrossrule.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		crossruleconflictdetection.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / 0037 — G1 auto-name-unnamed-locations tool
+	// G1 auto-name-unnamed-locations tool
 	// registration. The two propose-only tools
 	// `draft_location_name` + `validate_location_name` are
 	// registered on the process-wide tool registry so the
 	// dispatcher can resolve the strategy's allowedTools at
-	// boot. AILocationSource derives the visited-location
+	// boot. aiautoname.LocationSource derives the visited-location
 	// aggregate from the SI canonical drives table (the legacy
-	// visited_locations table was dropped in Phase-42 / Prompt
-	// 0076; visited-location aggregates are derived on demand)
-	// so the LLM reads the SAME aggregate the canonical
-	// VisitedLocationRepo emits. AILocationNameValidator
+	// visited_locations table no longer exists; visited-location
+	// aggregates are derived on demand) so the LLM reads the SAME aggregate the canonical
+	// VisitedLocationRepo emits. aiautoname.LocationNameValidator
 	// mirrors the byte-equivalent shape rules the canonical
 	// save handler will enforce (1-200 chars, no control chars,
 	// no leading/trailing whitespace).
-	tools.RegisterAutoNameUnnamedLocationsTools(aiToolRegistry, tools.AutoNameUnnamedLocationsSources{
-		Locations: NewAILocationSource(db),
-		Validator: NewAILocationNameValidator(),
+	location.RegisterAutoNameUnnamedLocationsTools(aiToolRegistry, location.AutoNameUnnamedLocationsSources{
+		Locations: aiautoname.NewLocationSource(db),
+		Validator: aiautoname.NewLocationNameValidator(),
 	})
 	// auto-name-unnamed-locations handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiAutoNameUnnamedLocationsHandler := NewAIAutoNameUnnamedLocationsHandler(
+	aiAutoNameUnnamedLocationsHandler := aiautoname.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		autonameunnamedlocations.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// Phase-50 / 0038 — G2 suggest-new-geofences tool registration.
+	// G2 suggest-new-geofences tool registration.
 	// The two propose-only tools `draft_geofence` +
 	// `validate_geofence` are registered on the process-wide tool
 	// registry so the dispatcher can resolve the strategy's
-	// allowedTools at boot. We REUSE the slice-0037
-	// *AILocationSource adapter — both strategies grok the same
-	// *models.VisitedLocation aggregate (drives-table grouped on
+	// allowedTools at boot. We REUSE the shared
+	// aiautoname.LocationSource adapter — both strategies grok the same
+	// *geomodel.VisitedLocation aggregate (drives-table grouped on
 	// vehicle_id + end_place), so duplicating the adapter would
 	// be a wiring smell rather than an actual decoupling.
-	// AISuggestGeofenceValidator mirrors the byte-equivalent
+	// SuggestGeofenceValidator mirrors the byte-equivalent
 	// shape rules the canonical geofence_handler.go's
 	// validateGeofence enforces (1-200 chars, no control chars,
 	// no leading/trailing whitespace, radius 50-1000 meters).
-	tools.RegisterSuggestNewGeofencesTools(aiToolRegistry, tools.SuggestNewGeofencesSources{
-		Locations: NewAILocationSource(db),
-		Validator: NewAISuggestGeofenceValidator(),
+	location.RegisterSuggestNewGeofencesTools(aiToolRegistry, location.SuggestNewGeofencesSources{
+		Locations: aiautoname.NewLocationSource(db),
+		Validator: aisuggeo.NewSuggestGeofenceValidator(),
 	})
 	// suggest-new-geofences handler. One per process; stateless
 	// beyond constructor inputs. Must be constructed AFTER the
 	// tool registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiSuggestNewGeofencesHandler := NewAISuggestNewGeofencesHandler(
+	aiSuggestNewGeofencesHandler := aisuggeo.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		suggestnewgeofences.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// Phase-50 / 0039 — G3 geofence-aware-automation-suggestions
-	// handler. The strategy REUSES the slice-0016
-	// nl-automation-builder tool pair (draft_automation_graph +
-	// validate_automation_graph) registered earlier in this file
-	// for the AIAutomationHandler — re-registering would panic on
-	// duplicate name. The handler ALSO needs read access to the
-	// user's existing geofence catalog so it can inject a
-	// deterministic id+name+category list into the synthesised
-	// user message; the LLM never sees lat/lon (PolicyAlertBuilder
-	// denies coordinate prose). One per process; stateless beyond
-	// constructor inputs.
-	aiGeofenceAwareAutomationHandler := NewAIGeofenceAwareAutomationHandler(
+	// G3 geofence-aware automation suggestions.
+	// Reuse the shared automation tools because re-registering duplicate names
+	// would panic. The handler injects only deterministic geofence id/name/category;
+	// lat/lon stays out of LLM context by policy.
+	aiGeofenceAwareAutomationHandler := aigeofautom.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		geofenceawareautomationsuggestions.New(),
-		database.NewGeofenceRepo(db),
+		geofencedb.NewGeofenceRepo(db),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// learned-per-vehicle-anomaly-baselines (Phase-50 / ML1, slice
+	// learned-per-vehicle-anomaly-baselines
 	// 0062) tools — train_anomaly_baseline + query_anomaly_baseline.
 	// Both READ-only; the trainer reads signal_log via the
-	// AISignalSampleSource adapter and returns a per-signal learned
+	// SignalSampleSource adapter and returns a per-signal learned
 	// envelope (mean / stddev / p5 / p95) clamped to the static
 	// safe-range envelope, with safe-range fallback per signal when
 	// fewer than anomaly.DefaultMinSamples observations exist in
 	// the lookback window. Tools registered BEFORE the handler is
 	// constructed so the dispatcher can resolve the strategy's
 	// allowedTools at boot.
-	tools.RegisterLearnedAnomalyBaselineTools(aiToolRegistry, tools.LearnedAnomalyBaselineSources{
-		Trainer: anomaly.NewTrainer(NewAISignalSampleSource(db)),
+	predict.RegisterLearnedAnomalyBaselineTools(aiToolRegistry, predict.LearnedAnomalyBaselineSources{
+		Trainer: anomaly.NewTrainer(aimlanom.NewSignalSampleSource(db)),
 	})
 	// learned-per-vehicle-anomaly-baselines handler. One per
 	// process; stateless beyond constructor inputs. Must be
 	// constructed AFTER the tool registration above.
-	aiLearnedAnomalyBaselinesHandler := NewAILearnedAnomalyBaselineHandler(
+	aiLearnedAnomalyBaselinesHandler := aimlanom.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		learnedanomalybaselines.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// range-prediction-model (Phase-50 / ML2, slice 0063) tools —
+	// range-prediction-model tools —
 	// train_range_model + query_range_prediction. Both READ-only;
-	// the trainer reads the `drives` table via the AIDriveStatsSource
+	// the trainer reads the `drives` table via the aimlrange DriveStatsSource
 	// adapter (SI columns: distance_m, energy_used_wh, avg_speed_mps,
 	// ambient_temp_c_avg per migration 000185) and returns a
 	// per-bucket learned envelope (mean Wh/km plus stddev / p5 / p95)
@@ -1677,23 +1877,23 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// exist in the lookback window. Tools registered BEFORE the
 	// handler is constructed so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	tools.RegisterRangePredictorTools(aiToolRegistry, tools.RangePredictorSources{
-		Trainer: mlrange.NewTrainer(NewAIDriveStatsSource(db)),
+	predict.RegisterRangePredictorTools(aiToolRegistry, predict.RangePredictorSources{
+		Trainer: mlrange.NewTrainer(aimlrange.NewDriveStatsSource(db)),
 	})
 	// range-prediction-model handler. One per process; stateless
 	// beyond constructor inputs. Must be constructed AFTER the tool
 	// registration above.
-	aiRangePredictionHandler := NewAIRangePredictionHandler(
+	aiRangePredictionHandler := aimlrange.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		rangepredictionmodel.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// ml-charging-curve-clustering (Phase-50 / ML3, slice 0064) tools —
+	// ml-charging-curve-clustering tools —
 	// train_charge_curve_clusters + query_charge_curve_clusters.
 	// Both READ-only; the trainer reads the `charging_sessions`
-	// table via the AIChargingSessionSource adapter (SI columns
+	// table via the aimlchargcv.ChargingSessionSource adapter (SI columns
 	// peak_power_w / avg_power_w / total_energy_wh / duration_min /
 	// charger_type / start_time / etc per migration 000185) and
 	// returns a per-cluster (L1/L2/DC/unknown) learned envelope
@@ -1704,24 +1904,24 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// exist in the lookback window). Tools registered BEFORE the
 	// handler is constructed so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	tools.RegisterChargeCurveClustersTools(aiToolRegistry, tools.ChargeCurveClustersSources{
-		Trainer: mlchargingcurves.NewTrainer(NewAIChargingSessionSource(database.NewChargingRepo(db))),
+	charge.RegisterChargeCurveClustersTools(aiToolRegistry, charge.ChargeCurveClustersSources{
+		Trainer: mlchargingcurves.NewTrainer(aimlchargcv.NewChargingSessionSource(chargingdb.NewChargingRepo(db))),
 	})
 	// ml-charging-curve-clustering handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiMLChargingCurveClusteringHandler := NewAIMLChargingCurveHandler(
+	aiMLChargingCurveClusteringHandler := aimlchargcv.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		mlchargingcurveclustering.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	geocodeHandler := NewGeocodeHandler(geocoding.NewSearcher("TeslaSync/1.0"), geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
-	shareHandler := NewShareHandler(db)
-	watchHandler := NewWatchHandler(db, teslaClient)
-	onboardingHandler := NewOnboardingHandler(db, opt.Encryptor)
-	searchHandler := NewSearchHandler(db)
+	geocodeHandler := apigeocode.NewHandler(geocoding.NewSearcher("TeslaSync/1.0"), geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
+	shareHandler := apishare.NewShareHandler(db)
+	watchHandler := watch.NewHandler(db, teslaClient)
+	onboardingHandler := apionboard.NewHandler(db, opt.Encryptor)
+	searchHandler := apisearch.NewHandler(db)
 
 	// Wire Redis signal cache to handlers that read live vehicle state.
 	// driveHandler + chargingHandler now read live state via the
@@ -1732,7 +1932,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// projection short-cuts, signal-key listing) and keep the legacy
 	// fluent setter until they migrate to LiveStateReader.
 	//
-	// redisSignalCache is also consumed by the Phase-50 / 0056 V2
+	// redisSignalCache is also consumed by the migration V2
 	// AIWatchFaceNLContextSource adapter below; declaring it at this
 	// outer scope lets the adapter reuse the same instance the
 	// watchHandler already does (one cache per router). The variable
@@ -1752,7 +1952,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 
 	// Wire ForwardAuth header into handlers that audit-log mutations
-	// (Phase-40 / Prompt 51 — bulk action endpoints).
+	//.
 	driveHandler.WithForwardAuthHeader(cfg.Auth.ForwardAuthHeader)
 	chargingHandler.WithForwardAuthHeader(cfg.Auth.ForwardAuthHeader)
 	alertHandler.WithForwardAuthHeader(cfg.Auth.ForwardAuthHeader)
@@ -1767,53 +1967,54 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 
 	// SSE event hub for automation real-time events
-	automationEventHub := NewEventHub()
-	automationPublisher := NewAutomationEventPublisher(automationEventHub)
+	automationEventHub := sse.NewEventHub()
+	automationPublisher := apiautomation.NewAutomationEventPublisher(automationEventHub)
 
 	// Wire MQTT publisher for automation config change notifications
-	var automationMQTTPublisher AutomationMQTTPublisher
+	var automationMQTTPublisher apiautomation.AutomationMQTTPublisher
 	if mqttClient != nil {
-		automationMQTTPublisher = &automationMQTTReloader{client: mqttClient}
+		automationMQTTPublisher = apiautomation.NewMQTTReloader(mqttClient)
 	}
 
-	automationHandler := NewAutomationHandler(db,
-		WithCommandExecutor(action.NewCommandExecutor(
-			database.NewVehicleRepo(db),
-			database.NewCommandLogRepo(db),
-			&settingsCheckerAdapter{database.NewSettingsRepo(db)},
+	automationHandler := apiautomation.NewAutomationHandler(db,
+		apiautomation.WithCommandExecutor(action.NewCommandExecutor(
+			vehicledb.NewVehicleRepo(db),
+			energydb.NewCommandLogRepo(db),
+			&settingsCheckerAdapter{settingsdb.NewSettingsRepo(db)},
 			teslaClient,
 		)),
-		WithAutomationEventPublisher(automationPublisher),
-		WithAutomationAuditor(automation.NewAuditor(NewDBAuditWriter(db))),
-		WithAutomationMQTTPublisher(automationMQTTPublisher),
+		apiautomation.WithAutomationEventPublisher(automationPublisher),
+		apiautomation.WithAutomationAuditor(automation.NewAuditor(NewDBAuditWriter(db))),
+		apiautomation.WithAutomationMQTTPublisher(automationMQTTPublisher),
 	)
 	telemetryHandler := opt.TelemetryHandler
 	if telemetryHandler == nil {
-		telemetryHandler = NewTelemetryHandler(db, mqttClient, eventHub, 5*time.Minute, geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
+		telemetryHandler = apitelem.NewHandler(db, mqttClient, eventHub, 5*time.Minute, geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
 	} else {
 		// Reusing handler from main ╬ô├ç├╢ wire the eventHub created by the router
 		telemetryHandler.SetEventHub(eventHub)
 	}
-	// Phase-39 / ADR-002: install the cold-path signal.StateReader on the
+	// install the cold-path signal.StateReader on the
 	// session tracker so charge-completion and drive-completion enrichment
 	// use the canonical state-read API instead of the legacy
-	// *database.SignalLogReader.SnapshotAt /
-	// *database.SignalHistoryWriter.SnapshotAt code paths that this prompt
+	// *signaldb.SignalLogReader.SnapshotAt /
+	// *signaldb.SignalHistoryWriter.SnapshotAt code paths that this prompt
 	// removed from telemetry_sessions_charge_tracking.go and
 	// telemetry_sessions_drive_tracking.go.
 	if st := telemetryHandler.SessionTracker(); st != nil {
 		st.SetChargeStateReader(stateReader)
 		st.SetDriveStateReader(stateReader)
 	}
-	devToolsHandler := NewDevToolsHandler(teslaClient, WithDB(db), WithMQTTClient(mqttClient), WithConfig(cfg), WithSignalStore(opt.SignalStore))
-	if opt.CacheStore != nil {
-		if rdb := opt.CacheStore.Underlying(); rdb != nil {
-			devToolsHandler.redisCache = signal.NewRedisSignalCache(rdb)
-		}
-	}
+	devToolsHandler := apidevtools.NewDevToolsHandler(teslaClient,
+		apidevtools.WithDB(db),
+		apidevtools.WithMQTTClient(mqttClient),
+		apidevtools.WithConfig(cfg),
+		apidevtools.WithRedisSignalCache(redisSignalCache),
+		apidevtools.WithSignalStore(opt.SignalStore),
+	)
 
 	// Wire telemetry handler into vehicle handler for streaming-aware state
-	vehicleHandler.SetTelemetryHandler(telemetryHandler)
+	vehicleHandler.SetTelemetrySource(telemetryHandler)
 
 	// Wire signal.StateReader into vehicle service for the durable
 	// last-value backstop used by BuildStateFromSignalStore (ADR-002).
@@ -1821,8 +2022,6 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 	// Wire telemetry handler into settings handler for capture toggle sync
 	settingsHandler.SetTelemetryHandler(telemetryHandler)
-
-	// Health check
 	r.Get("/healthz", HealthHandler(db))
 	r.Get("/readyz", ReadyHandler(db, teslaClient))
 
@@ -1831,18 +2030,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Post("/internal/flush", func(w http.ResponseWriter, req *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "flushed"})
 	})
-
-	// Metrics
 	r.Handle("/metrics", MetricsHandler())
 
 	// Public: Automation webhook receiver (no auth — token IS the auth).
 	// Mounted before the /api/v1 subrouter so it is exempt from any
 	// ForwardAuth / auth middleware applied to the main API group.
 	if opt.WebhookTrigger != nil {
-		webhookReceiver := NewWebhookReceiverHandler(opt.WebhookTrigger)
+		webhookReceiver := apiwhrx.NewHandler(opt.WebhookTrigger)
 		r.With(
 			httprate.Limit(60, 1*time.Minute, httprate.WithKeyFuncs(
-				webhookTokenKeyFunc,
+				apiwhrx.WebhookTokenKeyFunc,
 			)),
 		).Post("/api/v1/automations/webhook/{token}", webhookReceiver.Receive)
 	}
@@ -1854,17 +2051,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		httprate.LimitByIP(60, 1*time.Minute),
 	).Get("/api/v1/share/{token}", shareHandler.GetPublicShare)
 
-	// Public: Web Vitals ingest (Phase 45 / Prompt 12). Anonymous browsers
+	// Public: Web Vitals ingest. Anonymous browsers
 	// POST batches of LCP/INP/CLS/FCP/TTFB samples here. Mounted outside
 	// the /api/v1 ForwardAuth subrouter so logged-out clients can still
 	// report — the body carries no PII and the handler caps batch size +
 	// label cardinality. Rate-limited per IP to bound abuse.
-	webVitalsHandler := NewWebVitalsHandler()
+	webVitalsHandler := apivitals.NewHandler()
 	r.With(
 		httprate.LimitByIP(120, 1*time.Minute),
 	).Post("/api/v1/web-vitals", webVitalsHandler.Ingest)
 
-	// Public: Web error reports (Phase 46 / Prompt 01). The SPA's global
+	// Public: Web error reports. The SPA's global
 	// error reporter POSTs uncaught exceptions, unhandled promise
 	// rejections, React render errors, and TanStack Query failures here.
 	// Mounted OUTSIDE the /api/v1 ForwardAuth subrouter so we can
@@ -1874,12 +2071,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// — 50 reports/minute is generous without enabling spam). The
 	// summary endpoint below is admin-only and shares the same handler
 	// instance so the rolling-window state is consistent.
-	webErrorHandler := NewWebErrorHandler()
+	webErrorHandler := apiwerr.NewHandler()
 	r.With(
 		httprate.LimitByIP(50, 1*time.Minute),
 	).Post("/api/v1/web-errors", webErrorHandler.Ingest)
 
-	// Public: Auth session-info endpoint (Phase 46 / Prompt 05). The
+	// Public: Auth session-info endpoint. The
 	// SPA polls this every 5 minutes so it can surface the
 	// SessionExpiringModal countdown ~60s before the upstream
 	// ForwardAuth cookie expires, and the SessionExpiredModal hard-
@@ -1889,39 +2086,45 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// expired-session path that drove it here, infinite-looping the
 	// hard-expired modal. Per-IP rate limit is generous (60/min)
 	// because every SPA tab independently polls.
-	authSessionHandler := NewAuthSessionHandler(cfg)
+	authSessionHandler := apiauths.NewHandler(cfg)
 	r.With(
 		httprate.LimitByIP(60, 1*time.Minute),
 	).Get("/api/v1/auth/session", authSessionHandler.Session)
 
-	// System state (Phase 46 / Prompt 04): single-row maintenance/degraded-mode
+	// System state: single-row maintenance/degraded-mode
 	// banner state. Repo + handler + maintenance provider are constructed
 	// once here so the GET /system/health closure and the admin POST share
 	// the same store and env-vs-DB resolver semantics.
-	systemStateRepo := database.NewSystemStateRepo(db)
-	adminMaintenanceHandler := NewAdminMaintenanceHandler(systemStateRepo, cfg, db)
-	maintenanceProvider := BuildMaintenanceProvider(systemStateRepo, cfg)
+	systemStateRepo := systemdb.NewSystemStateRepo(db)
+	adminMaintenanceHandler := apiadminmnt.NewAdminMaintenanceHandler(
+		systemStateRepo,
+		cfg,
+		apiadminmnt.WithAuditFunc(func(r *http.Request, headerName, action, resource string, entityID *int64, detail string) {
+			logAuditFromRequest(db, r, headerName, action, resource, entityID, detail)
+		}),
+	)
+	maintenanceProvider := apiadminmnt.BuildMaintenanceProvider(systemStateRepo, cfg)
 
-	// Phase 46 / Prompt 08: in-app feedback widget. Repo is shared
+	// in-app feedback widget. Repo is shared
 	// between the public POST ingest endpoint (rate-limited per
 	// submitter) and the admin queue endpoints (list + patch + optional
 	// GitHub Issues bridge). The bridge is wired at construction time
 	// from cfg.GitHub; when Repo or Token is empty, NewGitHubIssuesClient
 	// returns nil and the admin endpoint flips github_bridge_enabled to
 	// false in its response so the SPA hides the Forward action.
-	userFeedbackRepo := database.NewUserFeedbackRepo(db)
-	feedbackHandler := NewFeedbackHandler(userFeedbackRepo, cfg)
+	userFeedbackRepo := dbuser.NewUserFeedbackRepo(db)
+	feedbackHandler := apifb.NewHandler(userFeedbackRepo, cfg)
 	githubIssuesClient := integrations.NewGitHubIssuesClient(integrations.GitHubIssuesConfig{
 		Repo:  cfg.GitHub.Repo,
 		Token: cfg.GitHub.Token,
 	})
-	var githubBridge GitHubIssuesPoster
+	var githubBridge apiadminfb.GitHubIssuesPoster
 	if githubIssuesClient != nil {
 		githubBridge = githubIssuesClient
 	}
-	adminFeedbackHandler := NewAdminFeedbackHandler(userFeedbackRepo, cfg, db, githubBridge)
+	adminFeedbackHandler := apiadminfb.NewAdminFeedbackHandler(userFeedbackRepo, cfg, db, githubBridge)
 
-	// feedback-queue-triage (Phase-50 / S5, slice 0046).
+	// feedback-queue-triage.
 	// The shared rag.Retriever is constructed per-feature so the
 	// rate-limit + cost-cap decorators on the embedding provider
 	// apply per-strategy. The retriever uses the same
@@ -1944,7 +2147,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai feedback-queue-triage: rag.New failed during boot wiring")
 	}
-	// feedback-queue-triage tools (Phase-50 / S5, slice 0046).
+	// feedback-queue-triage tools.
 	// Adds `draft_feedback_triage` + `validate_feedback_triage` +
 	// `retrieve_feedback_chunks` to the shared tool registry so
 	// the dispatcher can resolve them for the
@@ -1952,10 +2155,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// other slice tools above: must be registered before the
 	// handler constructor below so the strategy's allowedTools
 	// resolve at boot. The Source is the production
-	// AIFeedbackTriageSource adapter that wraps userFeedbackRepo
+	// FeedbackTriageSource adapter that wraps userFeedbackRepo
 	// and PII-minimizes the row into a FeedbackTriageEntry.
-	aiFeedbackTriageSource := NewAIFeedbackTriageSource(userFeedbackRepo)
-	tools.RegisterFeedbackQueueTriageTools(aiToolRegistry, tools.FeedbackQueueTriageSources{
+	aiFeedbackTriageSource := aifeedtri.NewFeedbackTriageSource(userFeedbackRepo)
+	feedback.RegisterFeedbackQueueTriageTools(aiToolRegistry, feedback.FeedbackQueueTriageSources{
 		Source:    aiFeedbackTriageSource,
 		Retriever: aiFeedbackTriageRetriever,
 	})
@@ -1963,7 +2166,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// beyond constructor inputs. Must be constructed AFTER the
 	// tool registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiFeedbackQueueTriageHandler := NewAIFeedbackQueueTriageHandler(
+	aiFeedbackQueueTriageHandler := aifeedtri.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		feedbackqueuetriage.New(),
@@ -1971,7 +2174,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// mqtt-sse-inspector-explanations (Phase-50 / S6, slice 0047).
+	// mqtt-sse-inspector-explanations.
 	// The shared rag.Retriever is constructed per-feature so the
 	// rate-limit + cost-cap decorators on the embedding provider
 	// apply per-strategy. The retriever uses the same
@@ -1994,20 +2197,20 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai mqtt-sse-inspector-explanations: rag.New failed during boot wiring")
 	}
-	// mqtt-sse-inspector-explanations tools (Phase-50 / S6, slice
-	// 0047). Adds `query_stream_inspector` +
+	// mqtt-sse-inspector-explanations tools
+	// Adds `query_stream_inspector` +
 	// `retrieve_stream_chunks` to the shared tool registry so the
 	// dispatcher can resolve them for the
 	// mqtt-sse-inspector-explanations strategy. Same ordering
 	// rule as the other slice tools above: must be registered
 	// before the handler constructor below so the strategy's
 	// allowedTools resolve at boot. The Source is the production
-	// AIStreamInspectorSource adapter that returns a
+	// StreamInspectorSource adapter that returns a
 	// deterministic empty envelope describing the bound window;
 	// the canonical baseline /api/v1/admin/mqtt/status surface
 	// remains reachable to the operator at all times.
-	aiStreamInspectorSource := NewAIStreamInspectorSource()
-	tools.RegisterMqttSseInspectorExplanationsTools(aiToolRegistry, tools.MqttSseInspectorExplanationsSources{
+	aiStreamInspectorSource := aimqttsse.NewStreamInspectorSource()
+	diagnostic.RegisterMqttSseInspectorExplanationsTools(aiToolRegistry, diagnostic.MqttSseInspectorExplanationsSources{
 		Retriever:       aiMqttSseInspectorExplanationsRetriever,
 		StreamInspector: aiStreamInspectorSource,
 	})
@@ -2015,7 +2218,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiMqttSseInspectorExplanationsHandler := NewAIMqttSseInspectorExplanationsHandler(
+	aiMqttSseInspectorExplanationsHandler := aimqttsse.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		mqttsseinspectorexplanations.New(),
@@ -2023,7 +2226,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// state-machine-debugger-narrator (Phase-50 / S7, slice 0048).
+	// state-machine-debugger-narrator.
 	// The shared rag.Retriever is constructed per-feature so the
 	// rate-limit + cost-cap decorators on the embedding provider
 	// apply per-strategy. The retriever uses the same
@@ -2046,19 +2249,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai state-machine-debugger-narrator: rag.New failed during boot wiring")
 	}
-	// state-machine-debugger-narrator tools (Phase-50 / S7, slice
-	// 0048). Adds `query_fsm_trace` + `retrieve_fsm_chunks` to
+	// state-machine-debugger-narrator tools
+	// Adds `query_fsm_trace` + `retrieve_fsm_chunks` to
 	// the shared tool registry so the dispatcher can resolve them
 	// for the state-machine-debugger-narrator strategy. Same
 	// ordering rule as the other slice tools above: must be
 	// registered before the handler constructor below so the
 	// strategy's allowedTools resolve at boot. The Source is the
-	// production AIFSMTraceSource adapter that returns a
+	// production FSMTraceSource adapter that returns a
 	// deterministic empty envelope describing the bound tuple;
 	// the canonical baseline /api/v1/fsm/transitions surface
 	// remains reachable to the operator at all times.
-	aiFSMTraceSource := NewAIFSMTraceSource()
-	tools.RegisterStateMachineDebuggerNarratorTools(aiToolRegistry, tools.StateMachineDebuggerNarratorSources{
+	aiFSMTraceSource := aifsmnar.NewFSMTraceSource()
+	summary.RegisterStateMachineDebuggerNarratorTools(aiToolRegistry, summary.StateMachineDebuggerNarratorSources{
 		Retriever: aiStateMachineDebuggerNarratorRetriever,
 		FSMTrace:  aiFSMTraceSource,
 	})
@@ -2066,7 +2269,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiStateMachineDebuggerNarratorHandler := NewAIStateMachineDebuggerNarratorHandler(
+	aiStateMachineDebuggerNarratorHandler := aifsmnar.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		statemachinedebuggernarrator.New(),
@@ -2074,8 +2277,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// predictive-maintenance retriever (Phase-50 / M1, slice
-	// 0049). The strategy's retrieve_maintenance_chunks tool
+	// predictive-maintenance retriever
+	// The strategy's retrieve_maintenance_chunks tool
 	// composes a thin wrapper around this rag.Retriever
 	// scoped to {maintenance_event, vehicle_state, ml_anomaly}
 	// source types — the allowlist is enforced at the tool
@@ -2096,14 +2299,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai predictive-maintenance: rag.New failed during boot wiring")
 	}
-	// predictive-maintenance tools (Phase-50 / M1, slice 0049).
+	// predictive-maintenance tools.
 	// Adds `query_maintenance_context` + `retrieve_maintenance_chunks`
 	// to the shared tool registry so the dispatcher can resolve
 	// them for the predictive-maintenance strategy. Same ordering
 	// rule as the other slice tools above: must be registered
 	// before the handler constructor below so the strategy's
 	// allowedTools resolve at boot. The Source is the production
-	// AIPredictiveMaintenanceContextSource adapter that wraps the
+	// aipredmaint.ContextSource adapter that wraps the
 	// SAME default-items + Redis-odometer reader the canonical
 	// baseline /api/v1/maintenance handler already serves; the
 	// canonical baseline surface remains reachable to the
@@ -2120,8 +2323,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			aiPredictiveMaintenanceRedisCache = signal.NewRedisSignalCache(rdb)
 		}
 	}
-	aiPredictiveMaintenanceContextSource := NewAIPredictiveMaintenanceContextSource(db, aiPredictiveMaintenanceRedisCache)
-	tools.RegisterPredictiveMaintenanceTools(aiToolRegistry, tools.PredictiveMaintenanceSources{
+	aiPredictiveMaintenanceContextSource := aipredmaint.NewContextSource(db, aiPredictiveMaintenanceRedisCache)
+	maintenancetool.RegisterPredictiveMaintenanceTools(aiToolRegistry, maintenancetool.PredictiveMaintenanceSources{
 		Retriever:          aiPredictiveMaintenanceRetriever,
 		MaintenanceContext: aiPredictiveMaintenanceContextSource,
 	})
@@ -2129,7 +2332,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// beyond constructor inputs. Must be constructed AFTER the
 	// tool registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiPredictiveMaintenanceHandler := NewAIPredictiveMaintenanceHandler(
+	aiPredictiveMaintenanceHandler := aipredmaint.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		predictivemaintenance.New(),
@@ -2137,32 +2340,32 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// tco-narration tools (Phase-50 / M2, slice 0050). Adds
+	// tco-narration tools. Adds
 	// `query_tco_summary` to the shared tool registry so the
 	// dispatcher can resolve it for the tco-narration
 	// strategy. Must be registered before the handler
 	// constructor below so the strategy's allowedTools resolve
 	// at boot. The TCOSummarizer adapter delegates to the same
-	// package-level api.ComputeTCOSummary helper that also
+	// package-level tco.ComputeTCOSummary helper that also
 	// backs the canonical GET /api/v1/analytics/tco handler —
 	// the AI narrator quotes the SAME deterministic envelope
 	// the chart renders (no duplicated SQL).
-	tools.RegisterTCONarrationTools(aiToolRegistry, tools.TCONarrationSources{
-		Summarizer: NewAITCOSummarizer(db),
+	lifetime.RegisterTCONarrationTools(aiToolRegistry, lifetime.TCONarrationSources{
+		Summarizer: aitconar.NewTCOSummarizer(db),
 	})
 	// tco-narration handler. One per process; stateless beyond
 	// constructor inputs. Must be constructed AFTER the tool
 	// registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiTCONarrationHandler := NewAITCONarrationHandler(
+	aiTCONarrationHandler := aitconar.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		tconarration.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// software-update-changelog-summarizer retriever (Phase-50
-	// / M3, slice 0051). The strategy's retrieve_update_notes
+	// software-update-changelog-summarizer retriever.
+	// The strategy's retrieve_update_notes
 	// tool composes a thin wrapper around this rag.Retriever
 	// scoped to {software_update, docs} source types — the
 	// allowlist is enforced at the tool boundary by
@@ -2184,8 +2387,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai software-update-changelog-summarizer: rag.New failed during boot wiring")
 	}
-	// software-update-changelog-summarizer tools (Phase-50 /
-	// M3, slice 0051). Adds `query_vehicle_software` +
+	// software-update-changelog-summarizer tools.
+	// Adds `query_vehicle_software` +
 	// `retrieve_update_notes` to the shared tool registry so
 	// the dispatcher can resolve them for the
 	// software-update-changelog-summarizer strategy. Same
@@ -2193,12 +2396,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// registered before the handler constructor below so the
 	// strategy's allowedTools resolve at boot. The
 	// VehicleSoftware adapter wraps the SAME
-	// database.SoftwareUpdateRepo.GetByVehicle reader the
+	// systemdb.SoftwareUpdateRepo.GetByVehicle reader the
 	// canonical baseline GET /api/v1/vehicles/{id}/software-updates
 	// handler already serves; the canonical baseline surface
 	// remains reachable to the operator at all times.
-	aiVehicleSoftwareSource := NewAIVehicleSoftwareSource(database.NewSoftwareUpdateRepo(db))
-	tools.RegisterSoftwareUpdateChangelogSummarizerTools(aiToolRegistry, tools.SoftwareUpdateChangelogSummarizerSources{
+	aiVehicleSoftwareSource := aiswupd.NewVehicleSoftwareSource(systemdb.NewSoftwareUpdateRepo(db))
+	summary.RegisterSoftwareUpdateChangelogSummarizerTools(aiToolRegistry, summary.SoftwareUpdateChangelogSummarizerSources{
 		Retriever:       aiSoftwareUpdateChangelogSummarizerRetriever,
 		VehicleSoftware: aiVehicleSoftwareSource,
 	})
@@ -2207,7 +2410,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// constructed AFTER the tool registration above so the
 	// dispatcher can resolve the strategy's allowedTools at
 	// boot.
-	aiSoftwareUpdateChangelogSummarizerHandler := NewAISoftwareUpdateChangelogSummarizerHandler(
+	aiSoftwareUpdateChangelogSummarizerHandler := aiswupd.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		softwareupdatechangelogsummarizer.New(),
@@ -2215,8 +2418,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// pii-redaction-shared-exports tools (Phase-50 / P1, slice
-	// 0052). Adds `draft_export_redaction_plan` +
+	// pii-redaction-shared-exports tools
+	// Adds `draft_export_redaction_plan` +
 	// `validate_export_redaction_plan` to the shared tool
 	// registry so the dispatcher can resolve them for the
 	// pii-redaction-shared-exports strategy. Both tools wrap a
@@ -2225,22 +2428,22 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// deterministic GET/POST /api/v1/export/jobs endpoints
 	// remain the canonical baseline export pipeline; this
 	// slice's tools never trigger an export and never touch the
-	// existing handlers. Registered AFTER the slice 0051 tools
+	// existing handlers. Registered AFTER the tool group tools
 	// above so the registry's Names list grows deterministically.
-	tools.RegisterPiiRedactionSharedExportsTools(aiToolRegistry)
+	export.RegisterPiiRedactionSharedExportsTools(aiToolRegistry)
 	// pii-redaction-shared-exports handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiPiiRedactionSharedExportsHandler := NewAIPiiRedactionSharedExportsHandler(
+	aiPiiRedactionSharedExportsHandler := aipiiredact.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		piiredactionsharedexports.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// quiet-hours-suggestion tools (Phase-50 / P2, slice
-	// 0053). Adds `draft_quiet_hours_window` +
+	// quiet-hours-suggestion tools
+	// Adds `draft_quiet_hours_window` +
 	// `validate_quiet_hours_window` to the shared tool
 	// registry so the dispatcher can resolve them for the
 	// quiet-hours-suggestion strategy. The draft tool wraps
@@ -2252,27 +2455,27 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// /api/v1/notifications/quiet-hours endpoints remain the
 	// canonical baseline write path; this slice's tools never
 	// trigger a save and never touch the existing handlers.
-	// Registered AFTER the slice 0052 tools above so the
+	// Registered AFTER the tool group tools above so the
 	// registry's Names list grows deterministically.
-	aiQuietHoursSuggestionSource := NewAIQuietHoursSuggestionSource(
-		database.NewNotificationRepo(db),
-		database.NewQuietHoursRepo(db),
+	aiQuietHoursSuggestionSource := aiquiethrs.NewSource(
+		dbnotif.NewNotificationRepo(db),
+		quiethoursdb.NewQuietHoursRepo(db),
 	)
-	tools.RegisterQuietHoursSuggestionTools(aiToolRegistry, tools.QuietHoursSuggestionSources{
+	schedule.RegisterQuietHoursSuggestionTools(aiToolRegistry, schedule.QuietHoursSuggestionSources{
 		Source: aiQuietHoursSuggestionSource,
 	})
 	// quiet-hours-suggestion handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiQuietHoursSuggestionHandler := NewAIQuietHoursSuggestionHandler(
+	aiQuietHoursSuggestionHandler := aiquiethrs.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		quiethourssuggestion.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// safety-setting-explainer (Phase-50 / 0054 P3) source.
+	// safety-setting-explainer source.
 	// Wraps the canonical SettingsRepo so the AI tool reads
 	// the SAME settings row the deterministic Settings UI
 	// already does — no new SQL, no duplicate read paths.
@@ -2283,10 +2486,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// never invents a setting that does not exist. Tool
 	// produces NO mutations and never triggers a save and
 	// never touches the existing handlers. Registered AFTER
-	// the slice 0053 tools above so the registry's Names
+	// the tool group tools above so the registry's Names
 	// list grows deterministically.
-	aiSafetySettingExplainerSource := NewAISafetySettingExplainerSource(aiSettingsRepo)
-	tools.RegisterSafetySettingExplainerTools(aiToolRegistry, tools.SafetySettingExplainerSources{
+	aiSafetySettingExplainerSource := aisafetyexp.NewSource(aiSettingsRepo)
+	safety.RegisterSafetySettingExplainerTools(aiToolRegistry, safety.SafetySettingExplainerSources{
 		Source: aiSafetySettingExplainerSource,
 	})
 	// safety-setting-explainer handler. One per process;
@@ -2294,39 +2497,39 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// constructed AFTER the tool registration above so the
 	// dispatcher can resolve the strategy's allowedTools at
 	// boot.
-	aiSafetySettingExplainerHandler := NewAISafetySettingExplainerHandler(
+	aiSafetySettingExplainerHandler := aisafetyexp.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		safetysettingexplainer.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// voice-mode (Phase-50 / 0055 V1) sources.
+	// voice-mode sources.
 	// The voice-mode AI surface layers an opt-in browser
 	// STT/TTS conversational overlay on top of the existing
 	// /chatbot text panel. Its single read-only tool
 	// stream_chatbot_response bundles:
 	//
-	//   - the recent chat history for the in-scope session
-	//     (read via the canonical *database.ChatRepo — the
-	//     SAME repo the deterministic /chatbot endpoint uses)
-	//   - the install-wide vehicle snapshot (VIN, display_name,
-	//     soc_percent, charging_state, last_drive_summary —
-	//     projected from VehicleRepo + LiveStateReader +
-	//     DriveRepo so the LLM reads the SAME values the rest
-	//     of the API surface already does; GPS / street names
-	//     are deliberately omitted)
+	// - the recent chat history for the in-scope session
+	// (read via the canonical *dbnotif.ChatRepo — the
+	// SAME repo the deterministic /chatbot endpoint uses)
+	// - the install-wide vehicle snapshot (VIN, display_name,
+	// soc_percent, charging_state, last_drive_summary —
+	// projected from VehicleRepo + LiveStateReader +
+	// DriveRepo so the LLM reads the SAME values the rest
+	// of the API surface already does; GPS / street names
+	// are deliberately omitted)
 	//
 	// NO new SQL is written; both adapters wrap existing
-	// readers. Registered AFTER the slice 0054 tools above so
+	// readers. Registered AFTER the tool group tools above so
 	// the registry's Names list grows deterministically.
-	aiVoiceModeChatSource := NewAIVoiceModeChatContextSource(database.NewChatRepo(db))
-	aiVoiceModeVehicleSource := NewAIVoiceModeVehicleSnapshotSource(
-		database.NewVehicleRepo(db),
-		database.NewDriveRepo(db),
+	aiVoiceModeChatSource := aivoice.NewChatContextSource(dbnotif.NewChatRepo(db))
+	aiVoiceModeVehicleSource := aivoice.NewVehicleSnapshotSource(
+		vehicledb.NewVehicleRepo(db),
+		drivedb.NewDriveRepo(db),
 		liveStateReader,
 	)
-	tools.RegisterVoiceModeTools(aiToolRegistry, tools.VoiceModeSources{
+	voice.RegisterVoiceModeTools(aiToolRegistry, voice.VoiceModeSources{
 		Chat:    aiVoiceModeChatSource,
 		Vehicle: aiVoiceModeVehicleSource,
 	})
@@ -2334,40 +2537,40 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// constructor inputs. Must be constructed AFTER the tool
 	// registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiVoiceModeHandler := NewAIVoiceModeHandler(
-		database.NewChatRepo(db),
+	aiVoiceModeHandler := aivoice.NewHandler(
+		dbnotif.NewChatRepo(db),
 		aiRegistry,
 		aiToolRegistry,
 		voicemode.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// watch-face-nl-response (Phase-50 / 0056 V2) sources.
+	// watch-face-nl-response sources.
 	// The watch-face-nl-response AI surface layers an opt-in
 	// Helix narrator on top of the existing /watch deterministic
 	// surface. Its single read-only tool query_watch_context
 	// bundles:
 	//
-	//   - the primary-vehicle snapshot (vehicle_name from
-	//     VehicleRepo + scalar live-state from the canonical
-	//     RedisSignalCache — the SAME two readers the
-	//     deterministic /watch/summary handler uses)
-	//   - the trailing-24h non-critical recent-alert list,
-	//     projected to {severity, age_seconds} pairs only (no
-	//     title, no message body, no PII) — read via the
-	//     canonical NotificationRepo.
+	// - the primary-vehicle snapshot (vehicle_name from
+	// VehicleRepo + scalar live-state from the canonical
+	// RedisSignalCache — the SAME two readers the
+	// deterministic /watch/summary handler uses)
+	// - the trailing-24h non-critical recent-alert list,
+	// projected to {severity, age_seconds} pairs only (no
+	// title, no message body, no PII) — read via the
+	// canonical NotificationRepo.
 	//
 	// NO new SQL is written; both adapters wrap existing
-	// readers. Registered AFTER the slice 0055 tools above so
+	// readers. Registered AFTER the tool group tools above so
 	// the registry's Names list grows deterministically.
-	aiWatchFaceNLContextSource := NewAIWatchFaceNLContextSource(
-		database.NewVehicleRepo(db),
+	aiWatchFaceNLContextSource := aiwatchnl.NewContextSource(
+		vehicledb.NewVehicleRepo(db),
 		redisSignalCache,
 	)
-	aiWatchFaceNLAlertHistorySource := NewAIWatchFaceNLAlertHistorySource(
-		database.NewNotificationRepo(db),
+	aiWatchFaceNLAlertHistorySource := aiwatchnl.NewAlertHistorySource(
+		dbnotif.NewNotificationRepo(db),
 	)
-	tools.RegisterWatchFaceNLResponseTools(aiToolRegistry, tools.WatchFaceNLResponseSources{
+	nl.RegisterWatchFaceNLResponseTools(aiToolRegistry, nl.WatchFaceNLResponseSources{
 		Source: aiWatchFaceNLContextSource,
 		Alerts: aiWatchFaceNLAlertHistorySource,
 	})
@@ -2375,14 +2578,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiWatchFaceNLResponseHandler := NewAIWatchFaceNLResponseHandler(
+	aiWatchFaceNLResponseHandler := aiwatchnl.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		watchfacenlresponse.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// nl-sql-playground (Phase-50 / 0057 PU1) sources.
+	// nl-sql-playground sources.
 	// The nl-sql-playground AI surface layers an opt-in Helix
 	// translator on top of the manual SQL editor at /power/sql.
 	// Its two propose-only tools (draft_readonly_sql +
@@ -2391,22 +2594,22 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// editor; the AI never executes SQL itself. The curated
 	// install-wide schema catalog (drives, charging_sessions,
 	// vehicles, alerts, signal_log_view) is hardcoded in
-	// AINLSQLSchemaCatalogSourceImpl — adding a table is a
+	// ainlsql.SchemaCatalogSourceImpl — adding a table is a
 	// deliberate per-prompt decision, not a default. NO new SQL
 	// is written by this slice; the executor remains the
 	// canonical baseline manual editor + the user's Run button.
-	// Registered AFTER the slice 0056 tools above so the
+	// Registered AFTER the tool group tools above so the
 	// registry's Names list grows deterministically.
-	aiNLSqlPlaygroundCatalogSource := NewAINLSQLSchemaCatalogSource()
-	aiNLSqlPlaygroundValidator := NewAINLSQLValidator()
-	tools.RegisterNLSqlPlaygroundTools(aiToolRegistry, tools.NLSqlPlaygroundSources{
+	aiNLSqlPlaygroundCatalogSource := ainlsql.NewSchemaCatalogSource()
+	aiNLSqlPlaygroundValidator := ainlsql.NewValidator()
+	nlq.RegisterNLSqlPlaygroundTools(aiToolRegistry, nlq.NLSqlPlaygroundSources{
 		Validator: aiNLSqlPlaygroundValidator,
 	})
 	// nl-sql-playground handler. One per process; stateless
 	// beyond constructor inputs. Must be constructed AFTER the
 	// tool registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiNLSqlPlaygroundHandler := NewAINLSQLPlaygroundHandler(
+	aiNLSqlPlaygroundHandler := ainlsql.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		nlsqlplayground.New(),
@@ -2414,7 +2617,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// nl-grafana-panel (Phase-50 / 0058 PU2) sources.
+	// nl-grafana-panel sources.
 	// The nl-grafana-panel AI surface layers an opt-in Helix
 	// translator on top of the manual Grafana panel JSON editor
 	// at /power/grafana. Its two propose-only tools
@@ -2423,22 +2626,22 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// into the existing manual JSON editor; the AI never pushes
 	// to Grafana itself. The three curated install-wide
 	// catalogs (panel-types, datasource-types, tables) are
-	// hardcoded in AINLGrafanaPanelCatalogSourceImpl — adding
+	// hardcoded in ainlgrafana.NLGrafanaPanelCatalogSourceImpl — adding
 	// any of these is a deliberate per-prompt decision, not a
 	// default. The table catalog is shared with nl-sql-playground
 	// so the two slices stay in lock-step. Registered AFTER the
-	// slice 0057 tools above so the registry's Names list grows
+	// tool group tools above so the registry's Names list grows
 	// deterministically.
-	aiNLGrafanaPanelCatalogSource := NewAINLGrafanaPanelCatalogSource()
-	aiNLGrafanaPanelValidator := NewAINLGrafanaValidator()
-	tools.RegisterNLGrafanaPanelTools(aiToolRegistry, tools.NLGrafanaPanelSources{
+	aiNLGrafanaPanelCatalogSource := ainlgrafana.NewNLGrafanaPanelCatalogSource()
+	aiNLGrafanaPanelValidator := ainlgrafana.NewNLGrafanaValidator()
+	nlq.RegisterNLGrafanaPanelTools(aiToolRegistry, nlq.NLGrafanaPanelSources{
 		Validator: aiNLGrafanaPanelValidator,
 	})
 	// nl-grafana-panel handler. One per process; stateless
 	// beyond constructor inputs. Must be constructed AFTER the
 	// tool registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiNLGrafanaPanelHandler := NewAINLGrafanaPanelHandler(
+	aiNLGrafanaPanelHandler := ainlgrafana.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		nlgrafanapanel.New(),
@@ -2446,7 +2649,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// Phase-50 / 0059 — nl-dashboard-composer (PU3). Registers
+	// nl-dashboard-composer (PU3). Registers
 	// the two propose-only typed tools (draft_dashboard_layout +
 	// validate_dashboard_layout) with the same shared
 	// install-wide tool registry so the dispatcher can resolve
@@ -2454,24 +2657,24 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// applied. The tools share the SAME single-dimension
 	// allowlist enforcement: every slot.panel_name MUST be in
 	// the in-scope curated panel catalog the handler installs in
-	// ctx via tools.WithDashboardComposerScope. The validator is
+	// ctx via nlq.WithDashboardComposerScope. The validator is
 	// permissive (shape checks already in the tool); kept as an
 	// adapter for future semantic checks. The curated install-
 	// wide panel catalog (six install-wide panel templates) is
-	// hardcoded in AINLDashboardComposerCatalogSourceImpl —
+	// hardcoded in ainldash.CatalogSourceImpl —
 	// adding a panel is a deliberate per-prompt decision, not a
 	// default. Registered AFTER nl-grafana-panel above so the
 	// registry's Names list grows deterministically.
-	aiNLDashboardComposerCatalogSource := NewAINLDashboardComposerCatalogSource()
-	aiNLDashboardComposerValidator := NewAINLDashboardComposerValidator()
-	tools.RegisterNLDashboardComposerTools(aiToolRegistry, tools.NLDashboardComposerSources{
+	aiNLDashboardComposerCatalogSource := ainldash.NewCatalogSource()
+	aiNLDashboardComposerValidator := ainldash.NewValidator()
+	nlq.RegisterNLDashboardComposerTools(aiToolRegistry, nlq.NLDashboardComposerSources{
 		Validator: aiNLDashboardComposerValidator,
 	})
 	// nl-dashboard-composer handler. One per process; stateless
 	// beyond constructor inputs. Must be constructed AFTER the
 	// tool registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiNLDashboardComposerHandler := NewAINLDashboardComposerHandler(
+	aiNLDashboardComposerHandler := ainldash.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		nldashboardcomposer.New(),
@@ -2479,50 +2682,50 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// trip-postcard-share-card-image-generation (Phase-50 / 0060,
+	// trip-postcard-share-card-image-generation (the migration,
 	// GEN1 slice). Registers the propose-only draft_image_prompt
 	// + render_share_card_preview tools on the shared registry so
 	// the dispatcher can resolve them when the strategy runs;
-	// production wiring reuses the existing *database.TripsDetailRepo
+	// production wiring reuses the existing *tripdb.TripsDetailRepo
 	// (same read path the GET /api/v1/trips/{id} baseline handler
 	// uses). Registered AFTER nl-dashboard-composer above so the
 	// registry's Names list grows deterministically.
-	tools.RegisterTripPostcardShareCardImageGenerationTools(aiToolRegistry, tools.TripPostcardShareCardImageGenerationSources{
+	trip.RegisterTripPostcardShareCardImageGenerationTools(aiToolRegistry, trip.TripPostcardShareCardImageGenerationSources{
 		Details: aiAutoTripNamingDetailRepo,
 	})
 	// trip-postcard-share-card-image-generation handler. One per
 	// process; stateless beyond constructor inputs. Must be
 	// constructed AFTER the tool registration above so the
 	// dispatcher can resolve the strategy's allowedTools at boot.
-	aiTripPostcardShareCardImageGenerationHandler := NewAITripPostcardShareCardImageGenerationHandler(
+	aiTripPostcardShareCardImageGenerationHandler := aipostcard.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		trippostcardsharecardimagegeneration.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// vehicle-paint-preview (Phase-50 / 0061, GEN2 slice). Registers
+	// vehicle-paint-preview. Registers
 	// the propose-only draft_paint_preview_prompt tool on the shared
 	// registry so the dispatcher can resolve it when the strategy
-	// runs; production wiring reuses *database.VehicleRepo (the same
+	// runs; production wiring reuses *vehicledb.VehicleRepo (the same
 	// read path the GET /api/v1/vehicles handlers already use, so
 	// no new SQL is added). Registered AFTER trip-postcard above so
 	// the registry's Names list grows deterministically.
-	tools.RegisterVehiclePaintPreviewTools(aiToolRegistry, tools.VehiclePaintPreviewSources{
-		Vehicles: database.NewVehicleRepo(db),
+	paint.RegisterVehiclePaintPreviewTools(aiToolRegistry, paint.VehiclePaintPreviewSources{
+		Vehicles: vehicledb.NewVehicleRepo(db),
 	})
 	// vehicle-paint-preview handler. One per process; stateless
 	// beyond constructor inputs. Must be constructed AFTER the
 	// tool registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiVehiclePaintPreviewHandler := NewAIVehiclePaintPreviewHandler(
+	aiVehiclePaintPreviewHandler := aivehpaint.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		vehiclepaintpreview.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// Phase-46 / Prompt 40 — rate-limit status counters. Construct two
+	// rate-limit status counters. Construct two
 	// sliding-window observers (one for every /api/v1 request, one
 	// scoped to writes only) and a handler that joins them with the
 	// Tesla client's bucket snapshot. Counters are attached as plain
@@ -2530,13 +2733,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// from them on demand.
 	apiRequestCounter := platform.NewWindowCounter()
 	apiWriteCounter := platform.NewWindowCounter()
-	rateLimitHandler := NewRateLimitHandler(RateLimitHandlerConfig{
+	rateLimitHandler := apiratelim.NewHandler(apiratelim.RateLimitHandlerConfig{
 		TeslaClient:  teslaClient,
 		APICounter:   apiRequestCounter,
 		WriteCounter: apiWriteCounter,
 	})
 
-	// Phase-46 / Prompt 41 — worker heartbeat store powering the
+	// worker heartbeat store powering the
 	// /system/queues panel. Backed by Redis when available so
 	// every worker process can write its heartbeat to the same
 	// snapshot the API server reads. Falls back to an in-memory
@@ -2544,19 +2747,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// every worker as "down (no heartbeat)" which honestly
 	// reflects the deployment state rather than fabricating an
 	// "ok" reading.
-	var queueHeartbeatStore database.WorkerStatusStore
+	var queueHeartbeatStore workerdb.WorkerStatusStore
 	if opt.CacheStore != nil {
 		if rdb := opt.CacheStore.Underlying(); rdb != nil {
-			queueHeartbeatStore = database.NewRedisWorkerStatusStore(rdb)
+			queueHeartbeatStore = workerdb.NewRedisWorkerStatusStore(rdb)
 		}
 	}
 	if queueHeartbeatStore == nil {
-		queueHeartbeatStore = database.NewMemoryWorkerStatusStore()
+		queueHeartbeatStore = workerdb.NewMemoryWorkerStatusStore()
 	}
-
-	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
-		// Phase-46 / Prompt 40 — count every /api/v1 request and every
+		// count every /api/v1 request and every
 		// write-method request before any rate-limit middleware so the
 		// status panel reflects raw load even when downstream limiters
 		// are rejecting traffic. Mounted BEFORE APICallLog so a panic
@@ -2569,10 +2770,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// ForwardAuthMiddleware so 401 responses from the auth layer are
 		// also captured. Skip predicate excludes streaming/health/metrics
 		// and the api-logs admin UI itself (feedback loop). The admin
-		// live log stream (phase-46/34) is also excluded so the
+		// live log stream is also excluded so the
 		// SSE viewer doesn't recursively log itself.
 		r.Use(APICallLogMiddleware(GetAPICallLogger(), cfg.APILogs.CaptureBodies, func(p string) bool {
-			if p == AdminLogStreamPath {
+			if p == apiadminls.AdminLogStreamPath {
 				return true
 			}
 			return DefaultAPILogSkip(p)
@@ -2582,7 +2783,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// No-op when ForwardAuthHeader is empty (dev mode / no auth configured).
 		r.Use(ForwardAuthMiddleware(cfg.Auth.ForwardAuthHeader))
 
-		// Phase-46 / Prompt 57 — Subject recorder. MUST run AFTER
+		// Subject recorder. MUST run AFTER
 		// ForwardAuthMiddleware (so the principal header is the
 		// authoritative one for this request) and BEFORE both the
 		// session tracker and the impersonation rewrite (so the
@@ -2592,7 +2793,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// who has touched the API). Open mode is a passthrough.
 		r.Use(tsauth.SubjectRecorderMiddleware(cfg.Auth.ForwardAuthHeader, subjectRecorder))
 
-		// Phase-46 / Prompt 42 — Session tracker. MUST run AFTER
+		// Session tracker. MUST run AFTER
 		// ForwardAuthMiddleware so the principal header is guaranteed
 		// present. Mints + binds a TeslaSync-issued cookie on the first
 		// authenticated request, validates it on every subsequent one,
@@ -2600,7 +2801,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// (no FORWARD_AUTH_HEADER configured) is a passthrough.
 		r.Use(tsauth.Middleware(cfg.Auth.ForwardAuthHeader, authSessionsRepo, tsauth.SessionTrackerOptions{}))
 
-		// Phase-46 / Prompt 46 — Impersonation middleware. MUST run
+		// Impersonation middleware. MUST run
 		// AFTER the session tracker so the tracker pins the cookie to
 		// the actual admin identity (not the rewritten target). The
 		// middleware verifies the HMAC-signed impersonation cookie,
@@ -2610,6 +2811,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Open mode is a passthrough.
 		r.Use(tsauth.ImpersonationMiddleware(cfg.Auth.ForwardAuthHeader, impersonationStore))
 
+		r.With(httprate.LimitByIP(60, 1*time.Minute)).Post("/audit/reveal", maskedRevealHandler.Reveal)
+
 		// Auth (stricter rate limits to prevent brute force)
 		r.Route("/auth", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(10, 1*time.Minute))
@@ -2618,33 +2821,33 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/callback", authHandler.Callback)
 			r.Post("/refresh", authHandler.Refresh)
 			r.Get("/status", authHandler.Status)
-			// Phase-46 / Prompt 31 — destructive: revokes Tesla
+			// destructive: revokes Tesla
 			// refresh token and clears credentials. Sudo gated.
-			// Phase-46 / Prompt 46 — Blocked during impersonation so
+			// Blocked during impersonation so
 			// an admin cannot accidentally disconnect the target's
 			// Tesla account; the original admin must end impersonation
 			// first.
 			r.With(tsauth.RequireNotImpersonating(), RequireSudo(sudoStore, sudoCfg)).Post("/disconnect", authHandler.Disconnect)
-			// Phase-46 / Prompt 31 — Sudo step-up reauth. POST a
+			// Sudo step-up reauth. POST a
 			// password OR totp_code to mint a 5-minute X-Sudo-Token
 			// the SPA echoes on subsequent destructive requests. In
 			// open mode this returns 200 mode="open" without minting
 			// anything; the dialog falls back to typed-confirmation.
-			// Phase-46 / Prompt 46 — Blocked during impersonation so
+			// Blocked during impersonation so
 			// no fresh sudo tokens can be minted under the target's
 			// rewritten principal. Existing tokens won't validate
 			// either (token subject != rewritten subject), so this is
 			// belt-and-suspenders.
 			r.With(tsauth.RequireNotImpersonating()).Post("/reauth", sudoHandler.Reauth)
-			// Phase-46 / Prompt 35 — per-user TOTP enrollment.
-			// /totp                              GET    status pill backing
-			// /totp/enroll                       POST   start enrollment
-			// /totp/verify                       POST   confirm enrollment
-			// /totp/sudo                         POST   mint sudo token via per-user TOTP
-			// /totp                              DELETE revoke (sudo-gated)
-			// /totp/backup-codes/regenerate      POST   rotate backup codes (sudo-gated)
+			// per-user TOTP enrollment.
+			// /totp GET status pill backing
+			// /totp/enroll POST start enrollment
+			// /totp/verify POST confirm enrollment
+			// /totp/sudo POST mint sudo token via per-user TOTP
+			// /totp DELETE revoke (sudo-gated)
+			// /totp/backup-codes/regenerate POST rotate backup codes (sudo-gated)
 			//
-			// Phase-46 / Prompt 46 — The entire /totp subtree is
+			// The entire /totp subtree is
 			// blocked during impersonation. Enrollment, verification,
 			// and sudo-token mints all read the principal from the
 			// (rewritten) header and would otherwise act as the target.
@@ -2657,13 +2860,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", totpHandler.Revoke)
 				r.With(RequireSudo(sudoStore, sudoCfg)).Post("/backup-codes/regenerate", totpHandler.RegenerateBackupCodes)
 			})
-			// Phase-46 / Prompt 42 — Active sessions / device
+			// Active sessions / device
 			// management. List is read-only; both DELETE routes are
 			// sudo-gated (RequireSudo is a passthrough in open mode,
 			// so the handler's own AUTH_MODE_OPEN check is what
 			// guards the resource semantics there).
 			//
-			// Phase-46 / Prompt 46 — DELETEs are blocked during
+			// DELETEs are blocked during
 			// impersonation so an admin cannot revoke the target's
 			// real sessions. List is allowed because it's read-only
 			// and reflects what the target sees, which is exactly the
@@ -2677,20 +2880,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			})
 		})
 
-		// Onboarding (Phase 40 / Prompt 18): first-run gate status.
+		// Onboarding: first-run gate status.
 		// Reports whether the install has connected a Tesla account,
 		// has any vehicles, and has received recent telemetry. The
 		// frontend polls this endpoint and routes the user to
 		// <OnboardingPage> until is_complete flips to true.
 		r.Get("/onboarding/status", onboardingHandler.Status)
-
-		// Vehicles
 		r.Route("/vehicles", func(r chi.Router) {
 			r.Get("/", vehicleHandler.List)
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/sync", vehicleHandler.SyncFromTesla)
 			r.Route("/{vehicleID}", func(r chi.Router) {
 				r.Get("/", vehicleHandler.Get)
-				// Phase-46 / Prompt 31 — destructive: requires sudo.
+				// destructive: requires sudo.
 				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", vehicleHandler.Delete)
 				r.Get("/positions", vehicleHandler.Positions)
 				r.Get("/state", vehicleHandler.CurrentState)
@@ -2732,7 +2933,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/upgrades", vehicleInfoHandler.UpgradeEligibility)
 				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/upgrades/refresh", vehicleInfoHandler.RefreshUpgradeEligibility)
 
-				// Phase-43a / Prompt 0006 — /guard endpoints restored.
+				// /guard endpoints restored.
 				// Status + Events are read-only and rate-limit-free
 				// (the SPA polls these from the dashboard). Acknowledge
 				// is a soft mark-read with per-IP rate-limit at 60/min
@@ -2756,7 +2957,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					fh.HandleDebug(w, req)
 				})
 
-				// Phase-46 / Prompt 43 — per-vehicle settings.
+				// per-vehicle settings.
 				// GET is read-only and unguarded; PUT/DELETE are
 				// rate-limited by IP at 60/min — the SPA only fires
 				// these on user save/reset clicks, but the guard
@@ -2766,7 +2967,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.With(httprate.LimitByIP(60, 1*time.Minute)).Put("/settings/{key}", vehicleSettingsHandler.Put)
 				r.With(httprate.LimitByIP(60, 1*time.Minute)).Delete("/settings/{key}", vehicleSettingsHandler.Delete)
 
-				// Phase-46 / Prompt 54 — vehicle hero photo. POST
+				// vehicle hero photo. POST
 				// + DELETE are rate-limited at 5/min (uploads are
 				// expensive and the SPA only fires them on
 				// explicit user action). GET routes are unguarded
@@ -2777,15 +2978,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/photo/{size}", vehiclePhotoHandler.GetFile)
 			})
 		})
-
-		// Drives
 		r.Route("/drives", func(r chi.Router) {
 			r.Get("/", driveHandler.ListByVehicle)
 			r.Get("/stats", driveHandler.Stats)
 			r.Get("/score", driveHandler.Score)
 			r.Get("/dynamics", driveHandler.Dynamics)
 			r.Get("/acceleration-distribution", driveHandler.AccelerationDistribution)
-			// Bulk delete (Phase-40 / Prompt 51)
+			// Bulk delete
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/bulk", driveHandler.BulkDelete)
 			r.Route("/{driveID}", func(r chi.Router) {
 				r.Get("/", driveHandler.Get)
@@ -2794,15 +2993,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				// Share link management
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/share", shareHandler.Create)
 				r.Get("/shares", shareHandler.List)
-				// Phase-44 / observability-batch / Prompt F10 —
+				//
 				// Drive-end diagnostic. Returns the fsm_transitions
 				// + signal_window centered on the drive's end_ts
 				// (or NOW for in-progress drives), explaining WHY
 				// the FSM ended the drive. Read-only, 60/min IP
 				// throttle, inherits /api/v1 forward-auth gate.
-				driveDiagnosticHandler := NewDriveDiagnosticHandler(
-					database.NewDriveRepo(db),
-					database.NewDriveDiagnosticRepo(db.Pool),
+				driveDiagnosticHandler := apidrived.NewHandler(
+					drivedb.NewDriveRepo(db),
+					drivedb.NewDriveDiagnosticRepo(db.Pool),
 				)
 				r.With(httprate.LimitByIP(60, 1*time.Minute)).
 					Get("/why-ended", driveDiagnosticHandler.Get)
@@ -2811,20 +3010,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Share link revocation (by token, not by drive)
 		r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/shares/{token}", shareHandler.Revoke)
-
-		// Drivetrain Health
 		r.Get("/drivetrain/health", drivetrainHealthHandler.Get)
-
-		// Maintenance
 		r.Route("/maintenance", func(r chi.Router) {
 			r.Get("/", maintenanceHandler.List)
 			r.Get("/records", maintenanceHandler.Records)
 		})
-
-		// Charging
 		r.Route("/charging", func(r chi.Router) {
 			r.Get("/", chargingHandler.ListByVehicle)
-			// Bulk delete (Phase-40 / Prompt 51)
+			// Bulk delete
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/bulk", chargingHandler.BulkDelete)
 			r.Route("/{sessionID}", func(r chi.Router) {
 				r.Get("/", chargingHandler.Get)
@@ -2878,12 +3071,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/error-vins/refresh", fleetTelemetryErrorHandler.RefreshErrorVINs)
 			r.Get("/errors", fleetTelemetryErrorHandler.Errors)
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/errors/refresh", fleetTelemetryErrorHandler.RefreshErrors)
-			// Phase-43a/0002 — package-derived routing snapshot for the
+			// package-derived routing snapshot for the
 			// admin Fleet Telemetry Coverage page. Read-only, DB-free.
 			// Rate limiting matches the admin /system endpoints' 60/min
 			// ceiling. The sibling /subscription endpoint owned by the
 			// same handler is intentionally NOT mounted here — no
-			// frontend caller exists today and the prompt allows only
+			// frontend caller exists today and the request allows only
 			// one new route.
 			r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/coverage", fleetTelemetryHandler.Coverage)
 		})
@@ -2908,7 +3101,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/geofences", func(r chi.Router) {
 			r.Get("/", geofenceHandler.List)
 			r.Post("/", geofenceHandler.Create)
-			// Bulk operations (Phase-45 / Prompt 32) — kept ahead of the
+			// Bulk operations — kept ahead of the
 			// {geofenceID} subrouter so chi matches the static path first.
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/bulk", geofenceHandler.BulkUpdate)
 			r.Route("/{geofenceID}", func(r chi.Router) {
@@ -2928,7 +3121,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Put("/settings/polling-config", settingsHandler.UpdatePollingConfig)
 			r.Get("/settings/dashboard-layouts", settingsHandler.GetDashboardLayouts)
 			r.Put("/settings/dashboard-layouts", settingsHandler.UpdateDashboardLayouts)
-			// Phase-50 / 0003 / F2 — pre-flight provider config
+			// pre-flight provider config
 			// validation for the Settings → AI form. Lives on the
 			// settings sub-tree (NOT under /api/v1/ai/*) because
 			// users call it WHILE opting in (ai_mode='off' at the
@@ -2936,15 +3129,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// in off mode by ADR-015 §I6. Auth-only — no sudo —
 			// because the worst-case write the call enables is
 			// the same one /settings allows already.
-			r.Post("/settings/ai/validate-config", AISettingsValidateHandler(aiRegistry, aiSettingsReader{repo: aiSettingsRepo}))
-			// Phase-46 / Prompt 36 — JSON bundle export + import.
+			r.Post("/settings/ai/validate-config", aisettingsvalidate.Handler(aiRegistry, aiSettingsReader{repo: aiSettingsRepo}))
+			// JSON bundle export + import.
 			// Export is read-only; import is sudo-gated because a
 			// large alert-rule replay or bulk geofence rewrite is a
 			// destructive action that should always carry a fresh
 			// credential. Both routes carry the parent rate limit.
 			r.Get("/settings/export", settingsExportHandler.Export)
 			r.With(RequireSudo(sudoStore, sudoCfg)).Post("/settings/import", settingsImportHandler.Import)
-			// Phase-46 / Prompt 50 — POST /settings/reset.
+			// POST /settings/reset.
 			// Sudo-gated for the same reason as /settings/import: every
 			// reset is destructive (wipes alert rules, geofences, or
 			// the entire user-discoverable preference surface) and
@@ -2952,7 +3145,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(RequireSudo(sudoStore, sudoCfg)).Post("/settings/reset", settingsResetHandler.Reset)
 		})
 
-		// Named dashboard layout library (Phase 40 / Prompt 30).
+		// Named dashboard layout library.
 		// Coexists with /settings/dashboard-layouts above — that endpoint
 		// holds the active in-app blob, this is the per-row "save as
 		// preset" library scoped per-vehicle.
@@ -2965,7 +3158,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/{id}/apply", dashboardLayoutHandler.Apply)
 		})
 
-		// Chart annotations (Phase 40 / Prompt 43) — durable storage for the
+		// Chart annotations — durable storage for the
 		// user-authored event markers rendered on time-series charts. Replaces
 		// the previous localStorage-only store so annotations survive a device
 		// swap or fresh browser profile.
@@ -2977,7 +3170,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Delete("/{id}", chartAnnotationHandler.Delete)
 		})
 
-		// Pinned items (Phase 40 / Prompt 48) — unified per-user "pin" storage
+		// Pinned items — unified per-user "pin" storage
 		// powering pinned-first ordering across vehicles, dashboard widgets,
 		// alert rules, geofences, automations, and commands.
 		r.Route("/pinned", func(r chi.Router) {
@@ -2988,7 +3181,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Delete("/{id}", pinnedHandler.Delete)
 		})
 
-		// Saved views (Phase 40 / Prompt 50) — durable named URL querystrings
+		// Saved views — durable named URL querystrings
 		// for list pages (filters, sort, pagination). Each row is a snapshot
 		// the user can recall later from the SavedViewMenu component; one
 		// view per (user, route) may be marked default and auto-applies on
@@ -3001,7 +3194,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Delete("/{id}", savedViewsHandler.Delete)
 		})
 
-		// Web Push (VAPID) — Phase 40 / Prompt 52. Browser subscription
+		// Web Push (VAPID). Browser subscription
 		// registration + listing + removal. The VAPID public key is also
 		// served unauthenticated (it is, by spec, public) — but rate
 		// limiting still applies via the parent router. Push delivery
@@ -3016,7 +3209,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Gas Price Auto-Poll
 		if opt.GasPriceWorker != nil {
-			gasPriceHandler := NewGasPriceHandler(db, opt.GasPriceWorker)
+			gasPriceHandler := apigas.NewHandler(db, opt.GasPriceWorker)
 			r.Route("/gas-price", func(r chi.Router) {
 				r.Get("/status", gasPriceHandler.Status)
 				r.Post("/poll", gasPriceHandler.Poll)
@@ -3036,11 +3229,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Put("/rules/{ruleID}", alertHandler.UpdateRule)
 			r.Delete("/rules/{ruleID}", alertHandler.DeleteRule)
 			r.Post("/rules/{ruleID}/snooze", alertHandler.SnoozeRule)
-			// Bulk enable/disable (Phase-40 / Prompt 51)
+			// Bulk enable/disable
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/enable", alertHandler.BulkEnableRules)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/disable", alertHandler.BulkDisableRules)
 			r.Post("/test", alertHandler.TestRule)
-			// Phase-50 / ADR-005 — alert message template helpers.
+			// alert message template helpers.
 			// These are static read paths registered BEFORE the
 			// catch-all `/{alertID}` route below so chi resolves them
 			// correctly. They are intentionally unauthenticated only
@@ -3050,7 +3243,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/message-presets", alertMessageHandler.MessagePresets)
 			r.Get("/message-placeholders", alertMessageHandler.MessagePlaceholders)
 			r.Post("/message-preview", alertMessageHandler.MessagePreview)
-			// Phase-46 / Prompt 20 — alert acknowledgement + audit timeline.
+			// alert acknowledgement + audit timeline.
 			// Registered AFTER the static `/rules`, `/metrics`, `/test` routes
 			// above so chi's static-first matching routes them correctly.
 			r.Get("/{alertID}", alertHandler.GetAlert)
@@ -3064,13 +3257,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/", automationHandler.List)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/", automationHandler.Create)
 
-			// Bulk operations (Phase-45 / Prompt 32) — registered before the
+			// Bulk operations — registered before the
 			// {id} subrouter so chi matches the static `/bulk` path first.
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/bulk", automationHandler.BulkUpdate)
 
 			// SSE stream for real-time automation events (static route before {id} param)
 			// Protected by ForwardAuthMiddleware on the parent /api/v1 group
-			r.Get("/events", SSEHandler(automationEventHub))
+			r.Get("/events", sse.SSEHandler(automationEventHub))
 
 			// Import/Export (static routes before {id} param)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/export", automationHandler.ExportBatch)
@@ -3163,7 +3356,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Post("/", notifScheduleHandler.CreateSchedule)
 				r.Delete("/{scheduleID}", notifScheduleHandler.DeleteSchedule)
 			})
-			// Phase-46 / Prompt 19 — Do-Not-Disturb windows. Mounted
+			// Do-Not-Disturb windows. Mounted
 			// before /{channelID} so chi's path matcher does not treat
 			// "quiet-hours" as a channel id.
 			r.Route("/quiet-hours", func(r chi.Router) {
@@ -3172,7 +3365,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Patch("/{id}", quietHoursHandler.Patch)
 				r.Delete("/{id}", quietHoursHandler.Delete)
 			})
-			// Phase-46 / Prompt 37 — webhook signature preview is a
+			// webhook signature preview is a
 			// pure utility (no DB touch, no outbound call); rate-limited
 			// because it computes HMAC SHA-256 on caller-supplied input.
 			// Mounted before /{channelID} for the same reason as
@@ -3186,7 +3379,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Delete("/", notificationHandler.DeleteChannel)
 				r.Post("/toggle", notificationHandler.ToggleChannel)
 				r.Post("/test", notificationHandler.TestChannel)
-				// Phase-46 / Prompt 37 — HMAC-aware webhook test. Sibling
+				// HMAC-aware webhook test. Sibling
 				// of /test so the legacy generic test stays available;
 				// this endpoint exists solely for webhook-kind channels
 				// and 404s on any other kind.
@@ -3276,16 +3469,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Software Updates
 		r.Get("/software-updates", softwareUpdateHandler.List)
 
-		// Phase-43a / Prompt 0005: /vampire-drain + /vampire-drain/stats
-		// restored after Phase-42 prompt 0077 removed them with the
-		// vampire_drain_events table. The two endpoints are now derived
-		// live from fsm_transitions (mig 000187) — parked windows from
-		// fsm_name='vehicle' transitions into 'parked' — paired with
+		// /vampire-drain + /vampire-drain/stats are derived
+		// live from fsm_transitions because vampire_drain_events no longer exists.
+		// Parked windows come from
+		// fsm_transitions (mig 000187) where fsm_name='vehicle' transitions into 'parked' — paired with
 		// signal_log.field='BatteryLevel' for the SOC endpoints, with
 		// charging windows excluded via signal_log.field='ChargeState'
 		// (int_value > 1). Same admin-style rate limit as /mileage and
-		// /vehicle-states (Phase-43a precedent).
-		vampireDrainHandler := NewVampireDrainHandler(database.NewVampireDrainRepo(db.Pool))
+		// /vehicle-states.
+		vampireDrainHandler := apivamp.NewVampireDrainHandler(drivedb.NewVampireDrainRepo(db.Pool))
 		r.Route("/vampire-drain", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(60, 1*time.Minute))
 			r.Get("/", vampireDrainHandler.Events)
@@ -3295,47 +3487,42 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Visited Locations
 		r.Get("/locations", visitedLocationHandler.List)
 
-		// Phase-43a / Prompt 0004: /mileage/{monthly,stats} restored after
-		// Phase-42 prompt 0077 removed them with the daily_mileage table.
-		// Both shapes are now derived live from the SI-canonical drives
-		// table (mig 000185) — distance_m / 1000 → km, energy_used_wh /
+		// /mileage/{monthly,stats} are derived live from the SI-canonical drives
+		// table because daily_mileage no longer exists.
+		// Shapes use distance_m / 1000 → km and energy_used_wh /
 		// 1000 → kWh. Frontend hooks useMonthlyMileage / useMileageStats
 		// stop returning 404. Same admin-style rate limit as
-		// /vehicle-states (Phase-43a / Prompt 0003 precedent).
-		mileageHandler := NewMileageHandler(database.NewMileageRepo(db.Pool))
+		// /vehicle-states.
+		mileageHandler := apimileage.NewHandler(drivedb.NewMileageRepo(db.Pool))
 		r.Route("/mileage", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(60, 1*time.Minute))
 			r.Get("/monthly", mileageHandler.Monthly)
 			r.Get("/stats", mileageHandler.Stats)
-			// Phase-43a / Prompt 0009 (fix/misc-fixes): per-day buckets
-			// for MileagePage.tsx's "Odometer Over Time" + "Daily
-			// Distance" charts. Page was 404ing since Phase-42/0077
-			// deleted the legacy daily_mileage handler.
+			// Per-day buckets for MileagePage.tsx's "Odometer Over Time" +
+			// "Daily Distance" charts, derived without the legacy daily_mileage handler.
 			r.Get("/daily", mileageHandler.Daily)
 		})
 
 		// Trips
 		r.Get("/trips", tripHandler.List)
 
-		// Phase-43a / Prompt 0008: GET /trips/{trip_id} restores the
+		// GET /trips/{trip_id} restores the
 		// per-trip detail endpoint that the frontend useTrip hook
 		// (web/src/api/hooks/useTrips.ts) calls to populate
 		// TripDetailPage. Aggregates the trip header + constituent
 		// drives (via trip_drives) + a vehicle-scoped time-window
 		// charging_sessions overlap to surface drive_count /
-		// charge_count / total_cost. Same admin-style rate limit
-		// (60/min) as the rest of the Phase-43a admin reads.
-		tripsDetailHandler := NewTripsDetailHandler(database.NewTripsDetailRepo(db.Pool))
+		// charge_count / total_cost. Uses the same admin-style rate limit
+		// (60/min) as related admin reads.
+		tripsDetailHandler := apitripsd.NewHandler(tripdb.NewTripsDetailRepo(db.Pool))
 		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/trips/{trip_id}", tripsDetailHandler.Get)
 
-		// Phase-43a / Prompt 0003: /vehicle-states/{timeline,summary} restored
-		// after Phase-42 prompt 0077 removed them with the vehicle_states
-		// snapshot table. The two endpoints are now derived from
-		// fsm_transitions (mig 000187) filtered to fsm_name='vehicle' so
+		// /vehicle-states/{timeline,summary} are derived from
+		// fsm_transitions because the vehicle_states snapshot table no longer exists.
+		// The query filters mig 000187 rows to fsm_name='vehicle' so
 		// frontend hooks useStateTimeline / useTimeline / useStateSummary
-		// stop returning 404. Same admin-style rate limit as /system/queues
-		// (Phase-46 / Prompt 41 precedent).
-		vehicleStatesHandler := NewVehicleStatesHandler(database.NewVehicleStatesRepo(db.Pool))
+		// stop returning 404. Same admin-style rate limit as /system/queues.
+		vehicleStatesHandler := apivehstates.NewHandler(vehicledb.NewVehicleStatesRepo(db.Pool))
 		r.Route("/vehicle-states", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(60, 1*time.Minute))
 			r.Get("/timeline", vehicleStatesHandler.Timeline)
@@ -3382,7 +3569,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				writeJSON(w, http.StatusOK, result)
 			})
 			r.Get("/transitions", func(w http.ResponseWriter, req *http.Request) {
-				fsmTransRepo := database.NewFSMTransitionRepo(db)
+				fsmTransRepo := dbobs.NewFSMTransitionRepo(db)
 				vehicleID, _ := strconv.ParseInt(req.URL.Query().Get("vehicle_id"), 10, 64)
 				if vehicleID == 0 {
 					writeError(w, http.StatusBadRequest, "vehicle_id required")
@@ -3445,8 +3632,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 
 		// Real-time SSE stream — protected by ForwardAuthMiddleware on the parent /api/v1 group
-		r.Get("/events", SSEHandler(eventHub))
-		// Backward-compat stub: frontend still calls fetchSSEToken() until it is removed
+		r.Get("/events", sse.SSEHandler(eventHub))
+		// Backward-compat stub: frontend still calls fetchSSEToken until it is removed
 		r.Get("/sse-token", func(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusOK, map[string]string{"token": ""})
 		})
@@ -3465,7 +3652,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			}
 			r.Get("/health", ExtendedHealthCheck(db, health, bufferStats, maintenanceProvider))
 
-			// Phase-46 / Prompt 57 — Auth-mode contract endpoint.
+			// Auth-mode contract endpoint.
 			// Always reachable; deliberately NOT sudo-gated and NOT
 			// wrapped in RequireSubjectMiddleware because the SPA's
 			// session-monitor + RequiresAuth components rely on this
@@ -3481,50 +3668,50 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/compression-stats", CompressionStatsHandler(db))
 			r.Get("/backup", backupHandler.ExportData)
 			r.Get("/backup/stats", backupHandler.BackupStats)
-			r.Get("/config-validation", ConfigValidation(cfg))
+			r.Get("/config-validation", apisystem.ConfigValidation(cfg))
 			r.Get("/audit", auditHandler.List)
 			r.Get("/errors/stats", ErrorStatsHandler(errorTracker))
 			r.Get("/errors/catalog", ErrorCatalogHandler())
-			r.Get("/map-config", MapConfigHandler(cfg))
+			r.Get("/map-config", apisystem.MapConfigHandler(cfg))
 
 			// Version & update endpoints
 			ver := opt.AppVersion
 			if ver == "" {
 				ver = "dev"
 			}
-			r.Get("/version", VersionHandler(ver, cfg))
-			r.Get("/update-check", UpdateCheckHandler())
-			r.Get("/workers", WorkersHealthHandler())
+			r.Get("/version", apisystem.VersionHandler(ver, cfg))
+			r.Get("/update-check", apisystem.UpdateCheckHandler())
+			r.Get("/workers", apisystem.WorkersHealthHandler())
 			r.Get("/metrics-catalog", MetricsCatalogHandler())
-			r.Get("/openapi", OpenAPIHandler())
+			r.Get("/openapi", apiopenapi.Handler())
 
-			// Phase-46 / Prompt 33 — Aggregated self-test endpoint.
+			// Aggregated self-test endpoint.
 			// Single click runs ~10 checks (DB, MQTT, Redis, Tesla
 			// token + breaker, signal_log freshness, migrations,
 			// runtime, health monitor) and returns a structured
 			// DiagnosticReport. Per-IP rate-limited because each
 			// call fans out concurrent probes against every shared
 			// dependency.
-			diagnosticHandler := NewDiagnosticHandler(db, teslaClient, mqttClient, opt.CacheStore, health, cfg)
+			diagnosticHandler := apidiag.NewHandler(db, teslaClient, mqttClient, opt.CacheStore, health, cfg)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).
 				Post("/diagnostic", diagnosticHandler.ServeHTTP)
 
-			// Phase-46 / Prompt 40 — Rate-limit status panel feed.
+			// Rate-limit status panel feed.
 			// Read-only; cheap (no DB / no Redis); polled every 30s
 			// by the admin status panel. Per-IP throttle still
 			// applies in case a misconfigured client busy-loops it.
 			r.With(httprate.LimitByIP(60, 1*time.Minute)).
 				Get("/rate-limits", rateLimitHandler.ServeHTTP)
 
-			// Phase-46 / Prompt 41 — Job queue status feed.
+			// Job queue status feed.
 			// Aggregates pending / in-progress / 24h success-fail
 			// counts across notification, export, automation
 			// workers, plus latest heartbeat (Redis). Both routes
 			// are GET-only and per-IP throttled at 60/min — the
 			// SPA polls /system/queues every 30s and lazy-loads
 			// the per-worker drawer on demand.
-			queueStatusHandler := NewQueueStatusHandler(QueueStatusHandlerConfig{
-				QueueRepo:      database.NewWorkerQueueRepo(db),
+			queueStatusHandler := apiqueue.NewQueueStatusHandler(apiqueue.QueueStatusHandlerConfig{
+				QueueRepo:      workerdb.NewWorkerQueueRepo(db),
 				HeartbeatStore: queueHeartbeatStore,
 			})
 			r.With(httprate.LimitByIP(60, 1*time.Minute)).
@@ -3532,7 +3719,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(60, 1*time.Minute)).
 				Get("/queues/{worker}/jobs", queueStatusHandler.ServeJobs)
 
-			// Phase-44 / observability-batch / Prompt F4 — DLQ
+			// DLQ
 			// Inspector. List + per-entry GET are read-only and
 			// per-IP throttled at 60/min. Replay is gated by
 			// sudo-token (RequireSudo) AND by DLQ_REPLAY_ENABLED
@@ -3541,7 +3728,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// opt.DLQInspector or opt.DLQReplayAuditRepo is nil,
 			// so a deployment without MQTT still serves the rest
 			// of /system unchanged.
-			dlqHandler := NewDLQHandler(
+			dlqHandler := apidlq.NewHandler(
 				opt.DLQInspector,
 				opt.DLQReplayAuditRepo,
 				cfg.Auth.ForwardAuthHeader,
@@ -3560,7 +3747,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				RequireSudo(sudoStore, sudoCfg),
 			).Post("/dlq/{id}/replay", dlqHandler.Replay)
 
-			// Phase-44 / observability-batch / Prompt F8 — Feature
+			// Feature
 			// Flags. List + GET + audit are read-only (60/min).
 			// PUT + DELETE are sudo-gated + audited via the
 			// feature_flag_changes table; the dynamic
@@ -3568,7 +3755,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// Redis Pub/Sub. The handler degrades to 503 when
 			// opt.FlagStore is nil so a redis-disabled deployment
 			// still serves the rest of /system unchanged.
-			flagsHandler := NewFlagsHandler(
+			flagsHandler := apiflagsh.NewHandler(
 				opt.FlagStore,
 				opt.FeatureFlagChangesRepo,
 				cfg.Auth.ForwardAuthHeader,
@@ -3590,7 +3777,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				RequireSudo(sudoStore, sudoCfg),
 			).Delete("/flags/{key}", flagsHandler.Delete)
 
-			// Phase-44 / observability-batch / Prompt F6 —
+			//
 			// Per-vehicle ingest X-Ray. Returns per-field
 			// sample counts + last-seen + time-bucket histogram
 			// over a configurable window. Read-only, 60/min IP
@@ -3598,12 +3785,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// vehicleID is in the URL because the cost of an
 			// unbounded fleet-wide query is too high for the
 			// signal_log hypertable.
-			ingestXRayHandler := NewIngestXRayHandler(database.NewIngestXRayRepo(db.Pool))
+			ingestXRayHandler := apixray.NewHandler(dbobs.NewIngestXRayRepo(db.Pool))
 			r.With(httprate.LimitByIP(60, 1*time.Minute)).
 				Get("/ingest-xray/{vehicleID}", ingestXRayHandler.Get)
 		})
 
-		// Phase-2 / Status API — operator-grade /api/v1/status/* endpoints.
+		// / Status API: operator-grade /api/v1/status/* endpoints.
 		// Stable contract for external integrations (Grafana, Uptime Kuma,
 		// Home Assistant, etc.). The SPA's System Status page also subscribes
 		// to /status/live (SSE) so it can drop polling. Inherits the parent
@@ -3612,9 +3799,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		if ver == "" {
 			ver = "dev"
 		}
-		incidentsRepo := database.NewIncidentRepo(db)
-		incidentsHandler := NewIncidentsHandler(incidentsRepo)
-		statusV1 := NewStatusV1Handler(StatusV1Config{
+		incidentsRepo := dbobs.NewIncidentRepo(db)
+		incidentsHandler := apistatus.NewStatusIncidentsHandler(incidentsRepo)
+		statusV1 := apistatus.NewStatusV1Handler(apistatus.StatusV1Config{
 			Health:           health,
 			AppVersion:       ver,
 			MaintenanceState: maintenanceProvider,
@@ -3642,7 +3829,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			})
 		})
 
-		// Phase-45 — Operator confidence admin surface. Five
+		// Operator confidence admin surface. Five
 		// read-only observability routes + audit viewer + GDPR
 		// export download. Each backing repo can be nil; the
 		// handler returns 503 SUBSYSTEM_NOT_CONFIGURED instead of
@@ -3668,41 +3855,41 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Group(func(r chi.Router) {
 			r.Use(httprate.LimitByIP(60, 1*time.Minute))
 			r.Use(handlermw.QueryBudget(handlermw.QueryBudgets{
-				"GET /admin/observability/schema-drift":   5,
-				"GET /admin/observability/slow-queries":   3,
-				"GET /admin/observability/vehicle-cost":   3,
-				"GET /admin/observability/disk-forecast":  5,
+				"GET /admin/observability/schema-drift":    5,
+				"GET /admin/observability/slow-queries":    3,
+				"GET /admin/observability/vehicle-cost":    3,
+				"GET /admin/observability/disk-forecast":   5,
 				"GET /admin/observability/secret-rotation": 2,
-				"GET /admin/observability/slo":            3,
-				"GET /admin/observability/data-quality":   3,
-				"GET /admin/observability/lineage":        1,
-				"GET /admin/observability/synthetic":      1,
-				"GET /admin/audit-log":                    3,
-				"GET /admin/audit-log/categories":         2,
-				"GET /admin/audit-log/actions":            2,
-				"GET /admin/audit-log/verify":             2,
-				"GET /admin/gdpr/exports/{id}":            2,
+				"GET /admin/observability/slo":             3,
+				"GET /admin/observability/data-quality":    3,
+				"GET /admin/observability/lineage":         1,
+				"GET /admin/observability/synthetic":       1,
+				"GET /admin/audit-log":                     3,
+				"GET /admin/audit-log/categories":          2,
+				"GET /admin/audit-log/actions":             2,
+				"GET /admin/audit-log/verify":              2,
+				"GET /admin/gdpr/exports/{id}":             2,
 			}))
 			v1AdminObs.Register(r)
 			v1AdminAudit.Register(r)
 			v1GDPRExport.Register(r)
 
-			// Phase-46 SOTA observability batch (p46-slo, p46-dq-lineage,
+			// SOTA observability batch (p46: slo, p46-dq-lineage,
 			// p46-synthetic). Each handler degrades to 503 SUBSYSTEM_NOT_CONFIGURED
 			// when its backing subsystem wasn't wired in opt — see
 			// RouterOptions for the optionality contract.
-			sloHandler := NewSLOHandler(opt.SLOCatalog, opt.SLOTracker)
+			sloHandler := apislo.NewHandler(opt.SLOCatalog, opt.SLOTracker)
 			r.Get("/admin/observability/slo", sloHandler.Snapshot)
 
-			dqHandler := NewDataQualityHandler(opt.DataQualityScorer)
+			dqHandler := apidq.NewHandler(opt.DataQualityScorer)
 			r.Get("/admin/observability/data-quality", dqHandler.Score)
 			r.Get("/admin/observability/lineage", dqHandler.Lineage)
 
-			syntheticHandler := NewSyntheticHandler(opt.SyntheticRunner)
+			syntheticHandler := apisynthetic.NewHandler(opt.SyntheticRunner)
 			r.Get("/admin/observability/synthetic", syntheticHandler.Snapshot)
 		})
 
-		// Per-user activity feed (Phase-40 / Prompt 49 — Recent Activity Discoverability).
+		// Per-user activity feed.
 		// Returns the requesting caller's audit_logs entries scoped by the
 		// configured ForwardAuth header value. Sibling to /system/audit, which
 		// remains the admin-wide view.
@@ -3716,7 +3903,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Adaptive Polling Engine
 		if opt.PollEngine != nil {
-			handlers := PollEngineHandlers(opt.PollEngine)
+			handlers := apipolling.PollEngineHandlers(opt.PollEngine)
 			r.Route("/polling", func(r chi.Router) {
 				r.Get("/status", handlers["status"])
 				r.Get("/decisions", handlers["decisions"])
@@ -3732,14 +3919,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/", apiKeyHandler.List)
 			r.Post("/", apiKeyHandler.Create)
 			r.Route("/{id}", func(r chi.Router) {
-				// Phase-46 / Prompt 31 — destructive: requires sudo.
+				// destructive: requires sudo.
 				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", apiKeyHandler.Delete)
 				r.With(RequireSudo(sudoStore, sudoCfg)).Post("/revoke", apiKeyHandler.Revoke)
 			})
 		})
 
-		// Admin: frontend error reporting summary (Phase 46 / Prompt 01).
-		// Last-hour rolling counts read from the same WebErrorHandler
+		// Admin: frontend error reporting summary.
+		// Last-hour rolling counts read from the same web error handler
 		// instance that the public /api/v1/web-errors POST endpoint
 		// writes to, so the summary stays in sync without going through
 		// Prometheus. Auth-protected by the parent /api/v1 ForwardAuth
@@ -3749,7 +3936,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 
 		// Admin: operator-controlled maintenance/degraded banner
-		// (Phase 46 / Prompt 04). GET returns the persisted DB row
+		//. GET returns the persisted DB row
 		// plus an env-override marker; POST validates and writes the
 		// row, audits the change via logAuditFromRequest, and rate-
 		// limits per IP because state-change endpoints are otherwise
@@ -3763,11 +3950,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/", adminMaintenanceHandler.Set)
 		})
 
-		// In-app feedback / report-bug widget (Phase 46 / Prompt 08).
+		// In-app feedback / report-bug widget.
 		// POST /feedback is the public ingest path used by the SPA's
 		// <FeedbackModal> (sidebar button + Cmd+K command palette
 		// entry). Mounted INSIDE this ForwardAuth subrouter so anonymous
-		// spam is bounded (per the prompt's Out-of-scope: "Anonymous
+		// spam is bounded (per the request's Out-of-scope: "Anonymous
 		// feedback (must be authenticated to prevent spam)"). Per-row
 		// rate limit (3/hour) is enforced inside the handler against
 		// user_feedback so it survives pod restarts; a tighter per-IP
@@ -3775,7 +3962,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// the DB lookup fails open.
 		r.With(httprate.LimitByIP(20, 1*time.Hour)).Post("/feedback", feedbackHandler.Submit)
 
-		// Admin feedback queue (Phase 46 / Prompt 08): list / get /
+		// Admin feedback queue: list / get /
 		// patch the user_feedback rows. PATCH optionally forwards the
 		// row to GitHub Issues when cfg.GitHub is configured. Any
 		// authenticated caller can read/write — audit_logs is the
@@ -3789,7 +3976,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			})
 		})
 
-		// Phase-46 / Prompt 44 — RBAC matrix admin endpoints.
+		// RBAC matrix admin endpoints.
 		// GET is unguarded so any authenticated caller can render
 		// the page; PUT is sudo-gated since it changes the
 		// authorisation matrix the install runs under. In open mode
@@ -3802,7 +3989,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(RequireSudo(sudoStore, sudoCfg)).Put("/matrix", rbacHandler.UpsertMatrix)
 		})
 
-		// Phase-46 / Prompt 46 — Admin impersonation endpoints.
+		// Admin impersonation endpoints.
 		// GET state + GET candidates are read-only and unguarded so
 		// the SPA can poll them to render the banner. POST start is
 		// sudo-gated AND blocked while already impersonating so a
@@ -3820,7 +4007,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/end", impersonationHandler.End)
 		})
 
-		// Admin: live log tail stream (Phase-46 / Prompt 34).
+		// Admin: live log tail stream.
 		// SSE endpoint that fans out structured zerolog events to
 		// any authenticated browser. Read-only, idempotent — kept
 		// behind the parent /api/v1 ForwardAuth gate but
@@ -3828,7 +4015,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// uses fetch+ReadableStream (NOT EventSource) so it could
 		// send X-Sudo-Token, but the stream itself triggers no side
 		// effects so step-up is reserved for destructive admin
-		// actions per Prompt 31's intent. httprate caps reconnect
+		// actions per the request's intent. httprate caps reconnect
 		// storms to 10/min/IP.
 		r.Route("/admin/logs", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(10, 1*time.Minute))
@@ -3892,8 +4079,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 
 		// Signal History (Postgres-backed — always available)
-		if telemetryHandler != nil && telemetryHandler.signalHistoryWriter != nil {
-			shw := telemetryHandler.signalHistoryWriter
+		if telemetryHandler != nil && telemetryHandler.SignalHistoryWriter() != nil {
+			shw := telemetryHandler.SignalHistoryWriter()
 			r.Route("/signals/history", func(r chi.Router) {
 				// GET /api/v1/signals/history?vehicle_id=1&signals=BatteryLevel,Gear&from=...&to=...&page=1&per_page=50
 				r.Get("/", func(w http.ResponseWriter, req *http.Request) {
@@ -3968,17 +4155,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			})
 		}
 
-		// Phase-43a / Prompt 0007: /signals/catalog and /signals/observations
-		// restored after Phase-42 prompt 0077 deleted the legacy
+		// /signals/catalog and /signals/observations
+		// restored after the migration deleted the legacy
 		// signal_catalog_handler.go. The catalog spine is parsed from
 		// routing.yaml (router.Load) at handler construction; aggregates
 		// + observations come from signal_log (mig 000186). Frontend hooks
 		// useSignalCatalog / useSignalObservations stop returning 404. Same
 		// admin-style rate limit as /vehicle-states + /system/queues
-		// (Phase-43a / Prompt 0003 + Phase-46 / Prompt 41 precedent).
+		//.
 		// Mounted BEFORE /signals/{vehicleID} so the static paths take
 		// precedence under chi v5's longest-static-prefix matching.
-		signalsCatalogHandler := NewSignalsCatalogHandler(database.NewSignalsCatalogRepo(db.Pool))
+		signalsCatalogHandler := apisigcat.NewHandler(signaldb.NewSignalsCatalogRepo(db.Pool))
 		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/signals/catalog", signalsCatalogHandler.Catalog)
 		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/signals/observations", signalsCatalogHandler.Observations)
 
@@ -3986,16 +4173,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/signals/{vehicleID}", func(r chi.Router) {
 			// Signal History (Postgres primary, MongoDB optional fallback)
 			if telemetryHandler != nil {
-				var mongoRepo *database.SignalLogRepo
-				if telemetryHandler.signalLogRepo != nil {
-					mongoRepo = telemetryHandler.signalLogRepo
+				var mongoRepo *signaldb.SignalLogRepo
+				if telemetryHandler.SignalLogRepo() != nil {
+					mongoRepo = telemetryHandler.SignalLogRepo()
 				}
-				signalHandler := NewSignalHandler(mongoRepo)
+				signalHandler := apisignal.NewHandler(mongoRepo)
 				if db != nil {
 					signalHandler.WithDB(db)
 				}
-				if telemetryHandler.signalHistoryWriter != nil {
-					signalHandler.WithSignalHistory(telemetryHandler.signalHistoryWriter)
+				if telemetryHandler.SignalHistoryWriter() != nil {
+					signalHandler.WithSignalHistory(telemetryHandler.SignalHistoryWriter())
 				}
 				if opt.CacheStore != nil {
 					if rdb := opt.CacheStore.Underlying(); rdb != nil {
@@ -4013,7 +4200,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/{signalName}/history", signalHandler.History)
 			} else {
 				// No telemetry handler at all — register with DB-only fallbacks
-				signalHandler := NewSignalHandler(nil)
+				signalHandler := apisignal.NewHandler(nil)
 				if db != nil {
 					signalHandler.WithDB(db)
 				}
@@ -4035,7 +4222,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/data-repair", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(20, 1*time.Minute))
 			// GET stays read-only and unguarded; every mutating route
-			// below threads through RequireSudo (Phase-46 / Prompt 31).
+			// below threads through RequireSudo.
 			r.Get("/stale-sessions", dataRepairHandler.GetStaleSessions)
 			r.Route("/charging/{id}", func(r chi.Router) {
 				r.With(RequireSudo(sudoStore, sudoCfg)).Put("/", dataRepairHandler.UpdateCharging)
@@ -4055,7 +4242,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/configs", backupRestoreHandler.CreateConfig)
 			r.Get("/configs/{configID}", backupRestoreHandler.GetConfig)
 			r.Put("/configs/{configID}", backupRestoreHandler.UpdateConfig)
-			// Phase-46 / Prompt 31 — destructive: requires sudo.
+			// destructive: requires sudo.
 			r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/configs/{configID}", backupRestoreHandler.DeleteConfig)
 			r.Post("/configs/{configID}/trigger", backupRestoreHandler.TriggerBackup)
 			r.Post("/quick", backupRestoreHandler.TriggerQuickBackup)
@@ -4067,26 +4254,26 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 
 		// Export
-		r.With(httprate.LimitByIP(10, 1*time.Minute)).Get("/export/{type}", NewExportHandler(db))
+		r.With(httprate.LimitByIP(10, 1*time.Minute)).Get("/export/{type}", apiexports.NewExportHandler(db))
 
 		// Export Jobs (async, MQTT-backed)
 		var pahoClient pahomqtt.Client
 		if mqttClient != nil {
 			pahoClient = mqttClient.Underlying()
 		}
-		exportJobHandler := NewExportJobHandler(db, pahoClient)
-		exportColumnsHandler := NewExportColumnsHandler()
-		// Phase-46 / Prompt 62 — column-selector UI fetches the publishable
+		exportJobHandler := apiexports.NewExportJobHandler(db, pahoClient)
+		exportColumnsHandler := apiexpcol.NewHandler()
+		// column-selector UI fetches the publishable
 		// column catalog for the active export type. Read-only and cheap;
 		// rate-limited to soak up accidental SPA loops.
 		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/exports/columns", exportColumnsHandler.ListColumns)
 		r.Route("/export/jobs", func(r chi.Router) {
 			r.Post("/", exportJobHandler.SubmitJob)
 			r.Post("/account", exportJobHandler.SubmitAccountJob)
-			// Phase-46 / Prompt 31 — destructive: a settings import
+			// destructive: a settings import
 			// can overwrite live config; gate on sudo.
 			r.With(RequireSudo(sudoStore, sudoCfg)).Post("/import", exportJobHandler.SubmitImportJob)
-			// Bulk operations (Phase-45 / Prompt 32) — registered before
+			// Bulk operations — registered before
 			// /{jobID} so chi matches the static `/bulk` path first.
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/bulk", exportJobHandler.BulkUpdate)
 			r.Get("/", exportJobHandler.ListJobs)
@@ -4094,7 +4281,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/{jobID}/download", exportJobHandler.DownloadJob)
 		})
 
-		// Phase-46 / Prompt 65 — recurring scheduled exports.
+		// recurring scheduled exports.
 		// Five routes mounted as a separate /scheduled-exports
 		// subtree (NOT /export/jobs/scheduled) because they
 		// describe schedule rows, not one-shot job rows. Owner
@@ -4129,7 +4316,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		exportSvc := exportsvc.New(exportRepo, fsmHistoryRepo, nil)
 		dashboardSvc := dashboardsvc.New(vehicleRepo, chargingRepo, tripRepo)
 
-		// Wire OTel FSM tracers so every Fire() emits a span. The fsm.Tracer
+		// Wire OTel FSM tracers so every Fire emits a span. The fsm.Tracer
 		// port is implemented by tracing.NewFSMTracer (the OTel adapter); the
 		// svc layer depends only on the port (ADR-006: zero-deps domain).
 		// Each tracer name surfaces as the instrumentation scope in Tempo, so
@@ -4156,16 +4343,71 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		_ = vehicleSvc
 		_ = v1VehicleHandler
 
-		// Phase-50 / 0001 — F0 AI-Off Contract.
+		// F0 AI-Off Contract.
 		//
 		// Mount every /api/v1/ai/* route through the guard. The
 		// guard returns 404 unless ai_mode is non-off AND the
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler, aiVampireDrainExplanationHandler, aiPreheatPrecoolRecommenderHandler, aiCabinTemperatureImpactNarrativeHandler, aiTirePressureTrendReasoningHandler, aiAlertTuningHandler, aiInboxCategorizationHandler, aiCrossRuleConflictHandler, aiAutoNameUnnamedLocationsHandler, aiSuggestNewGeofencesHandler, aiGeofenceAwareAutomationHandler, aiLearnedAnomalyBaselinesHandler, aiRangePredictionHandler, aiMLChargingCurveClusteringHandler, aiPeriodCompareNarrationHandler, aiLifetimeStatsQAHandler, aiIncidentTimelineSummarizerHandler, aiDataRepairSuggestionsHandler, aiSignalExplorerNlFilterHandler, aiLogTraceSummarizationHandler, aiFeedbackQueueTriageHandler, aiMqttSseInspectorExplanationsHandler, aiStateMachineDebuggerNarratorHandler, aiPredictiveMaintenanceHandler, aiTCONarrationHandler, aiSoftwareUpdateChangelogSummarizerHandler, aiPiiRedactionSharedExportsHandler, aiQuietHoursSuggestionHandler, aiSafetySettingExplainerHandler, aiVoiceModeHandler, aiWatchFaceNLResponseHandler, aiNLSqlPlaygroundHandler, aiNLGrafanaPanelHandler, aiNLDashboardComposerHandler, aiTripPostcardShareCardImageGenerationHandler, aiVehiclePaintPreviewHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), AIHandlers{
+			Chatbot:                              aiChatbotHandler,
+			Digest:                               aiDigestHandler,
+			YIR:                                  aiYIRHandler,
+			Anomaly:                              aiAnomalyHandler,
+			Alert:                                aiAlertHandler,
+			Automation:                           aiAutomationHandler,
+			Search:                               aiSearchHandler,
+			DriveCoach:                           aiDriveCoachHandler,
+			ChargingDiagnosis:                    aiChargingDiagnosisHandler,
+			RagHelp:                              aiRagHelpHandler,
+			DriveSearch:                          aiDriveSearchHandler,
+			SpeedProfileInsights:                 aiSpeedProfileInsightsHandler,
+			RouteEfficiencySuggestions:           aiRouteEfficiencySuggestionsHandler,
+			AutoTripName:                         aiAutoTripNameHandler,
+			TripPlannerLLM:                       aiTripPlannerLLMHandler,
+			SmartChargeSchedule:                  aiSmartChargeScheduleHandler,
+			BatteryHealth:                        aiBatteryHealthHandler,
+			ChargingCurveClustering:              aiChargingCurveClusteringHandler,
+			CostForecastNarration:                aiCostForecastNarrationHandler,
+			VampireDrainExplanation:              aiVampireDrainExplanationHandler,
+			PreheatPrecoolRecommender:            aiPreheatPrecoolRecommenderHandler,
+			CabinTemperatureImpactNarrative:      aiCabinTemperatureImpactNarrativeHandler,
+			TirePressureTrendReasoning:           aiTirePressureTrendReasoningHandler,
+			AlertTuning:                          aiAlertTuningHandler,
+			InboxCategorize:                      aiInboxCategorizationHandler,
+			CrossRuleConflict:                    aiCrossRuleConflictHandler,
+			AutoNameUnnamedLocations:             aiAutoNameUnnamedLocationsHandler,
+			SuggestNewGeofences:                  aiSuggestNewGeofencesHandler,
+			GeofenceAwareAutomation:              aiGeofenceAwareAutomationHandler,
+			LearnedAnomalyBaselines:              aiLearnedAnomalyBaselinesHandler,
+			RangePrediction:                      aiRangePredictionHandler,
+			MLChargingCurveClustering:            aiMLChargingCurveClusteringHandler,
+			PeriodCompareNarration:               aiPeriodCompareNarrationHandler,
+			LifetimeStatsQA:                      aiLifetimeStatsQAHandler,
+			IncidentTimelineSummarizer:           aiIncidentTimelineSummarizerHandler,
+			DataRepairSuggestions:                aiDataRepairSuggestionsHandler,
+			SignalExplorerNlFilter:               aiSignalExplorerNlFilterHandler,
+			LogTraceSummarization:                aiLogTraceSummarizationHandler,
+			FeedbackQueueTriage:                  aiFeedbackQueueTriageHandler,
+			MqttSseInspectorExplanations:         aiMqttSseInspectorExplanationsHandler,
+			StateMachineDebuggerNarrator:         aiStateMachineDebuggerNarratorHandler,
+			PredictiveMaintenance:                aiPredictiveMaintenanceHandler,
+			TCONarration:                         aiTCONarrationHandler,
+			SoftwareUpdateChangelogSummarizer:    aiSoftwareUpdateChangelogSummarizerHandler,
+			PiiRedactionSharedExports:            aiPiiRedactionSharedExportsHandler,
+			QuietHoursSuggestion:                 aiQuietHoursSuggestionHandler,
+			SafetySettingExplainer:               aiSafetySettingExplainerHandler,
+			VoiceMode:                            aiVoiceModeHandler,
+			WatchFaceNLResponse:                  aiWatchFaceNLResponseHandler,
+			NLSqlPlayground:                      aiNLSqlPlaygroundHandler,
+			NLGrafanaPanel:                       aiNLGrafanaPanelHandler,
+			NLDashboardComposer:                  aiNLDashboardComposerHandler,
+			TripPostcardShareCardImageGeneration: aiTripPostcardShareCardImageGenerationHandler,
+			VehiclePaintPreview:                  aiVehiclePaintPreviewHandler,
+		})
 
-		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
+		// F3 AI Usage Card endpoints.
 		//
 		// /api/v1/ai/usage/{today,by-feature,recent} surface the
 		// audit log written by the audit decorator above. The
@@ -4173,9 +4415,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// __usage__ meta-feature has no toggle of its own) but
 		// still 404 in off mode (ADR-015 §I6) — the wrapper inside
 		// mountAIUsageRoutes carves out the exception precisely.
-		mountAIUsageRoutes(r, aiSettingsRepo, aiCallLogRepo, cfg.Auth.ForwardAuthHeader)
+		aiusage.MountUsageRoutes(r, aiSettingsRepo, aiCallLogRepo, cfg.Auth.ForwardAuthHeader)
 
-		// Phase-50 / 0009 — F8 AI Admin endpoints (redaction-bypass report).
+		// F8 AI Admin endpoints (redaction-bypass report).
 		//
 		// /api/v1/ai/admin/redaction-bypass surfaces the
 		// per-(feature, provider) bypass summary written by the
@@ -4185,7 +4427,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// own) but still 404s in off mode (ADR-015 §I6) — the
 		// wrapper inside mountAIAdminRoutes carves out the
 		// exception precisely.
-		mountAIAdminRoutes(r, aiSettingsRepo, aiCallLogRepo)
+		aiusage.MountAdminRoutes(r, aiSettingsRepo, aiCallLogRepo)
 
 		// Watch endpoints — lightweight API key auth for wearable devices
 		r.Route("/watch", func(r chi.Router) {
@@ -4332,40 +4574,15 @@ func installAdminLogStreamTap(reg *platform.LogSubscriberRegistry) {
 	adminLogStreamTapState.current.SetTarget(reg)
 }
 
-// isVehiclePhotoUploadPath returns true when the request is the
-// vehicle photo upload endpoint (POST /api/v1/vehicles/{id}/photo).
-// Used by the global body-limit middleware to bypass the 1 MB cap
-// for photo uploads — a wrapped http.MaxBytesReader can't be
-// loosened later, so the bypass MUST happen at the global layer.
-func isVehiclePhotoUploadPath(method, path string) bool {
-	if method != http.MethodPost {
-		return false
-	}
-	const prefix = "/api/v1/vehicles/"
-	if !strings.HasPrefix(path, prefix) {
-		return false
-	}
-	rest := path[len(prefix):]
-	idx := strings.Index(rest, "/")
-	if idx <= 0 {
-		return false
-	}
-	tail := rest[idx:]
-	// Accept exactly /photo (no trailing slash, no sub-path) so
-	// future endpoints under /vehicles/{id}/photo/X don't
-	// inherit the 12 MB limit.
-	return tail == "/photo"
-}
-
-// aiSettingsReader adapts *database.SettingsRepo to the
+// aiSettingsReader adapts *settingsdb.SettingsRepo to the
 // provider.SettingsReader port. The repo natively exposes
 // AIMode + AIFeatureEnabled (cheap single-row PK lookups). The
 // AIProviderConfig accessor is implemented here by calling
-// the existing typed Get() and pulling out the AIProviderConfig
+// the existing typed Get and pulling out the AIProviderConfig
 // JSONB field — keeping the repo single-purpose (R5 mitigation)
 // and avoiding a settings-repo migration in slice F1.
 type aiSettingsReader struct {
-	repo *database.SettingsRepo
+	repo *settingsdb.SettingsRepo
 }
 
 func (a aiSettingsReader) AIMode(ctx context.Context) (string, error) {

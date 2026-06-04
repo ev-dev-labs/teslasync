@@ -7,6 +7,8 @@ import (
 	"math"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/ev-dev-labs/teslasync/internal/automation/condition"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
@@ -153,7 +155,7 @@ func (e *Engine) evaluateOtherAutomationCondition(index int, c *models.Automatio
 	}
 }
 
-func (e *Engine) currentVehicleState(a *models.AutomationFull, base conditionResult) (*models.VehicleState, *conditionResult) {
+func (e *Engine) currentVehicleState(a *models.AutomationFull, base conditionResult) (*vehiclemodel.VehicleState, *conditionResult) {
 	if e.stateProvider == nil {
 		return nil, &conditionResult{Index: base.Index, Type: base.Type, Result: "unknown", Reason: "no state provider configured"}
 	}
@@ -232,7 +234,7 @@ func validateTypedTriggers(a *models.AutomationFull) (string, error) {
 	return firstKind, nil
 }
 
-func vehicleStateSignalValue(state *models.VehicleState, signal string) (any, bool) {
+func vehicleStateSignalValue(state *vehiclemodel.VehicleState, signal string) (any, bool) {
 	switch signal {
 	case "state":
 		return state.State, true

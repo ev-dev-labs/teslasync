@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 )
 
 // ─── Config Parsing Tests ───────────────────────────────
@@ -155,37 +155,37 @@ func TestEvaluateStateCheck_BoolEq(t *testing.T) {
 		name     string
 		field    string
 		expected *bool
-		state    *models.VehicleState
+		state    *vehiclemodel.VehicleState
 		wantMet  bool
 	}{
 		{
 			"is_locked eq true, locked",
 			"is_locked", &trueVal,
-			&models.VehicleState{IsLocked: true},
+			&vehiclemodel.VehicleState{IsLocked: true},
 			true,
 		},
 		{
 			"is_locked eq true, unlocked",
 			"is_locked", &trueVal,
-			&models.VehicleState{IsLocked: false},
+			&vehiclemodel.VehicleState{IsLocked: false},
 			false,
 		},
 		{
 			"is_charging eq false, not charging",
 			"is_charging", &falseVal,
-			&models.VehicleState{IsCharging: false},
+			&vehiclemodel.VehicleState{IsCharging: false},
 			true,
 		},
 		{
 			"is_climate_on eq true, climate on",
 			"is_climate_on", &trueVal,
-			&models.VehicleState{IsClimateOn: true},
+			&vehiclemodel.VehicleState{IsClimateOn: true},
 			true,
 		},
 		{
 			"sentry_mode eq false, sentry on",
 			"sentry_mode", &falseVal,
-			&models.VehicleState{SentryMode: true},
+			&vehiclemodel.VehicleState{SentryMode: true},
 			false,
 		},
 	}
@@ -221,7 +221,7 @@ func TestEvaluateStateCheck_BoolNeq(t *testing.T) {
 	}
 
 	// is_locked=false, expected=true → neq → met
-	result, _, err := EvaluateStateCheck(cfg, &models.VehicleState{IsLocked: false})
+	result, _, err := EvaluateStateCheck(cfg, &vehiclemodel.VehicleState{IsLocked: false})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -230,7 +230,7 @@ func TestEvaluateStateCheck_BoolNeq(t *testing.T) {
 	}
 
 	// is_locked=true, expected=true → neq → not met
-	result, _, err = EvaluateStateCheck(cfg, &models.VehicleState{IsLocked: true})
+	result, _, err = EvaluateStateCheck(cfg, &vehiclemodel.VehicleState{IsLocked: true})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -275,7 +275,7 @@ func TestEvaluateStateCheck_NumericOperators(t *testing.T) {
 				Operator:    tt.op,
 				NumberValue: &val20,
 			}
-			state := &models.VehicleState{BatteryLevel: tt.actual}
+			state := &vehiclemodel.VehicleState{BatteryLevel: tt.actual}
 			result, _, err := EvaluateStateCheck(cfg, state)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
@@ -309,7 +309,7 @@ func TestEvaluateStateCheck_NumericDecimal(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			state := &models.VehicleState{InsideTemp: tt.temp}
+			state := &vehiclemodel.VehicleState{InsideTemp: tt.temp}
 			result, _, err := EvaluateStateCheck(cfg, state)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
@@ -331,7 +331,7 @@ func TestEvaluateStateCheck_SpeedField(t *testing.T) {
 		NumberValue: &val100,
 	}
 
-	state := &models.VehicleState{Speed: 88.5}
+	state := &vehiclemodel.VehicleState{Speed: 88.5}
 	result, _, err := EvaluateStateCheck(cfg, state)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -350,7 +350,7 @@ func TestEvaluateStateCheck_OutsideTempField(t *testing.T) {
 		NumberValue: &val0,
 	}
 
-	state := &models.VehicleState{OutsideTemp: -5.2}
+	state := &vehiclemodel.VehicleState{OutsideTemp: -5.2}
 	result, _, err := EvaluateStateCheck(cfg, state)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -384,7 +384,7 @@ func TestEvaluateStateCheck_StringEq(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			vs := &models.VehicleState{State: tt.state}
+			vs := &vehiclemodel.VehicleState{State: tt.state}
 			result, _, err := EvaluateStateCheck(cfg, vs)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
@@ -406,7 +406,7 @@ func TestEvaluateStateCheck_StringNeq(t *testing.T) {
 		StringValue: &asleep,
 	}
 
-	result, _, err := EvaluateStateCheck(cfg, &models.VehicleState{State: "online"})
+	result, _, err := EvaluateStateCheck(cfg, &vehiclemodel.VehicleState{State: "online"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -414,7 +414,7 @@ func TestEvaluateStateCheck_StringNeq(t *testing.T) {
 		t.Errorf("expected state='online' neq 'asleep' to be met: %s", result.Reason)
 	}
 
-	result, _, err = EvaluateStateCheck(cfg, &models.VehicleState{State: "asleep"})
+	result, _, err = EvaluateStateCheck(cfg, &vehiclemodel.VehicleState{State: "asleep"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -450,7 +450,7 @@ func TestEvaluateStateCheck_SnapshotContent(t *testing.T) {
 		NumberValue: &val20,
 	}
 
-	state := &models.VehicleState{BatteryLevel: 45}
+	state := &vehiclemodel.VehicleState{BatteryLevel: 45}
 	_, snapshot, err := EvaluateStateCheck(cfg, state)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -486,7 +486,7 @@ func TestEvaluateStateCheck_SnapshotBoolField(t *testing.T) {
 		BoolValue: &trueVal,
 	}
 
-	state := &models.VehicleState{IsLocked: false}
+	state := &vehiclemodel.VehicleState{IsLocked: false}
 	_, snapshot, err := EvaluateStateCheck(cfg, state)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -514,43 +514,43 @@ func TestEvaluateStateCheck_ReasonStrings(t *testing.T) {
 	tests := []struct {
 		name       string
 		cfg        *StateCheckConfig
-		state      *models.VehicleState
+		state      *vehiclemodel.VehicleState
 		wantReason string
 	}{
 		{
 			"numeric gt met",
 			numericCfg("battery_level", "gt", 20),
-			&models.VehicleState{BatteryLevel: 45},
+			&vehiclemodel.VehicleState{BatteryLevel: 45},
 			"battery_level 45 > 20",
 		},
 		{
 			"numeric gt not met",
 			numericCfg("battery_level", "gt", 20),
-			&models.VehicleState{BatteryLevel: 15},
+			&vehiclemodel.VehicleState{BatteryLevel: 15},
 			"battery_level 15 > 20",
 		},
 		{
 			"bool eq met",
 			boolCfg("is_locked", "eq", true),
-			&models.VehicleState{IsLocked: true},
+			&vehiclemodel.VehicleState{IsLocked: true},
 			"is_locked true == true",
 		},
 		{
 			"string eq met",
 			stringCfg("state", "eq", "online"),
-			&models.VehicleState{State: "online"},
+			&vehiclemodel.VehicleState{State: "online"},
 			"state online == online",
 		},
 		{
 			"numeric decimal",
 			numericCfg("inside_temp", "gte", 22.5),
-			&models.VehicleState{InsideTemp: 23.7},
+			&vehiclemodel.VehicleState{InsideTemp: 23.7},
 			"inside_temp 23.7 >= 22.5",
 		},
 		{
 			"numeric lte zero",
 			numericCfg("outside_temp", "lte", 0),
-			&models.VehicleState{OutsideTemp: -3},
+			&vehiclemodel.VehicleState{OutsideTemp: -3},
 			"outside_temp -3 <= 0",
 		},
 	}
@@ -623,67 +623,67 @@ func TestStateCheck_EndToEnd(t *testing.T) {
 	tests := []struct {
 		name    string
 		json    string
-		state   *models.VehicleState
+		state   *vehiclemodel.VehicleState
 		wantMet bool
 	}{
 		{
 			"battery gt 20, level is 45",
 			`{"type": "state_check", "field": "battery_level", "operator": "gt", "value": 20}`,
-			&models.VehicleState{BatteryLevel: 45},
+			&vehiclemodel.VehicleState{BatteryLevel: 45},
 			true,
 		},
 		{
 			"battery gt 20, level is 10",
 			`{"type": "state_check", "field": "battery_level", "operator": "gt", "value": 20}`,
-			&models.VehicleState{BatteryLevel: 10},
+			&vehiclemodel.VehicleState{BatteryLevel: 10},
 			false,
 		},
 		{
 			"is_locked eq true, locked",
 			`{"field": "is_locked", "operator": "eq", "value": true}`,
-			&models.VehicleState{IsLocked: true},
+			&vehiclemodel.VehicleState{IsLocked: true},
 			true,
 		},
 		{
 			"is_locked eq true, unlocked",
 			`{"field": "is_locked", "operator": "eq", "value": true}`,
-			&models.VehicleState{IsLocked: false},
+			&vehiclemodel.VehicleState{IsLocked: false},
 			false,
 		},
 		{
 			"state eq online, is online",
 			`{"field": "state", "operator": "eq", "value": "online"}`,
-			&models.VehicleState{State: "online"},
+			&vehiclemodel.VehicleState{State: "online"},
 			true,
 		},
 		{
 			"state neq asleep, is online",
 			`{"field": "state", "operator": "neq", "value": "asleep"}`,
-			&models.VehicleState{State: "online"},
+			&vehiclemodel.VehicleState{State: "online"},
 			true,
 		},
 		{
 			"sentry_mode neq false, sentry on",
 			`{"field": "sentry_mode", "operator": "neq", "value": false}`,
-			&models.VehicleState{SentryMode: true},
+			&vehiclemodel.VehicleState{SentryMode: true},
 			true,
 		},
 		{
 			"speed lte 120, speed is 88",
 			`{"field": "speed", "operator": "lte", "value": 120}`,
-			&models.VehicleState{Speed: 88},
+			&vehiclemodel.VehicleState{Speed: 88},
 			true,
 		},
 		{
 			"inside_temp gte 22, temp is 22",
 			`{"field": "inside_temp", "operator": "gte", "value": 22}`,
-			&models.VehicleState{InsideTemp: 22},
+			&vehiclemodel.VehicleState{InsideTemp: 22},
 			true,
 		},
 		{
 			"outside_temp lt 0, temp is -5",
 			`{"field": "outside_temp", "operator": "lt", "value": 0}`,
-			&models.VehicleState{OutsideTemp: -5},
+			&vehiclemodel.VehicleState{OutsideTemp: -5},
 			true,
 		},
 	}

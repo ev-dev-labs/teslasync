@@ -6,7 +6,7 @@ import { ApiError } from '@/lib/resilience'
 import { QueryError } from '../QueryError'
 
 /**
- * Phase-45 / Prompt 20 — QueryError branch contract.
+ * QueryError branch contract.
  *
  * The component must surface different recovery copy + CTAs based on
  * `ApiError.status` so users know whether the failure is auth, server,

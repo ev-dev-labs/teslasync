@@ -6,7 +6,6 @@ export { InfrastructureSection } from './InfrastructureSection';
 export { DataPipelineSection } from './DataPipelineSection';
 export { OperationsSection } from './OperationsSection';
 
-// Phase 2 additions
 export { AnomalyInlineRow } from './AnomalyInlineRow';
 export { BackgroundWorkersCard } from './BackgroundWorkersCard';
 export { BackupActionsCard } from './BackupActionsCard';

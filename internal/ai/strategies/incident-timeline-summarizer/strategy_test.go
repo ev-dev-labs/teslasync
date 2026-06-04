@@ -1,13 +1,5 @@
-// Phase-50 / 0042 — S1 Incident timeline summarizer.
-//
-// Unit tests for the incident-timeline-summarizer Strategy. Mirrors
-// the shape of lifetime-stats-qa's strategy_test.go (the closest
-// precedent: a tools+RAG-style narrator strategy with a deny-all
-// redaction policy). The Strategy is a pure value (no internal
-// state, no IO) so the tests are tight: pin the feature ID + system
-// prompt + tool whitelist + redaction policy shape so a future edit
-// that breaks the contract surfaces here before the dispatcher
-// silently changes behaviour.
+// Unit tests pin the incident timeline summarizer strategy's public
+// contract: feature ID, system prompt, tool whitelist, and redaction policy.
 
 package incidenttimelinesummarizer
 
@@ -131,7 +123,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs preferred-greeting or preferred-unit-
+// future change that needs preferred-greeting or preferred-unit-
 // display preferences ships.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
@@ -146,12 +138,11 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 }
 
 // TestStrategy_RedactionPolicyChatbot proves the strategy hands the
-// dispatcher PolicyChatbot wrapped through the F4↔F8 adapter.
+// dispatcher PolicyChatbot wrapped through the redaction adapter.
 // PolicyChatbot is the DENY-BY-DEFAULT policy: Allow == nil so EVERY
 // PII class — VIN, lat/long, addresses, place names, AND
-// vehicle-name — is tagged round-trip. The slice prompt explicitly
-// mandates "Allowed classes: none; logs are redacted before
-// summarization."
+// vehicle-name — is tagged round-trip because logs are redacted before
+// summarization.
 func TestStrategy_RedactionPolicyChatbot(t *testing.T) {
 	t.Parallel()
 	s := New()

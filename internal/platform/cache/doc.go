@@ -2,8 +2,6 @@
 //
 // Layer: platform
 //
-// DEPRECATED per ADR-007: new code belongs in internal/cache (the
-// canonical home, 4 .go files). Existing symbols here remain
-// functional; consolidation tracked in phase-48 (see
-// docs/architecture/platform-consolidation-todo.md).
+// Deprecated: new code belongs in internal/cache. Existing symbols here
+// remain functional until platform consolidation is complete.
 package cache

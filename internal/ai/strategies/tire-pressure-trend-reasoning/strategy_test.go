@@ -1,5 +1,3 @@
-// Phase-50 / 0033 — T3 Tire-pressure trend reasoning.
-//
 // Unit tests for the tire-pressure-trend-reasoning Strategy.
 // Mirrors the shape of cabin-temperature-impact-narrative's
 // strategy_test.go (the closest precedent: single read-only
@@ -140,9 +138,8 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
-// the strategy must not contribute extra prefix messages until a
-// future slice that needs preferred-trend-window preferences
-// ships.
+// the strategy must not contribute extra prefix messages until
+// preferred-trend-window preferences need them.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -157,12 +154,10 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 
 // TestStrategy_RedactionPolicyTirePressureTrendReasoning
 // proves the strategy hands the dispatcher
-// PolicyTirePressureTrendReasoning wrapped through the F4↔F8
-// adapter. PolicyTirePressureTrendReasoning allows
-// ClassVehicleName so the narration can address the user's car;
-// every other PII class is redacted to a round-trip tag. The
-// slice prompt explicitly mandates a PolicyDigest-shaped
-// allow-list with round-trip tags.
+// PolicyTirePressureTrendReasoning wrapped through the redaction
+// adapter. PolicyTirePressureTrendReasoning allows ClassVehicleName
+// so the narration can address the user's car; every other PII class
+// is redacted to a round-trip tag.
 func TestStrategy_RedactionPolicyTirePressureTrendReasoning(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -214,8 +209,6 @@ func TestStrategy_EvalGoldensReturnsNil(t *testing.T) {
 		t.Fatalf("EvalGoldens() = %v, want nil (goldens live in YAML)", g)
 	}
 }
-
-// --- helpers ---------------------------------------------------------
 
 func contains(s, sub string) bool {
 	return len(s) >= len(sub) && (s == sub || indexOf(s, sub) >= 0)

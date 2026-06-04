@@ -1,12 +1,7 @@
-// Phase-50 / 0057 — PU1 Natural-language SQL playground.
-// Phase-50 / W1 inline wiring (per slice prompt 0057) — wires the
-// "Draft SQL" button to POST /api/v1/ai/power/sql/draft via the
-// canonical useAiStream hook. The slice methodology forbids
-// shipping the visual affordance without end-to-end SSE wiring;
-// this component lands both in one commit so the on-mode wiring
-// test (TestNlSqlPlaygroundAIOnWiredCallsRoute) can prove the
-// button actually opens an SSE stream against the registered
-// backend route.
+// Natural-language SQL playground AI surface.
+// The "Draft SQL" button POSTs to /api/v1/ai/power/sql/draft through
+// useAiStream, and the wiring test verifies that it opens an SSE stream
+// against the registered backend route.
 //
 // AINLSqlPlayground is the visible AI surface for the /power/sql
 // page. It is rendered conditionally via
@@ -30,7 +25,7 @@
 // user; this AI section is opt-in propose-only suggestion layered
 // alongside.
 //
-// Render contract (P11/P12 — Wired-or-absent, No-placeholder-buttons):
+// Render contract:
 //   - useAiStream is called unconditionally at the top of the body
 //     (Hooks-rules safe).
 //   - The Draft button's disabled prop is a COMPUTED expression

@@ -1,12 +1,9 @@
 // Package slo provides the runtime SLO tracker for TeslaSync.
 //
-// Phase-46 / p46-slo. The codegen toolkit at cmd/slogen renders Prometheus
-// recording rules, multi-window multi-burn-rate alerts, and Grafana
-// dashboards from slo/catalog.yaml at build time. This package consumes
-// the same catalogue at runtime so the SPA can show a live SLO board
-// inside TeslaSync — same source of truth, same SLI expressions, no
-// drift between operators looking at Grafana and admins looking at the
-// admin/observability/slo page.
+// The codegen toolkit at cmd/slogen renders Prometheus recording rules,
+// multi-window multi-burn-rate alerts, and Grafana dashboards from
+// slo/catalog.yaml at build time. This package consumes the same catalogue at
+// runtime so Grafana and the admin SLO page use the same source of truth.
 //
 // Three primitives:
 //

@@ -2,7 +2,7 @@
  * Metric semantics — single source of truth for "is going up good or bad?"
  * across every Delta indicator in the app.
  *
- * Phase-40 / Prompt 45 — see `web/src/components/data-display/Delta.tsx`.
+ * See `web/src/components/data-display/Delta.tsx`.
  */
 
 /**

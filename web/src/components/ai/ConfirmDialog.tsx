@@ -1,4 +1,4 @@
-// Phase-50 / 0005 — F4 AI Tool-Use Framework.
+// AI tool-use confirmation dialog.
 //
 // AiConfirmDialog renders the user-facing confirmation prompt for a
 // dispatcher-paused mutating tool call. Distinct from the generic
@@ -7,19 +7,13 @@
 // audit context, so the user can verify the AI is about to do
 // exactly what they expect before approving.
 //
-// ADR-015 invariants
-// ------------------
-//   §I1  Default-off          — the dialog renders only when its
-//                                parent (a Strategy-mounted page)
-//                                says open=true. Off mode never
-//                                instantiates the parent.
-//   §I3  Baseline intact      — the user has explicit Confirm/Cancel
-//                                affordances; nothing fires
-//                                automatically.
-//   §I9  Provenance visible   — the tool name and the JSON arguments
-//                                the LLM emitted are rendered
-//                                verbatim. The user can see exactly
-//                                what is about to happen.
+// Safety contract
+// ---------------
+//   - The dialog renders only when its parent says open=true.
+//   - The user has explicit Confirm/Cancel affordances; nothing fires
+//     automatically.
+//   - The tool name and JSON arguments are rendered verbatim so the
+//     user can inspect exactly what is about to happen.
 //
 // The dialog is i18n-aware via react-i18next; English fallbacks are
 // inlined so a missing locale key never strands the UI in

@@ -1,6 +1,6 @@
 package v1
 
-// Phase-45 — GDPR data-subject export handler.
+// GDPR data-subject export handler.
 //
 // Three routes:
 //   POST   /admin/gdpr/exports          — kick off a new export (queued state)

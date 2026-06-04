@@ -129,11 +129,10 @@ func New(cfg provider.ProviderConfig, opts ...Option) (*Adapter, error) {
 // Builder is the registry-compatible factory for [Adapter].
 func Builder(cfg provider.ProviderConfig) (provider.Provider, error) { return New(cfg) }
 
-// Name implements [provider.Provider].
 func (a *Adapter) Name() string { return provider.NameAzure }
 
-// Capabilities implements [provider.Provider]. Both Azure flavors
-// support tools + streaming. Embeddings advertised true; the per-call
+// Both Azure flavors support tools and streaming. Embeddings are
+// advertised true; the per-call
 // path returns an error when no embedding deployment / model is
 // configured.
 func (a *Adapter) Capabilities() provider.Capabilities {
@@ -145,7 +144,6 @@ func (a *Adapter) Capabilities() provider.Capabilities {
 	}
 }
 
-// Chat implements [provider.Provider] non-streaming completion.
 func (a *Adapter) Chat(ctx context.Context, req provider.ChatRequest) (*provider.ChatResponse, error) {
 	endpoint, modelInBody, err := a.chatEndpoint(req)
 	if err != nil {
@@ -175,7 +173,6 @@ func (a *Adapter) Chat(ctx context.Context, req provider.ChatRequest) (*provider
 	return wire.toChatResponse(), nil
 }
 
-// Stream implements [provider.Provider] streaming completion.
 func (a *Adapter) Stream(ctx context.Context, req provider.ChatRequest) (<-chan provider.Chunk, error) {
 	endpoint, modelInBody, err := a.chatEndpoint(req)
 	if err != nil {
@@ -204,8 +201,7 @@ func (a *Adapter) Stream(ctx context.Context, req provider.ChatRequest) (<-chan 
 	return out, nil
 }
 
-// Embed implements [provider.Provider] for the Azure embeddings
-// route. URL shape depends on flavor:
+// Embed uses the Azure embeddings route. URL shape depends on flavor:
 //
 //   - OpenAI flavor:  {base}/openai/deployments/{depl}/embeddings?api-version=...
 //   - Foundry flavor: {base}/embeddings?api-version=... (model in body)
@@ -381,7 +377,7 @@ func (a *Adapter) newRequest(ctx context.Context, method, urlStr string, body io
 	return req, nil
 }
 
-// --- wire types --------------------------------------------------------
+// Wire types.
 //
 // Mirror openai/openai.go because Azure's chat completions JSON shape
 // is identical to OpenAI's. Re-declared here (rather than imported)
@@ -470,9 +466,8 @@ func encodeChatRequest(req provider.ChatRequest, modelInBody string, stream bool
 	wireMsgs := make([]azureWireMsg, 0, len(req.Messages))
 	for _, m := range req.Messages {
 		wm := azureWireMsg{Role: m.Role, Content: m.Content, Name: m.Name, ToolCallID: m.ToolID}
-		// Legacy singular tool field — still honored for callers
-		// (mostly tests + pre-Phase-50 code) that built Message
-		// values by hand.
+		// Legacy singular tool field, still honored for callers that build
+		// Message values by hand.
 		if m.Tool != nil {
 			tc := azureWireToolCall{ID: m.Tool.ID, Type: "function"}
 			tc.Function.Name = m.Tool.Name

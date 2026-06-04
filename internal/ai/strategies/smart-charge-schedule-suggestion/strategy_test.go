@@ -1,4 +1,4 @@
-// Phase-50 / 0026 — C1 Smart-charge schedule suggestion.
+// Smart-charge schedule suggestion strategy tests.
 //
 // Unit tests for the smart-charge-schedule-suggestion Strategy.
 // Mirrors the shape of trip-planner-llm-agent's strategy_test.go
@@ -140,7 +140,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs preferred-rate-plan preferences ships.
+// future feature needs preferred-rate-plan preferences.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -158,7 +158,7 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 // wrapped through the F4↔F8 adapter.
 // PolicySmartChargeScheduleSuggestion allows ClassVehicleName so the
 // narration can address the user's car; every other PII class is
-// redacted to a round-trip tag. The slice prompt explicitly mandates
+// redacted to a round-trip tag. The feature requirements explicitly mandate
 // a PolicyDigest-shaped allow-list and "home/work locations remain
 // tagged".
 func TestStrategy_RedactionPolicySmartChargeScheduleSuggestion(t *testing.T) {
@@ -190,7 +190,7 @@ func TestStrategy_RedactionPolicySmartChargeScheduleSuggestion(t *testing.T) {
 	// Defence-in-depth: the allow-list must NOT include lat/long
 	// or street addresses — the narration describes the schedule
 	// by start_time / end_time / target_soc / cost (tagged), not
-	// by exact coordinates, and the slice prompt says
+	// by exact coordinates, and the feature requirements says
 	// "home/work locations remain tagged".
 	for _, c := range want.Allow {
 		switch c {

@@ -12,14 +12,11 @@ import {
 } from '@/lib/columnOrderStore'
 
 /**
- * Phase-46 / Prompt 45 — Combined column visibility + reorder menu.
- *
+ * Combined column visibility and reorder menu.
  * This supersedes `DataTableColumnsMenu` for tables that opt into either
  * `columnVisibility` or `columnReorder`. Renders an icon-button trigger
  * + popover with one row per column:
- *
  *   [✓] Header                         ↑   ↓
- *
  * - Checkbox toggles visibility (with the same "at least one must stay
  *   visible" guardrail as the legacy menu).
  * - ↑ / ↓ buttons are the keyboard fallback for drag-to-reorder; they
@@ -27,7 +24,6 @@ import {
  * - "Reset to defaults" button at the bottom clears the persisted layout
  *   so the table reverts to its source-defined order + `defaultVisible`
  *   visibility.
- *
  * The component is deliberately storage-agnostic — DataTable owns the
  * `localStorage` round-trip and feeds us the current `layout` + a
  * controlled `onChange`.

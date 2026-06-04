@@ -1,6 +1,6 @@
 package middleware
 
-// Phase-45 / Prompt 5 — Per-route query budget enforcement.
+// Per-route query budget enforcement.
 //
 // The middleware attaches a per-request query counter to the request
 // context. The database tracer increments it on every Query/QueryRow.
@@ -16,7 +16,14 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	// Grandfathered exception: this middleware exposes a per-request
+	// pgx query counter primitive whose underlying counter lives in
+	// internal/database/query_budget.go. Mirrored in
+	// internal/arch/rules.go AllowedExceptions and
+	// tools/archmetrics/main.go baseline. The proper fix is to extract
+	// the counter primitive to internal/platform/dbobserver/; until then,
+	// depguard's `handler` rule is suppressed via the directive below.
+	"github.com/ev-dev-labs/teslasync/internal/database" //nolint:depguard // ADR-A3: see comment above
 )
 
 // QueryBudgets maps `<METHOD> <route-pattern>` (chi pattern, e.g.

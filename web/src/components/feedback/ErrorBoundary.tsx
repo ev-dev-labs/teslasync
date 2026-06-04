@@ -56,8 +56,8 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    // Phase 46 / Prompt 01: forward the captured error to the central
-    // reporter BEFORE any recovery logic so it ships even if the
+    // Forward the captured error to the central reporter BEFORE any
+    // recovery logic so it ships even if the
     // chunk-load reload below succeeds (and tears down the page).
     reportFrontendError(error, 'react')
 
@@ -69,7 +69,7 @@ export class ErrorBoundary extends Component<Props, State> {
       retryCount: this.state.retryCount,
     })
 
-    // Phase-45 / Prompt 11 — Stale-chunk recovery.
+    // Stale-chunk recovery.
     //
     // A ChunkLoadError almost always means the server has redeployed and the
     // hashed asset the SPA tried to fetch no longer exists. The default

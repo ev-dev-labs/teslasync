@@ -75,7 +75,7 @@ export function windowTextClass(state: WindowState): string {
 /* ------------------------------------------------------------------ */
 
 export function doorClosed(state: unknown): boolean {
-  // Native types — backend may emit DoorState as bool/object after Phase-42a.
+  // Backend may emit DoorState as bool/object.
   if (state == null) return true;
   if (typeof state === 'boolean') return !state;
   if (typeof state === 'number') return state === 0;
@@ -134,7 +134,7 @@ export function timeSince(iso: string | null | undefined): string {
 /* ------------------------------------------------------------------ */
 
 /** Returns true if the SentryMode value means armed (any non-Off state).
- *  Accepts native bool (Phase-42a backend) and string enum values. */
+ *  Accepts native bool and string enum values. */
 export function isSentryActive(val: unknown): boolean {
   if (typeof val === 'boolean') return val;
   const raw = asNonEmptyString(val);

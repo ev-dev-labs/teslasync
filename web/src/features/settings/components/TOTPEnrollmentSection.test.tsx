@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 35 — TOTPEnrollmentSection contract.
+ * TOTPEnrollmentSection contract.
  *
  * Coverage:
  *   1. Open mode (status.mode='open') renders the inline placeholder

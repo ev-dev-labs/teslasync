@@ -1,13 +1,5 @@
-// Phase-50 / 0030 — C5 Vampire-drain explanation.
-//
-// Unit tests for the vampire-drain-explanation Strategy. Mirrors
-// the shape of cost-forecast-narration's strategy_test.go (the
-// closest precedent: single read-only narrator strategy, plus one
-// optional retrieval tool). The Strategy is a pure value (no
-// internal state, no IO) so the tests are tight: pin the feature
-// ID + system prompt + tool whitelist + redaction policy shape so
-// a future edit that breaks the contract surfaces here before the
-// dispatcher silently changes behaviour.
+// Unit tests pin the vampire-drain explanation strategy's public
+// contract: feature ID, system prompt, tool whitelist, and redaction policy.
 
 package vampiredrainexplanation
 
@@ -52,10 +44,8 @@ func TestStrategy_System(t *testing.T) {
 		"ALWAYS call query_vampire_drain_windows FIRST",
 		"Do NOT invent windows",
 		"never invent ambient temperatures",
-		// Honest-uncertainty directives — the slice prompt's
-		// rubber-duck critique flagged that "caused by" was
-		// too strong; the prompt MUST insist on the
-		// correlational nature of the inference.
+		// Honest-uncertainty directives — "caused by" is too strong here; the prompt must
+		// frame the inference as correlational.
 		"appears correlated with",
 		"CORRELATIONAL",
 		// Honest-insufficient-data directive — when
@@ -142,7 +132,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs preferred-parking-pattern preferences
+// future change that needs preferred-parking-pattern preferences
 // ships.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
@@ -158,11 +148,10 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 
 // TestStrategy_RedactionPolicyVampireDrainExplanation proves the
 // strategy hands the dispatcher PolicyVampireDrainExplanation
-// wrapped through the F4↔F8 adapter.
+// wrapped through the redaction adapter.
 // PolicyVampireDrainExplanation allows ClassVehicleName so the
 // narration can address the user's car; every other PII class is
-// redacted to a round-trip tag. The slice prompt explicitly
-// mandates a PolicyDigest-shaped allow-list with round-trip tags.
+// redacted to a round-trip tag. The policy intentionally mirrors the digest allow-list with round-trip tags.
 func TestStrategy_RedactionPolicyVampireDrainExplanation(t *testing.T) {
 	t.Parallel()
 	s := New()

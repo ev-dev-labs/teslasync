@@ -10,8 +10,8 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
-	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 	unithistory "github.com/ev-dev-labs/teslasync/internal/tesla/unit_history"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 )
 
 // ErrNoUnitContext is the normalize-package sentinel returned by

@@ -1,4 +1,4 @@
-// Phase-50 / 0064 — ML3 Charging-curve fingerprint clustering statistical model.
+// Charging-curve fingerprint clustering strategy tests.
 //
 // Unit tests for the ml-charging-curve-clustering Strategy. Mirrors
 // the shape of range-prediction-model strategy_test.go. The
@@ -63,9 +63,9 @@ func TestStrategy_System(t *testing.T) {
 
 // TestStrategy_Tools pins the exact whitelist AND the prescribed
 // order: train_charge_curve_clusters FIRST, then
-// query_charge_curve_clusters. The slice prompt's Action Steps list
-// the tools in this exact order
-// ("train_charge_curve_clusters;query_charge_curve_clusters").
+// query_charge_curve_clusters. The strategy contract requires
+// this exact tool order: train_charge_curve_clusters, then
+// query_charge_curve_clusters.
 // Reversing them silently produces a confused narration that quotes
 // the fallback as if it were the learned proposal — the eval
 // harness loads the same list from goldens.yaml.
@@ -127,7 +127,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs preferred-window preferences ships.
+// future feature that needs preferred-window preferences ships.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -141,12 +141,11 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 }
 
 // TestStrategy_RedactionPolicyChatbot proves the strategy hands the
-// dispatcher PolicyChatbot wrapped through the F4↔F8 adapter.
+// dispatcher PolicyChatbot wrapped through the redaction adapter.
 // PolicyChatbot is the project-wide deny-all-tagged policy: every
 // PII class is converted into a round-trip tag before the LLM call
-// (Allow: nil, Mode: ModeRedactedTags). The slice prompt explicitly
-// mandates "Allowed classes: none; training is local and does not
-// require provider egress".
+// (Allow: nil, Mode: ModeRedactedTags). Training is local and does
+// not require provider egress.
 func TestStrategy_RedactionPolicyChatbot(t *testing.T) {
 	t.Parallel()
 	s := New()

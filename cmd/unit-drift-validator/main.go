@@ -37,10 +37,10 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
 )
 
-// version is overwritten at build time via -ldflags '-X main.version=X.Y.Z'.
 var version = "dev"
 
 // operatorTokenEnv is the credential gate. Identical sentinel to
@@ -104,7 +104,7 @@ func run(argv []string, stdout, stderr io.Writer) int {
 	}
 	defer db.Close()
 
-	vehicleRepo := database.NewVehicleRepo(db)
+	vehicleRepo := vehicledb.NewVehicleRepo(db)
 	v := worker.NewUnitDriftValidator(db, vehicleRepo)
 
 	opts := worker.Options{

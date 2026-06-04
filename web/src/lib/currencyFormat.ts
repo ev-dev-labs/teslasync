@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 49 — Currency formatting & parsing helpers.
+ * Currency formatting and parsing helpers.
  *
  * Pure helpers for the shared `<CurrencyInput>` primitive. Two directions:
  *

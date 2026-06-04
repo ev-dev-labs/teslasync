@@ -244,7 +244,7 @@ export function useGeocodeSearch(query: string, enabled = true) {
 }
 
 /**
- * Result envelope for the standardized bulk endpoints (Phase-40 / Prompt 51).
+ * Result envelope for the standardized bulk endpoints.
  * Exactly one of `deleted` / `updated` is populated to match the verb of the
  * underlying endpoint; `failed` enumerates per-id failures with a stable
  * machine-readable reason ("not_found", "forbidden").

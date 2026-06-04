@@ -1,12 +1,10 @@
-// Phase-50 / 0054 — P3 Helix safety setting explainer.
-//
-// `TestSafetySettingExplainerAIOffShowsStaticHelpOnly` (the
-// Vitest sibling to the Go test of the same name) is the
-// slice's load-bearing AI-OFF contract proof on the React side.
+// Helix safety setting explainer.
+// `TestSafetySettingExplainerAIOffShowsStaticHelpOnly` is the
+// React-side AI-OFF contract proof that complements the Go test of
+// the same name.
 // It mounts the FULL `/settings/safety` SafetyPage with
 // ai_mode='off' (plus the per-feature toggle on, to defeat the
 // obvious "off because nothing is enabled" path) and asserts:
-//
 //   1. The deterministic baseline listing of safety-related
 //      settings renders — every row is present with its current
 //      value visible, every row's docs link renders. This is the
@@ -22,7 +20,6 @@
 //      This is the positive control that proves the gate
 //      actually works (otherwise the "absent in off mode"
 //      assertion is trivially true).
-//
 // The HTTP POST /api/v1/ai/settings/safety/explain
 // 404-in-off-mode invariant is proven by the Go-side
 // TestSafetySettingExplainerAIOffShowsStaticHelpOnly in
@@ -30,10 +27,9 @@
 // the network layer does not exist in the React unit-test
 // scope. The "static help only" semantic refers to this page's
 // canonical baseline rendering of the safety-related settings.
-//
 // File name MUST stay
 // `TestSafetySettingExplainerAIOffShowsStaticHelpOnly.test.tsx`
-// — the slice prompt's verification command runs
+// — the verification command runs
 // `vitest --run TestSafetySettingExplainerAIOffShowsStaticHelpOnly`,
 // where the positional pattern is matched against the file PATH.
 

@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 68 — Inline-help allowlist.
+ * Inline-help allowlist.
  *
  * i18n keys for form-field labels that are explicitly "no-help-needed" —
  * either the field name is universally understood (e.g. "Name", "Email")

@@ -3,7 +3,7 @@ import { deriveSessionState, SESSION_EXPIRING_THRESHOLD_S } from '../useSessionM
 import type { SessionInfo } from '@/api/types'
 
 /**
- * Phase-46 / Prompt 05 — useSessionMonitor unit tests.
+ * useSessionMonitor unit tests.
  *
  * The hook itself is a thin wrapper around useQuery + a 1Hz tick.
  * The non-trivial logic is in {@link deriveSessionState}, which is

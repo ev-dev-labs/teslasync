@@ -171,8 +171,8 @@ func TestUnknown_PollingData_TransitionsToPollingOnly(t *testing.T) {
 
 func TestPollingOnly_StreamingData_TransitionsToStreaming(t *testing.T) {
 	f := New(1, "VIN001")
-	f.RecordBatch(5, "fleet_api")          // unknown → polling_only
-	f.RecordBatch(10, "fleet_telemetry")   // polling_only → streaming
+	f.RecordBatch(5, "fleet_api")        // unknown → polling_only
+	f.RecordBatch(10, "fleet_telemetry") // polling_only → streaming
 	if f.State() != Streaming {
 		t.Fatalf("expected Streaming, got %s", f.State())
 	}
@@ -180,8 +180,8 @@ func TestPollingOnly_StreamingData_TransitionsToStreaming(t *testing.T) {
 
 func TestPollingOnly_MorePollingData_StaysPollingOnly(t *testing.T) {
 	f := New(1, "VIN001")
-	f.RecordBatch(5, "fleet_api")  // unknown → polling_only
-	f.RecordBatch(3, "fleet_api")  // stays polling_only (not fleet_telemetry)
+	f.RecordBatch(5, "fleet_api") // unknown → polling_only
+	f.RecordBatch(3, "fleet_api") // stays polling_only (not fleet_telemetry)
 	if f.State() != PollingOnly {
 		t.Fatalf("expected PollingOnly, got %s", f.State())
 	}

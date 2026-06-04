@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Phase-46 / Prompt 24 — TagInput adoption audit (tripwire).
+// TagInput adoption audit (tripwire).
 //
 // Walks `web/src/**/*.tsx` and fails if any feature page hand-rolls
 // the canonical free-text-tag-chip pattern instead of using the shared

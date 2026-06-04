@@ -258,7 +258,7 @@ export default function ClimateControlPage() {
   // °C scalar directly and returns the user-pref display value.
   const toTemperatureDisplay = (celsius: number) => convertTempFromSI(celsius, tempUnit);
 
-  /* ─── Vehicle selector — Phase 40 / Prompt 16: header VehiclePicker is the source of truth ─── */
+  /* ─── Vehicle selector: header VehiclePicker is the source of truth ─── */
   const { vehicleId } = useSelectedVehicle();
   const activeId = vehicleId != null ? String(vehicleId) : '';
 
@@ -448,7 +448,7 @@ export default function ClimateControlPage() {
         </div>
       }
     >
-      {/* ─── AI: Preheat / Precool recommender (Phase-50 / 0031, T1) ─── */}
+      {/* ─── AI: Preheat / Precool recommender ─── */}
       {/* Hidden entirely when ai_mode='off' or the per-feature toggle is off */}
       {/* via the withAiFeature HOC; renders an opt-in propose-only section */}
       {/* above the deterministic HVAC banner when enabled. */}

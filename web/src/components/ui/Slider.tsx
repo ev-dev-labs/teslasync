@@ -49,8 +49,7 @@ export interface SliderProps {
  * Layout: matches `<Input>`/`<Select>` (md size) — same label style
  * (`text-sm text-secondary`) and same overall row height so a Slider
  * dropped into a form grid alongside other controls aligns vertically.
- *
- * Phase-46 / Prompt 23.
+
  */
 export const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
   {

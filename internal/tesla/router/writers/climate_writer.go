@@ -9,17 +9,12 @@ import (
 )
 
 // climateColumnByField is the static field→column map for destination
-// climate_snapshot. Built at file-edit time from routing.yaml entries
-// with `dest: climate_snapshot` (31 routes — see the AUDIT_EVIDENCE
-// section of phase-42a/0012's log for the verbatim extraction).
+// climate_snapshot. It mirrors routing.yaml entries with `dest:
+// climate_snapshot`.
 //
-// Per phase-42a prompt 0012 Decision #3 this map is a static var, NOT
-// a runtime read of routing.yaml: the routing layer's loader already
-// validated every entry at process start, the per-payload hot path
-// must not re-parse a 1000-line YAML file, and a compile-time
-// declaration here lets the reflective coverage test in
-// climate_writer_test.go catch any drift between routing.yaml and this
-// file at CI time rather than at the first Write call.
+// This map is static rather than read from routing.yaml at runtime: the
+// routing loader already validates every entry at process start, the hot path
+// must not re-parse YAML, and the reflective coverage test catches drift in CI.
 //
 // New routes are added by:
 //
@@ -64,8 +59,8 @@ var climateColumnByField = map[string]string{
 	"WiperHeatEnabled":                        "wiper_heat_enabled",
 }
 
-// climateColumnFor is the columnFor callback supplied to snapshotWriter
-// per phase-42a prompt 0012 Decision #2. Closes over climateColumnByField
+// climateColumnFor is the columnFor callback supplied to snapshotWriter. It
+// closes over climateColumnByField
 // so the snapshot helper has a single source-of-truth lookup; ok=false
 // is returned for any field NOT routed here (the snapshot helper then
 // errors out loudly per its drop-loud contract — see snapshot_base.go's
@@ -76,8 +71,7 @@ func climateColumnFor(field string) (string, bool) {
 }
 
 // NewClimateWriter constructs the production climate snapshot writer.
-// Returns the router.Writer for destination climate_snapshot
-// (constructor signature is locked by phase-42a prompt 0012 Decision #1).
+// Returns the router.Writer for destination climate_snapshot.
 //
 // Composes the unexported snapshotWriter from snapshot_base.go: the
 // table is "climate_snapshots" (matches migration 000183) and the

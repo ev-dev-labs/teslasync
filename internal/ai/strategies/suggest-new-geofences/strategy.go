@@ -1,21 +1,19 @@
-// Package suggestnewgeofences is the Phase-50 / G2 strategy for the
-// LLM-assisted "suggest new geofences" surface.
+// Package suggestnewgeofences provides the LLM-assisted geofence
+// suggestion strategy.
 //
 // The strategy declares:
 //
 //   - the system prompt that frames the suggestion as a propose-only
-//     assistant — produce a structured geofence proposal via the F4
+//     assistant — produce a structured geofence proposal via typed
 //     tools, do NOT save anything, NEVER write SQL, refuse
 //     cross-vehicle / cross-user requests, refuse to modify existing
 //     geofences without explicit confirmation;
 //   - the two propose-only tools the LLM is allowed to call —
 //     `draft_geofence` and `validate_geofence` — both of which read
-//     the *models.VisitedLocation aggregate the user already sees in
+//     the *geomodel.VisitedLocation aggregate the user already sees in
 //     /geofences and run a deterministic geofence-shape validation
-//     pass. The actual persistence flows through the user's explicit
-//     confirmation in the GeofencesPage UI (the slice prompt:
-//     "without creating them autonomously"), which lands as the user
-//     clicks the existing baseline "Add Geofence" Save button —
+//     pass. Persistence only happens after the user explicitly clicks
+//     the existing "Add Geofence" Save button in the GeofencesPage UI;
 //     this strategy ships zero write paths;
 //   - the redaction policy (`PolicySuggestNewGeofences`) which allows
 //     ClassVehicleName so the proposed name can reasonably include a
@@ -34,11 +32,6 @@
 // unchanged. Manual geofence creation through the existing modal
 // remains the canonical baseline; off-mode users never see the AI
 // surface at all (ADR-015 §I3, §I5, §I6).
-//
-// Service-worker chunks: this slice's frontend code is loaded under
-// the page-bundle for /geofences; the off-mode walker validates
-// code chunks via the `withAiFeature` HOC + the AI_FEATURES map.
-// See the slice log for the documented mapping.
 //
 // ADR-015 alignment:
 //
@@ -105,7 +98,7 @@ const FeatureID = "suggest-new-geofences"
 //     Suggested names should be generic descriptors (e.g.
 //     "Frequent Stop — South Lake Union", "Weekend Spot",
 //     "Work parking") rather than coordinate pairs or numbered
-//     street addresses; the typed F4 tool envelope (NOT the prose)
+//     street addresses; the typed tool envelope, not prose,
 //     is what carries the centroid + radius back to the SPA.
 const SystemPrompt = `You are the TeslaSync geofence-suggestion assistant. ` +
 	`Your job is to PROPOSE a typed geofence draft (centroid lat/lon, radius in meters, human-readable name) for ONE existing visited location based on its visit evidence (current address_name, visit_count, total_duration_s, last_visited); you NEVER save anything yourself. ` +
@@ -178,14 +171,11 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicySuggestNewGeofences wrapped through the F4↔F8 adapter so the
-// dispatcher's per-request ctx-installation step (dispatch.Run installs
-// the policy via redact.WithPolicy) sees the concrete policy.
+// PolicySuggestNewGeofences through the redaction adapter so the
+// dispatcher's per-request policy installation sees the concrete policy.
 //
-// Per the slice prompt: "Policy: PolicyDigest from
-// internal/ai/redact/policies.go. Allowed classes: ClassVehicleName
-// only; coordinates remain tagged until user confirmation".
-// PolicySuggestNewGeofences is the per-feature constructor with the
+// PolicySuggestNewGeofences allows only ClassVehicleName; coordinates
+// remain tagged until user confirmation. It is the per-feature constructor with the
 // same allow-list as PolicyDigest — kept as a distinct identifier so a
 // future per-feature change to suggest-new-geofences' allow-list does
 // not bleed across to the digest, auto-name-unnamed-locations, or

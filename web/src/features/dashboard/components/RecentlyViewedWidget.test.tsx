@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 51 — RecentlyViewedWidget tests.
+ * RecentlyViewedWidget tests.
  *
  * The widget is a thin presentation layer on top of `lib/recentPages`,
  * so the tests focus on:

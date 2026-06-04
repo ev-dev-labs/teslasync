@@ -8,14 +8,11 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// Phase-46 / Prompt 19 — quiet-hours / Do-Not-Disturb decision logic.
-//
-// The dispatcher (Worker.processNotification) consults a QuietHoursDecider
-// before delivering each notification. When a window is active for the
-// notification's severity, the row is logged with status=deferred_dnd
-// and delivery is skipped. The replay loop in cmd/notification-worker
-// picks up deferred rows once their causing window ends and dispatches
-// them through the same MQTT pipeline.
+// Quiet-hours logic suppresses notification delivery during active
+// Do-Not-Disturb windows. Worker.processNotification logs suppressed
+// rows with status=deferred_dnd; the replay loop in cmd/notification-worker
+// picks them up once the causing window ends and dispatches them through
+// the same MQTT pipeline.
 
 // StatusDeferredDND is the notification_logs.status value the
 // dispatcher writes when a Do-Not-Disturb window suppressed delivery.
@@ -35,7 +32,7 @@ type QuietHoursDecider interface {
 }
 
 // QuietHoursLister is the narrow read surface the decider needs. The
-// production implementation is *database.QuietHoursRepo (its
+// production implementation is *quiethoursdb.QuietHoursRepo (its
 // ListEnabled method).
 type QuietHoursLister interface {
 	ListEnabled(ctx context.Context) ([]*models.QuietHoursWindow, error)

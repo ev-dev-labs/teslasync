@@ -1,5 +1,3 @@
-// Phase-49 / p49-backup-verify.
-//
 // cmd/backup-verify is a one-shot binary that exercises the most
 // recent successful backup_run artifact and verifies it round-trips
 // through the storage provider, decompresses cleanly, matches its
@@ -30,6 +28,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/backupverify"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbbackup "github.com/ev-dev-labs/teslasync/internal/database/backup"
 )
 
 func main() {
@@ -50,8 +49,8 @@ func main() {
 	defer db.Close()
 
 	processor := backup.NewProcessor(db)
-	runsRepo := database.NewBackupRunRepo(db)
-	configsRepo := database.NewBackupConfigRepo(db)
+	runsRepo := dbbackup.NewBackupRunRepo(db)
+	configsRepo := dbbackup.NewBackupConfigRepo(db)
 
 	criticals := parseCriticals(os.Getenv("BACKUP_VERIFY_CRITICAL_TABLES"))
 	maxAge := parseDuration(os.Getenv("BACKUP_VERIFY_MAX_AGE"), 7*24*time.Hour)

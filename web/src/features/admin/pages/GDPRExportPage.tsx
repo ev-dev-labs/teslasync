@@ -1,5 +1,5 @@
 /**
- * GDPR Export Page — Phase-45 admin observability surface.
+ * GDPR Export Page — admin observability surface.
  *
  * Polls a specific export artifact by id and exposes a Download
  * button that hits the binary streaming endpoint. The id can be
@@ -115,6 +115,7 @@ export default function GDPRExportPage() {
 
           {!activeId && (
             <GlassPanel className="p-6">
+              {/* no-action: the artifact-ID lookup input is immediately above this panel; this empty state only renders before submission */}
               <EmptyState
                 icon={<HardDriveDownload className="h-8 w-8" />}
                 title={t('admin.gdprExport.emptyTitle', 'No artifact selected')}
@@ -166,7 +167,7 @@ export default function GDPRExportPage() {
                   <dl className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <MetaRow label={t('admin.gdprExport.metaId', 'ID')} value={
                       <div className="flex items-center gap-2">
-                        <span className="break-all font-mono text-sm text-white/80">{artifact.id}</span>
+                        <span className="break-all font-mono text-sm text-[var(--text-primary)]">{artifact.id}</span>
                         <CopyButton text={artifact.id} iconOnly variant="ghost" size="sm" />
                       </div>
                     } />
@@ -209,7 +210,7 @@ export default function GDPRExportPage() {
                         label={t('admin.gdprExport.metaSha256', 'SHA-256')}
                         value={
                           <div className="flex items-center gap-2">
-                            <span className="break-all font-mono text-xs text-white/70">{artifact.sha256}</span>
+                            <span className="break-all font-mono text-xs text-[var(--text-secondary)]">{artifact.sha256}</span>
                             <CopyButton text={artifact.sha256} iconOnly variant="ghost" size="sm" />
                           </div>
                         }
@@ -264,7 +265,7 @@ function MetaRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
       <Caption>{label}</Caption>
-      <div className="text-white/85">{value}</div>
+      <div className="text-[var(--text-primary)]">{value}</div>
     </div>
   );
 }

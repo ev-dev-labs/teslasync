@@ -11,10 +11,10 @@
 // imply a hardcoded wire-unit assumption (e.g. "always assume km for
 // distance"), which is wrong: Tesla emits distances in either mi or km
 // depending on the per-vehicle SettingDistanceUnit at sample time, and
-// that preference can transition mid-day. The unit-history layer
-// (prompt 0022) materialises the active unit per (vehicle, sample-time);
-// the normalize pipeline (prompt 0028) joins it onto every Atomic and
-// calls ToSI. The package itself owns no I/O and no state.
+// that preference can transition mid-day. The unit-history layer stores
+// the active unit per (vehicle, sample-time); the normalize pipeline joins
+// it onto every Atomic and calls ToSI. The package itself owns no I/O and
+// no state.
 package units
 
 import "errors"
@@ -63,12 +63,10 @@ const (
 // counter so an alert can fire if the rate stays non-zero.
 var ErrNoUnitContext = errors.New("units: no active unit available for vehicle")
 
-// ErrUnsupportedField is returned by ToSI when the field is either
-// unknown to protomodel.SignalsByName or is known but has UnitKindNone
-// (and is not on the speed-override list). The prompt phrases this as
-// "field not unit-bearing"; both arms map to the same sentinel because
-// a caller invoking ToSI on a non-unit-bearing field is, in either
-// case, a programmer bug rather than a runtime data-quality problem.
+// ErrUnsupportedField is returned by ToSI when the field is unknown to
+// protomodel.SignalsByName or is known with UnitKindNone and is not on the
+// speed-override list. Both cases are programmer bugs rather than runtime
+// data-quality problems.
 var ErrUnsupportedField = errors.New("units: field not unit-bearing")
 
 // ErrUnsupportedUnit is returned by ToSI when the active unit is

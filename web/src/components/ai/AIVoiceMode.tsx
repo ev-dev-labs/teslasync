@@ -1,71 +1,17 @@
-// Phase-50 / 0055 — V1 Helix voice mode.
+// Browser-native voice front-end for the chatbot stream. SpeechRecognition
+// turns microphone input into text, useAiStream POSTs it to /api/v1/ai/voice/chat,
+// and speechSynthesis reads the streamed response aloud. Audio never leaves
+// the browser; only transcribed text is sent through the same guards as chat.
 //
-// What this component is:
-//   A browser-native voice front-end for the chatbot streaming
-//   endpoint. The user taps a mic button, the browser's
-//   SpeechRecognition API transcribes the utterance to text,
-//   the text is POSTed to /api/v1/ai/voice/chat (via useAiStream),
-//   and the streaming reply is spoken back via the browser's
-//   speechSynthesis API. NO audio bytes leave the browser. The
-//   only thing that crosses the network is the transcribed text
-//   (same shape as the typed chatbot — same redaction, same
-//   guard chain).
+// Voice mode is an opt-in wrapper around the typed chatbot, not a replacement.
+// withAiFeature removes the panel entirely when AI mode or this feature is off,
+// and the transcript draft is only written while the panel is mounted.
 //
-// Why browser-side STT/TTS:
-//   ADR-015 §I4 (zero egress in off mode) and §I3 (baseline intact)
-//   both push us to keep the audio plumbing client-only. The
-//   typed chatbot already handles the language model side of
-//   "Tesla questions answered in plain English"; voice mode is
-//   purely an input/output transducer on top of that. If we ever
-//   want server-side STT/TTS we can layer it as a separate slice
-//   without touching this code path.
-//
-// W1 inline wiring (P11/P12):
-//   - useAiStream targets POST /ai/voice/chat (the backend path
-//     after stripping the /api/v1 prefix; the hook prepends it).
-//   - The primary action button is disabled via a COMPUTED
-//     expression
-//     (`stream.state === 'streaming' || stream.state === 'paused-confirm'`
-//     OR no transcript yet OR no STT support); never a literal
-//     `disabled` or `disabled={true}` (Rule W1-A).
-//   - The render contract is NARRATIVE: the LLM speaks. There is
-//     no typed proposal, no "Apply to form" handoff. Streaming
-//     text is rendered via AiOutputPanel (inside AIFeatureCard).
-//   - cancel() runs on unmount, on feature-flip, and on user
-//     "stop" tap. speechSynthesis.cancel() runs alongside so
-//     the speaker stops the moment the user does (no orphaned
-//     speech after the stream is aborted).
-//   - Component is wrapped with withAiFeature so it is ABSENT
-//     (returns null) when ai_mode='off' or the per-feature
-//     toggle is off (ADR-015 §I5 hidden UI). The localStorage
-//     transcript-draft key is only ever written from inside this
-//     wrapped subtree, which is why the off-mode test can prove
-//     "no client storage artifacts when AI is off" by simply
-//     mounting the page and asserting the key never appears.
-//
-// HX (Helix UX) contract:
-//   - The surface renders through the shared AIFeatureCard
-//     scaffold. The per-feature verb "Speak to Helix" is passed
-//     via `buttonLabel`. The card composes the accessible name
-//     as "Ask Helix · Speak to Helix" — tests locate the button
-//     via the unanchored regex /Speak to Helix/i.
-//   - i18n keys say "Helix" not "AI" (voiceMode.* namespace).
-//
-// ADR-015 alignment:
-//   - I3 baseline intact: the typed chatbot remains the canonical
-//     conversation surface. Voice mode adds an OPT-IN panel above
-//     the conversation; the conversation textarea / send button
-//     are unaffected.
-//   - I5 hidden UI:       withAiFeature returns null in off mode,
-//     so the panel is absent from the DOM and the localStorage
-//     key is never written.
-//   - I6 404 routes:      the backend route is guard-wrapped and
-//     returns 404 when ai_mode='off'.
-//   - I12 client/bg:      service-worker chunk `ai-voice-mode`
-//     and client storage key `ai.voiceMode.transcriptDraft` are
-//     both bounded to this component's mount lifecycle. The
-//     storage key is removed on cancel/unmount and never written
-//     when the component is not mounted (off-mode invariant).
+// Render contract:
+//   - useAiStream targets /ai/voice/chat; the client adds /api/v1.
+//   - The primary action uses computed disabled state, never a literal disabled.
+//   - cancel() also calls speechSynthesis.cancel() so speech stops immediately.
+//   - AIFeatureCard composes the accessible name as "Ask Helix · Speak to Helix".
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -76,12 +22,8 @@ import { withAiFeature } from '@/components/ai/withAiFeature'
 import { useAiStream, type AiStreamEvent } from '@/hooks/useAiStream'
 import { Button } from '@/components/ui'
 
-// ---------------------------------------------------------------
-// SpeechRecognition is a vendor-prefixed Web API not in the
-// standard DOM lib (lib.dom.d.ts). Declare just the narrow slice
-// we use so TypeScript is happy without pulling in a third-party
-// typings package.
-// ---------------------------------------------------------------
+// SpeechRecognition is vendor-prefixed and absent from lib.dom.d.ts;
+// declare only the narrow surface this component uses.
 interface SpeechRecognitionAlternativeShim {
   readonly transcript: string
 }

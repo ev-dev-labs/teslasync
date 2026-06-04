@@ -1,5 +1,4 @@
-// Package periodcomparenarration is the Phase-50 / 0040 X1 strategy
-// for the LLM-narrated period comparison.
+// Package periodcomparenarration implements LLM-narrated period comparison.
 //
 // The strategy declares:
 //
@@ -174,7 +173,7 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 // (dispatch.Run installs the policy via redact.WithPolicy) sees
 // the concrete policy.
 //
-// Per the slice prompt: "Allowed classes: ClassVehicleName only;
+// Per the feature requirements: "Allowed classes: ClassVehicleName only;
 // aggregate analytics data is user-visible. Round-trip required:
 // yes". PolicyPeriodCompareNarration is the per-feature constructor
 // with the same allow-list as PolicyDigest /

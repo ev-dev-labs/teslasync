@@ -16,8 +16,8 @@ import type { ClipboardOutcome } from '@/hooks/useChartExport';
  * ChartExportMenu — single Download-icon trigger that opens a menu of
  * "Save as PNG / Save as SVG / Copy image to clipboard" actions.
  *
- * Phase-46 / Prompt 16. Designed for embedding inside `ChartContainer`'s
- * title-bar action area; the trigger pulls double-duty as the visible
+ * Designed for embedding inside `ChartContainer`'s title-bar action area;
+ * the trigger pulls double-duty as the visible
  * affordance and the keyboard-accessible menu launcher.
  *
  * Optional `onExportCsv` adds a "Download data as CSV" item at the top

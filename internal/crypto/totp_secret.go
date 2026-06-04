@@ -1,4 +1,4 @@
-// Package crypto — Phase-46 / Prompt 35.
+// Package crypto provides TOTP secret and backup-code helpers.
 //
 // TOTP secret + backup-code envelope helpers.
 //

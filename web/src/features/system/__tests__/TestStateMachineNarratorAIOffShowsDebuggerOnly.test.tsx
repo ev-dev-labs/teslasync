@@ -1,6 +1,6 @@
-// Phase-50 / 0048 — S7 State-machine debugger narrator.
+// State-machine debugger narrator.
 //
-// `TestStateMachineNarratorAIOffShowsDebuggerOnly` is the slice's
+// `TestStateMachineNarratorAIOffShowsDebuggerOnly` is the
 // load-bearing AI-OFF contract proof on the React side. It mounts
 // the AIStateMachineDebuggerNarrator component with ai_mode='off'
 // (plus the per-feature toggle on, to defeat the obvious "off
@@ -14,20 +14,19 @@
 //      proves the gate actually works (otherwise the "absent in
 //      off mode" assertion is trivially true).
 //   4. The mode='cloud' path with toggle=false also hides the
-//      section — per-feature opt-in (ADR-015 §I7).
+//      section, proving per-feature opt-in.
 //
 // In addition, this file asserts the canonical StateMachineDebuggerPage
 // baseline surfaces (transition table, state diagram, FSM health
 // panel, timeline chart) are NOT replaced or hidden by this
-// slice. Because the full StateMachineDebuggerPage transitively
+// feature. Because the full StateMachineDebuggerPage transitively
 // owns ~15 hooks, the baseline-coexistence half of the proof is
 // covered by the Go-side
 // TestStateMachineNarratorAIOffShowsDebuggerOnly in
 // internal/api/ai_state_machine_debugger_narrator_handler_test.go,
 // which proves the baseline `/api/v1/fsm/transitions` snapshot
 // route remains reachable when ai_mode='off' AND the AI route
-// returns 404 — together those two halves satisfy ADR-015
-// §I3 + §I5 + §I6.
+// returns 404.
 //
 // The HTTP POST /api/v1/ai/system/fsm/narrate 404-in-off-mode
 // invariant is proven by the Go-side
@@ -37,7 +36,7 @@
 //
 // File name MUST stay
 // `TestStateMachineNarratorAIOffShowsDebuggerOnly.test.tsx`
-// — the slice prompt's verification command runs
+// — the targeted verification command runs
 // `vitest --run TestStateMachineNarratorAIOffShowsDebuggerOnly`,
 // where the positional pattern is matched against the file PATH.
 
@@ -94,7 +93,7 @@ describe('TestStateMachineNarratorAIOffShowsDebuggerOnly (state-machine-debugger
     // The toggle is intentionally set to true to defeat the
     // shortcut path "the section hides because the feature flag
     // is off". The mode='off' check MUST trump the per-feature
-    // toggle (ADR-015 §I7).
+    // toggle, proving per-feature opt-in.
     //
     // The vehicleId/fromUnix/toUnix props are also intentionally
     // set so the absent-in-DOM assertion proves that the gate
@@ -130,7 +129,7 @@ describe('TestStateMachineNarratorAIOffShowsDebuggerOnly (state-machine-debugger
   it('TestStateMachineNarratorAIOffShowsDebuggerOnly: AIStateMachineDebuggerNarrator renders nothing when ai_mode is non-off but the state-machine-debugger-narrator toggle is false', () => {
     // The other half of the gate: even with mode='cloud', a
     // toggle=false MUST hide the surface (per-feature opt-in,
-    // ADR-015 §I7).
+    // proving per-feature opt-in.
     mockUseSettings.mockReturnValue(
       settingsPayload({
         ai_mode: 'cloud',

@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 
 /**
- * notificationSound — per-channel notification audio (Phase-46 / Prompt 29).
+ * Per-channel notification audio.
  *
  * Stores user preferences in localStorage (no backend AppSettings field
  * needed) and provides a tiny WebAudio-based player that procedurally

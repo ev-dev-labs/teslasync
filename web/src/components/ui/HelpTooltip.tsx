@@ -13,8 +13,6 @@ import { Tooltip } from './Tooltip';
  * Composes the shared `<Tooltip>` so it inherits placement, ARIA wiring
  * (`role="tooltip"` + `aria-describedby` on the trigger), keyboard focus
  * support, and `prefers-reduced-motion` handling.
- *
- * Phase-40 / Prompt 47.
  */
 export interface HelpTooltipProps {
   /** Plain text content (use `i18nKey` instead when localising). */

@@ -1,8 +1,8 @@
-// Phase-50 / 0038 — G2 Suggest new geofences.
+// Suggest new geofences.
 //
 // `TestSuggestGeofencesAIOffManualGeofenceWorks` (the Vitest sibling
-// to the Go test of the same name) is the slice's load-bearing
-// AI-OFF contract proof on the React side. It mounts the
+// to the Go test of the same name) is the React-side AI-OFF contract
+// proof. It mounts the
 // AISuggestNewGeofences component with ai_mode='off' (plus the
 // per-feature toggle on, to defeat the obvious "off because
 // nothing is enabled" path) and asserts:
@@ -15,7 +15,7 @@
 //      (otherwise the "absent in off mode" assertion is trivially
 //      true).
 //
-// W1 inline wiring — also asserts the on-mode wiring contract:
+// Also asserts the on-mode wiring contract:
 //   - clicking "Suggest geofence" POSTs exactly one request to
 //     `/api/v1/ai/geofences/draft` with `{"location_id": 501}`.
 //   - the first delta event's text renders inside the gated
@@ -37,7 +37,7 @@
 //
 // File name MUST stay
 // `TestSuggestGeofencesAIOffManualGeofenceWorks.test.tsx` — the
-// slice prompt's verification command runs
+// verification command runs
 // `vitest --run TestSuggestGeofencesAIOffManualGeofenceWorks`,
 // where the positional pattern is matched against the file PATH.
 

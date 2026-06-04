@@ -10,16 +10,16 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
+	"github.com/rs/zerolog/log"
 )
 
-// processImportDrives imports drive records from CSV data stored in the job's file_data.
-// The CSV is stored as the job's "payload" — the API handler reads the uploaded file,
-// stores it in export_jobs.file_data, and then the worker processes it here.
+// processImportDrives imports drive records from export_jobs.file_data, where
+// the API handler stores the uploaded CSV before the worker processes it.
 func (p *Processor) processImportDrives(ctx context.Context, req *JobRequest) (*ProcessResult, error) {
-	// The import data is stored in the job's file_data field by the API handler
 	jobRepo := p.db.Pool
 	var csvData []byte
 	err := jobRepo.QueryRow(ctx, `SELECT file_data FROM export_jobs WHERE id = $1`, req.JobID).Scan(&csvData)
@@ -75,7 +75,7 @@ func (p *Processor) processImportDrives(ctx context.Context, req *JobRequest) (*
 			speedMax, _ = strconv.ParseFloat(record[idx], 64)
 		}
 
-		d := &models.Drive{
+		d := &drivemodel.Drive{
 			VehicleID: vehicleID,
 			StartTs:   startDate,
 			DistanceM: distance,
@@ -161,7 +161,7 @@ func (p *Processor) processImportCharging(ctx context.Context, req *JobRequest) 
 			continue
 		}
 
-		c := &models.ChargingSession{
+		c := &chargingmodel.ChargingSession{
 			VehicleID:          vehicleID,
 			StartedAt:          startDate,
 			TotalEnergyAddedWh: &energyAdded,

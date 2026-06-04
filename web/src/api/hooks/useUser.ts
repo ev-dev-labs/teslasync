@@ -37,7 +37,7 @@ export function useUpdateUser() {
   });
 }
 
-// ─── My Recent Activity (Phase-40 / Prompt 49) ───────────────────────────────
+// ─── My Recent Activity ──────────────────────────────────────────────────────
 
 export interface MyActivityParams {
   /** ISO date string (YYYY-MM-DD). Optional — backend defaults to last 30 days. */

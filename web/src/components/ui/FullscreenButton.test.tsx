@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 56 — `<FullscreenButton>` contract tests.
+ * `<FullscreenButton>` contract tests.
  *
  * Stubs the browser Fullscreen API on the JSDOM `document` /
  * `Element.prototype` so we can verify:

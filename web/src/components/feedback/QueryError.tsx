@@ -34,10 +34,8 @@ interface QueryErrorProps {
 
 /**
  * Inline error banner for failed API queries.
- *
  * Branches by `ApiError.status` so users get actionable recovery copy
  * per failure mode rather than a generic "something went wrong":
- *
  *   - **404** — "Resource not found" with optional Back-to-list CTA
  *   - **401 / 403** — "Sign in required" with Sign-in CTA
  *   - **5xx** — "Server error" with manual Retry CTA
@@ -69,7 +67,7 @@ export function QueryError({ error, onRetry, resourceName, listHref }: QueryErro
 
   if (!error) return null
 
-  // Phase-45 / Prompt 33 — transient waiting (rate-limited, upstream
+  // transient waiting (rate-limited, upstream
   // breaker open). The global <RateLimitBanner> already shows a
   // countdown so we render a calm "waiting" placeholder here instead
   // of a loud "request failed" panel — the two would otherwise compete

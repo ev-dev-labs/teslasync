@@ -9,13 +9,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sony/gobreaker"
+	apiadminmnt "github.com/ev-dev-labs/teslasync/internal/api/adminmaintenance"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/sony/gobreaker"
+
+	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
 )
 
 // MaintenanceView is the resolved service-mode snapshot returned by the
@@ -24,13 +28,7 @@ import (
 // TESLASYNC_SYSTEM_MODE, "db" when an admin POSTed to
 // /admin/maintenance, "default" when neither is set. The SPA uses
 // `source == "env"` to disable the admin-panel write controls.
-type MaintenanceView struct {
-	Mode      string
-	Message   string
-	Until     *time.Time
-	UpdatedAt time.Time
-	Source    string
-}
+type MaintenanceView = apiadminmnt.MaintenanceView
 
 var startTime = time.Now()
 
@@ -88,7 +86,7 @@ func ReadyHandler(db *database.DB, tc *tesla.Client) http.HandlerFunc {
 // tesla.NewClient — i.e. how long the breaker stays open before it tries
 // a half-open probe. Held here as a constant so /system/status can
 // surface an accurate breaker_reset_at without modifying the tesla
-// client. Keep in sync with internal/tesla/client.go (Phase-45 / Prompt 33).
+// client. Keep in sync with internal/tesla/client.go.
 const teslaBreakerTimeout = 60 * time.Second
 
 // teslaBreakerObserver tracks the last open transition time of the Tesla
@@ -134,11 +132,9 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 
 	// Tracks the Tesla circuit breaker's last open transition so the
 	// /system/status response can advertise breaker_reset_at to the SPA.
-	// Phase-45 / Prompt 33.
 	var teslaBreakerObs teslaBreakerObserver
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Serve cached result if fresh
 		cacheMu.Lock()
 		if cached != nil && time.Since(cachedAt) < cacheTTL {
 			cacheMu.Unlock()
@@ -149,8 +145,6 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 
 		components := health.GetStatus()
 		overall := health.OverallStatus()
-
-		// Enriched component statuses with live checks
 		dbStatus := "healthy"
 		if err := db.Health(r.Context()); err != nil {
 			dbStatus = "unhealthy"
@@ -163,12 +157,8 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 		if tc.HasValidToken() {
 			teslaStatus = "authenticated"
 		}
-
-		// Circuit breaker state
 		cbState := tc.CircuitBreakerState()
 		cbCounts := tc.CircuitBreakerCounts()
-
-		// MQTT connectivity check
 		mqttStatus := "disabled"
 		if mqttClient != nil {
 			if mqttClient.IsConnected() {
@@ -179,8 +169,6 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 				health.RecordFailure("mqtt", fmt.Errorf("MQTT broker not connected"))
 			}
 		}
-
-		// Fleet Telemetry status
 		ftStatus := "disabled"
 		ftDetails := map[string]interface{}{
 			"enabled": false,
@@ -188,12 +176,12 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 		if cfg != nil && cfg.FleetTelemetry.Enabled {
 			ftStatus = "enabled"
 			ftDetails = map[string]interface{}{
-				"enabled":  true,
-				"host":     cfg.FleetTelemetry.Host,
-				"port":     cfg.FleetTelemetry.Port,
-				"endpoint": "/api/v1/telemetry",
-				"protocol": "HTTP POST (JSON)",
-				"supported_signals": SubscribedSignals,
+				"enabled":           true,
+				"host":              cfg.FleetTelemetry.Host,
+				"port":              cfg.FleetTelemetry.Port,
+				"endpoint":          "/api/v1/telemetry",
+				"protocol":          "HTTP POST (JSON)",
+				"supported_signals": apisignal.SubscribedSignals,
 			}
 		}
 
@@ -203,8 +191,8 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 			LastError   string `json:"last_error,omitempty"`
 		}
 
-		// Phase-45 / Prompt 33 — surface breaker state + reset window
-		// inside tesla_api so the SPA's <RateLimitBanner> can show an
+		// Surface breaker state and the reset window inside tesla_api so
+		// the SPA's <RateLimitBanner> can show an
 		// accurate countdown without polling a separate endpoint. The
 		// existing top-level `circuit_breaker` block is kept for
 		// backwards compatibility with consumers that already read it.
@@ -250,8 +238,6 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 		if overall == resilience.StatusUnhealthy {
 			statusCode = http.StatusServiceUnavailable
 		}
-
-		// Cache the result for subsequent requests
 		cacheMu.Lock()
 		cached = result
 		cachedAt = time.Now()
@@ -261,18 +247,12 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 	}
 }
 
-// ExtendedHealthCheck returns a detailed health check with per-component latency,
-// pool stats, and system information. bufferStats is optional — if non-nil, it adds
-// telemetry write buffer statistics. systemState is optional — if non-nil, it injects
-// the operator-controlled service-mode banner block (Phase-46 / Prompt 04) into the
-// response under top-level keys `mode`, `maintenance_message`, `maintenance_until`,
-// `maintenance_updated_at`, and `maintenance_source` so the SPA can render the
-// MaintenanceBanner without a separate round-trip.
+// ExtendedHealthCheck returns component latency, pool stats, and system metadata.
+// Optional providers add telemetry buffer stats and the service-mode block
+// so the SPA can render MaintenanceBanner without another round-trip.
 func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor, bufferStats func() (int, int), systemState func(context.Context) MaintenanceView) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		results := make(map[string]interface{})
-
-		// Database check with latency (direct live check)
 		dbStart := time.Now()
 		var dbCheck int
 		err := db.Pool.QueryRow(r.Context(), "SELECT 1").Scan(&dbCheck)
@@ -282,13 +262,9 @@ func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor, buff
 		} else {
 			results["database"] = map[string]interface{}{"status": "healthy", "latency_ms": dbLatency.Milliseconds()}
 		}
-
-		// DB pool stats
 		poolStatsMap := db.PoolStats()
 		poolStatsMap["status"] = "healthy"
 		results["database_pool"] = poolStatsMap
-
-		// DB write circuit breaker
 		if db.WriteBreaker != nil {
 			counts := db.WriteBreaker.Counts()
 			cbState := db.WriteBreaker.State().String()
@@ -317,8 +293,6 @@ func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor, buff
 				}
 			}
 		}
-
-		// Telemetry write buffer stats
 		if bufferStats != nil {
 			driveBuf, chargeBuf := bufferStats()
 			results["telemetry_buffers"] = map[string]interface{}{
@@ -327,16 +301,12 @@ func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor, buff
 				"charge_buffered": chargeBuf,
 			}
 		}
-
-		// System info
 		results["system"] = map[string]interface{}{
 			"status":         "healthy",
 			"goroutines":     runtime.NumGoroutine(),
 			"go_version":     runtime.Version(),
 			"uptime_seconds": time.Since(startTime).Seconds(),
 		}
-
-		// Use the health monitor's overall status which properly skips unchecked components
 		overall := "healthy"
 		monitorStatus := health.OverallStatus()
 		if monitorStatus == resilience.StatusDegraded {
@@ -344,7 +314,6 @@ func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor, buff
 		} else if monitorStatus == resilience.StatusUnhealthy {
 			overall = "unhealthy"
 		}
-		// Also degrade if the live database check failed
 		if err != nil {
 			overall = "degraded"
 		}
@@ -360,7 +329,7 @@ func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor, buff
 			"checked_at": time.Now(),
 			// Default service-mode block — overwritten below when systemState is wired.
 			// Always emitted so SPA consumers can rely on the field's presence.
-			"mode":   database.SystemModeOK,
+			"mode":   systemdb.SystemModeOK,
 			"source": "default",
 		}
 		if systemState != nil {
@@ -505,8 +474,6 @@ func APIUsageHandler(db *database.DB) http.HandlerFunc {
 		monthlyCredit := 10.0
 
 		ctx := r.Context()
-
-		// Total requests this month
 		var totalRequests int
 		err := db.Pool.QueryRow(ctx,
 			`SELECT COUNT(*) FROM api_call_logs WHERE ts >= date_trunc('month', NOW())`).Scan(&totalRequests)
@@ -521,8 +488,6 @@ func APIUsageHandler(db *database.DB) http.HandlerFunc {
 			})
 			return
 		}
-
-		// Skipped polls (408/504 asleep responses don't count as useful polls)
 		var skippedPolls int
 		_ = db.Pool.QueryRow(ctx,
 			`SELECT COUNT(*) FROM api_call_logs WHERE ts >= date_trunc('month', NOW()) AND (status_code = 408 OR status_code = 504)`).Scan(&skippedPolls)

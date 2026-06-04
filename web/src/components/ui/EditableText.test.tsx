@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 38 — `<EditableText>` contract tests.
+ * `<EditableText>` contract tests.
  *
  * Verifies the inline-edit lifecycle: enter on dblclick / Enter / F2,
  * Enter saves, Escape cancels, blur saves only when valid, errors

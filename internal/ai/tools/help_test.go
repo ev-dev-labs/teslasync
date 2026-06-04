@@ -1,5 +1,3 @@
-// Phase-50 / 0020 — N6 RAG-backed app help tests.
-//
 // Tool tests for retrieve_docs + cite_help_chunk. Both tools are
 // pure functions over their typed input; retrieve_docs uses the
 // shared fakeRetriever defined in search_test.go (same package),

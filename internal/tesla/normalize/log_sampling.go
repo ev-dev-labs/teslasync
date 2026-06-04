@@ -10,7 +10,7 @@ import (
 // hotPathLogSamplerEvery configure the per-process log sampler shared
 // by the normalize pipeline (and mirrored by the MQTT consumer in
 // internal/mqtt). The contract is documented in
-// docs/runbooks/phase-44-log-sampling.md:
+// the log-sampling runbook:
 //
 //   - The first `Burst` events in any rolling `Period` window are
 //     emitted unconditionally so a fresh outage produces immediate

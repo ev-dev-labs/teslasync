@@ -126,14 +126,14 @@ func (s *fakeLiveStore) seed(vehicleID int64, signals map[string]any) {
 }
 
 type fakeFSMHandler struct {
-	mu             sync.Mutex
-	calls          int
-	lastVeh        int64
-	lastSigs       map[string]any
-	lastPayloadTs  time.Time
-	lastFieldTs    map[string]time.Time
-	rec            *callRecorder
-	orderTick      int64
+	mu            sync.Mutex
+	calls         int
+	lastVeh       int64
+	lastSigs      map[string]any
+	lastPayloadTs time.Time
+	lastFieldTs   map[string]time.Time
+	rec           *callRecorder
+	orderTick     int64
 }
 
 func (f *fakeFSMHandler) ProcessSignals(_ context.Context, vehicleID int64, signals map[string]any) {
@@ -168,16 +168,16 @@ func (f *fakeFSMHandler) ProcessSignalsAt(_ context.Context, vehicleID int64, si
 }
 
 type fakeSessionTracker struct {
-	mu             sync.Mutex
-	calls          int
-	lastVeh        int64
-	lastVin        string
-	lastSigs       map[string]any
-	lastAccum      map[string]any
-	lastPayloadTs  time.Time
-	lastFieldTs    map[string]time.Time
-	rec            *callRecorder
-	orderTick      int64
+	mu            sync.Mutex
+	calls         int
+	lastVeh       int64
+	lastVin       string
+	lastSigs      map[string]any
+	lastAccum     map[string]any
+	lastPayloadTs time.Time
+	lastFieldTs   map[string]time.Time
+	rec           *callRecorder
+	orderTick     int64
 }
 
 func (s *fakeSessionTracker) ProcessSignals(_ context.Context, vehicleID int64, vin string, signals, accumulated map[string]any) {
@@ -216,14 +216,14 @@ func (s *fakeSessionTracker) ProcessSignalsAt(_ context.Context, vehicleID int64
 }
 
 type fakeAlertEvaluator struct {
-	mu         sync.Mutex
-	calls      int
-	lastVeh    int64
-	lastVin    string
-	lastSigs   map[string]any
-	lastAccum  map[string]any
-	rec        *callRecorder
-	orderTick  int64
+	mu        sync.Mutex
+	calls     int
+	lastVeh   int64
+	lastVin   string
+	lastSigs  map[string]any
+	lastAccum map[string]any
+	rec       *callRecorder
+	orderTick int64
 }
 
 func (e *fakeAlertEvaluator) Evaluate(_ context.Context, vehicleID int64, vin string, signals, accumulated map[string]any) {
@@ -304,8 +304,7 @@ func newDefaultObserver(t *testing.T) (*SideEffectsObserver, *fakeLiveStore, *fa
 }
 
 // ---------------------------------------------------------------------------
-// Decision #10 (a): atomics map conversion — 3 atomics produce a 3-key
-// map keyed on Field with values matching the (post-route) Atomic.Value.
+// Atomics are converted to a map keyed by Field with post-route values.
 // ---------------------------------------------------------------------------
 
 func TestSideEffectsObserver_AtomicsConvertedToSignalsMap(t *testing.T) {
@@ -314,9 +313,9 @@ func TestSideEffectsObserver_AtomicsConvertedToSignalsMap(t *testing.T) {
 	obs, live, _, _, _, _, _ := newDefaultObserver(t)
 
 	atomics := []codec.Atomic{
-		{Field: "VehicleSpeed", Value: 12.5, EmittedAt: time.Now(), VehicleID: "VIN-A"},     // SI value (m/s)
-		{Field: "BatteryHeaterOn", Value: true, EmittedAt: time.Now(), VehicleID: "VIN-A"},  // pass-through bool
-		{Field: "Gear", Value: "P", EmittedAt: time.Now(), VehicleID: "VIN-A"},              // string enum
+		{Field: "VehicleSpeed", Value: 12.5, EmittedAt: time.Now(), VehicleID: "VIN-A"},    // SI value (m/s)
+		{Field: "BatteryHeaterOn", Value: true, EmittedAt: time.Now(), VehicleID: "VIN-A"}, // pass-through bool
+		{Field: "Gear", Value: "P", EmittedAt: time.Now(), VehicleID: "VIN-A"},             // string enum
 	}
 	obs.OnPayloadProcessed(context.Background(), 1, atomics)
 
@@ -338,8 +337,7 @@ func TestSideEffectsObserver_AtomicsConvertedToSignalsMap(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Phase-42a/0030.bis (commit C2 of v3.4 prod-replay accuracy fix):
-// per-field event-time threading. The observer reduces []codec.Atomic →
+// Per-field event-time threading: the observer reduces []codec.Atomic →
 // map[Field]Value but MUST also expose two timing channels:
 //
 //   - payloadTs = max(EmittedAt) across the batch (high-water mark)
@@ -423,8 +421,9 @@ func TestSideEffectsObserver_DuplicateFieldKeepsLatestEmittedAtInFieldTs(t *test
 		t.Errorf("fsm.lastFieldTs[Gear] = %v, want %v (latest)", got, second)
 	}
 }
+
 // ---------------------------------------------------------------------------
-// Decision #10 (b): all 4 callbacks invoked exactly once per payload
+// All side-effect callbacks are invoked exactly once per payload
 // (live, fsm, sessions, alerts). SSE counts as a 5th callback —
 // also exactly once. VIN lookup counts as a 6th — also exactly once.
 // (signal_log writes are owned by the router writer, not this observer.)
@@ -461,9 +460,8 @@ func TestSideEffectsObserver_AllCallbacksInvokedOncePerPayload(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Decision #10 (c): VIN lookup is invoked exactly once per payload.
-// (Already covered by the previous test, but pinned standalone here for
-// the "regression on this exact behavior" gate.)
+// VIN lookup is invoked exactly once per payload. This is pinned
+// separately from the broader fan-out test for clearer regressions.
 // ---------------------------------------------------------------------------
 
 func TestSideEffectsObserver_VINLookupInvokedOncePerPayload(t *testing.T) {
@@ -485,7 +483,7 @@ func TestSideEffectsObserver_VINLookupInvokedOncePerPayload(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Decision #10 (d): FSM, sessions, and alerts receive the SAME signals
+// FSM, sessions, and alerts receive the SAME signals
 // map. We assert pointer equality (same backing map) by mutating the
 // map seen by FSM and observing the mutation in the maps captured by
 // sessions and alerts. This is the strongest possible "same map"
@@ -651,8 +649,8 @@ func TestSideEffectsObserver_AccumulatedFallsBackToSignalsOnFirstMessage(t *test
 }
 
 // ---------------------------------------------------------------------------
-// Decision #10 (e): live store called BEFORE FSM (FSM may read live
-// state). Asserted via the shared callRecorder ordering ticks.
+// The live store must run before FSM because FSM may read live state.
+// Asserted via shared callRecorder ordering ticks.
 // ---------------------------------------------------------------------------
 
 func TestSideEffectsObserver_LiveStoreCalledBeforeFSM(t *testing.T) {
@@ -673,9 +671,8 @@ func TestSideEffectsObserver_LiveStoreCalledBeforeFSM(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Decision #10 (f): SSE called LAST (broadcasts the post-update view).
-// Asserted via the shared callRecorder ordering ticks against ALL
-// other callbacks.
+// SSE must run last so it broadcasts the post-update view. Asserted
+// via shared callRecorder ordering ticks against all other callbacks.
 // ---------------------------------------------------------------------------
 
 func TestSideEffectsObserver_SSECalledLast(t *testing.T) {
@@ -719,7 +716,7 @@ func TestSideEffectsObserver_SSECalledLast(t *testing.T) {
 // live.GetAll runs AFTER FSM and BEFORE sessions/alerts so the
 // accumulated snapshot includes the current payload's atomics
 // (UpdateAll has merged them) but FSM still sees only the current
-// payload as `signals` (per Decision #10(d)).
+// payload as `signals`.
 // ---------------------------------------------------------------------------
 
 func TestSideEffectsObserver_FullCallOrderLivesUpToDesignContract(t *testing.T) {
@@ -743,8 +740,8 @@ func TestSideEffectsObserver_FullCallOrderLivesUpToDesignContract(t *testing.T) 
 		t.Errorf("live.GetAll.orderTick = %d, want 3 (after fsm, before sessions/alerts)", live.getAllOrderTick)
 	}
 	// Sessions and alerts run consecutively after live.GetAll but
-	// before sse. We do NOT pin which runs first because Decision #10
-	// names them as a pair without ordering.
+	// before sse. We do NOT pin which runs first; they only need to
+	// complete before SSE.
 	pair := []int64{sess.orderTick, alerts.orderTick}
 	if pair[0] == 0 || pair[1] == 0 {
 		t.Fatalf("sessions/alerts not invoked: sess=%d alerts=%d", pair[0], pair[1])
@@ -803,9 +800,7 @@ func TestSideEffectsObserver_VINLookupFailureSkipsSessionsAndAlertsOnly(t *testi
 
 // ---------------------------------------------------------------------------
 // Live store error path: error is logged at WARN, the rest of the
-// callback chain proceeds. This pins the "observer failures must not
-// fail the payload" rule (phase-42a/0000 Decision #2) at the
-// per-callback granularity.
+// callback chain proceeds. Observer failures must not fail the payload.
 // ---------------------------------------------------------------------------
 
 func TestSideEffectsObserver_LiveStoreErrorDoesNotFailChain(t *testing.T) {

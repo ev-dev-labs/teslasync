@@ -1,5 +1,5 @@
-// Phase-50 / 0012 — U2 Weekly digest narration.
-// Phase-50 / W1 (slice 0065) — wired the Generate button to
+// Weekly digest narration.
+// wired the Generate button to
 // POST /api/v1/ai/digests/weekly/narrate.
 //
 // AIDigestNarration is the visible AI surface for the weekly-digest

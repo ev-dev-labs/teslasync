@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 /**
- * Phase-45 / Prompt 33 — RateLimitError + UpstreamUnavailableError
- * + Retry-After parsing + scope short-circuit cache + dispatched
- * CustomEvents.
+ * RateLimitError + UpstreamUnavailableError + Retry-After parsing,
+ * scope short-circuit cache, and dispatched CustomEvents.
  *
  * These tests use vitest's `vi.stubGlobal('fetch', ...)` to intercept
  * the resilientFetch network call so we can synthesize 429 / 503

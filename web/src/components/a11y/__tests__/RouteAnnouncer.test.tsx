@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 21 — RouteAnnouncer contract.
+ * RouteAnnouncer contract.
  *
  * Verifies the live-region wiring (role / aria-live / aria-atomic),
  * the "no announce on first paint" rule, the post-navigation read of

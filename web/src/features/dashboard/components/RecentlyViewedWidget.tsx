@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 51 — Recently viewed widget.
+ * Recently viewed widget.
  *
  * Lightweight "back to where I was" surface for the dashboard. Renders
  * the top {@link RECENT_PAGES_DISPLAY_LIMIT} entries from the

@@ -3,7 +3,8 @@ package apilog
 import (
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
@@ -35,7 +36,7 @@ func (a *sinkAdapter) Enqueue(record httputil.APICallRecord) {
 	if a == nil || a.logger == nil {
 		return
 	}
-	entry := &models.APICallLog{
+	entry := &teslamodel.APICallLog{
 		Ts:         time.Now().UTC(),
 		Service:    record.Service,
 		HTTPMethod: record.Method,

@@ -18,7 +18,7 @@ import {
 } from '@/lib/globalProgress'
 
 /**
- * Phase-46 / Prompt 07 — TopProgress component contract.
+ * TopProgress component contract.
  *
  * Verifies the bar respects the globalProgress lifecycle, exposes
  * accessible progressbar semantics, and honours prefers-reduced-motion

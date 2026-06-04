@@ -1,6 +1,5 @@
-// Package nldrivesearchreplay is the Phase-50 / D1 (slice 0021)
-// strategy for the LLM-assisted "natural-language drive search and
-// replay".
+// Package nldrivesearchreplay implements LLM-assisted natural-language
+// drive search and replay.
 //
 // The strategy declares:
 //
@@ -8,9 +7,8 @@
 //     read-only retriever — call retrieve_drive_chunks FIRST to
 //     gather candidate matches over the calling user's own
 //     drive_summary, route_segment, and location_summary corpora
-//     (only drive_summary is wired into the F7 indexer today; the
-//     other two are reserved by string for forward-compatibility per
-//     the slice prompt), then OPTIONALLY call hydrate_drive_replay
+//     (only drive_summary is indexed today; the other two source types
+//     are reserved for forward compatibility), then OPTIONALLY call hydrate_drive_replay
 //     for each cited drive to fetch a
 //     {title, subtitle, url, replay_url, when} envelope so the LLM
 //     can cite the entity by name AND offer a one-click replay
@@ -19,8 +17,8 @@
 //     not appear in the retriever's output;
 //
 //   - the two read-only tools the LLM is allowed to call —
-//     `retrieve_drive_chunks` (a thin wrapper over the F7
-//     rag.Retriever scoped to the calling user_subject + this slice's
+//     `retrieve_drive_chunks` (a thin wrapper over rag.Retriever
+//     scoped to the calling user_subject and this strategy's
 //     source-type allowlist) and `hydrate_drive_replay` (a narrow
 //     lookup that converts a drive reference into a
 //     {title, subtitle, url, replay_url, when} envelope by
@@ -32,7 +30,7 @@
 //     cleartext: VINs, place names, addresses, lat/long, phone
 //     numbers, emails, etc. are redacted to round-trip tags
 //     (`<vin id='1'/>`) before the prompt + retrieved chunks reach
-//     the provider. The F8 redact decorator restores them only in
+//     the provider. The redaction decorator restores them only in
 //     the final response delivered to the requesting user.
 //
 // The strategy is consumed by the AI HTTP handler at
@@ -54,7 +52,7 @@
 //     through the existing canonical query paths;
 //     the AI only proposes a NARRATIVE over
 //     already-retrieved entities with replay anchors.
-//   - I4 zero egress:     all retrieval is local (F7 pgvector against
+//   - I4 zero egress:     all retrieval is local (pgvector against
 //     a self-hosted database); the LLM call itself
 //     only fires when ai_mode != 'off' AND the
 //     per-feature toggle is on.
@@ -99,7 +97,7 @@ const SystemPrompt = `You are the TeslaSync natural-language drive search and re
 // time — the dispatcher refuses to mount a strategy that references
 // an unknown tool.
 //
-// Both tools are READ-ONLY: retrieve_drive_chunks calls the F7
+// Both tools are READ-ONLY: retrieve_drive_chunks calls the
 // retriever (pgvector cosine similarity scoped to the calling
 // user_subject); hydrate_drive_replay calls a narrow
 // DriveReplayHydrator port that resolves a drive reference to a
@@ -154,18 +152,17 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyChatbot wrapped through the F4↔F8 adapter so the
+// PolicyChatbot wrapped through the redaction adapter so the
 // dispatcher's per-request ctx-installation step (dispatch.Run
 // installs the policy via redact.WithPolicy) sees the concrete
 // deny-all policy.
 //
-// Per the slice prompt: "Policy: PolicyChatbot from
-// internal/ai/redact/policies.go. Allowed classes: none; route /
-// location details stay tagged unless shown back to the same user".
-// The policy's Allow list is nil, so every PII class — VIN,
+// PolicyChatbot allows no cleartext PII; route and location details
+// stay tagged unless shown back to the same user. The policy's Allow
+// list is nil, so every PII class — VIN,
 // lat/long, vehicle name, addresses, phone numbers, emails — is
 // redacted to a round-trip tag before the prompt + tool outputs
-// reach the provider. The F8 redact decorator restores the original
+// reach the provider. The redaction decorator restores the original
 // values in the final SSE frame delivered to the requesting user;
 // the provider only ever sees `<vin id='1'/>` etc.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {

@@ -1,16 +1,14 @@
 package auditviewersvc
 
-// Phase-45 / Phase-47/10 — handler-facing type aliases.
-//
+import auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
+
 // Re-exports keep internal/handler/v1 from importing internal/database
 // directly (TestHandlerV1Thinness). Aliases are transparent so service
 // internals can continue to use database.* identifiers unchanged.
 
-import "github.com/ev-dev-labs/teslasync/internal/database"
-
 // Query is the request filter the handler builds from query-string
 // parameters and passes to Service.Query.
-type Query = database.AuditLogQuery
+type Query = auditdb.AuditLogQuery
 
 // Row is the audit row shape returned by Query.
-type Row = database.AuditLogRow
+type Row = auditdb.AuditLogRow

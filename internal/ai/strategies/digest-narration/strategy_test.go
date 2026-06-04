@@ -1,5 +1,3 @@
-// Phase-50 / 0012 — U2 Weekly digest narration.
-//
 // Unit tests for the digest-narration Strategy. The Strategy is a
 // pure value (no internal state, no IO) so the tests are tight: pin
 // the feature ID + system prompt + tool whitelist + redaction policy
@@ -104,7 +102,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs RAG-backed digest context ships.
+// future change needs RAG-backed digest context.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -118,7 +116,7 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 }
 
 // TestStrategy_RedactionPolicyDigest proves the strategy hands the
-// dispatcher PolicyDigest wrapped through the F4↔F8 adapter.
+// dispatcher PolicyDigest wrapped through the redaction adapter.
 // PolicyDigest allows ClassVehicleName so the narration can name the
 // user's car; every other PII class is redacted to a round-trip tag.
 func TestStrategy_RedactionPolicyDigest(t *testing.T) {

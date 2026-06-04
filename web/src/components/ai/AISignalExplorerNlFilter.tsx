@@ -1,13 +1,10 @@
-// Phase-50 / 0044 — S3 Signal explorer natural-language filter.
-// Phase-50 / W1 inline wiring (per slice prompt 0044) — wires the
+// Signal explorer natural-language filter.
+// Wires the
 // "Draft filter" button to POST
 // /api/v1/ai/signals/filter/draft via the canonical useAiStream
-// hook. The slice methodology forbids shipping the visual
-// affordance without end-to-end SSE wiring; this component lands
-// both in one commit so the on-mode wiring test
-// (TestSignalExplorerNlFilterAIOnWiredCallsRoute) can prove the
-// button actually opens an SSE stream against the registered
-// backend route.
+// hook. The visual affordance and SSE wiring ship together so
+// the button always opens a stream against the registered backend
+// route.
 //
 // AISignalExplorerNlFilter is the visible AI surface for the
 // /signals/explorer page. It is rendered conditionally via
@@ -31,7 +28,7 @@
 // user; this AI section is opt-in propose-only suggestion layered
 // alongside.
 //
-// Render contract (P11/P12 — Wired-or-absent, No-placeholder-buttons):
+// Render contract:
 //   - useAiStream is called unconditionally at the top of the body
 //     (Hooks-rules safe).
 //   - The Draft button's disabled prop is a COMPUTED expression

@@ -15,14 +15,14 @@
 //
 //  2. [LoadCannedFile] parses a YAML document of the shape:
 //
-//         replies:
-//           - finish_reason: tool_calls
-//             tool_calls:
-//               - id: call_1
-//                 name: query_battery_status
-//                 arguments: '{"vehicle_id": 1}'
-//           - finish_reason: stop
-//             content: "Your range is about 310 miles."
+//     replies:
+//     - finish_reason: tool_calls
+//     tool_calls:
+//     - id: call_1
+//     name: query_battery_status
+//     arguments: '{"vehicle_id": 1}'
+//     - finish_reason: stop
+//     content: "Your range is about 310 miles."
 //
 //     One file per golden. See `internal/ai/strategies/<feature>/canned/`.
 //

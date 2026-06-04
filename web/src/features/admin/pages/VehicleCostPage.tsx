@@ -1,5 +1,5 @@
 /**
- * Vehicle Cost Page — Phase-45 admin observability surface.
+ * Vehicle Cost page.
  *
  * Per-vehicle ingest cost report: signal_log row count, estimated
  * byte cost, ingest rate over the last 24 h, and DLQ failures. Shows
@@ -57,7 +57,7 @@ export default function VehicleCostPage() {
         header: t('admin.vehicleCost.colVehicle', 'Vehicle'),
         render: (r) => (
           <div className="flex flex-col">
-            <span className="font-medium text-white/90">
+            <span className="font-medium text-[var(--text-primary)]">
               {r.display_name ?? t('admin.vehicleCost.unnamed', 'Vehicle #{{id}}', { id: r.vehicle_id })}
             </span>
             <Caption>ID {fmtNumber(r.vehicle_id)}</Caption>
@@ -88,7 +88,7 @@ export default function VehicleCostPage() {
         align: 'right',
         render: (r) => {
           const failures = r.dlq_failures_24h ?? 0;
-          const cls = failures > 0 ? 'text-amber-300 tabular-nums' : 'tabular-nums text-white/60';
+          const cls = failures > 0 ? 'text-amber-300 tabular-nums' : 'tabular-nums text-[var(--text-secondary)]';
           return <span className={cls}>{fmtNumber(failures)}</span>;
         },
       },
@@ -96,7 +96,7 @@ export default function VehicleCostPage() {
         key: 'last',
         header: t('admin.vehicleCost.colLastSeen', 'Last seen'),
         render: (r) => (
-          <span className="text-white/80">{formatRelative(r.last_seen_at)}</span>
+          <span className="text-[var(--text-primary)]">{formatRelative(r.last_seen_at)}</span>
         ),
       },
     ],
@@ -142,6 +142,7 @@ export default function VehicleCostPage() {
             </div>
             <SectionErrorBoundary name="vehicle-cost-table">
               {vehicles.length === 0 && !query.isLoading && !subsystemMissing ? (
+                // no-action: vehicles populate this view by ingesting telemetry; not a user-actionable surface
                 <EmptyState
                   icon={<Wallet className="h-8 w-8" />}
                   title={t('admin.vehicleCost.emptyTitle', 'No vehicle cost data')}
@@ -152,6 +153,7 @@ export default function VehicleCostPage() {
                 />
               ) : (
                 <DataTable
+                  tableId="admin:vehicle-cost"
                   columns={columns}
                   data={vehicles}
                   keyExtractor={(r) => r.vehicle_id}

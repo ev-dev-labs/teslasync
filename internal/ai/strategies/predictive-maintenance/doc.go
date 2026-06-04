@@ -1,4 +1,4 @@
-// Package predictivemaintenance is part of the TeslaSync adapter layer.
+// Package predictivemaintenance implements the predictive-maintenance AI strategy.
 //
 // Layer: adapter
 package predictivemaintenance

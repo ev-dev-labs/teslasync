@@ -5,7 +5,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 )
 
 // TestEverySchemaMatchesHandlerValidation is the R2-mitigation pin
@@ -171,7 +175,7 @@ func TestEverySchemaContainsTitleField(t *testing.T) {
 }
 
 // TestBuiltinsHaveNoMutators confirms the F4 starter set is read-only.
-// Mutating tools belong with their owning feature slice (N1/N2/...).
+// Mutating tools belong with their owning feature.
 func TestBuiltinsHaveNoMutators(t *testing.T) {
 	t.Parallel()
 	r := NewRegistry()
@@ -201,10 +205,10 @@ func TestRoundTripExecuteOnMinimalPayloads(t *testing.T) {
 	t.Parallel()
 	r := NewRegistry()
 	Register12Builtins(r, Sources{
-		Vehicles:      &fakeVehicles{one: map[int64]*models.Vehicle{1: {ID: 1, DisplayName: "x", VIN: "v", Timezone: "UTC"}}},
+		Vehicles:      &fakeVehicles{one: map[int64]*vehiclemodel.Vehicle{1: {ID: 1, DisplayName: "x", VIN: "v", Timezone: "UTC"}}},
 		VehicleState:  &fakeState{},
-		Drives:        &fakeDrives{one: map[int64]*models.Drive{1: {ID: 1}}},
-		Charges:       &fakeCharges{one: map[int64]*models.ChargingSession{1: {ID: 1}}},
+		Drives:        &fakeDrives{one: map[int64]*drivemodel.Drive{1: {ID: 1}}},
+		Charges:       &fakeCharges{one: map[int64]*chargingmodel.ChargingSession{1: {ID: 1}}},
 		AlertRules:    &fakeRules{},
 		Notifications: &fakeNotif{},
 		Geofences:     &fakeFences{},

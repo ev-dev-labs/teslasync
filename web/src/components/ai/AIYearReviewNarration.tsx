@@ -1,6 +1,4 @@
-// Phase-50 / 0013 — U3 Year-in-review narration.
-// Phase-50 / W1 (slice 0065) — wired the Generate button to
-// POST /api/v1/ai/analytics/year-in-review/narrate.
+// Year-in-review narration wired to POST /ai/analytics/year-in-review/narrate.
 
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -15,10 +13,7 @@ interface InnerSectionProps {
 
 function InnerSection({ vehicleId }: InnerSectionProps) {
   const { t } = useTranslation()
-  // Default to the previous calendar year — the year-in-review page is
-  // typically reviewed in January for the year that just ended. If the
-  // user is browsing it during the active year, they can re-fire the
-  // request after picking a year filter in a future iteration.
+  // Default to the previous calendar year; most reviews happen after year end.
   const defaultYear = new Date().getFullYear() - 1
   const body = useMemo(
     () => ({ vehicle_id: vehicleId ?? 0, year: defaultYear }),

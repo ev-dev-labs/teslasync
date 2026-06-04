@@ -1,0 +1,27 @@
+
+D:\repos\teslasync\web\dev-dist\workbox-d93339a4.js
+    52:7   error  Definition for rule '@typescript-eslint/ban-types' was not found                @typescript-eslint/ban-types
+   419:5   error  Definition for rule '@typescript-eslint/ban-types' was not found                @typescript-eslint/ban-types
+   435:5   error  Unused eslint-disable directive (no problems were reported)
+   752:11  error  Definition for rule '@typescript-eslint/no-unsafe-member-access' was not found  @typescript-eslint/no-unsafe-member-access
+   754:13  error  Definition for rule '@typescript-eslint/no-unsafe-assignment' was not found     @typescript-eslint/no-unsafe-assignment
+   948:11  error  Definition for rule '@typescript-eslint/no-unsafe-assignment' was not found     @typescript-eslint/no-unsafe-assignment
+   964:13  error  Definition for rule '@typescript-eslint/no-unsafe-assignment' was not found     @typescript-eslint/no-unsafe-assignment
+   970:13  error  Unused eslint-disable directive (no problems were reported)
+  1257:5   error  Definition for rule '@typescript-eslint/ban-types' was not found                @typescript-eslint/ban-types
+  1275:5   error  Definition for rule '@typescript-eslint/ban-types' was not found                @typescript-eslint/ban-types
+  2603:35  error  Unused eslint-disable directive (no problems were reported)
+  3431:11  error  Unused eslint-disable directive (no problems were reported)
+  3951:9   error  Definition for rule '@typescript-eslint/no-unsafe-return' was not found         @typescript-eslint/no-unsafe-return
+  3998:9   error  Definition for rule '@typescript-eslint/no-unsafe-return' was not found         @typescript-eslint/no-unsafe-return
+
+D:\repos\teslasync\web\src\components\layout\sidebar\LinearSidebar.tsx
+  302:5  error  Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')
+
+D:\repos\teslasync\web\src\components\layout\sidebar\NotionSidebar.tsx
+  289:5  error  Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')
+
+✖ 16 problems (16 errors, 0 warnings)
+  6 errors and 0 warnings potentially fixable with the `--fix` option.
+
+exit_code: 1

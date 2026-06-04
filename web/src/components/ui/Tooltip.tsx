@@ -15,7 +15,7 @@ export interface TooltipProps {
    * Tooltip content. Strings render in a single line by default; pass JSX (or
    * set `multiline`) when the content needs to wrap.
    *
-   * IMPORTANT — text colour contract (Phase-45 / Prompt 34):
+   * IMPORTANT — text colour contract:
    * The tooltip uses an INVERTED surface for high contrast (light card in
    * dark mode / dark card in light mode) and cascades its own intrinsic
    * `text-gray-100 dark:text-gray-900` pair through this content. Do NOT
@@ -100,7 +100,7 @@ const sideClasses = {
 /**
  * Hover/focus tooltip.
  *
- * Visual contract — INVERTED surface (Phase-45 / Prompt 34):
+ * Visual contract — inverted surface:
  *   - dark mode  → light card (`bg-gray-100`) with dark text (`text-gray-900`)
  *   - light mode → dark  card (`bg-gray-900`) with light text (`text-gray-100`)
  *
@@ -115,7 +115,7 @@ const sideClasses = {
  * rationale, `web/scripts/audit-tooltip-text-color.mjs` for CI enforcement,
  * and `warnIfHardcodedTextColor` above for the dev-time backstop.
  *
- * Accessibility (Phase-40 / Prompt 20):
+ * Accessibility:
  * - Tooltip body has `role="tooltip"` + a stable id.
  * - When `children` is a single element, the tooltip id is added to that
  *   element's `aria-describedby` (preserving any existing value) so screen
@@ -124,12 +124,12 @@ const sideClasses = {
  *   users (Tab into a button wrapped in a tooltip) get the same affordance as
  *   mouse users.
  *
- * Touch devices (Phase-40 / Prompt 47):
+ * Touch devices:
  * - Wrap a focusable trigger (e.g. <button>) and tapping it grants focus,
  *   triggering `:focus-within` on the wrapper — so the tooltip appears on
  *   tap. Tapping outside blurs the trigger and dismisses the tooltip.
  *
- * Reduced motion (Phase-40 / Prompt 47):
+ * Reduced motion:
  * - The reveal transition is disabled globally via the `motion-reduce`
  *   variant when the user has `prefers-reduced-motion: reduce`.
  */
@@ -174,7 +174,7 @@ export function Tooltip({ content, side = 'top', multiline, children }: TooltipP
           'pointer-events-none absolute z-50 rounded-lg px-2.5 py-1.5 text-xs font-medium',
           multiline ? 'whitespace-normal max-w-[260px]' : 'whitespace-nowrap',
           'bg-gray-900 text-gray-100 shadow-lg dark:bg-gray-100 dark:text-gray-900',
-          // Phase-46 / Prompt 11 — forced-colors mode suppresses
+          // Forced-colors mode suppresses
           // box-shadow and remaps the bg-gray to Canvas, so the tooltip
           // body would otherwise blend into surrounding panels. Pin a
           // system-colour border + opaque Canvas bg so the inverted

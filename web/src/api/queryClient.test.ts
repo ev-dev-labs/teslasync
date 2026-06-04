@@ -1,5 +1,5 @@
 /**
- * queryClient.test.ts — Phase-46 / Prompt 53.
+ * queryClient pause-when-hidden polling tests.
  *
  * Locks in the pause-when-hidden polling contract:
  *

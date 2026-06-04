@@ -1,5 +1,3 @@
-// Phase-50 / 0046 — S5 Feedback queue triage.
-//
 // Unit tests for the feedback-queue-triage Strategy. Mirrors the
 // shape of log-trace-summarization's strategy_test.go (the closest
 // precedent: a tools+RAG-style propose-only strategy with a
@@ -136,8 +134,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs preferred-greeting or per-team triage-
-// preference data ships.
+// preferred-greeting or per-team triage-preference feature needs it.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -152,11 +149,9 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 
 // TestStrategy_RedactionPolicyAlertBuilder proves the strategy
 // hands the dispatcher PolicyAlertBuilder wrapped through the
-// F4↔F8 adapter. PolicyAlertBuilder is the DENY-BY-DEFAULT policy:
-// Allow == nil so EVERY PII class — VIN, lat/long, addresses,
-// place names, AND vehicle-name — is tagged round-trip. The
-// slice prompt explicitly mandates "Allowed classes: none;
-// feedback text is redacted and proposals require confirmation."
+// redaction adapter. PolicyAlertBuilder is the deny-by-default
+// policy: Allow == nil so every PII class — VIN, lat/long,
+// addresses, place names, and vehicle-name — is tagged round-trip.
 func TestStrategy_RedactionPolicyAlertBuilder(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -185,8 +180,6 @@ func TestStrategy_EvalGoldensReturnsNil(t *testing.T) {
 		t.Fatalf("EvalGoldens() = %v, want nil (goldens live in YAML)", g)
 	}
 }
-
-// --- helpers ---------------------------------------------------------
 
 func contains(s, sub string) bool {
 	return len(s) >= len(sub) && (s == sub || indexOf(s, sub) >= 0)

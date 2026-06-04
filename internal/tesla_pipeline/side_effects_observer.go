@@ -1,42 +1,15 @@
-// Package teslapipeline hosts the production AtomicsObserver
-// implementation that bridges normalize.Pipeline payload completion
-// to the legacy 5 cross-cutting effects (live signal store, durable
-// signal history, FSM dispatch, drive/charge sessions + alert
-// evaluation, SSE fanout).
+// Package teslapipeline hosts the production AtomicsObserver implementation
+// that bridges normalize.Pipeline payload completion to cross-cutting effects:
+// live signal state, FSM dispatch, drive/charge sessions, alert evaluation, and
+// SSE fanout.
 //
-// Why this lives in its own package (not under
-// internal/tesla/normalize):
+// This bridge lives outside internal/tesla/normalize because it wires
+// application-level concerns. Placing it in normalize would either create an
+// import cycle with internal/api or force API-owned callback types into the pure
+// normalization package.
 //
-//   - The bridge depends on legacy internal/api types (FSMHandler,
-//     TelemetrySessionTracker, TelemetryAlertEvaluator,
-//     TelemetryHandler.broadcastSSE) and on internal/signal.LiveSignalStore.
-//     If we placed SideEffectsObserver inside internal/tesla/normalize
-//     it would either pull those packages into a leaf utility (creating
-//     an import cycle with internal/api which already imports normalize
-//     for the unit-conversion path) or force the legacy types to move.
-//     Neither is acceptable for a phase-42a addition that must be
-//     reversible.
-//
-//   - The bridge is the "wiring layer" — it owns the policy
-//     decisions about call ordering, error suppression, and VIN
-//     resolution. Those are application-level concerns that don't
-//     belong in the (pure, single-responsibility) normalize package.
-//
-//   - Tests for the bridge use mock implementations of the 5
-//     callback interfaces declared here (LiveSignalStore,
-//     FSMHandler, SessionTracker, AlertEvaluator, VINResolver) so
-//     the bridge can be exercised without spinning up a
-//     TelemetryHandler. Putting the interfaces here (rather than in
-//     internal/api) keeps internal/api free of the bridge's mock
-//     surface.
-//
-// Production wiring of *SideEffectsObserver into normalize.New is
-// deferred to phase-42a/0050 (the MQTT subscriber cutover prompt).
-// Until then this package is import-cycle-free and can be
-// constructed in tests but is NOT registered against any live
-// pipeline. The phase-42 final-gate v2 verification covers the
-// pipeline + writers; the bridge is verified end-to-end in
-// phase-42a/9999.
+// Tests use the small callback interfaces declared here so the bridge can be
+// exercised without spinning up a TelemetryHandler.
 package teslapipeline
 
 import (
@@ -53,24 +26,20 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla/normalize"
 )
 
-// sideEffectsTracerName is the OpenTelemetry tracer name for the
-// observer parent span and the per-effect child spans. The Phase-10
-// trace-coverage audit greps for this exact constant so the observer
-// stays accounted for in the tesla_signal_ingest_to_db flow.
+// sideEffectsTracerName is the OpenTelemetry tracer name for the observer
+// parent span and per-effect child spans. The trace-coverage audit greps for
+// this exact constant so the observer stays accounted for in the
+// tesla_signal_ingest_to_db flow.
 const sideEffectsTracerName = "teslapipeline"
 
-// LiveSignalStore mirrors the subset of internal/signal.LiveSignalStore
-// the SideEffectsObserver needs. The legacy method on the concrete
-// type is UpdateNonBlocking; production wiring at phase-42a/0050
-// adapts that method to this UpdateAll signature so the bridge does
-// not depend on the broader signal package.
+// LiveSignalStore mirrors the subset of internal/signal.LiveSignalStore that
+// SideEffectsObserver needs. The adapter keeps this package decoupled from the
+// broader signal package.
 //
-// Returning an error rather than swallowing inside the interface
-// preserves the LiveSignalStore's ability to surface back-pressure
-// (e.g. a Redis publish-queue overflow) to the bridge, which logs
-// at WARN. The bridge does NOT propagate the error to the
-// AtomicsObserver caller — observer failures must not fail the
-// payload (phase-42a/0000 Decision #2).
+// Returning an error preserves the LiveSignalStore's ability to surface
+// back-pressure (for example, a Redis publish-queue overflow) to the bridge,
+// which logs at WARN. The bridge does not propagate the error to the
+// AtomicsObserver caller because observer failures must not fail the payload.
 //
 // GetAll returns the current cross-batch snapshot of all signals
 // known for the vehicle (i.e. the union of every UpdateAll call
@@ -80,13 +49,9 @@ const sideEffectsTracerName = "teslapipeline"
 // map (or an error) is acceptable — the bridge falls back to the
 // per-payload signals map and logs at DEBUG.
 //
-// Per the per-field MQTT cutover this is the load-bearing fix:
-// before, the bridge passed the per-payload `signals` map as both
-// `current` and `accumulated`. With per-field MQTT each payload
-// carries one signal, so accumulated would only have one key,
-// breaking sessions' "use last-known battery / odometer / location
-// when starting a new session" feature. GetAll restores the
-// cross-batch accumulator to its legacy semantics.
+// GetAll is load-bearing for per-field MQTT: each payload often carries one
+// signal, so sessions need the cross-batch snapshot to use last-known battery,
+// odometer, and location when starting a new session.
 type LiveSignalStore interface {
 	UpdateAll(ctx context.Context, vehicleID int64, signals map[string]any) error
 	GetAll(ctx context.Context, vehicleID int64) (map[string]any, error)
@@ -98,13 +63,11 @@ type LiveSignalStore interface {
 // per-FSM metrics. Bridging at the same shape keeps the production
 // adapter trivial.
 //
-// ProcessSignalsAt is the event-time-aware variant added by Phase-42a
-// prompt 0030.bis (commit C2 of v3.4 prod-replay accuracy fix).
-// payloadTs is the largest EmittedAt across the batch's atomics
-// (see OnPayloadProcessed below); fieldTs maps each Field name to
-// its per-atomic EmittedAt so downstream consumers can stamp
-// per-field-derived state (gear timestamp, charge-state timestamp)
-// at the originating signal's event-time rather than wall-clock.
+// ProcessSignalsAt is the event-time-aware variant. payloadTs is the largest
+// EmittedAt across the batch's atomics (see OnPayloadProcessed below); fieldTs
+// maps each Field name to its per-atomic EmittedAt so downstream consumers can
+// stamp per-field-derived state (gear timestamp, charge-state timestamp) at the
+// originating signal's event-time rather than wall-clock.
 // A zero payloadTs (or nil/empty fieldTs) signals the legacy code
 // path — implementations fall back to time.Now().UTC().
 type FSMHandler interface {
@@ -112,24 +75,15 @@ type FSMHandler interface {
 	ProcessSignalsAt(ctx context.Context, vehicleID int64, signals map[string]any, payloadTs time.Time, fieldTs map[string]time.Time)
 }
 
-// SessionTracker mirrors
-// (*internal/api.TelemetrySessionTracker).ProcessSignals. The
-// trailing accumulated map is the legacy "last-known values across
-// batches" parameter. Per phase-42a/0000 Decision #8 the bridge
-// passes the SAME per-payload signals map for both the current and
-// accumulated arguments — the cross-batch accumulator is a future
-// follow-up. The session tracker's "use last-known battery /
-// odometer / location when starting a new session" feature is
-// therefore narrowed to "use the values present in the current
-// batch", which is acceptable while the new pipeline runs in
-// shadow alongside the legacy path.
+// SessionTracker mirrors (*internal/api.TelemetrySessionTracker).ProcessSignals.
+// The trailing accumulated map is the last-known values snapshot across
+// batches.
 //
-// ProcessSignalsAt is the event-time-aware variant. payloadTs +
-// fieldTs are forwarded so drive/charge session start/end timestamps
-// reflect the underlying signal event-time instead of wall-clock —
-// without this, replaying a 24-minute batch of historical signals
-// produces a single "drive" stamped with the replay-runner's clock
-// rather than the original event window.
+// ProcessSignalsAt is the event-time-aware variant. payloadTs + fieldTs are
+// forwarded so drive/charge session start/end timestamps reflect the underlying
+// signal event-time instead of wall-clock. Without this, replaying historical
+// signals would stamp sessions with the replay runner's clock rather than the
+// original event window.
 type SessionTracker interface {
 	ProcessSignals(ctx context.Context, vehicleID int64, vin string, signals map[string]any, accumulated map[string]any)
 	ProcessSignalsAt(ctx context.Context, vehicleID int64, vin string, signals map[string]any, accumulated map[string]any, payloadTs time.Time, fieldTs map[string]time.Time)
@@ -142,23 +96,17 @@ type AlertEvaluator interface {
 	Evaluate(ctx context.Context, vehicleID int64, vin string, signals map[string]any, accumulated map[string]any)
 }
 
-// VINResolver returns the canonical VIN string for a vehicle's
-// internal database id. The bridge uses this to derive the vin
-// argument for SessionTracker and AlertEvaluator without coupling
-// the codec.Atomic shape to the bridge's input contract — although
-// codec.Atomic.VehicleID does in fact carry the VIN today (codec
-// populates it from Payload.Vin), making the bridge depend on that
-// field would lock the codec to that contract for all future
-// upstream changes. A VIN lookup against the canonical Postgres
-// vehicles table is the architecturally clean choice phase-42a/0000
-// Decision #8 locked.
+// VINResolver returns the canonical VIN string for an internal vehicle id. The
+// bridge uses this to derive the vin argument for SessionTracker and
+// AlertEvaluator without coupling the codec.Atomic shape to the bridge's input
+// contract. Although codec.Atomic.VehicleID carries the VIN today, depending on
+// that field here would lock the codec to that contract for future upstream
+// changes.
 //
-// The interface returns an error so production wiring can surface
-// "vehicle not registered" (the analogue of the writer-layer
-// "vehicle not found" PII-clean error in router/writers/*). The
-// bridge logs the error at WARN and SKIPS sessions+alerts for the
-// payload — live store / FSM / SSE proceed because they do not
-// depend on VIN.
+// The interface returns an error so production wiring can surface "vehicle not
+// registered" without logging PII. The bridge logs the error at WARN and skips
+// sessions+alerts for the payload; live store, FSM, and SSE proceed because they
+// do not depend on VIN.
 type VINResolver interface {
 	VINByID(ctx context.Context, vehicleID int64) (string, error)
 }
@@ -204,8 +152,8 @@ type Config struct {
 }
 
 // SideEffectsObserver is the production normalize.AtomicsObserver
-// implementation. Construct one per process via New and register it
-// against the Pipeline at phase-42a/0050 cutover.
+// implementation. Construct one per process via New and register it against the
+// Pipeline.
 type SideEffectsObserver struct {
 	live         LiveSignalStore
 	fsm          FSMHandler
@@ -254,32 +202,31 @@ func New(cfg Config) *SideEffectsObserver {
 	}
 }
 
-// OnPayloadProcessed implements normalize.AtomicsObserver. It runs
-// the cross-cutting side-effects in the order locked by
-// phase-42a/0000 Decision #10 + the prompt's DESIGN block, as
-// amended by the per-field MQTT cutover (signal_log writes are
-// owned by the router writer, NOT this observer):
+// OnPayloadProcessed implements normalize.AtomicsObserver. It runs the
+// cross-cutting side-effects in dependency order. The router writer owns
+// signal_log writes; this observer handles live state, FSM, sessions, alerts,
+// and SSE:
 //
 //  1. live.UpdateAll(...)               — L1 in-process state
 //  2. fsm.ProcessSignals(...)           — drive/charge/sleep FSM
-//                                          (may read live state from
-//                                          step 1)
+//     (may read live state from
+//     step 1)
 //  3. live.GetAll(...)                  — cross-batch accumulated
-//                                          snapshot for sessions +
-//                                          alerts (per-field MQTT
-//                                          delivers one atomic per
-//                                          payload, so the per-batch
-//                                          signals map alone is
-//                                          insufficient)
+//     snapshot for sessions +
+//     alerts (per-field MQTT
+//     delivers one atomic per
+//     payload, so the per-batch
+//     signals map alone is
+//     insufficient)
 //  4. sessions.ProcessSignals(...)      — drive/charge sessions
 //     alerts.Evaluate(...)              — alert rule fanout
-//                                          (current=signals from
-//                                          this payload;
-//                                          accumulated=snapshot
-//                                          from step 3)
+//     (current=signals from
+//     this payload;
+//     accumulated=snapshot
+//     from step 3)
 //  5. broadcastSSE(...)                 — SSE fanout LAST so the
-//                                          wire view reflects all
-//                                          upstream side-effects
+//     wire view reflects all
+//     upstream side-effects
 //
 // VIN resolution is performed once via vinResolver.VINByID. If the
 // lookup fails (vehicle not registered, transient pgx error) the
@@ -318,9 +265,8 @@ func (o *SideEffectsObserver) OnPayloadProcessed(ctx context.Context, vehicleID 
 	// payloadTs is the latest EmittedAt across all atomics — the
 	// "high-water mark" used as the sctx.Now for FSM/session
 	// start/end decisions when no field-specific time is available.
-	// Per Phase-42a/0030.bis (commit C2 of v3.4 prod-replay accuracy
-	// fix) max(EmittedAt) alone is INSUFFICIENT for replay batches
-	// spanning multiple minutes — fieldTs is the canonical thread.
+	// max(EmittedAt) alone is insufficient for replay batches spanning multiple
+	// minutes; fieldTs carries each surviving field's canonical event time.
 	fieldTs := make(map[string]time.Time, len(atomics))
 	var payloadTs time.Time
 	for _, a := range atomics {
@@ -356,9 +302,8 @@ func (o *SideEffectsObserver) OnPayloadProcessed(ctx context.Context, vehicleID 
 		span.End()
 	}
 
-	// Step 2: FSM dispatch. The FSM may read live state populated by
-	// step 1 — calling FSM before live is the regression that
-	// Decision #10(e) explicitly guards against.
+	// Step 2: FSM dispatch. The FSM may read live state populated by step 1, so
+	// live state must be updated first.
 	{
 		stepCtx, span := otel.Tracer(sideEffectsTracerName).Start(
 			ctx, "fsm.dispatch_signals",
@@ -438,7 +383,7 @@ func (o *SideEffectsObserver) OnPayloadProcessed(ctx context.Context, vehicleID 
 		// distinct maps under per-field MQTT (a payload typically
 		// has 1 entry; accumulated has hundreds). Downstream
 		// consumers MUST NOT mutate either map — both are shared
-		// with FSM / SSE / live store under Decision #10(d).
+		// with FSM / SSE / live store.
 		{
 			sessCtx, sessSpan := otel.Tracer(sideEffectsTracerName).Start(
 				ctx, "sessions.process_signals_at",
@@ -475,8 +420,7 @@ func (o *SideEffectsObserver) OnPayloadProcessed(ctx context.Context, vehicleID 
 	// independently. Frontend consumers that subscribe to this
 	// observer's payload will see the canonical signals view; the
 	// existing sseManager.ts consumer of the legacy payload remains
-	// driven by the legacy ProcessSignals path until phase-42a/0090
-	// retires it.
+	// driven by the legacy ProcessSignals path until that path is retired.
 	o.broadcastSSE(ctx, map[string]any{
 		"vehicle_id": vehicleID,
 		"ts":         o.now(),

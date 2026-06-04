@@ -1,34 +1,34 @@
 #!/usr/bin/env node
-// Phase-46 / Prompt 55 — DataTable export adoption audit.
+// DataTable export adoption audit.
 //
 // Long-tail list pages (charging, drives, trips, automation, alerts,
 // notifications, api-logs, audit) MUST opt their <DataTable/> into
 // client-side CSV export by setting the `exportable` prop. Users
 // routinely export to spreadsheets for tax records, insurance, and
-// fleet reporting — DataTable already supports it (Phase-40 /
-// Prompt 31), but most pages forget to flip the flag.
+// fleet reporting — DataTable already supports it (/
+//), but most pages forget to flip the flag.
 //
 // This audit:
-//   1. Walks src/features/**/pages/*.tsx looking for files whose name
-//      matches the long-tail list-page pattern.
-//   2. For every <DataTable .../> JSX block in those files, requires
-//      either `exportable` or a `// export-audit:skip <reason>`
-//      file-level waiver.
-//   3. Surfaces a separate informational warning for files that
-//      match the pattern but render rows via raw `.map()` /
-//      `<table>` instead of <DataTable/>. These can't be enforced
-//      yet — they belong on the migration backlog.
+// 1. Walks src/features/**/pages/*.tsx looking for files whose name
+// matches the long-tail list-page pattern.
+// 2. For every <DataTable.../> JSX block in those files, requires
+// either `exportable` or a `// export-audit:skip <reason>`
+// file-level waiver.
+// 3. Surfaces a separate informational warning for files that
+// match the pattern but render rows via raw `.map()` /
+// `<table>` instead of <DataTable/>. These can't be enforced
+// yet — they belong on the migration backlog.
 //
 // Recognised exemptions on a target page's <DataTable/>:
-//   • `exportable`                              — the prop is set.
-//   • `// export-audit:skip <reason>`           — explicit per-file
-//                                                  waiver (use for
-//                                                  pages where the
-//                                                  rendered cells are
-//                                                  not meaningfully
-//                                                  exportable, e.g.
-//                                                  embedded action
-//                                                  bars).
+// • `exportable` — the prop is set.
+// • `// export-audit:skip <reason>` — explicit per-file
+// waiver (use for
+// pages where the
+// rendered cells are
+// not meaningfully
+// exportable, e.g.
+// embedded action
+// bars).
 //
 // Exit 0 when every <DataTable/> in a target page satisfies one of
 // the above; exit 1 with a per-table report otherwise.
@@ -48,7 +48,7 @@ const PAGES_ROOT = path.join(ROOT, 'features');
 // detail/summary pages (e.g. ChargingDetailPage, ChargingHeatmapPage)
 // that happen to embed a DataTable for non-list content don't get
 // roped in. The waiver mechanism is the escape valve when something
-// genuinely doesn't belong in the export sweep.
+// genuinely doesn't belong in the export target set.
 const TARGET_FRAGMENTS = [
   'charging',
   'drives',

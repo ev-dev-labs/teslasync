@@ -13,10 +13,10 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 )
 
-// Phase-10 — full Tesla signal-ingest pipeline tracing.
+// Runtime contract tests for the Tesla signal-ingest trace tree.
 //
-// This file contains the runtime contract tests that pair with the
-// static cmd/trace-coverage-audit `tesla_signal_ingest_to_db` flow.
+// These tests pair with the static cmd/trace-coverage-audit
+// `tesla_signal_ingest_to_db` flow.
 // The audit proves every required source file CONTAINS span creation
 // code; these tests prove the SHAPE of the runtime trace tree by
 // installing a tracetest.SpanRecorder, driving the observer with a
@@ -31,17 +31,16 @@ import (
 //     signal.live_store.get_all, observer.vin_resolve,
 //     sessions.process_signals_at, alerts.evaluate.
 //  3. The 6 children are CHILDREN of observer.side_effects (parent
-//     span_id matches), not peers. This is Decision #9: the
-//     implementation MUST use the ctx RETURNED by Start() for each
-//     child — re-using the original ctx would make them peers.
+//     span_id matches), not peers. The implementation must use the ctx
+//     returned by Start() for each child; reusing the original ctx would make
+//     them peers.
 //  4. observer.side_effects is itself a child of the synthesised
 //     "mqtt.consume" parent we install at the call-site. This is
 //     the end-to-end linkage proof: a real production trace from
 //     mqtt.consume through to alerts.evaluate shares a single
 //     trace_id and forms an unbroken parent-child chain.
-//  5. The parent stamps vehicle_id + atomic_count attributes; each
-//     child stamps vehicle_id + signal_count where applicable. No
-//     VIN, no raw values — Decision #11.
+//  5. The parent stamps vehicle_id + atomic_count attributes; each child stamps
+//     vehicle_id + signal_count where applicable. No VIN and no raw values.
 
 // installSpanRecorder swaps the global TracerProvider for a
 // tracetest.SpanRecorder for the lifetime of the test. The Cleanup
@@ -57,10 +56,9 @@ func installSpanRecorder(t *testing.T) *tracetest.SpanRecorder {
 	return rec
 }
 
-// TestPhase10_ObserverEmitsParentAndSixChildren is the Phase-10
-// contract test: end-to-end runtime trace shape for the
-// SideEffectsObserver pipeline. See file-level godoc for the full
-// assertion list.
+// This test verifies the end-to-end runtime trace shape for the
+// SideEffectsObserver pipeline. See file-level godoc for the full assertion
+// list.
 func TestPhase10_ObserverEmitsParentAndSixChildren(t *testing.T) {
 	rec := installSpanRecorder(t)
 
@@ -123,10 +121,10 @@ func TestPhase10_ObserverEmitsParentAndSixChildren(t *testing.T) {
 			got, rootSpanID)
 	}
 
-	// All 6 cross-cutting children must be DIRECT children of
-	// observer.side_effects. Decision #9 critical regression guard:
-	// using the original ctx instead of the parent-returned ctx makes
-	// the children peers, breaking the visual tree in Tempo.
+	// All 6 cross-cutting children must be direct children of
+	// observer.side_effects. Using the original ctx instead of the
+	// parent-returned ctx makes the children peers, breaking the visual tree in
+	// Tempo.
 	parentSpanID := parent.SpanContext().SpanID()
 	for _, name := range expectedChildren {
 		child := byName[name]
@@ -160,8 +158,7 @@ func TestPhase10_ObserverEmitsParentAndSixChildren(t *testing.T) {
 		t.Errorf("observer.vin_resolve sessions_alerts_skipped = %v, want false", got)
 	}
 
-	// PII guard — Decision #5/#11: no VIN, no raw values, no
-	// per-field lists in span attrs.
+	// PII guard: no VIN, no raw values, and no per-field lists in span attrs.
 	for _, s := range spans {
 		for _, kv := range s.Attributes() {
 			k := string(kv.Key)
@@ -173,12 +170,10 @@ func TestPhase10_ObserverEmitsParentAndSixChildren(t *testing.T) {
 	}
 }
 
-// TestPhase10_VINResolveFailureSkipsSessionsAndAlerts asserts the
-// post-failure span tree: observer.vin_resolve records an error, sets
-// sessions_alerts_skipped=true, and the sessions.process_signals_at
-// + alerts.evaluate spans are ABSENT (the live_store + fsm spans
-// still emit because they don't depend on VIN). This locks Decision
-// #4 / Step 5 of the OnPayloadProcessed contract.
+// This test asserts the post-failure span tree: observer.vin_resolve records an
+// error, sets sessions_alerts_skipped=true, and sessions.process_signals_at +
+// alerts.evaluate are absent. The live_store and fsm spans still emit because
+// they do not depend on VIN.
 func TestPhase10_VINResolveFailureSkipsSessionsAndAlerts(t *testing.T) {
 	rec := installSpanRecorder(t)
 

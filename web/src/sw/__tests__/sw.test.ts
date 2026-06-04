@@ -1,5 +1,5 @@
 /**
- * Phase-49 / Slice 0010 — duplicate notification icon fix.
+ * Duplicate notification icon regression test.
  *
  * Regression test that pins the contract: the service worker MUST NOT
  * populate `NotificationOptions.icon` when handling a push event. On

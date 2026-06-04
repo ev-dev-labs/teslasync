@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Phase-46 / Prompt 67 — Chart legend toggle adoption audit.
+// Chart legend toggle adoption audit.
 //
 // Multi-series charts (≥ 2 sibling <Line|Bar|Area>) MUST opt into the
 // URL-persisted hidden-series toggle so users can declutter and share
@@ -14,12 +14,12 @@
 // count is ≥ 2 and no `chartKey=` prop is present.
 //
 // Why warn-only:
-//   • Adoption is a per-PR sweep, not a hard ratchet.
-//   • Some charts deliberately don't want toggling (e.g. confidence
-//     bands paired with a primary line, where hiding the band alone
-//     misleads). Authors can silence the warning per-block with a
-//     `// chart-legend-audit:skip <reason>` comment line above the
-//     `<ChartContainer …>` opening tag.
+// • Adoption is incremental, not a hard ratchet.
+// • Some charts deliberately don't want toggling (e.g. confidence
+// bands paired with a primary line, where hiding the band alone
+// misleads). Authors can silence the warning per-block with a
+// `// chart-legend-audit:skip <reason>` comment line above the
+// `<ChartContainer …>` opening tag.
 //
 // Exit status: always 0. Output is informational; the gate captures
 // it via `AUDIT_EXIT=$LASTEXITCODE`.
@@ -34,7 +34,7 @@ const FILE_RE = /\.tsx$/;
 const SKIP_RE = /\/\/\s*chart-legend-audit:skip\b/;
 
 /**
- * Recursively gather every .tsx file under the given dir. Skips
+ * Recursively gather every.tsx file under the given dir. Skips
  * `__tests__` and `*.test.tsx` because tests routinely fabricate
  * stripped-down chart blocks that would false-positive.
  */
@@ -68,7 +68,7 @@ function walk(dir) {
 
 /**
  * Bracket-aware extraction of every `<ChartContainer …>…</ChartContainer>`
- * block. Returns [{ block, openTag, lineNumber }] where `block` is the
+ * block. Returns [{block, openTag, lineNumber }] where `block` is the
  * whole element source (opening through closing tag) and `openTag` is
  * just the attributes-and-props portion (so attribute checks aren't
  * tricked by descendant content).

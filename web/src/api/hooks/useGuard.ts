@@ -20,13 +20,12 @@ export interface GuardConfig {
 /** Wire shape of a guard event.
  *
  *  Matches `database.GuardEvent` from `internal/database/guard_repo.go`
- *  exactly; do NOT add fields the backend does not emit. The Phase-43a
- *  GuardHandler restoration (`/vehicles/{id}/guard/events`) returns
- *  state-change records sourced from `security_events`, not the legacy
- *  alert-shaped events (`vehicle_moved`, `unauthorized_drive`, …) that
- *  the original interface was modelled after — `event_type` is therefore
- *  a free-form `string` so the UI must use lookup-with-fallback for
- *  labels/icons rather than exhaustive switching.
+ *  exactly; do NOT add fields the backend does not emit. The guard
+ *  events endpoint returns state-change records sourced from
+ *  `security_events`, not legacy alert-shaped events (`vehicle_moved`,
+ *  `unauthorized_drive`, …). `event_type` is therefore a free-form
+ *  `string`, so the UI must use lookup-with-fallback for labels/icons
+ *  rather than exhaustive switching.
  *
  *  `acknowledged` is DERIVED from `acknowledged_at != null`; the
  *  backend does not emit it as a separate boolean. */
@@ -50,10 +49,9 @@ export function isGuardEventAcknowledged(ev: Pick<GuardEvent, 'acknowledged_at'>
 /** Envelope returned by GET `/vehicles/{id}/guard/events`.
  *
  *  Mirrors `internal/api/guard_handler.go::GuardEventsResponse`. The
- *  envelope shape (vs a bare array) was introduced by Phase-43a so the
- *  vehicle_id can be echoed back; the frontend MUST NOT assume the
- *  response is an array — use `safeArray(data?.events)` (already done
- *  inside `useGuardEvents` via TanStack `select`). */
+ *  envelope shape (vs a bare array) echoes `vehicle_id`; the frontend
+ *  MUST NOT assume the response is an array — use `safeArray(data?.events)`
+ *  (already done inside `useGuardEvents` via TanStack `select`). */
 export interface GuardEventsResponse {
   vehicle_id: number;
   events: GuardEvent[];
@@ -82,11 +80,8 @@ export const guardKeys = {
 /**
  * Subscribes to the guard config (`GET /vehicles/{id}/guard`).
  *
- *  Phase-43a restored the four guard endpoints (Status / Events /
- *  Acknowledge / Panic) backed by the new `guard_repo` over
- *  `security_events` — see `internal/api/guard_handler.go` and
- *  `internal/api/router.go:820-823`. The previous `@deprecated` notice
- *  (Phase-42 prompt 0077 deletion) is therefore stale.
+ *  Backed by `guard_repo` over `security_events`; see
+ *  `internal/api/guard_handler.go` and `internal/api/router.go:820-823`.
  */
 export function useGuardConfig(vehicleId: number) {
   return useQuery({
@@ -101,8 +96,8 @@ export function useGuardConfig(vehicleId: number) {
 /**
  * Subscribes to the guard events feed.
  *
- *  Phase-43a backend returns an envelope `{ vehicle_id, events: [...] }`
- *  — see `GuardEventsResponse`. We unwrap with `safeArray(data?.events)`
+ *  The backend returns an envelope `{ vehicle_id, events: [...] }`;
+ *  see `GuardEventsResponse`. We unwrap with `safeArray(data?.events)`
  *  inside TanStack's `select` so callers always receive `GuardEvent[]`
  *  and never need to defend against shape drift. This is the canonical
  *  way to absorb the contract change without a "bridge" layer.
@@ -118,7 +113,7 @@ export function useGuardEvents(vehicleId: number) {
   });
 }
 
-/** Mutates the guard config (`POST /vehicles/{id}/guard`). Phase-43a restored. */
+/** Mutates the guard config (`POST /vehicles/{id}/guard`). */
 export function useSetGuardConfig() {
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -146,7 +141,7 @@ export function useSetGuardConfig() {
   });
 }
 
-/** Triggers a panic alert (`POST /vehicles/{id}/guard/panic`). Phase-43a restored. */
+/** Triggers a panic alert (`POST /vehicles/{id}/guard/panic`). */
 export function useGuardPanic() {
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -167,8 +162,7 @@ export function useGuardPanic() {
 
 /**
  * Acknowledges a guard event
- * (`POST /vehicles/{id}/guard/events/{eventID}/acknowledge`). Phase-43a
- * restored.
+ * (`POST /vehicles/{id}/guard/events/{eventID}/acknowledge`).
  */
 export function useAcknowledgeGuardEvent() {
   const queryClient = useQueryClient();

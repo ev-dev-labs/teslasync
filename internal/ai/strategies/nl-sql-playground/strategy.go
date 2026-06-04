@@ -1,38 +1,36 @@
-// Package nlsqlplayground is the Phase-50 / 0057 PU1 strategy for
+// Package nlsqlplayground is the strategy for
 // the LLM-backed nl-sql-playground surface.
 //
 // The strategy declares:
 //
-//   - the system prompt that frames the surface as a propose-only
-//     read-only SQL drafter: produce a typed ReadonlySQLDraft DTO via
-//     the F4 tools constrained to the per-request scope-bound
-//     curated schema catalog the handler installs server-side; never
-//     execute the SQL itself; refuse cross-table requests; refuse to
-//     propose a table name that is not in the in-scope catalog;
-//     refuse any DML or DDL keyword;
+// - the system prompt that frames the surface as a propose-only
+// read-only SQL drafter: produce a typed ReadonlySQLDraft DTO via
+// the F4 tools constrained to the per-request scope-bound
+// curated schema catalog the handler installs server-side; never
+// execute the SQL itself; refuse cross-table requests; refuse to
+// propose a table name that is not in the in-scope catalog;
+// refuse any DML or DDL keyword;
 //
-//   - the two propose-only tools the LLM is allowed to call:
+// - the two propose-only tools the LLM is allowed to call:
 //
-//     1. `draft_readonly_sql`    — accept a typed
-//     {prompt, sql, rationale} input and return a normalised +
-//     validated ReadonlySQLDraft envelope. The tool is per-request
-//     scope-bound to the curated schema catalog the handler installed
-//     via tools.WithScopedSchemaCatalog; the LLM CANNOT propose a
-//     table name that is not in the catalog. Defence-in-depth
-//     against prompt injection in operator-authored prompts.
+// 1. `draft_readonly_sql` — accept a typed
+// {prompt, sql, rationale} input and return a normalised +
+// validated ReadonlySQLDraft envelope. The tool is per-request
+// scope-bound to the curated schema catalog the handler installed
+// via nlq.WithScopedSchemaCatalog; the LLM CANNOT propose a
+// table name that is not in the catalog. Defence-in-depth
+// against prompt injection in operator-authored prompts.
 //
-//     2. `validate_readonly_sql` — accept the same typed shape and
-//     re-run the canonical validator without rebuilding the draft
-//     envelope. Used by the LLM to confirm a draft is acceptable
-//     before narrating it to the user.
+// 2. `validate_readonly_sql` — accept the same typed shape and
+// re-run the canonical validator without rebuilding the draft
+// envelope. Used by the LLM to confirm a draft is acceptable
+// before narrating it to the user.
 //
-//   - the redaction policy (`PolicyAlertBuilder`) which the slice
-//     prompt mandates ("Allowed classes: none; schema metadata only,
-//     no raw telemetry in prompt"): VIN, lat/long, addresses, place
-//     names, vehicle-name, AND every other PII class remain tagged
-//     via round-trip markers so a leaked transcript reveals nothing
-//     about the operator's environment, vehicle identifiers, or any
-//     value an operator pasted into the request prose.
+// - the redaction policy (`PolicyAlertBuilder`): VIN, lat/long, addresses, place
+// names, vehicle-name, AND every other PII class remain tagged
+// via round-trip markers so a leaked transcript reveals nothing
+// about the operator's environment, vehicle identifiers, or any
+// value an operator pasted into the request prose.
 //
 // The strategy is consumed by the AI HTTP handler at
 // `internal/api/ai_nl_sql_playground_handler.go` which builds a
@@ -45,20 +43,20 @@
 //
 // ADR-015 alignment:
 //
-//   - I1 default-off:    feature toggle defaults false in features.Registry.
-//   - I3 baseline intact: this strategy never replaces the
-//     deterministic manual SQL editor, the curated schema catalog
-//     viewer, or the canonical Run button at /power/sql. The AI
-//     proposes a typed ReadonlySQLDraft; the user explicitly clicks
-//     "Apply to editor" to copy the draft into the baseline form,
-//     then clicks the canonical Run button to execute.
-//   - I7 per-feature:    the AI route is gated by
-//     guard.Wrap("nl-sql-playground").
-//   - I9 redaction:      PolicyAlertBuilder redacts EVERY PII class
-//     so a confused LLM cannot leak a hostname, IP, VIN, or any
-//     pasted value to the model. Schema metadata (table + column
-//     names + descriptions) is the only data that crosses the
-//     prompt boundary by construction.
+// - I1 default-off: feature toggle defaults false in features.Registry.
+// - I3 baseline intact: this strategy never replaces the
+// deterministic manual SQL editor, the curated schema catalog
+// viewer, or the canonical Run button at /power/sql. The AI
+// proposes a typed ReadonlySQLDraft; the user explicitly clicks
+// "Apply to editor" to copy the draft into the baseline form,
+// then clicks the canonical Run button to execute.
+// - I7 per-feature: the AI route is gated by
+// guard.Wrap("nl-sql-playground").
+// - I9 redaction: PolicyAlertBuilder redacts EVERY PII class
+// so a confused LLM cannot leak a hostname, IP, VIN, or any
+// pasted value to the model. Schema metadata (table + column
+// names + descriptions) is the only data that crosses the
+// prompt boundary by construction.
 package nlsqlplayground
 
 import (
@@ -84,38 +82,38 @@ const FeatureID = "nl-sql-playground"
 //
 // The prompt explicitly:
 //
-//   - Forces tool-first behaviour: the LLM MUST call
-//     draft_readonly_sql with the typed {prompt, sql, rationale} it
-//     proposes given the curated schema catalog the handler
-//     synthesises into the user message. Then it MUST call
-//     validate_readonly_sql on the proposed draft to confirm it
-//     satisfies the read-only contract before narrating the plan
-//     to the user.
-//   - Forbids executing the SQL itself: this is a propose-only
-//     surface. The LLM has no tool that runs the query; the actual
-//     execution flows through the existing manual SQL playground
-//     Run button after the user explicitly clicks "Apply to
-//     editor" in the AI panel. The narration MUST surface this
-//     "review and click Run yourself" expectation so the user is
-//     never surprised.
-//   - REQUIRES every referenced table to be in the curated
-//     in-scope catalog passed in the user message. Inventing a
-//     table name that is not in the catalog is forbidden — the
-//     tool enforces the same invariant via the per-request scope
-//     binding, but the prompt-level ban is defence-in-depth.
-//   - Forbids ANY DML or DDL keyword: INSERT, UPDATE, DELETE,
-//     DROP, ALTER, CREATE, TRUNCATE, GRANT, REVOKE, VACUUM, COPY,
-//     CALL, DO, MERGE, EXECUTE. The SQL MUST start with SELECT
-//     or WITH. Multiple statements (separated by semicolons) are
-//     forbidden.
-//   - Asks for short, focused output (one rationale sentence per
-//     proposed query plus the typed draft) so the surface fits
-//     inside the existing /power/sql page layout without a
-//     scroll bomb.
-//   - Bans inventing values for tables the catalog does not
-//     contain: "show me supercharger logins" when no
-//     `supercharger_logins` table exists must produce a polite
-//     refusal, not a guess against a hallucinated schema.
+// - Forces tool-first behaviour: the LLM MUST call
+// draft_readonly_sql with the typed {prompt, sql, rationale} it
+// proposes given the curated schema catalog the handler
+// synthesises into the user message. Then it MUST call
+// validate_readonly_sql on the proposed draft to confirm it
+// satisfies the read-only contract before narrating the plan
+// to the user.
+// - Forbids executing the SQL itself: this is a propose-only
+// surface. The LLM has no tool that runs the query; the actual
+// execution flows through the existing manual SQL playground
+// Run button after the user explicitly clicks "Apply to
+// editor" in the AI panel. The narration MUST surface this
+// "review and click Run yourself" expectation so the user is
+// never surprised.
+// - REQUIRES every referenced table to be in the curated
+// in-scope catalog passed in the user message. Inventing a
+// table name that is not in the catalog is forbidden — the
+// tool enforces the same invariant via the per-request scope
+// binding, but the prompt-level ban is defence-in-depth.
+// - Forbids ANY DML or DDL keyword: INSERT, UPDATE, DELETE,
+// DROP, ALTER, CREATE, TRUNCATE, GRANT, REVOKE, VACUUM, COPY,
+// CALL, DO, MERGE, EXECUTE. The SQL MUST start with SELECT
+// or WITH. Multiple statements (separated by semicolons) are
+// forbidden.
+// - Asks for short, focused output (one rationale sentence per
+// proposed query plus the typed draft) so the surface fits
+// inside the existing /power/sql page layout without a
+// scroll bomb.
+// - Bans inventing values for tables the catalog does not
+// contain: "show me supercharger logins" when no
+// `supercharger_logins` table exists must produce a polite
+// refusal, not a guess against a hallucinated schema.
 const SystemPrompt = `You are the TeslaSync nl-sql-playground agent. ` +
 	`Your job is to PROPOSE a typed ReadonlySQLDraft (a single read-only SELECT statement) that the user can review and run themselves on the SQL playground at /power/sql; you NEVER execute the SQL yourself. ` +
 	`ALWAYS call draft_readonly_sql FIRST with the typed {prompt, sql, rationale} you propose given the in-scope curated schema catalog the user message lists, then call validate_readonly_sql on the proposed draft to confirm it satisfies the read-only contract. ` +
@@ -192,10 +190,10 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyAlertBuilder from
-// internal/ai/redact/policies.go. Allowed classes: none; schema
-// metadata only, no raw telemetry in prompt. Round-trip required:
-// no." PolicyAlertBuilder's deny-by-default stance keeps every PII
+// Redaction requirements use PolicyAlertBuilder from
+// internal/ai/redact/policies.go. It allows no PII through to the
+// provider; schema metadata is the only cleartext context.
+// PolicyAlertBuilder's deny-by-default stance keeps every PII
 // class round-tripped to a tag before the message ever reaches the
 // provider — defence in depth against an operator-authored prompt
 // that pastes a VIN or location string into the request prose.

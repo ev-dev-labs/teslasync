@@ -1,6 +1,6 @@
-// Phase-50 / 0038 — G2 Suggest new geofences.
+// Suggest new geofences.
 //
-// W1 inline wiring (P11/P12):
+// Wiring contract:
 //   - useAiStream targets POST /ai/geofences/draft (the backend
 //     path after stripping the /api/v1 prefix). The location_id
 //     flows through the JSON body, not the URL — the backend route
@@ -8,19 +8,19 @@
 //   - The primary action button is disabled via a COMPUTED
 //     expression
 //     (`stream.state === 'streaming' || stream.state === 'paused-confirm' || locationId <= 0`),
-//     never a literal `disabled` or `disabled={true}` (Rule W1-A).
+//     never a literal `disabled` or `disabled={true}`.
 //   - tool_result frames carrying a typed geofence-draft envelope
 //     are captured in component state; clicking "Apply to form"
 //     copies the proposed name + radius + centroid into the
 //     parent's form state via the onApplyDraft callback. The AI
 //     panel NEVER persists state directly — the baseline Add
 //     Geofence form's existing Save button remains the sole
-//     write path (ADR-015 §I3 + §I8 propose-only contract).
+//     write path.
 //   - cancel() runs on unmount AND on locationId change (dedicated
 //     useEffect with explicit deps).
 //   - Component is wrapped with withAiFeature so it is ABSENT
 //     (returns null) when ai_mode='off' or the per-feature toggle
-//     is off (ADR-015 §I5 hidden UI).
+//     is off.
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'

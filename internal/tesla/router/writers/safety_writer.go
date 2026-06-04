@@ -9,12 +9,10 @@ import (
 )
 
 // safetyColumnByField is the static field→column map for destination
-// safety_snapshot. Built at file-edit time from routing.yaml entries
-// with `dest: safety_snapshot` (1 route today — see the AUDIT_EVIDENCE
-// section of phase-42a/0016's log for the verbatim extraction).
+// safety_snapshot. It mirrors routing.yaml entries with
+// `dest: safety_snapshot`.
 //
-// Per phase-42a prompt 0012 Decision #3 (inherited by 0016) this map
-// is a static var, NOT a runtime read of routing.yaml: the routing
+// This map is a static var, NOT a runtime read of routing.yaml: the routing
 // layer's loader already validated every entry at process start, the
 // per-payload hot path must not re-parse a 1000-line YAML file, and
 // a compile-time declaration here lets the reflective coverage test
@@ -42,9 +40,8 @@ var safetyColumnByField = map[string]string{
 	"ServiceMode": "service_mode",
 }
 
-// safetyColumnFor is the columnFor callback supplied to snapshotWriter
-// per phase-42a prompt 0012 Decision #2 (inherited by 0016). Closes
-// over safetyColumnByField so the snapshot helper has a single
+// safetyColumnFor is the columnFor callback supplied to snapshotWriter.
+// It closes over safetyColumnByField so the snapshot helper has a single
 // source-of-truth lookup; ok=false is returned for any field NOT
 // routed here (the snapshot helper then errors out loudly per its
 // drop-loud contract — see snapshot_base.go's columnFor godoc).
@@ -53,9 +50,8 @@ func safetyColumnFor(field string) (string, bool) {
 	return col, ok
 }
 
-// NewSafetyWriter constructs the production safety snapshot writer.
-// Returns the router.Writer for destination safety_snapshot
-// (constructor signature is locked by phase-42a prompt 0016 Decision #1).
+// NewSafetyWriter constructs the production safety snapshot writer for
+// destination safety_snapshot.
 //
 // Composes the unexported snapshotWriter from snapshot_base.go: the
 // table is "safety_snapshots" (matches migration 000183 lines 309-317)

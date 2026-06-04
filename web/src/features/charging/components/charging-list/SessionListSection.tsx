@@ -32,7 +32,7 @@ interface SessionListSectionProps {
   startDate: string;
   endDate: string;
   vehicleId: number | null;
-  // Phase-40 / Prompt 51 — bulk-action plumbing
+  // Bulk-action plumbing
   selectedIds?: Set<number>;
   onToggleSelected?: (id: number, on: boolean) => void;
   onClearSelection?: () => void;

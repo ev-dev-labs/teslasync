@@ -29,7 +29,7 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-// Phase-45 / Prompt 19 — `<DataFreshness>` consults useReducedMotion via
+// `<DataFreshness>` consults useReducedMotion via
 // `useMotionPreference()`. We mock framer-motion's hook so individual tests
 // can drive both motion-allowed and reduced-motion code paths without
 // touching window.matchMedia (framer-motion v12 caches that at module load).
@@ -221,7 +221,7 @@ describe('DataFreshness', () => {
     expect(onRefresh).not.toHaveBeenCalled()
   })
 
-  // ── Phase-45 / Prompt 19 — background-refetch pulse ───────────────
+  // ── Background-refetch pulse ───────────────────────────────────────
 
   it('pulses the dot while a background refetch is in flight (isFetching with prior data)', () => {
     reducedMotionMock.mockReturnValue(false)

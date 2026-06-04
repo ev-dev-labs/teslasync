@@ -27,6 +27,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { useFormatting } from '@/hooks/useFormatting';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { formatCurrencyValue, currencyCodeFromSymbol } from '@/lib/currencyFormat';
 import { cn } from '@/lib/cn';
 
@@ -151,7 +152,7 @@ export default function TeslaChargingSessionsPage() {
       header: t('tesla_sessions.col.energy', 'Energy (kWh)'),
       render: (row) => (
         <span className="text-sm font-medium text-cyan-400">
-          {row.total_energy_added_wh != null ? fmtNumber(row.total_energy_added_wh, 1) : '—'}
+          {row.total_energy_added_wh != null ? fmtNumber(convertEnergyFromSI(row.total_energy_added_wh, 'kWh'), 1) : '—'}
         </span>
       ),
       sortable: true,

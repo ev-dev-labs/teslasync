@@ -1,4 +1,4 @@
-// Phase-50 / 0025 — D5 Trip planner LLM agent.
+// Trip planner LLM agent strategy tests.
 //
 // Unit tests for the trip-planner-llm-agent Strategy. Mirrors the
 // shape of auto-trip-naming's strategy_test.go (the propose-only
@@ -140,7 +140,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs route-style preferences ships.
+// future feature needs route-style preferences.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -155,11 +155,9 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 
 // TestStrategy_RedactionPolicyTripPlannerLLMAgent proves the
 // strategy hands the dispatcher PolicyTripPlannerLLMAgent wrapped
-// through the F4↔F8 adapter. PolicyTripPlannerLLMAgent allows
+// through the redaction adapter. PolicyTripPlannerLLMAgent allows
 // ClassVehicleName so the narration can address the user's car;
-// every other PII class is redacted to a round-trip tag. The slice
-// prompt explicitly mandates a PolicyDigest-shaped allow-list and
-// "start/end locations are tagged and restored only to same user".
+// every other PII class is redacted to a round-trip tag. Start and end locations remain tagged and are restored only for the same user.
 func TestStrategy_RedactionPolicyTripPlannerLLMAgent(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -188,10 +186,9 @@ func TestStrategy_RedactionPolicyTripPlannerLLMAgent(t *testing.T) {
 	}
 	// Defence-in-depth: the allow-list must NOT include lat/long
 	// or street addresses — the narration describes the plan by
-	// distance / arrival_soc / charger place name (tagged), not
-	// by exact coordinates, and the slice prompt says
-	// "start/end locations are tagged and restored only to same
-	// user".
+	// distance / arrival_soc / tagged charger place name, not by exact
+	// coordinates. Start and end locations stay tagged until same-user
+	// restoration.
 	for _, c := range want.Allow {
 		switch c {
 		case redact.ClassLatLong, redact.ClassStreetAddr:

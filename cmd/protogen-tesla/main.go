@@ -18,9 +18,8 @@
 //
 // All flags have sane defaults; the binary is intended to be invoked from a
 // `go generate` directive at internal/tesla/protomodel/doc.go. The --only
-// flag is a transitional helper used by the phase-42 prompts that land
-// each generated file in isolation; once every file has been claimed,
-// callers should drop --only and let Emit produce all three.
+// flag lets callers emit one generated file at a time; normal callers
+// should leave it unset and let Emit produce all three.
 package main
 
 import (

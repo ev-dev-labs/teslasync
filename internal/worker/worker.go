@@ -4,11 +4,19 @@ import (
 	"sync"
 	"time"
 
+	settingsmodel "github.com/ev-dev-labs/teslasync/internal/models/settings"
+
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
+	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
+	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
+	positiondb "github.com/ev-dev-labs/teslasync/internal/database/position"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/events"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/service"
@@ -26,13 +34,13 @@ type vehicleHealth struct {
 // Worker polls Tesla API for vehicle data and stores it.
 type Worker struct {
 	db            *database.DB
-	vehicleRepo   *database.VehicleRepo
-	posRepo       *database.PositionRepo
-	driveRepo     *database.DriveRepo
-	chargeRepo    *database.ChargingRepo
-	tokenRepo     *database.TokenRepo
-	alertRuleRepo *database.AlertRuleRepo
-	settingsRepo  *database.SettingsRepo
+	vehicleRepo   *vehicledb.VehicleRepo
+	posRepo       *positiondb.PositionRepo
+	driveRepo     *drivedb.DriveRepo
+	chargeRepo    *chargingdb.ChargingRepo
+	tokenRepo     *dbauth.TokenRepo
+	alertRuleRepo *dbalert.AlertRuleRepo
+	settingsRepo  *settingsdb.SettingsRepo
 	teslaClient   *tesla.Client
 	mqttClient    *mqtt.Client
 	eventBus      *events.Bus
@@ -58,7 +66,7 @@ type Worker struct {
 	fallbackPollInterval time.Duration // overrides cfg.PollInterval when fleet telemetry is primary
 
 	// Cached polling config — refreshed each poll cycle from the database.
-	pollingConfig *models.LegacyPollingConfig
+	pollingConfig *settingsmodel.LegacyPollingConfig
 
 	// Adaptive polling engine — evaluates API responses to determine optimal
 	// poll intervals. When set, replaces the fixed-interval backoff logic.
@@ -70,13 +78,13 @@ type Worker struct {
 func New(db *database.DB, tc *tesla.Client, mc *mqtt.Client, cfg config.WorkerConfig, eb *events.Bus, enc *crypto.Encryptor) *Worker {
 	return &Worker{
 		db:                db,
-		vehicleRepo:       database.NewVehicleRepo(db),
-		posRepo:           database.NewPositionRepo(db),
-		driveRepo:         database.NewDriveRepo(db),
-		chargeRepo:        database.NewChargingRepo(db),
-		tokenRepo:         database.NewTokenRepo(db, enc),
-		alertRuleRepo:     database.NewAlertRuleRepo(db),
-		settingsRepo:      database.NewSettingsRepo(db),
+		vehicleRepo:       vehicledb.NewVehicleRepo(db),
+		posRepo:           positiondb.NewPositionRepo(db),
+		driveRepo:         drivedb.NewDriveRepo(db),
+		chargeRepo:        chargingdb.NewChargingRepo(db),
+		tokenRepo:         dbauth.NewTokenRepo(db, enc),
+		alertRuleRepo:     dbalert.NewAlertRuleRepo(db),
+		settingsRepo:      settingsdb.NewSettingsRepo(db),
 		teslaClient:       tc,
 		mqttClient:        mc,
 		eventBus:          eb,

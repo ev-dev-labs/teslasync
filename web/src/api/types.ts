@@ -3,7 +3,7 @@
  *
  * Every exported interface and type alias used across the API layer.
  *
- * === SI Unit Conventions (Phase-43 / Prompt 0011) ===
+ * === SI Unit Conventions ===
  *
  * Field names carry their unit as a suffix. Fields marked `(SI)` are stored
  * and transported in canonical SI (or derived-SI) form; the frontend
@@ -63,12 +63,12 @@ export interface Vehicle {
   updated_at: string
 }
 
-// VehicleLiveState removed — vehicle_live_state table dropped (phase-14/13).
+// VehicleLiveState removed — vehicle_live_state table dropped.
 // Use VehicleState (from /vehicles/{id}/state via SignalStore) or
 // VehicleLiveState from hooks/useVehicleLive (SSE) instead.
 
-// Position mirrors the post-migration `positions` hypertable(Phase 3,
-// migration 000142_baseline_typed). High-frequency GPS + motion sample.
+// Position mirrors the typed `positions` hypertable.
+// High-frequency GPS + motion sample.
 // Typed-only — no raw_json / JSONB carve-outs (ADR-001, ADR-005).
 // Matches Go model in internal/models/position.go.
 export interface Position {
@@ -113,7 +113,7 @@ export interface Drive {
   avg_power_w: number | null
   /** Average ambient temperature in degrees Celsius (SI). */
   outside_temp_avg_c: number | null
-  /** Average inside cabin temperature in degrees Celsius (SI; nullable, column dropped Phase-42). */
+  /** Average inside cabin temperature in degrees Celsius (SI; nullable, column dropped). */
   inside_temp_avg_c: number | null
   score: number | null
   ended_status: string | null
@@ -257,7 +257,7 @@ export interface AppSettings {
    * Default timezone-display mode used by `<DateTime>` when no explicit
    * `in` prop is set. 'vehicle' = car local time (falls back to user TZ
    * when the vehicle has no learned tz); 'user' = browser local; 'utc'
-   * = literal UTC. Defaults to 'vehicle'. (Phase 40 / 22.)
+   * = literal UTC. Defaults to 'vehicle'.
    */
   tz_display_default?: 'vehicle' | 'user' | 'utc'
   /**
@@ -269,7 +269,7 @@ export interface AppSettings {
   /**
    * When true (default), the app prefixes `document.title` with the
    * unread-notification count `(N)` and paints a coloured dot on the
-   * favicon. Disable to keep the tab title/icon static. (Phase 40 / 32.)
+   * favicon. Disable to keep the tab title/icon static.
    */
   tab_badge_enabled?: boolean
   /**
@@ -277,7 +277,7 @@ export interface AppSettings {
    * `"(!) ALERT — "` in front of `document.title` when a critical
    * alert fires while the tab is in the background. Disabled
    * automatically for users with `prefers-reduced-motion: reduce`.
-   * (Phase 40 / 32.)
+   *
    */
   critical_flash_enabled?: boolean
   /**
@@ -291,14 +291,14 @@ export interface AppSettings {
    *     `padding="auto"` / `size="auto"`.
    *
    * Defaults to `'comfortable'` so existing users see no visual
-   * change. (Phase 40 / 44.)
+   * change.
    */
   ui_density?: 'compact' | 'comfortable' | 'spacious'
   /**
    * Default visible format for `<TimeStamp>` when no explicit `format`
    * prop is set. 'relative' renders "2h ago" with an absolute hover
    * tooltip; 'absolute' renders "Apr 4, 2:30 AM" with a relative hover
-   * tooltip. Defaults to 'relative'. (Phase-45 / 22.)
+   * tooltip. Defaults to 'relative'.
    */
   time_format_default?: 'relative' | 'absolute'
   /**
@@ -308,11 +308,11 @@ export interface AppSettings {
    * Consumed by the reactive `useChartPalette()` hook in
    * `@/hooks/useChartPalette`. The static `CHART_COLORS` constant
    * always renders CB-safe regardless of this preference.
-   * (Phase-45 / 23.)
+   *
    */
   chart_palette?: 'cb_safe' | 'neon'
   /**
-   * Phase-50 / F0 — AI-Off Contract (ADR-015).
+   * AI-Off Contract (ADR-015).
    *
    * Top-level gate. `'off'` (default) blocks every AI surface
    * end-to-end: backend handlers return 404, frontend wrappers render
@@ -324,7 +324,7 @@ export interface AppSettings {
    */
   ai_mode?: 'off' | 'local' | 'cloud'
   /**
-   * Phase-50 / F0 — per-feature opt-in map keyed by registry feature
+   * per-feature opt-in map keyed by registry feature
    * ID (see `web/src/ai/features.ts`, generated from
    * `internal/ai/features/registry.go`). Default `{}` means every
    * feature is off; setting `ai_features['chatbot-llm'] = true`
@@ -333,7 +333,7 @@ export interface AppSettings {
    */
   ai_features?: Record<string, boolean>
   /**
-   * Phase-50 / F0 — adapter-specific configuration (`base_url`,
+   * adapter-specific configuration (`base_url`,
    * `model`, `api_key_ref`, etc.). The backend redacts this field
    * from Settings GET responses whenever `ai_mode === 'off'`
    * (ADR-015 §I9), so the SPA must not rely on it being present in
@@ -341,13 +341,13 @@ export interface AppSettings {
    */
   ai_provider_config?: Record<string, unknown>
   /**
-   * Phase-50 / F0 — daily AI cost cap in cents. `0` (default) means
+   * daily AI cost cap in cents. `0` (default) means
    * unset (the per-feature rate limiters still apply). Enforced by
    * the cost-tracker slice F9.
    */
   ai_cost_cap_cents?: number
   /**
-   * Phase-50 / F2 — snapshot of the per-feature opt-in map preserved
+   * snapshot of the per-feature opt-in map preserved
    * at the moment `ai_mode` was set to `'off'`. Per ADR-015 §I7 the
    * mode→off transition CLEARS `ai_features` so a subsequent
    * re-enable cannot silently restore the prior selection. The
@@ -465,14 +465,14 @@ export interface Alert {
   message: string
   is_read: boolean
   created_at: string
-  /** Drill-through metadata (Phase 40 / Prompt 14). Populated when the
+  /** Drill-through metadata. Populated when the
    *  notification log links to a still-existing alert rule. Used by
    *  `getAlertDrillthroughHref()` (web/src/lib/alertDrillthrough.ts) to
    *  deep-link from the alert into the relevant context page. */
   rule_id?: number | null
   rule_signal?: string | null
   rule_severity?: AlertRuleSeverity | string | null
-  /** Phase-46 / Prompt 20 — acknowledgement state. Populated by
+  /** acknowledgement state. Populated by
    *  GET /alerts/{id} and by the ack/reopen mutations. List endpoint also
    *  returns these when the row is acknowledged so the inbox can show a
    *  badge without a per-row detail fetch. */
@@ -481,7 +481,7 @@ export interface Alert {
   acknowledgement_note?: string | null
 }
 
-/** Phase-46 / Prompt 20 — entry in an alert's audit timeline. The synthetic
+/** entry in an alert's audit timeline. The synthetic
  *  `created` event has `id: 0` and is reconstructed from
  *  `notification_logs.created_at` server-side; persisted events have a
  *  positive `id` from `notification_log_events`. */
@@ -495,7 +495,7 @@ export interface AlertEvent {
   note?: string | null
 }
 
-/** Phase-46 / Prompt 20 — wire shape of GET /alerts/{id}. Extends Alert with
+/** wire shape of GET /alerts/{id}. Extends Alert with
  *  the ack columns (already optional on Alert) and an always-present events
  *  array (oldest first, includes synthetic `created`). */
 export interface AlertDetail extends Alert {
@@ -515,7 +515,7 @@ export interface AlertRule {
   enabled: boolean
   vehicle_id?: number | null
   /**
-   * Phase-49 / Slice 0005 — sticky-all flag. When `true`, the rule
+   * sticky-all flag. When `true`, the rule
    * applies to every vehicle in the fleet, including any added after
    * the rule was created. Mutually exclusive with a non-empty
    * `vehicle_ids` array. Optional on read for backward-compat with
@@ -524,7 +524,7 @@ export interface AlertRule {
    */
   all_vehicles?: boolean
   /**
-   * Phase-49 / Slice 0005 — explicit subset of vehicle IDs the rule
+   * explicit subset of vehicle IDs the rule
    * applies to. Always present (`[]` if sticky-all). Optional on read
    * only for backward-compat with pre-0005 API responses.
    */
@@ -550,11 +550,11 @@ export interface AlertRule {
    * between successive falling-edge resets. NULL = unlimited (legacy
    * behaviour). Once-mode rules ignore this field — the latch already
    * caps them at 1 per resolution.
-   * Phase-49 / Slice 0003 / Decision D5.
+   * Decision D5.
    */
   max_fires_per_resolution?: number | null
   /**
-   * Phase-49 / Slice 0009 — two-tier severity escalation. When set,
+   * two-tier severity escalation. When set,
    * a repeat-mode rule whose underlying condition has stayed
    * unresolved for at least `escalation_after_min` minutes fires at
    * `escalation_severity` instead of the base `severity`. Both fields
@@ -566,14 +566,14 @@ export interface AlertRule {
   escalation_after_min?: number | null
   escalation_severity?: AlertRuleSeverity | null
   /**
-   * Phase-50 / ADR-014 — per-rule notification body template. NULL
+   * ADR-014 — per-rule notification body template. NULL
    * means "use the op-aware default rendered by internal/alertmsg".
    * Supports `{{key}}` substitution; whitespace inside the braces is
    * allowed. Max length: 1024 chars.
    */
   msg_template?: string | null
   /**
-   * Phase-50 / ADR-014 — when FALSE, transports that render a separate
+   * ADR-014 — when FALSE, transports that render a separate
    * title field (Discord/Slack/Telegram/ntfy/webhook) deliver
    * body-only notifications. Transports that REQUIRE a title (WebPush,
    * email Subject, Pushover) ignore this flag. Defaults to TRUE.
@@ -589,15 +589,15 @@ export interface AlertRuleInput {
   enabled?: boolean
   vehicle_id?: number | null
   /**
-   * Phase-49 / Slice 0005 — sticky-all flag. New writes from the
+   * sticky-all flag. New writes from the
    * editor MUST set this together with `vehicle_ids`; the legacy
    * `vehicle_id` field is no longer written by Alert Studio.
    */
   all_vehicles?: boolean
   /**
-   * Phase-49 / Slice 0005 — explicit subset of vehicle IDs. Empty
+   * explicit subset of vehicle IDs. Empty
    * array when `all_vehicles` is true. Always sorted + deduped on the
-   * client per slice 0006 / Decision D14.
+   * client per Decision D14.
    */
   vehicle_ids?: number[]
   signal_name?: string
@@ -618,15 +618,15 @@ export interface AlertRuleInput {
   metric_op?: ComputedMetricOp | null
   max_fires_per_resolution?: number | null
   /**
-   * Phase-49 / Slice 0009 — escalation pair. See AlertRule.escalation_*
+   * escalation pair. See AlertRule.escalation_*
    * for invariants. Both fields MUST appear together (both null or
    * both populated). Repeat-mode only.
    */
   escalation_after_min?: number | null
   escalation_severity?: AlertRuleSeverity | null
-  /** Phase-50 / ADR-014 — see AlertRule.msg_template. */
+  /** ADR-014 — see AlertRule.msg_template. */
   msg_template?: string | null
-  /** Phase-50 / ADR-014 — see AlertRule.include_title. */
+  /** ADR-014 — see AlertRule.include_title. */
   include_title?: boolean
 }
 
@@ -668,17 +668,17 @@ export interface AlertTestRequest {
   message?: string
   target?: AlertTestTarget | null
   /**
-   * Phase-50 / ADR-014 — when set, the Test Rule endpoint previews the
+   * ADR-014 — when set, the Test Rule endpoint previews the
    * given template instead of the legacy free-form `message`. Empty
    * string is normalised to "use the op-aware default".
    */
   msg_template?: string | null
-  /** Phase-50 / ADR-014 — see AlertRule.include_title. */
+  /** ADR-014 — see AlertRule.include_title. */
   include_title?: boolean
 }
 
 /**
- * Phase-50 / ADR-014 — autocomplete suggestion served by
+ * ADR-014 — autocomplete suggestion served by
  * GET /api/v1/alerts/message-placeholders. Mirrors
  * internal/alertmsg.Placeholder.
  */
@@ -691,7 +691,7 @@ export interface AlertMessagePlaceholder {
 }
 
 /**
- * Phase-50 / ADR-014 — curated message-template preset served by
+ * ADR-014 — curated message-template preset served by
  * GET /api/v1/alerts/message-presets. Mirrors internal/alertmsg.Preset.
  */
 export interface AlertMessagePreset {
@@ -704,7 +704,7 @@ export interface AlertMessagePreset {
 }
 
 /**
- * Phase-50 / ADR-014 — request body for POST /api/v1/alerts/message-preview.
+ * ADR-014 — request body for POST /api/v1/alerts/message-preview.
  * Accepts the editor's draft rule shape so the preview renders against
  * the same inputs the production dispatch path uses.
  */
@@ -807,7 +807,7 @@ export type {
   NotificationChannelPushover,
 } from '@/types/notifications'
 
-// Phase-46 / Prompt 37 — webhook channel test endpoint result.
+// webhook channel test endpoint result.
 //
 // Mirrors `webhookTestResponse` in
 // internal/api/notification_channel_handler.go. The handler returns
@@ -824,7 +824,7 @@ export interface WebhookTestResult {
   error?: string
 }
 
-// Phase-46 / Prompt 37 — request shape for the signature preview
+// request shape for the signature preview
 // utility endpoint. `body` is the verbatim bytes the receiver would
 // HMAC-validate; the server signs them with `secret` and returns the
 // resulting `sha256=<hex>` value.
@@ -833,7 +833,7 @@ export interface WebhookSignaturePreviewRequest {
   body: string
 }
 
-// Phase-46 / Prompt 37 — preview-signature endpoint response. Always
+// preview-signature endpoint response. Always
 // non-empty when the request validated (empty `secret` is rejected
 // with 400 server-side, never echoed back as an empty signature).
 export interface WebhookSignaturePreviewResult {
@@ -857,7 +857,7 @@ export interface NotificationLog {
   archived_at?: string | null
 }
 
-// Phase-46 / Prompt 27 — server-aggregated notification "thread".
+// server-aggregated notification "thread".
 //
 // A group represents repeated deliveries of the same alert rule + severity
 // (the canonical key is `sha256(alert_rule_id + "|" + severity_lc)`).
@@ -883,7 +883,7 @@ export interface NotificationLogGroup {
   vehicle_ids: number[]
 }
 
-// Phase-46 / Prompt 19 — Do-Not-Disturb / quiet hours window.
+// Do-Not-Disturb / quiet hours window.
 // Server-backed CRUD lives at /api/v1/notifications/quiet-hours.
 // Times are local-clock HH:MM strings, evaluated against `timezone`
 // (IANA name); `weekdays` is a 7-bit mask Sun=1..Sat=64.
@@ -954,7 +954,7 @@ export interface ChatResponse {
 }
 
 /**
- * Per-session metadata used to render the chatbot sidebar (Phase 40 / Prompt 56).
+ * Per-session metadata used to render the chatbot sidebar.
  * `title` is null when the user hasn't renamed the session — the UI then
  * falls back to `first_message`.
  */
@@ -1097,7 +1097,7 @@ export interface DriveDynamicsSnapshot {
 }
 
 // ClimateSnapshot matches the JSON response shape from /climate and /climate/latest.
-// Backed by signal_log after phase-14 rewire.
+// Backed by signal_log.
 export interface ClimateSnapshot {
   vehicle_id: number
   ts: string
@@ -1139,11 +1139,11 @@ export interface ClimateSnapshot {
   seat_heater_rear_center?: number | null
 }
 
-// SecurityEvent mirrors the post-migration `security_events` hypertable
-// (Phase 3, migration 000142_baseline_typed). Event-driven door/lock/sentry
-// history with 5-year audit retention. Typed-only — no raw_json / JSONB
-// carve-outs (ADR-001, ADR-005). Matches Go model in
-// internal/models/security.go. PK: (vehicle_id, ts, event_type).
+// SecurityEvent mirrors the typed `security_events` hypertable.
+// Event-driven door/lock/sentry history with 5-year audit retention.
+// Typed-only — no raw_json / JSONB carve-outs.
+// Matches Go model in internal/models/security.go.
+// PK: (vehicle_id, ts, event_type).
 export interface SecurityEvent {
   vehicle_id: number
   ts: string
@@ -1159,10 +1159,10 @@ export interface SecurityEvent {
   // columns, seat/belt/light JSONB carve-outs). Optional so existing widgets
   // compile; values are undefined when reading the typed column set.
   //
-  // Post per-field MQTT cutover (Phase-42a) the backend serializes raw
-  // `signal.SignalValue` (`interface{}`) — door / window fields can arrive
-  // as native booleans (e.g. `false`) or string enums depending on the
-  // protomodel emission. Mark them as a union so consumers type-narrow.
+  // The backend serializes raw `signal.SignalValue` (`interface{}`) — door /
+  // window fields can arrive as native booleans (e.g. `false`) or string enums
+  // depending on the protomodel emission. Mark them as a union so consumers
+  // type-narrow.
   id?: number
   created_at: string
   door_state?: string | boolean | null
@@ -1178,11 +1178,11 @@ export interface SecurityEvent {
   lights_turn_signal?: string | null
 }
 
-// VehicleMetaSnapshot mirrors the post-migration `vehicle_meta_snapshots`
-// consolidated hypertable (Phase 3, migration 000142_baseline_typed). The
-// `category` discriminator selects which column group is populated; unused
-// groups remain null. Typed-only — no raw_json / JSONB carve-outs
-// (ADR-001, ADR-005). Matches Go model in internal/models/vehicle_meta.go.
+// VehicleMetaSnapshot mirrors the typed `vehicle_meta_snapshots` hypertable.
+// The `category` discriminator selects which column group is populated;
+// unused groups remain null. Typed-only — no raw_json / JSONB carve-outs.
+// Matches Go model in internal/models/vehicle_meta.go.
+// Category-specific column groups not in use stay null.
 export type VehicleMetaCategory =
   | 'tire'
   | 'media'
@@ -1416,7 +1416,7 @@ export interface ExtendedHealthResponse {
   system: { goroutines: number; go_version: string; uptime_seconds: number }
 }
 
-// === Aggregated diagnostic / self-test (Phase-46 / Prompt 33) ===
+// === Aggregated diagnostic / self-test ===
 
 export type DiagnosticCheckStatus = 'ok' | 'warn' | 'fail'
 export type DiagnosticOverallStatus = 'ok' | 'degraded' | 'down'
@@ -1797,7 +1797,7 @@ export interface RouteDetailData {
 // === Charging Telemetry ===
 
 // ChargingTelemetry matches the JSON response shape from /charging-telemetry
-// and /charging-telemetry/latest. Backed by signal_log after phase-14 rewire.
+// and /charging-telemetry/latest. Backed by signal_log.
 export interface ChargingTelemetry {
   vehicle_id: number
   ts: string
@@ -2246,7 +2246,7 @@ export interface AutomationHistoryStats {
 
 /** Per-signal history response from /signals/{vehicleID}/{signalName}/history */
 // SignalHistoryResp matches the typed `/api/v1/signals/{vid}/{name}/history`
-// response added by Phase-42 (signal_handler.go). Each row carries the
+// response from signal_handler.go. Each row carries the
 // row's source-of-truth `value_kind` discriminator and the typed value
 // in a single `value` field — UI code should call
 // `adaptSignalHistoryRow` to project it into the legacy
@@ -2495,7 +2495,7 @@ export type {
   AutomationTriggerStep,
 } from '@/types/automations';
 
-// === Pinned items (Phase 40 / Prompt 48) ===
+// === Pinned items ===
 
 export type PinnedItemType =
   | 'vehicle'
@@ -2517,7 +2517,7 @@ export interface PinnedItem {
   context?: string | null
 }
 
-// === Saved views (Phase 40 / Prompt 50) ===
+// === Saved views ===
 
 export interface SavedView {
   id: number
@@ -2549,7 +2549,7 @@ export interface SavedViewUpdateInput {
   sort_order?: number
 }
 
-// ── Web Push (Phase 40 / Prompt 52) ────────────────────────────────────────
+// ── Web Push ────────────────────────────────────────
 
 /**
  * One row of `push_subscriptions`. Mirrors `internal/models.PushSubscription`.
@@ -2582,15 +2582,15 @@ export interface PushSubscribeBody {
   }
 }
 
-// === Phase-42 typed signal envelope =============================//
-// Backend prompts 0069 (`/signals/`) and 0071 (SSE `signal_change`)
-// rewrote the live/history payload from a raw string to the typed
-// envelope `{kind, value, ts}`. The frontend hooks normalize the
-// backend's protomodel.ValueKind discriminator (e.g. "ValueKindFloat" or
-// the integer enum on SSE) into the compact `SignalKind` union below so
+// === Typed signal envelope =====================================//
+// Live/history payloads carry typed values.
+// The live/history payload uses the typed envelope `{kind, value, ts}`
+// instead of raw strings. The frontend hooks normalize the backend's
+// protomodel.ValueKind discriminator (e.g. "ValueKindFloat" or the
+// integer enum on SSE) into the compact `SignalKind` union below so
 // React components can switch on `kind` and trust the typed `value`
 // without re-parsing strings. Forward-only — no fallback for the
-// pre-Phase-42 string-only shape.
+// legacy string-only shape.
 
 /**
  * Compact discriminator for a typed signal value. Maps to the backend's
@@ -2645,15 +2645,15 @@ export interface SignalDescriptor {
   is_setting_unit: boolean
 }
 
-/** SSE `signal_change` event from EventHub.BroadcastSignalChange (Phase-42
- *  Prompt 0071). Per-signal companion to the existing `vehicle_update`
- *  batch event so dashboards can apply O(1) keyed updates. */
+/** SSE `signal_change` event from EventHub.BroadcastSignalChange.
+ *  Per-signal companion to the existing `vehicle_update` batch event so
+ *  dashboards can apply O(1) keyed updates. */
 export interface SignalChangeEvent extends SignalEnvelope {
   vehicle_id: number
   field: string
 }
 
-/** Response shape of GET /signals/{vehicleID}/live (Phase-42 Prompt 0069). */
+/** Response shape of GET /signals/{vehicleID}/live. */
 export interface LiveSignalsResponse {
   vehicle_id: number
   count: number
@@ -2661,7 +2661,7 @@ export interface LiveSignalsResponse {
   signals: Record<string, SignalEnvelope>
 }
 
-/** Response shape of GET /signals/{vehicleID}/available (Phase-42 Prompt 0069). */
+/** Response shape of GET /signals/{vehicleID}/available. */
 export interface AvailableSignalsResponse {
   vehicle_id: number
   count: number
@@ -2681,7 +2681,7 @@ export interface SignalHistoryResponseTyped {
 }
 
 /** One row of the per-category routing destination map served by
- *  GET /tesla/fleet-telemetry/coverage (Phase-42 Prompt 0068). */
+ *  GET /tesla/fleet-telemetry/coverage. */
 export interface FleetTelemetryFieldCoverage {
   field: string
   destination: string
@@ -2705,7 +2705,7 @@ export interface FleetTelemetryCoverageResponse {
   orphan_fields?: string[]
 }
 
-// === Auth Session Info (Phase 46 / Prompt 05) ===
+// === Auth Session Info ===
 
 /**
  * Snapshot of the upstream ForwardAuth session, returned by
@@ -2736,7 +2736,7 @@ export interface SessionInfo {
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Phase-46 / Prompt 08 — In-app feedback widget
+// In-app feedback widget
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type FeedbackCategory = 'bug' | 'feature' | 'other'
@@ -2789,7 +2789,7 @@ export interface FeedbackListResponse {
   github_repo?: string
 }
 
-// Phase-46 / Prompt 35 — per-user TOTP enrollment.
+// per-user TOTP enrollment.
 //
 // Status response from GET /api/v1/auth/totp. The discriminator is
 // `mode`: `'open'` means the install runs without a forward-auth
@@ -2819,7 +2819,7 @@ export interface TOTPEnrollment {
 }
 
 // Returned by POST /api/v1/auth/totp/sudo. Same shape as the password
-// reauth response from prompt 31 so the SPA's reauth interceptor can
+// reauth response from so the SPA's reauth interceptor can
 // consume it without a discriminator.
 export interface TOTPSudoToken {
   mode: 'session'
@@ -2833,7 +2833,7 @@ export interface TOTPBackupCodesResponse {
   backup_codes: string[]
 }
 
-// Phase-46 / Prompt 42 — Active sessions / device management.
+// Active sessions / device management.
 //
 // One row per TeslaSync-issued device cookie binding. Provider-agnostic:
 // TeslaSync mints its OWN cookie and persists the binding here, so
@@ -2866,7 +2866,7 @@ export interface RevokeAllOthersResponse {
   revoked: number
 }
 
-// === Rate-limit status (Phase-46 / Prompt 40) ===
+// === Rate-limit status ===
 
 /** Single scope row returned by GET /api/v1/system/rate-limits. */
 export type RateLimitSeverity = 'ok' | 'warn' | 'critical'
@@ -2896,7 +2896,7 @@ export interface RateLimitStatusResponse {
   scopes: ScopeBudget[]
 }
 
-// === Job queue status (Phase-46 / Prompt 41) ===
+// === Job queue status ===
 
 /** Heartbeat staleness band rendered by the queue status panel. */
 export type QueueHeartbeatSeverity = 'ok' | 'warn' | 'critical' | 'down'
@@ -2968,7 +2968,7 @@ export interface QueueJobsResponse {
   jobs: QueueJobView[]
 }
 
-/* Phase-46 / Prompt 43 - Per-vehicle settings layer
+/* Per-vehicle settings layer
  * ───────────────────────────────────────────────────
  * The resolver returns one EffectiveSetting per supported key, each
  * tagged with the layer that produced its value. The SPA's
@@ -3019,7 +3019,7 @@ export type VehicleSettingValue = string | number | boolean
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Phase-46 / Prompt 44 — RBAC matrix admin
+// RBAC matrix admin
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -3097,7 +3097,7 @@ export interface RbacUpsertRequest {
 }
 
 
-// Phase-46 / Prompt 46 — Admin impersonation API contracts.
+// Admin impersonation API contracts.
 //
 // The state endpoint returns one of three modes: 'open' (501 in open-
 // mode installs), 'inactive' (forward-auth, no cookie present), or
@@ -3116,7 +3116,7 @@ export type ImpersonationStatus =
 
 // Single row in the candidates list. Subject is the opaque
 // proxy-issued identity; the SPA renders it verbatim because the
-// future prompt 57 may add a display-name column without changing
+// future may add a display-name column without changing
 // this contract.
 export interface ImpersonationCandidate {
   subject: string
@@ -3135,7 +3135,7 @@ export interface ImpersonationStartRequest {
 
 
 /**
- * Phase-46 / Prompt 54 — Vehicle photo upload types.
+ * Vehicle photo upload types.
  *
  * The backend stores three rendered sizes per upload (thumb 256,
  * medium 1024, full 2048 pixels along the longer edge); GET /photo
@@ -3156,7 +3156,7 @@ export interface VehiclePhotoMeta {
   sizes?: VehiclePhotoSizes
 }
 
-// === Auth-mode contract (Phase-46 / Prompt 57) ===
+// === Auth-mode contract ===
 
 /**
  * Two-state classification returned by GET /api/v1/system/auth-mode.

@@ -5,10 +5,18 @@ import (
 	"sync"
 	"time"
 
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
+	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
 )
@@ -66,9 +74,9 @@ type apiDriveState struct {
 // worker's API-polling path. It owns the active-session maps so the
 // worker no longer needs to track them directly.
 type SessionService struct {
-	driveRepo  *database.DriveRepo
-	chargeRepo *database.ChargingRepo
-	tripRepo   *database.TripRepo
+	driveRepo  *drivedb.DriveRepo
+	chargeRepo *chargingdb.ChargingRepo
+	tripRepo   *tripdb.TripRepo
 	eventBus   *events.Bus
 
 	mu               sync.Mutex
@@ -80,9 +88,9 @@ type SessionService struct {
 // NewSessionService creates a SessionService.
 func NewSessionService(db *database.DB, eventBus *events.Bus) *SessionService {
 	return &SessionService{
-		driveRepo:        database.NewDriveRepo(db),
-		chargeRepo:       database.NewChargingRepo(db),
-		tripRepo:         database.NewTripRepo(db),
+		driveRepo:        drivedb.NewDriveRepo(db),
+		chargeRepo:       chargingdb.NewChargingRepo(db),
+		tripRepo:         tripdb.NewTripRepo(db),
 		eventBus:         eventBus,
 		activeDrives:     make(map[int64]int64),
 		activeDriveState: make(map[int64]*apiDriveState),
@@ -92,7 +100,7 @@ func NewSessionService(db *database.DB, eventBus *events.Bus) *SessionService {
 
 // TrackDriveFromAPI evaluates a polled VehicleDataResponse and starts,
 // updates, or ends a drive session. This is the worker (API-polling) path.
-func (s *SessionService) TrackDriveFromAPI(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {
+func (s *SessionService) TrackDriveFromAPI(ctx context.Context, vehicle *vehiclemodel.Vehicle, data *tesla.VehicleDataResponse) {
 	isDriving := data.DriveState.Speed != nil && *data.DriveState.Speed > 0
 
 	s.mu.Lock()
@@ -112,7 +120,7 @@ func (s *SessionService) TrackDriveFromAPI(ctx context.Context, vehicle *models.
 	}
 }
 
-func (s *SessionService) startDrive(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {
+func (s *SessionService) startDrive(ctx context.Context, vehicle *vehiclemodel.Vehicle, data *tesla.VehicleDataResponse) {
 	now := time.Now().UTC()
 	odometer := data.VehicleState.Odometer
 	lat := data.DriveState.Latitude
@@ -124,7 +132,7 @@ func (s *SessionService) startDrive(ctx context.Context, vehicle *models.Vehicle
 	soc := float64(batteryLevel)
 	bl := int16(batteryLevel)
 
-	drive := &models.Drive{
+	drive := &drivemodel.Drive{
 		VehicleID:       vehicle.ID,
 		StartTs:         now,
 		StartBatteryPct: &bl,
@@ -137,8 +145,8 @@ func (s *SessionService) startDrive(ctx context.Context, vehicle *models.Vehicle
 		return
 	}
 
-	// Write additional start fields via PartialUpdate (SI canonical column
-	// names per Phase-48; note start_lng vs the model's StartLon Go field).
+	// Write start_lng explicitly because the DB column uses lng while the Go
+	// model field is StartLon.
 	startFields := map[string]interface{}{
 		"start_lat": lat,
 		"start_lng": lon,
@@ -204,7 +212,7 @@ func (s *SessionService) startDrive(ctx context.Context, vehicle *models.Vehicle
 	}
 }
 
-func (s *SessionService) updateActiveDrive(vehicle *models.Vehicle, data *tesla.VehicleDataResponse, state *apiDriveState) {
+func (s *SessionService) updateActiveDrive(vehicle *vehiclemodel.Vehicle, data *tesla.VehicleDataResponse, state *apiDriveState) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -284,7 +292,7 @@ func (s *SessionService) updateActiveDrive(vehicle *models.Vehicle, data *tesla.
 	state.LastLongitude = &lon
 }
 
-func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehicle, driveID int64, state *apiDriveState, data *tesla.VehicleDataResponse) {
+func (s *SessionService) completeDrive(ctx context.Context, vehicle *vehiclemodel.Vehicle, driveID int64, state *apiDriveState, data *tesla.VehicleDataResponse) {
 	now := time.Now().UTC()
 	endBattery := data.ChargeState.BatteryLevel
 
@@ -309,7 +317,7 @@ func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehi
 	// Calculate metrics. The Tesla API VehicleDataResponse reports speed in
 	// mph, distance/odometer in miles. SessionService accumulates in those
 	// US units so the math here stays in legacy display units; the values
-	// are converted to SI at the repo boundary (Phase-48).
+	// are converted to SI at the repo boundary.
 	var distanceMi float64
 	if state.StartOdometer != nil && state.LastOdometer != nil {
 		distanceMi = *state.LastOdometer - *state.StartOdometer
@@ -340,22 +348,22 @@ func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehi
 	}
 	_ = insideAvg // mig 000185 dropped the inside cabin temp column.
 
-	// Convert legacy US units → SI canonical at the repo boundary (Phase-48).
+	// Convert legacy US units to canonical SI at the repo boundary.
 	const mPerMile = 1609.344
 	const mpsPerMph = 0.44704
 	distanceM := distanceMi * mPerMile
 	durationS := int64(durationMin*60.0 + 0.5)
 	maxSpeedMps := maxSpeedUS * mpsPerMph
 
-	// Complete with core fields (SI canonical per Phase-48)
+	// Complete with core SI fields.
 	endBatteryPct := int16(endBattery)
 	if err := s.driveRepo.Complete(ctx, driveID, now,
 		distanceM, durationS, &endBatteryPct, &maxSpeedMps, nil, outsideAvg); err != nil {
 		log.Error().Err(err).Int64("driveID", driveID).Msg("failed to complete drive")
 	}
 
-	// Build enhanced fields map (same as telemetry path). Keys are SI
-	// canonical column names per Phase-48.
+	// Build enhanced fields using the same canonical SI column names as the
+	// telemetry path.
 	enhanced := map[string]interface{}{}
 
 	// Speed (SI: m/s)
@@ -412,7 +420,7 @@ func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehi
 
 // TrackChargeFromAPI evaluates a polled VehicleDataResponse and starts or
 // ends a charging session as appropriate. This is the worker (API-polling) path.
-func (s *SessionService) TrackChargeFromAPI(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {
+func (s *SessionService) TrackChargeFromAPI(ctx context.Context, vehicle *vehiclemodel.Vehicle, data *tesla.VehicleDataResponse) {
 	isCharging := data.ChargeState.ChargingState == enums.ChargeStateCharging
 
 	s.mu.Lock()
@@ -421,7 +429,7 @@ func (s *SessionService) TrackChargeFromAPI(ctx context.Context, vehicle *models
 
 	if isCharging && !hasActiveCharge {
 		cbl := float64(data.ChargeState.BatteryLevel)
-		session := &models.ChargingSession{
+		session := &chargingmodel.ChargingSession{
 			VehicleID:   vehicle.ID,
 			StartedAt:   time.Now().UTC(),
 			StartSocPct: &cbl,

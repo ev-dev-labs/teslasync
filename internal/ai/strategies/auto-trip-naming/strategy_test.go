@@ -1,5 +1,3 @@
-// Phase-50 / 0024 — D4 Auto trip naming.
-//
 // Unit tests for the auto-trip-naming Strategy. Mirrors the shape of
 // nl-alert-builder's strategy_test.go (the propose-only precedent
 // using draft_*/validate_* tools rather than query_*/retrieve_*).
@@ -88,9 +86,8 @@ func TestStrategy_Tools(t *testing.T) {
 	}
 }
 
-// TestStrategy_ToolsIsDefensiveCopy proves Tools() returns a copy —
-// a caller that mutates the slice does NOT leak the mutation back
-// into the strategy. Dispatcher safety relies on this.
+// TestStrategy_ToolsIsDefensiveCopy proves Tools() returns a copy.
+// Mutating the returned slice must not affect the strategy.
 func TestStrategy_ToolsIsDefensiveCopy(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -132,7 +129,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs naming-style preferences ships.
+// future feature that needs naming-style preferences ships.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -147,11 +144,9 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 
 // TestStrategy_RedactionPolicyAutoTripNaming proves the strategy
 // hands the dispatcher PolicyAutoTripNaming wrapped through the
-// F4↔F8 adapter. PolicyAutoTripNaming allows ClassVehicleName so
+// redaction adapter. PolicyAutoTripNaming allows ClassVehicleName so
 // the proposed name can address the user's car; every other PII
-// class is redacted to a round-trip tag. The slice prompt
-// explicitly mandates a PolicyDigest-shaped allow-list and "places
-// stay tagged unless restored to same user".
+// class is redacted to a round-trip tag.
 func TestStrategy_RedactionPolicyAutoTripNaming(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -181,8 +176,7 @@ func TestStrategy_RedactionPolicyAutoTripNaming(t *testing.T) {
 	// Defence-in-depth: the allow-list must NOT include lat/long
 	// or street addresses — the proposed name describes the trip
 	// by place name pair or generic time-window, not exact
-	// coordinates, and the slice prompt says "places stay tagged
-	// unless restored to same user".
+	// coordinates.
 	for _, c := range want.Allow {
 		switch c {
 		case redact.ClassLatLong, redact.ClassStreetAddr:

@@ -129,4 +129,3 @@ func TestInject_NoActiveSpan_EmitsEnvelopeWithEmptyTrace(t *testing.T) {
 		t.Fatalf("envelope missing payload key: %s", wrapped)
 	}
 }
-

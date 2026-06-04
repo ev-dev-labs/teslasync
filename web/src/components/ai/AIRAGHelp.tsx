@@ -1,5 +1,5 @@
-// Phase-50 / 0020 — N6 RAG-backed app help.
-// Phase-50 / W1 (slice 0065) — wired the Ask button to
+// RAG-backed app help.
+// wired the Ask button to
 // POST /api/v1/ai/help/query.
 
 import { useMemo, useState } from 'react'

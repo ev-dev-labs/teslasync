@@ -1,5 +1,3 @@
-// Phase-50 / 0006 — F5 SSE Streaming.
-//
 // Unit tests for `useAiStream`. Mocks `global.fetch` to return a
 // ReadableStream of canned SSE bytes; exercises the parser, the
 // state machine, the cancellation path, and the off-mode 404 path.

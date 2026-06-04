@@ -10,22 +10,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 )
 
-// --- Mocks ---
-
 type mockVehicleRepo struct {
-	vehicles []*models.Vehicle
-	byID     map[int64]*models.Vehicle
+	vehicles []*vehiclemodel.Vehicle
+	byID     map[int64]*vehiclemodel.Vehicle
 	err      error
 	// getByIDFunc allows per-call state overrides for polling tests.
-	getByIDFunc  func(id int64) (*models.Vehicle, error)
+	getByIDFunc  func(id int64) (*vehiclemodel.Vehicle, error)
 	stateByID    map[int64]string
 	getStateFunc func(id int64) (string, error)
 }
 
-func (m *mockVehicleRepo) GetByID(_ context.Context, id int64) (*models.Vehicle, error) {
+func (m *mockVehicleRepo) GetByID(_ context.Context, id int64) (*vehiclemodel.Vehicle, error) {
 	if m.getByIDFunc != nil {
 		return m.getByIDFunc(id)
 	}
@@ -35,7 +35,7 @@ func (m *mockVehicleRepo) GetByID(_ context.Context, id int64) (*models.Vehicle,
 	return m.byID[id], nil
 }
 
-func (m *mockVehicleRepo) GetAll(_ context.Context) ([]*models.Vehicle, error) {
+func (m *mockVehicleRepo) GetAll(_ context.Context) ([]*vehiclemodel.Vehicle, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -53,11 +53,11 @@ func (m *mockVehicleRepo) GetLiveState(_ context.Context, id int64) (string, err
 }
 
 type mockCommandLogRepo struct {
-	logs []*models.CommandLog
+	logs []*vehiclemodel.CommandLog
 	err  error
 }
 
-func (m *mockCommandLogRepo) Create(_ context.Context, cl *models.CommandLog) error {
+func (m *mockCommandLogRepo) Create(_ context.Context, cl *vehiclemodel.CommandLog) error {
 	if m.err != nil {
 		return m.err
 	}
@@ -68,7 +68,7 @@ func (m *mockCommandLogRepo) Create(_ context.Context, cl *models.CommandLog) er
 type mockSettingsChecker struct {
 	suspended  bool
 	suspendErr error
-	pollingCfg *models.PollingConfig
+	pollingCfg *systemmodel.PollingConfig
 	pollingErr error
 }
 
@@ -76,7 +76,7 @@ func (m *mockSettingsChecker) IsAPISuspended(_ context.Context) (bool, error) {
 	return m.suspended, m.suspendErr
 }
 
-func (m *mockSettingsChecker) GetPollingConfig(_ context.Context) (*models.PollingConfig, error) {
+func (m *mockSettingsChecker) GetPollingConfig(_ context.Context) (*systemmodel.PollingConfig, error) {
 	if m.pollingErr != nil {
 		return nil, m.pollingErr
 	}
@@ -125,8 +125,8 @@ func (m *mockTeslaCommander) SendCommand(_ context.Context, vin string, command 
 
 // --- Helpers ---
 
-func defaultPollingConfig() *models.PollingConfig {
-	return &models.PollingConfig{
+func defaultPollingConfig() *systemmodel.PollingConfig {
+	return &systemmodel.PollingConfig{
 		AwakeIntervalSec:   30,
 		AsleepIntervalSec:  300,
 		DrivingIntervalSec: 15,
@@ -134,11 +134,11 @@ func defaultPollingConfig() *models.PollingConfig {
 	}
 }
 
-func testVehicle(id int64, vin, name string) *models.Vehicle {
-	return &models.Vehicle{ID: id, VIN: vin, DisplayName: name}
+func testVehicle(id int64, vin, name string) *vehiclemodel.Vehicle {
+	return &vehiclemodel.Vehicle{ID: id, VIN: vin, DisplayName: name}
 }
 
-func testVehicleWithState(id int64, vin, name, state string) *models.Vehicle {
+func testVehicleWithState(id int64, vin, name, state string) *vehiclemodel.Vehicle {
 	return testVehicle(id, vin, name)
 }
 
@@ -237,7 +237,7 @@ func TestDecodeCommandSpec(t *testing.T) {
 
 func TestExecute_SingleVehicle_Success(t *testing.T) {
 	v := testVehicle(1, "VIN001", "Model 3")
-	vehicleRepo := &mockVehicleRepo{byID: map[int64]*models.Vehicle{1: v}}
+	vehicleRepo := &mockVehicleRepo{byID: map[int64]*vehiclemodel.Vehicle{1: v}}
 	commandRepo := &mockCommandLogRepo{}
 	settings := &mockSettingsChecker{pollingCfg: defaultPollingConfig()}
 	teslaCmd := &mockTeslaCommander{hasToken: true}
@@ -290,7 +290,7 @@ func TestExecute_SingleVehicle_Success(t *testing.T) {
 
 func TestExecute_SingleVehicle_CommandFails(t *testing.T) {
 	v := testVehicle(1, "VIN001", "Model 3")
-	vehicleRepo := &mockVehicleRepo{byID: map[int64]*models.Vehicle{1: v}}
+	vehicleRepo := &mockVehicleRepo{byID: map[int64]*vehiclemodel.Vehicle{1: v}}
 	commandRepo := &mockCommandLogRepo{}
 	settings := &mockSettingsChecker{pollingCfg: defaultPollingConfig()}
 	teslaCmd := &mockTeslaCommander{hasToken: true, sendErr: errors.New("vehicle not responding")}
@@ -336,7 +336,7 @@ func TestExecute_FleetWide_MixedResults(t *testing.T) {
 	v1 := testVehicle(1, "VIN001", "Model 3")
 	v2 := testVehicle(2, "VIN002", "Model Y")
 	v3 := testVehicle(3, "VIN003", "Model S")
-	vehicleRepo := &mockVehicleRepo{vehicles: []*models.Vehicle{v1, v2, v3}}
+	vehicleRepo := &mockVehicleRepo{vehicles: []*vehiclemodel.Vehicle{v1, v2, v3}}
 	commandRepo := &mockCommandLogRepo{}
 	settings := &mockSettingsChecker{pollingCfg: defaultPollingConfig()}
 	teslaCmd := &mockTeslaCommander{
@@ -379,7 +379,7 @@ func TestExecute_FleetWide_MixedResults(t *testing.T) {
 }
 
 func TestExecute_FleetWide_NoVehicles(t *testing.T) {
-	vehicleRepo := &mockVehicleRepo{vehicles: []*models.Vehicle{}}
+	vehicleRepo := &mockVehicleRepo{vehicles: []*vehiclemodel.Vehicle{}}
 	settings := &mockSettingsChecker{pollingCfg: defaultPollingConfig()}
 	teslaCmd := &mockTeslaCommander{hasToken: true}
 
@@ -435,7 +435,7 @@ func TestExecute_NoValidToken(t *testing.T) {
 }
 
 func TestExecute_VehicleNotFound(t *testing.T) {
-	vehicleRepo := &mockVehicleRepo{byID: map[int64]*models.Vehicle{}}
+	vehicleRepo := &mockVehicleRepo{byID: map[int64]*vehiclemodel.Vehicle{}}
 	settings := &mockSettingsChecker{pollingCfg: defaultPollingConfig()}
 	exec := NewCommandExecutor(vehicleRepo, &mockCommandLogRepo{}, settings, &mockTeslaCommander{hasToken: true})
 
@@ -464,7 +464,7 @@ func TestExecute_InvalidConfig(t *testing.T) {
 func TestExecute_ContextCancelled(t *testing.T) {
 	v1 := testVehicle(1, "VIN001", "Model 3")
 	v2 := testVehicle(2, "VIN002", "Model Y")
-	vehicleRepo := &mockVehicleRepo{vehicles: []*models.Vehicle{v1, v2}}
+	vehicleRepo := &mockVehicleRepo{vehicles: []*vehiclemodel.Vehicle{v1, v2}}
 	settings := &mockSettingsChecker{pollingCfg: defaultPollingConfig()}
 
 	// Tesla client that cancels context on first call
@@ -485,7 +485,7 @@ func TestExecute_ContextCancelled(t *testing.T) {
 
 func TestExecute_WithParams(t *testing.T) {
 	v := testVehicle(1, "VIN001", "Model 3")
-	vehicleRepo := &mockVehicleRepo{byID: map[int64]*models.Vehicle{1: v}}
+	vehicleRepo := &mockVehicleRepo{byID: map[int64]*vehiclemodel.Vehicle{1: v}}
 	commandRepo := &mockCommandLogRepo{}
 	settings := &mockSettingsChecker{pollingCfg: defaultPollingConfig()}
 	teslaCmd := &mockTeslaCommander{hasToken: true}
@@ -551,7 +551,7 @@ func TestExecute_AllCommandsFromWhitelist(t *testing.T) {
 
 func TestAutoWake_VehicleOnline_NoWakeAttempted(t *testing.T) {
 	v := testVehicle(1, "VIN001", "Model 3") // State: "online"
-	vehicleRepo := &mockVehicleRepo{byID: map[int64]*models.Vehicle{1: v}}
+	vehicleRepo := &mockVehicleRepo{byID: map[int64]*vehiclemodel.Vehicle{1: v}}
 	commandRepo := &mockCommandLogRepo{}
 	settings := &mockSettingsChecker{pollingCfg: defaultPollingConfig()}
 	teslaCmd := &mockTeslaCommander{hasToken: true}
@@ -592,7 +592,7 @@ func TestAutoWake_VehicleAsleep_WakeSucceeds(t *testing.T) {
 	// Simulate the vehicle waking on the 2nd poll.
 	var callCount atomic.Int32
 	vehicleRepo := &mockVehicleRepo{
-		byID: map[int64]*models.Vehicle{1: v},
+		byID: map[int64]*vehiclemodel.Vehicle{1: v},
 		getStateFunc: func(id int64) (string, error) {
 			n := callCount.Add(1)
 			if n >= 3 {
@@ -665,7 +665,7 @@ func TestAutoWake_VehicleOffline_WakeSucceeds(t *testing.T) {
 	// Call 1: pre-wake state check → offline. Call 2+: first wake poll → online.
 	var callCount atomic.Int32
 	vehicleRepo := &mockVehicleRepo{
-		byID: map[int64]*models.Vehicle{1: v},
+		byID: map[int64]*vehiclemodel.Vehicle{1: v},
 		getStateFunc: func(_ int64) (string, error) {
 			n := callCount.Add(1)
 			if n >= 2 {
@@ -707,7 +707,7 @@ func TestAutoWake_VehicleOffline_WakeSucceeds(t *testing.T) {
 func TestAutoWake_WakeCommandFails(t *testing.T) {
 	v := testVehicleWithState(1, "VIN001", "Model 3", "asleep")
 	vehicleRepo := &mockVehicleRepo{
-		byID:      map[int64]*models.Vehicle{1: v},
+		byID:      map[int64]*vehiclemodel.Vehicle{1: v},
 		stateByID: map[int64]string{1: "asleep"},
 	}
 	commandRepo := &mockCommandLogRepo{}
@@ -764,7 +764,7 @@ func TestAutoWake_WakeTimeout(t *testing.T) {
 
 	// Vehicle never comes online.
 	vehicleRepo := &mockVehicleRepo{
-		byID:      map[int64]*models.Vehicle{1: v},
+		byID:      map[int64]*vehiclemodel.Vehicle{1: v},
 		stateByID: map[int64]string{1: "asleep"},
 	}
 	commandRepo := &mockCommandLogRepo{}
@@ -814,7 +814,7 @@ func TestAutoWake_WakeTimeout(t *testing.T) {
 func TestAutoWake_WakeUpCommand_SkipsAutoWake(t *testing.T) {
 	v := testVehicleWithState(1, "VIN001", "Model 3", "asleep")
 	vehicleRepo := &mockVehicleRepo{
-		byID:      map[int64]*models.Vehicle{1: v},
+		byID:      map[int64]*vehiclemodel.Vehicle{1: v},
 		stateByID: map[int64]string{1: "asleep"},
 	}
 	commandRepo := &mockCommandLogRepo{}
@@ -859,7 +859,7 @@ func TestAutoWake_WakeUpCommand_SkipsAutoWake(t *testing.T) {
 func TestAutoWake_WakeDisabledInPollingConfig(t *testing.T) {
 	v := testVehicleWithState(1, "VIN001", "Model 3", "asleep")
 	vehicleRepo := &mockVehicleRepo{
-		byID:      map[int64]*models.Vehicle{1: v},
+		byID:      map[int64]*vehiclemodel.Vehicle{1: v},
 		stateByID: map[int64]string{1: "asleep"},
 	}
 	commandRepo := &mockCommandLogRepo{}
@@ -905,7 +905,7 @@ func TestAutoWake_ContextCancelledDuringWake(t *testing.T) {
 	v := testVehicleWithState(1, "VIN001", "Model 3", "asleep")
 
 	vehicleRepo := &mockVehicleRepo{
-		byID:      map[int64]*models.Vehicle{1: v},
+		byID:      map[int64]*vehiclemodel.Vehicle{1: v},
 		stateByID: map[int64]string{1: "asleep"},
 	}
 	commandRepo := &mockCommandLogRepo{}

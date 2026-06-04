@@ -1,6 +1,4 @@
-// Package platform — log_subscribers.go
-//
-// Phase-46 / Prompt 34 — Live log tail viewer.
+// Package platform provides the live log tail fan-out primitive.
 //
 // LogSubscriberRegistry is a fan-out tap that an SSE handler can attach
 // to the global zerolog Logger so a web client can stream structured

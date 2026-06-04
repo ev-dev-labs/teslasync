@@ -150,11 +150,11 @@ func isFixedBarPressureField(field string) bool {
 // miles AND a downstream consumer that depends on the conversion.
 //
 // ChargeRateMilePerHour is INTENTIONALLY EXCLUDED: it is pinned by
-// the Phase-48 R2 audit (units_test.go TestRangeAddedMetersPerHour_R2_AuditPin)
-// as UnitKindDistance with a deliberate misnomer in its proto
-// identifier (the wire payload is meters of range added per hour, not
-// mph). Changing its conversion path requires a coordinated codec +
-// JSON rename and is out of scope for the always-miles override.
+// TestRangeAddedMetersPerHour_R2_AuditPin as UnitKindDistance with a
+// deliberate misnomer in its proto identifier. The wire payload is
+// meters of range added per hour, not mph. Changing its conversion path
+// requires a coordinated codec and JSON rename and is out of scope for
+// the always-miles override.
 var fixedMileDistanceFields = map[string]bool{
 	"Odometer":                   true,
 	"RatedRange":                 true,

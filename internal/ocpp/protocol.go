@@ -1,8 +1,6 @@
 // Package ocpp implements a minimal Charging Station Management
 // System (CSMS) for OCPP 1.6-J (JSON-over-WebSocket).
 //
-// Phase-50 / p50-ocpp.
-//
 // Scope: this is a foundation, not a full CSMS. It implements the six
 // messages that cover ~95% of the home/garage charger handshake +
 // session lifecycle:

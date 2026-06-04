@@ -1,35 +1,9 @@
-// Phase-50 / 0032 — T2 Cabin temperature impact narrative.
+// React-side AI-off contract for cabin temperature narration. The AI section
+// is absent when AI is off, while deterministic charts remain the baseline.
 //
-// `TestCabinTemperatureNarrativeAIOffShowsChartsOnly` (the Vitest
-// sibling to the Go test of the same name) is the slice's
-// load-bearing AI-OFF contract proof on the React side. It mounts
-// the AICabinTemperatureImpactNarrative component with ai_mode='off'
-// (plus the per-feature toggle on, to defeat the obvious "off
-// because nothing is enabled" path) and asserts:
-//
-//   1. The AI section's rooted test ID is absent from the DOM.
-//   2. The wrapper renders no children (empty container).
-//   3. With ai_mode='cloud' AND
-//      cabin-temperature-impact-narrative=true, the section IS
-//      present + carries the expected test ID. This is the positive
-//      control that proves the gate actually works (otherwise the
-//      "absent in off mode" assertion is trivially true).
-//
-// The HTTP POST /api/v1/ai/climate/temperature-impact/narrate
-// 404-in-off-mode invariant is proven by the Go-side
-// TestCabinTemperatureNarrativeAIOffShowsChartsOnly in
-// internal/api/ai_temperature_impact_handler_test.go — the network
-// layer does not exist in the React unit-test scope. The "shows
-// charts only" semantic refers to the parent TemperatureImpactPage
-// which keeps rendering the deterministic temperature-bucket
-// efficiency chart, monthly seasonal trend, and recent-drives table
-// regardless of this AI section's visibility.
-//
-// File name MUST stay
-// `TestCabinTemperatureNarrativeAIOffShowsChartsOnly.test.tsx` —
-// the slice prompt's verification command runs
-// `vitest --run TestCabinTemperatureNarrativeAIOffShowsChartsOnly`,
-// where the positional pattern is matched against the file PATH.
+// The backend test covers 404-in-off-mode behavior; this unit test has no
+// network layer. Keep the file name stable because targeted verification
+// matches it by path.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -83,8 +57,7 @@ describe('TestCabinTemperatureNarrativeAIOffShowsChartsOnly (cabin-temperature-i
   it('TestCabinTemperatureNarrativeAIOffShowsChartsOnly: renders nothing when ai_mode=off even with the cabin-temperature-impact-narrative toggle on', () => {
     // The toggle is intentionally set to true to defeat the
     // shortcut path "the section hides because the feature flag is
-    // off". The mode='off' check MUST trump the per-feature toggle
-    // (ADR-015 §I7).
+    // off". mode='off' must trump the per-feature toggle.
     //
     // The vehicleId prop is also intentionally set so the
     // absent-in-DOM assertion proves that the gate (not a missing
@@ -107,9 +80,8 @@ describe('TestCabinTemperatureNarrativeAIOffShowsChartsOnly (cabin-temperature-i
   });
 
   it('TestCabinTemperatureNarrativeAIOffShowsChartsOnly: renders nothing when ai_mode is non-off but the cabin-temperature-impact-narrative toggle is false', () => {
-    // The other half of the gate: even with mode='cloud', a
-    // toggle=false MUST hide the surface (per-feature opt-in,
-    // ADR-015 §I7).
+    // The other half of the gate: even with mode='cloud', toggle=false must
+    // hide the surface.
     mockUseSettings.mockReturnValue(
       settingsPayload({
         ai_mode: 'cloud',

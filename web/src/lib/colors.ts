@@ -4,11 +4,11 @@
  * Single source of truth for chart palettes, charger-type colors,
  * status indicators, and battery-health colors used across the app.
  *
- * Phase-40 / Prompt 60 — chart palette is theme-aware:
+ * Theme-aware chart palette:
  *   - `useThemeChartPalette()` derives the series colors from the active theme
  *   - `buildChartPalette(theme, mode)` is the pure builder for non-React contexts
  *
- * Phase-45 / Prompt 23 — color-blind-safe default palette:
+ * Color-blind-safe default palette:
  *   - `CHART_COLORS_CB_SAFE` (Okabe-Ito) is the new default for `CHART_COLORS`.
  *   - `CHART_COLORS_NEON` retains the original neon palette for the stylistic
  *     dashboard surfaces, exposed via the user `chart_palette` Settings pref.
@@ -55,9 +55,9 @@ export const CHART_COLORS_NEON = [
 ] as const
 
 /**
- * Default static chart palette. Phase-45/23 swapped this from the neon palette
- * to the CB-safe Okabe-Ito palette so every consumer that imports the bare
- * `CHART_COLORS` constant gets a CVD-safe default automatically. Consumers
+ * Default static chart palette. This uses the CB-safe Okabe-Ito palette so
+ * every consumer that imports the bare `CHART_COLORS` constant gets a
+ * CVD-safe default automatically. Consumers
  * that should react to the user's `chart_palette` preference should switch to
  * `useChartPalette()` in `@/hooks/useChartPalette`.
  */
@@ -198,7 +198,7 @@ export function statusHexColor(status: string): string {
   }
 }
 
-/* ── Theme-aware chart palette (Phase-40 / Prompt 60) ──────────────────────── */
+/* ── Theme-aware chart palette ─────────────────────────────────────────────── */
 
 /**
  * A complete chart palette. `series` is theme-derived (hue-rotated between the
@@ -322,7 +322,7 @@ export function buildChartPalette(theme: ColorTheme, mode: ModeTheme): ChartPale
  * theme. Re-derives the palette whenever the user switches themes, so any
  * chart that consumes this hook re-renders with the new colours automatically.
  *
- * NOTE (Phase-45/23): renamed from `useChartPalette` to `useThemeChartPalette`
+ * NOTE: renamed from `useChartPalette` to `useThemeChartPalette`
  * to free the simpler `useChartPalette` name for the new user-pref-driven hook
  * at `@/hooks/useChartPalette` that returns `readonly string[]`.
  */

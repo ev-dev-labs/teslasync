@@ -2,7 +2,6 @@ package user
 
 import "time"
 
-// User represents a user/account aggregate.
 type User struct {
 	ID                         string    `json:"id" db:"id"`
 	Email                      string    `json:"email" db:"email"`

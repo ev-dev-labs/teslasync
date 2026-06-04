@@ -1,5 +1,5 @@
 /**
- * Tour launcher helper — Phase-46 / Prompt 61.
+ * Tour launcher helper.
  *
  * Single entry point used by Settings, the command palette, and any other
  * UI surface that wants to (re-)play a registered tour. Clears the per-tour
@@ -13,7 +13,7 @@
  *
  *   - `dispatchTourStart` → window CustomEvent: same-tab, synchronous,
  *     already wired into Layout via `TOUR_START_EVENT` listener since
- *     Phase-40 / Prompt 65. This is what drives the local tour.
+ *     the local tour state machine. This is what drives the local tour.
  *   - `broadcast()` → BroadcastChannel/storage event: cross-tab, async.
  *     `subscribe()` drops messages whose `_from === TAB_ID` (per the bus
  *     contract in `broadcast.ts`), so the local tab will never see this

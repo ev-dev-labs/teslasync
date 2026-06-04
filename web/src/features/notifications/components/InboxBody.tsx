@@ -70,7 +70,7 @@ type SeverityValue = (typeof SEVERITY_VALUES)[number];
 const READ_VALUES = ['all', 'read', 'unread'] as const;
 type ReadValue = (typeof READ_VALUES)[number];
 
-// Phase-46 / Prompt 27 — grouped/threaded vs flat inbox view. Default
+// Grouped/threaded vs flat inbox view. Default
 // is grouped because power users with many alert rules drown in flat
 // duplicates; flat remains available for the historical workflow and
 // for users who want to see every individual delivery.
@@ -141,7 +141,7 @@ export interface InboxBodyProps {
 export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   const { t } = useTranslation();
 
-  // ── URL-backed filter state (Phase 40 / Prompt 33) ─────────────────────
+  // ── URL-backed filter state ─────────────────────
   // Severity, vehicle, search, and read-state live in the URL so a filtered
   // view can be shared / reloaded / linked from outside.
   const [severityRaw] = useUrlArray('severity');
@@ -151,7 +151,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   const [readState] = useUrlEnum<ReadValue>('read', READ_VALUES, 'all');
   const [from] = useUrlString('from', '');
   const [to] = useUrlString('to', '');
-  // Phase-46 / Prompt 27 — view mode is URL-backed too so a deep link can
+  // View mode is URL-backed too so a deep link can
   // express "Inbox, grouped" vs "Inbox, flat" independent of filter state.
   const [view, setView] = useUrlEnum<ViewValue>('view', VIEW_VALUES, 'grouped');
   const setFiltersBatch = useUrlBatch();
@@ -204,7 +204,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     });
   }, [setFiltersBatch]);
 
-  // Phase-50 / 0035 — A2 inbox-auto-categorization apply callback.
+  // Inbox auto-categorization apply callback.
   // The AI panel's "Apply categories as filter" button passes a
   // deduped rule_id list back to the inbox; we copy it into the
   // existing URL-backed rule_id filter so the deterministic
@@ -221,7 +221,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   const { data: rawRows, isLoading, error, refetch } = useNotificationLogs(filters, { enabled: !isGrouped });
   const rows = useMemo<NotificationLog[]>(() => rawRows ?? [], [rawRows]);
 
-  // Phase-46 / Prompt 27 — grouped/threaded fetch. Only enabled in
+  // Grouped/threaded fetch. Only enabled in
   // grouped mode AND on the inbox tab (archived doesn't group; the
   // archive workflow is row-by-row triage).
   const {
@@ -268,8 +268,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     markReadMut.mutate(unread);
   }, [archived, isLoading, rows, markReadMut, isGrouped]);
 
-  // Phase-45 / Prompt 32 — generic bulk-selection helper replaces the
-  // hand-rolled Set<number> state from Phase-45 / 28.
+  // Generic bulk-selection helper replaces hand-rolled Set<number> state.
   const bulkSelection = useBulkSelection<number>();
   const selected = bulkSelection.selectedIds;
   const clearSelection = bulkSelection.clear;
@@ -515,7 +514,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
         />
       </FadeIn>
 
-      {/* Phase-50 / 0035 — A2 inbox-auto-categorization. The
+      {/* Inbox auto-categorization. The
         component is wrapped with withAiFeature, so it is ABSENT
         when ai_mode='off' OR the per-feature toggle is off
         (ADR-015 §I5). The "Apply categories as filter" callback

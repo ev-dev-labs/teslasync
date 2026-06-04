@@ -3,7 +3,7 @@
  *
  * Foundation layer — resilient HTTP helper used by every domain module.
  *
- * Phase-46 / Prompt 31 — sudo-style step-up reauth interceptor.
+ * Step-up reauth interceptor for sensitive admin endpoints.
  * Sensitive admin endpoints (revoke API key, delete vehicle, drop a
  * data-repair table, restore a backup, rotate the Tesla token) require
  * a fresh credential before they fire. The backend gates them with
@@ -52,10 +52,9 @@ export interface ApiRequestOptions extends RequestInit {
 
 function normalizePath(path: string): string {
   const withSlash = path.startsWith('/') ? path : `/${path}`
-  // Defensive strip: hooks MUST pass paths WITHOUT the /api/v1 prefix
-  // (engineering rule #7; enforced by audit:rogue-prefix gate). Strip
-  // here so a stray `/api/v1/foo` does not concatenate downstream into
-  // `/api/v1/api/v1/foo`. Idempotent for the canonical `/foo` form.
+  // Defensive strip: hooks must pass paths without the /api/v1 prefix.
+  // This keeps a stray `/api/v1/foo` from becoming `/api/v1/api/v1/foo`.
+  // Idempotent for the canonical `/foo` form.
   return withSlash.replace(/^\/api\/v1\//, '/')
 }
 
@@ -81,8 +80,7 @@ export const SUDO_REQUIRED_CODE = 'SUDO_REQUIRED'
 
 /**
  * Sentinel code returned by every endpoint that has no sensible
- * behaviour without an upstream identity provider configured —
- * Phase-46 / Prompt 57 (`AUTH_MODE_OPEN`). Mirrors the backend
+ * behaviour without an upstream identity provider configured. Mirrors the backend
  * constants `internal/api.ErrCodeAuthModeOpen` and
  * `internal/auth.AuthModeOpenCode`.
  *

@@ -1,42 +1,39 @@
-// Phase-50 / 0062 — ML1 Learned per-vehicle anomaly baselines.
-// Phase-50 / W1 inline wiring (per slice prompt 0062) — on-mode
-// wiring test proving the Train baseline button opens an SSE
+// Learned per-vehicle anomaly baselines on-mode wiring test proving the Train baseline button opens an SSE
 // stream against the registered backend route POST
 // /api/v1/ai/ml/anomaly-baselines/train.
-//
-// `TestLearnedPerVehicleAnomalyBaselinesAIOnWiredCallsRoute` is
-// the load-bearing positive wiring proof for slice 0062's W1
-// inline addendum. It mounts the AILearnedAnomalyBaselines
+
+// `TestLearnedPerVehicleAnomalyBaselinesAIOnWiredCallsRoute` proves
+// the positive wiring contract. It mounts the AILearnedAnomalyBaselines
 // component with ai_mode='cloud' + the per-feature toggle on,
 // stubs global fetch with a deterministic SSE byte stream, clicks
 // the Train baseline button, and asserts:
-//
-//   1. Exactly ONE POST against the registered backend route
-//      `${getApiBase()}/api/v1/ai/ml/anomaly-baselines/train` is
-//      enqueued with `Content-Type: application/json` and a body
-//      containing the in-scope vehicle_id + the default
-//      learning-window days. The path MUST match the registry
-//      entry verbatim — a typo here is invisible to the off-mode
-//      test (which only asserts absence) and would silently 404
-//      in production.
-//   2. The first `delta` event's text renders inside the gated
-//      wrapper
-//      `data-testid="ai-feature-learned-per-vehicle-anomaly-baselines-root"`.
-//   3. A second click while `state === 'streaming'` is a no-op —
-//      the second fetch call is NOT enqueued (the double-submit
-//      guard inside useAiStream + the visual `disabled` mirror it
-//      from canGenerate). This proves W1 Rule A — the disabled
-//      prop is a computed expression that reacts to state.
-//   4. The off-mode invariant test
-//      (`TestLearnedAnomalyBaselineAIOffUsesSafeRangesOnly`)
-//      continues to pass unchanged — wiring MUST NOT regress the
-//      off-mode absence invariant. That assertion lives in the
-//      sibling file and is exercised independently by the npm
-//      test runner.
-//
+
+// 1. Exactly ONE POST against the registered backend route
+// `${getApiBase()}/api/v1/ai/ml/anomaly-baselines/train` is
+// enqueued with `Content-Type: application/json` and a body
+// containing the in-scope vehicle_id + the default
+// learning-window days. The path MUST match the registry
+// entry verbatim — a typo here is invisible to the off-mode
+// test (which only asserts absence) and would silently 404
+// in production.
+// 2. The first `delta` event's text renders inside the gated
+// wrapper
+// `data-testid="ai-feature-learned-per-vehicle-anomaly-baselines-root"`.
+// 3. A second click while `state === 'streaming'` is a no-op —
+// the second fetch call is NOT enqueued (the double-submit
+// guard inside useAiStream + the visual `disabled` mirror it
+// from canGenerate). This proves the disabled prop is computed
+// from stream state rather than hardcoded.
+// 4. The off-mode invariant test
+// (`TestLearnedAnomalyBaselineAIOffUsesSafeRangesOnly`)
+// continues to pass unchanged — wiring MUST NOT regress the
+// off-mode absence invariant. That assertion lives in the
+// sibling file and is exercised independently by the npm
+// test runner.
+
 // The test name MUST stay
 // `TestLearnedPerVehicleAnomalyBaselinesAIOnWiredCallsRoute` per
-// the W1 inline addendum naming contract.
+// the inline addendum naming contract.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
@@ -170,7 +167,7 @@ describe('TestLearnedPerVehicleAnomalyBaselinesAIOnWiredCallsRoute (learned-per-
     // route. fireEvent.click bypasses pointer-events behaviour;
     // @testing-library/user-event is intentionally NOT a
     // dependency of this codebase (see web/package.json), so we
-    // use fireEvent.click consistently across the slice tests.
+    // use fireEvent.click consistently across these wiring tests.
     await act(async () => {
       fireEvent.click(button);
     });
@@ -260,7 +257,7 @@ describe('TestLearnedPerVehicleAnomalyBaselinesAIOnWiredCallsRoute (learned-per-
   });
 
   it('TestLearnedPerVehicleAnomalyBaselinesAIOnWiredCallsRoute: Train baseline button is disabled when no vehicleId is available (computed, not literal)', () => {
-    // This test guards W1 Rule A from the slice prompt: the
+    // This test guards the contract that the
     // primary action button's `disabled` prop MUST be a computed
     // expression (here: `!canGenerate`), not a literal
     // `disabled` / `disabled={true}`. We prove the dynamic

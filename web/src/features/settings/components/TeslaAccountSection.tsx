@@ -27,10 +27,8 @@ export function TeslaAccountSection() {
   const syncMut = useSyncVehicles()
   const { confirm: confirmDisconnect, dialogProps: disconnectDialogProps } = useConfirm()
 
-  // Phase-45 / Prompt 30 — local "disconnected" pill driven by the same
-  // CustomEvents the <TeslaReauthBanner> uses, so a user landing on this
-  // page directly sees the same status without having to wait for a
-  // failed call.
+  // Mirror TeslaReauthBanner events so this page shows token-expired status
+  // before the next failed API call.
   const [pillDisconnected, setPillDisconnected] = useState(false)
   useEffect(() => {
     const onExpired = () => setPillDisconnected(true)
@@ -43,12 +41,8 @@ export function TeslaAccountSection() {
     }
   }, [])
 
-  // Phase-45 / Prompt 30 — fire `teslasync:tesla-auth-recovered` when the
-  // auth-status query flips from `authenticated: false` (or unknown) to
-  // `authenticated: true`. This is the canonical moment a queued
-  // mutation can be safely replayed and the banner can hide. We track
-  // the previous value via a ref so the effect only fires on the
-  // edge, not on every poll.
+  // Fire recovery only on the unauthenticated → authenticated edge so queued
+  // mutations can replay and the banner can hide once per recovery.
   const prevAuthRef = useRef<boolean | null>(null)
   useEffect(() => {
     if (!auth) return

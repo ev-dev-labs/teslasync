@@ -6,9 +6,7 @@ import (
 )
 
 // CTI child rows for `automation_steps` of kind `action_*`. See migration
-// 000142_baseline_typed and
-// .github/prompts/db-refactor/phase-3-schema/_baseline_source/16-automation-actions.sql
-// and 17-automation-step-children.sql.
+// 000142_baseline_typed.
 //
 // ADR-001: typed-by-default — no raw_json. The single JSONB carve-out in the
 // entire schema is AutomationAction.CommandParams (per ADR-004/ADR-005), which
@@ -41,9 +39,8 @@ type AutomationAction struct {
 // AutomationStepActionNotify mirrors `automation_step_action_notify`.
 //
 // Template is a mustache-style string (NOT json) rendered at notification
-// dispatch time. ChannelID is a FK to notification_channels(id) (added in
-// prompt 19) ON DELETE RESTRICT — a channel referenced by an automation
-// cannot be deleted.
+// dispatch time. ChannelID is a FK to notification_channels(id) ON DELETE
+// RESTRICT - a channel referenced by an automation cannot be deleted.
 type AutomationStepActionNotify struct {
 	StepID    int64  `db:"step_id"    json:"step_id"`
 	ChannelID int64  `db:"channel_id" json:"channel_id"`

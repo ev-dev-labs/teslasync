@@ -13,7 +13,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
 )
 
 // processAccount produces a GDPR-style ZIP export with one CSV per allowed
@@ -68,20 +68,20 @@ func (p *Processor) processAccount(ctx context.Context, req *JobRequest) (*Proce
 	zw := zip.NewWriter(&buf)
 
 	totalRecords := 0
-	for _, table := range database.AllowedAccountTables {
+	for _, table := range exportdb.AllowedAccountTables {
 		if err := ctx.Err(); err != nil {
 			_ = zw.Close()
 			return nil, err
 		}
 
 		var (
-			snap *database.ExportTableSnapshot
+			snap *exportdb.ExportTableSnapshot
 			err  error
 		)
 		if req.VehicleID != nil {
-			snap, err = database.FetchTableSnapshotForVehicle(ctx, p.db, table, *req.VehicleID, MaxAccountRowsPerTable)
+			snap, err = exportdb.FetchTableSnapshotForVehicle(ctx, p.db, table, *req.VehicleID, MaxAccountRowsPerTable)
 		} else {
-			snap, err = database.FetchTableSnapshot(ctx, p.db, table, MaxAccountRowsPerTable)
+			snap, err = exportdb.FetchTableSnapshot(ctx, p.db, table, MaxAccountRowsPerTable)
 		}
 		if err != nil {
 			// Don't abort the whole archive — log and skip this table. The
@@ -158,10 +158,9 @@ func (p *Processor) processAccount(ctx context.Context, req *JobRequest) (*Proce
 // of the snapshot's columns and the allowlist (case-sensitive). Order in
 // the output follows the allowlist's order. When no requested column is
 // present in this snapshot, the resulting CSV is empty (header + no rows).
-// allowedColumns nil/empty preserves byte-for-byte parity with the
-// pre-Phase-46/62 caller — sorted alphabetic column order, every column
-// emitted.
-func snapshotToCSV(snap *database.ExportTableSnapshot, startDate, endDate *time.Time, allowedColumns []string) ([]byte, error) {
+// allowedColumns nil/empty preserves the legacy default: sorted
+// alphabetic column order with every column emitted.
+func snapshotToCSV(snap *exportdb.ExportTableSnapshot, startDate, endDate *time.Time, allowedColumns []string) ([]byte, error) {
 	if snap == nil {
 		return nil, fmt.Errorf("snapshotToCSV: nil snapshot")
 	}
@@ -196,10 +195,8 @@ func snapshotToCSV(snap *database.ExportTableSnapshot, startDate, endDate *time.
 		return nil, err
 	}
 
-	// pickTimestampKey scans the resolved column set for date filtering;
-	// when the user has filtered out the timestamp column entirely, scan
-	// the full snapshot so we still honour the date range against the
-	// underlying row data.
+	// If the requested output omits the timestamp column, still apply the
+	// date range against the full snapshot so filtering remains meaningful.
 	tsKey := pickTimestampKey(cols)
 	if tsKey == "" {
 		tsKey = pickTimestampKey(snap.Columns)

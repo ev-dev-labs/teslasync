@@ -37,7 +37,7 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
   // so the SI-canonical `convertDistanceFromSI` (meters in) treats it
   // correctly. Daily-avg derives from the last_30d_km rolling window —
   // the legacy endpoint exposed `avgDaily` directly; the restored
-  // endpoint exposes `last_30d_km` (Phase-43a / Prompt 0004).
+  // endpoint exposes `last_30d_km`.
   const totalMeters = (data?.lifetime_km ?? 0) * 1000;
   const dailyAvgMeters = ((data?.last_30d_km ?? 0) / 30) * 1000;
   const totalDisplay = toDistanceDisplay(totalMeters);

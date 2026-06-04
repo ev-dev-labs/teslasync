@@ -1,8 +1,6 @@
-// Phase-50 / 0031 — T1 Preheat and precool recommender.
-//
 // `TestPreheatPrecoolAIOffManualClimateWorks` (the Vitest sibling
-// to the Go test of the same name) is the slice's load-bearing
-// AI-OFF contract proof on the React side. It mounts the
+// to the Go test of the same name) proves the React-side AI-off
+// contract. It mounts the
 // AIPreheatPrecoolRecommender component with ai_mode='off' (plus
 // the per-feature toggle on, to defeat the obvious "off because
 // nothing is enabled" path) and asserts:
@@ -27,7 +25,7 @@
 //
 // File name MUST stay
 // `TestPreheatPrecoolAIOffManualClimateWorks.test.tsx` — the
-// slice prompt's verification command runs
+// verification command runs
 // `vitest --run TestPreheatPrecoolAIOffManualClimateWorks`,
 // where the positional pattern is matched against the file PATH.
 

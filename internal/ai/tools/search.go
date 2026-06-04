@@ -1,14 +1,14 @@
-// Phase-50 / 0017 — N3 Natural-language search across drives, charges,
+// Natural-language search across drives, charges,
 // and alerts.
 //
 // search.go ships TWO new read-only tools:
 //
-//   - `retrieve_chunks`        — accept a typed natural-language query
+//   `retrieve_chunks`        — accept a typed natural-language query
 //                                 + a small list of source types and
 //                                 return the top-k nearest chunks via
-//                                 the F7 rag.Retriever scoped to the
+//                                 the rag.Retriever scoped to the
 //                                 calling user_subject.
-//   - `hydrate_search_result`  — accept a typed (source_type, source_id)
+//   `hydrate_search_result`  — accept a typed (source_type, source_id)
 //                                 reference and return a human-friendly
 //                                 envelope (title, subtitle, url, when)
 //                                 by delegating to a narrow Hydrator
@@ -26,26 +26,26 @@
 // citations to the hydrated entities — the LLM's only effect on the
 // system is the narration it streams back over SSE.
 //
-// Design constraints (from the slice prompt):
+// Design constraints (from the feature spec):
 //
-//   - "Tools must call existing typed handlers or services; no
-//     duplicate write paths." → retrieve_chunks delegates to the F7
+//   "Tools must call existing typed handlers or services; no
+//     duplicate write paths." → retrieve_chunks delegates to the RAG
 //     rag.Retriever (the single canonical retrieval entry point);
 //     hydrate_search_result delegates to a narrow read interface
 //     satisfied at boot by an adapter wrapping the existing read
 //     handlers (no new SQL).
 //
-//   - "the LLM never writes raw SQL" → tools have no DB handle. The
+//   "the LLM never writes raw SQL" → tools have no DB handle. The
 //     interfaces are intentionally narrow — Retriever exposes only
 //     Retrieve / Index / Forget; Hydrator exposes only HydrateOne.
 //
-//   - "no duplicate write paths" → no save_* / update_* / delete_*
-//     tool exists in this slice; hydration is a pure read.
+//   "no duplicate write paths" → no save_* / update_* / delete_*
+//     tool exists in this feature; hydration is a pure read.
 //
 // The source-type allowlist is enforced at the tool boundary (any
 // other rag.Source* constant is refused), so a confused LLM that
 // asks the assistant to search e.g. "user_note" cannot accidentally
-// expose a corpus the slice did not enumerate.
+// expose a corpus the feature did not enumerate.
 
 package tools
 
@@ -64,8 +64,8 @@ import (
 // nlSearchAllowedSourceTypes is the per-feature allowlist of
 // rag.Source* constants the nl-search strategy may retrieve over.
 // Any other source type passed via the LLM's typed input is refused
-// at validation time — the slice prompt explicitly enumerates these
-// three corpora and a future slice that adds a new source must add
+// at validation time — the feature spec explicitly enumerates these
+// three corpora and a future feature that adds a new source must add
 // it here AND extend the strategy's system prompt + goldens, not
 // silently widen.
 //
@@ -88,7 +88,7 @@ var nlSearchAllowedSourceTypeSet = func() map[string]struct{} {
 }()
 
 // nlSearchMaxK is the per-call upper bound on the retriever's k
-// parameter. The F7 retriever's hard ceiling is rag.MaxK (100); we
+// parameter. The RAG retriever's hard ceiling is rag.MaxK (100); we
 // clamp tighter here because a conversational NL search returning
 // >16 results adds no value (the LLM won't cite them all and the
 // chunk text inflates the context window cost).
@@ -148,7 +148,7 @@ type retrievedChunk struct {
 	Score      float32 `json:"score"`
 }
 
-// retrieveChunks is the read-only tool that calls the F7 retriever.
+// retrieveChunks is the read-only tool that calls the RAG retriever.
 // It is the FIRST tool the LLM is expected to call (per the
 // strategy's system prompt).
 //
@@ -173,7 +173,7 @@ func (t *retrieveChunks) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveChunks) InputSchema() json.RawMessage {
-	return cachedSchema(retrieveChunksInput{})
+	return CachedSchema(retrieveChunksInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;
@@ -191,7 +191,7 @@ func (t *retrieveChunks) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator,
 // then enforces the per-feature source-type allowlist that the
-// validator's `oneof` tag cannot express for slice fields.
+// validator's `oneof` tag cannot express for feature fields.
 func (t *retrieveChunks) Validate(raw json.RawMessage) (any, error) {
 	v, err := ValidateStruct[retrieveChunksInput](raw)
 	if err != nil {
@@ -205,7 +205,7 @@ func (t *retrieveChunks) Validate(raw json.RawMessage) (any, error) {
 }
 
 // Execute implements [Tool]. Resolves user_subject from the ctx the
-// AI handler installed via provider.WithSubject, then calls the F7
+// AI handler installed via provider.WithSubject, then calls the RAG
 // retriever. Returns a deterministic envelope with explicit JSON
 // tags so the dispatcher's serialisation path is uniform across
 // runs.
@@ -261,20 +261,20 @@ func (t *retrieveChunks) Execute(ctx context.Context, in any) (any, error) {
 // result. Returned by Hydrator.HydrateOne and surfaced verbatim by
 // the hydrate_search_result tool. Fields:
 //
-//   - SourceType: matches one of the rag.Source* constants the
-//     allowlist permits.
-//   - SourceID:   domain key the hydrator resolved (typically a
-//     numeric ID rendered as a string for cross-source uniformity).
-//   - Title:      one-line human-friendly title (e.g. "Drive #142
-//     2025-01-04 14:32 → 15:18").
-//   - Subtitle:   optional one-line context (route, total energy,
-//     alert message). May be empty.
-//   - URL:        SPA route the user can navigate to for the full
-//     entity view (e.g. "/drives/142"). May be empty if the source
-//     type does not have a dedicated detail page.
-//   - When:       RFC3339 timestamp of the entity's primary
-//     timestamp (drive start, charge start, alert fired_at). May
-//     be empty if the source type has no canonical timestamp.
+//	SourceType: matches one of the rag.Source* constants the
+//	  allowlist permits.
+//	SourceID:   domain key the hydrator resolved (typically a
+//	  numeric ID rendered as a string for cross-source uniformity).
+//	Title:      one-line human-friendly title (e.g. "Drive #142
+//	  2025-01-04 14:32 → 15:18").
+//	Subtitle:   optional one-line context (route, total energy,
+//	  alert message). May be empty.
+//	URL:        SPA route the user can navigate to for the full
+//	  entity view (e.g. "/drives/142"). May be empty if the source
+//	  type does not have a dedicated detail page.
+//	When:       RFC3339 timestamp of the entity's primary
+//	  timestamp (drive start, charge start, alert fired_at). May
+//	  be empty if the source type has no canonical timestamp.
 //
 // The shape mirrors web/src/api/types.ts SearchHit so the AI side
 // panel can render the hydrated envelope using the same component
@@ -296,7 +296,7 @@ type HydratedResult struct {
 //
 // The interface MUST stay read-only — adding a Save / Update method
 // here would defeat the propose-only contract that ADR-015 §I3 + the
-// slice prompt mandate. New methods that fetch additional read-only
+// feature spec mandate. New methods that fetch additional read-only
 // metadata (e.g. HydrateMany for batch lookups) are fine.
 type Hydrator interface {
 	// HydrateOne resolves a (sourceType, sourceID) reference into a
@@ -374,7 +374,7 @@ func (t *hydrateSearchResult) Description() string {
 
 // InputSchema implements [Tool].
 func (t *hydrateSearchResult) InputSchema() json.RawMessage {
-	return cachedSchema(hydrateSearchResultInput{})
+	return CachedSchema(hydrateSearchResultInput{})
 }
 
 // OutputSchema implements [Tool].
@@ -451,7 +451,7 @@ type SearchSources struct {
 	Hydrator  Hydrator
 }
 
-// RegisterSearchTools installs the nl-search slice's tools on r.
+// RegisterSearchTools installs the nl-search feature's tools on r.
 // Called from router.go AFTER RegisterAutomationBuilderTools so the
 // registry's alphabetical Names list grows deterministically without
 // disturbing earlier registrations or the BuiltinNames pin test.

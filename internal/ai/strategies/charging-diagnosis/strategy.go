@@ -1,5 +1,4 @@
-// Package chargingdiagnosis is the Phase-50 / N5 strategy for the
-// LLM-narrated per-charging-session diagnosis.
+// Package chargingdiagnosis defines the LLM-narrated per-charging-session diagnosis strategy.
 //
 // The strategy declares:
 //
@@ -11,9 +10,9 @@
 //     never proposes mutations, never generalises across sessions
 //     or vehicles;
 //   - the two read-only tools the LLM is allowed to call —
-//     `query_charge_session` (new in this slice; thin envelope over
-//     a single *models.ChargingSession by ID) and
-//     `query_charging_aggregation` (new in this slice; deterministic
+//     `query_charge_session` (thin envelope over
+//     a single *chargingmodel.ChargingSession by ID) and
+//     `query_charging_aggregation` (deterministic
 //     flag-detection envelope mirroring the frontend
 //     web/src/lib/chargingAggregation.ts logic — trickle / expensive
 //     / low_power / telemetry_gap / cost_zero / bad_power flags
@@ -36,12 +35,11 @@
 // existing deterministic flag badges remain the canonical
 // classification path.
 //
-// This slice does NOT change how flags are computed (per the slice
-// prompt's explicit "without changing how flags are computed"
-// mandate). The new query_charging_aggregation tool mirrors the
-// frontend's deterministic flag-detection logic so the LLM has the
-// same flag set the user already sees on the page; the AI's role
-// is to EXPLAIN those flags in plain language, not redefine them.
+// This strategy does not change how flags are computed. The
+// query_charging_aggregation tool mirrors the frontend's deterministic
+// flag-detection logic so the LLM sees the same flags the user already
+// sees; the AI explains those flags in plain language rather than
+// redefining them.
 //
 // ADR-015 alignment:
 //
@@ -89,7 +87,7 @@ const FeatureID = "charging-diagnosis"
 //     14:32") are forbidden because the tools return aggregates and
 //     boolean flags, not per-row telemetry events.
 //   - Constrains the diagnosis to the FOUR canonical flag families
-//     the slice prompt names: trickle, expensive, low_power,
+//     the canonical flag families: trickle, expensive, low_power,
 //     interrupted (telemetry_gap). Other deterministic flags
 //     (cost_zero, bad_power) MAY be mentioned when present in the
 //     tool reply, but the four named families are the headline
@@ -124,7 +122,7 @@ const SystemPrompt = `You are the TeslaSync charging diagnosis assistant. ` +
 // RegisterChargingDiagnosisTools at boot. The dispatcher refuses
 // to mount a strategy that references an unknown tool.
 //
-// This slice ships zero mutating tools: charging diagnosis only
+// Charging diagnosis exposes zero mutating tools; it only
 // READS already-aggregated session state. A future "draft a
 // charge-schedule alert based on this session" strategy that needs
 // to write would add its own strategy with its own confirm hook.
@@ -173,7 +171,7 @@ func (s *Strategy) Tools() []string {
 //
 // Future work: this is where a per-vehicle "user prefers SI vs US
 // units" preference snippet would be injected once charging
-// diagnosis grows that surface. Today's slice keeps Context empty
+// diagnosis grows that surface. Context stays empty
 // so the dispatcher's behaviour is fully determined by [System] +
 // History.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
@@ -181,12 +179,12 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyChargingDiagnosis wrapped through the F4↔F8 adapter so the
+// PolicyChargingDiagnosis wrapped through the strategy redaction adapter so the
 // dispatcher's per-request ctx-installation step (dispatch.Run
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyDigest from
+// Policy contract: "Policy: PolicyDigest from
 // internal/ai/redact/policies.go. Allowed classes: ClassVehicleName
 // only; charging location names remain tagged by default".
 // PolicyChargingDiagnosis is the per-feature constructor with the

@@ -1,13 +1,7 @@
-// Phase-50 / 0028 — C3 Charging-curve fingerprint clustering.
-//
-// Unit tests for the charging-curve-fingerprint-clustering Strategy.
-// Mirrors the shape of route-efficiency-suggestions /
-// battery-health-forecast-narrative strategy_test.go (the two-tool
-// retrieve+query precedent). The Strategy is a pure value (no
-// internal state, no IO) so the tests are tight: pin the feature
-// ID + system prompt + tool whitelist + redaction policy shape so a
-// future edit that breaks the contract surfaces here before the
-// dispatcher silently changes behaviour.
+// Unit tests for the charging-curve-fingerprint-clustering strategy.
+// The strategy is a pure value, so these tests pin the feature ID,
+// system prompt, tool whitelist, and redaction policy before a
+// contract break can reach the dispatcher.
 
 package chargingcurvefingerprintclustering
 
@@ -132,7 +126,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs preferred-granularity preferences ships.
+// feature needs preferred-granularity preferences.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -150,9 +144,8 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 // PolicyChargingCurveFingerprintClustering wrapped through the F4↔F8
 // adapter. PolicyChargingCurveFingerprintClustering allows
 // ClassVehicleName so the narration can address the user's car;
-// every other PII class is redacted to a round-trip tag. The slice
-// prompt explicitly mandates a PolicyDigest-shaped allow-list with
-// round-trip tags and "charging location remains tagged".
+// every other PII class is redacted to a round-trip tag, and charging
+// locations remain tagged.
 func TestStrategy_RedactionPolicyChargingCurveFingerprintClustering(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -179,10 +172,8 @@ func TestStrategy_RedactionPolicyChargingCurveFingerprintClustering(t *testing.T
 	if !allowsVehicleName {
 		t.Errorf("redact.PolicyChargingCurveFingerprintClustering.Allow does not include ClassVehicleName; got=%v", want.Allow)
 	}
-	// Defence-in-depth: the allow-list must NOT include lat/long
-	// or street addresses — the slice prompt explicitly mandates
-	// that charging location stays tagged so a leaked transcript
-	// does not reveal where the user charges.
+	// Defence-in-depth: the allow-list must NOT include lat/long or street
+	// addresses, so a leaked transcript does not reveal where the user charges.
 	for _, c := range want.Allow {
 		switch c {
 		case redact.ClassLatLong, redact.ClassStreetAddr:

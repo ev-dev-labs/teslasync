@@ -14,8 +14,7 @@ interface PaginationProps {
  * Table pagination controls with first/prev/next/last buttons and optional
  * page-size selector.
  *
- * Accessibility (Phase-40 / Prompt 20): the control set is wrapped in a
- * landmark `<nav>` so screen readers announce it as a pagination region. The
+ * Accessibility: the control set is wrapped in a landmark `<nav>` so screen readers announce it as a pagination region. The
  * "showing X–Y of Z" copy lives inside `aria-live="polite"` so the count
  * update is announced as the user pages without stealing focus.
  */

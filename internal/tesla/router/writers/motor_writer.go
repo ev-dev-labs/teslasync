@@ -9,12 +9,10 @@ import (
 )
 
 // motorColumnByField is the static field→column map for destination
-// motor_snapshot. Built at file-edit time from routing.yaml entries
-// with `dest: motor_snapshot` (36 routes — see the AUDIT_EVIDENCE
-// section of phase-42a/0013's log for the verbatim extraction).
+// motor_snapshot. Built from routing.yaml entries with
+// `dest: motor_snapshot` (36 routes).
 //
-// Per phase-42a prompt 0013 Decision #3 (mirrors prompt 0012) this
-// map is a static var, NOT a runtime read of routing.yaml: the
+// This map is a static var, NOT a runtime read of routing.yaml: the
 // routing layer's loader already validated every entry at process
 // start, the per-payload hot path must not re-parse a 1000-line YAML
 // file, and a compile-time declaration here lets the reflective
@@ -78,9 +76,8 @@ var motorColumnByField = map[string]string{
 	"IsolationResistance": "isolation_resistance_ohm",
 }
 
-// motorColumnFor is the columnFor callback supplied to snapshotWriter
-// per phase-42a prompt 0013 Decision #2. Closes over motorColumnByField
-// so the snapshot helper has a single source-of-truth lookup; ok=false
+// motorColumnFor is the columnFor callback supplied to snapshotWriter.
+// It closes over motorColumnByField so the snapshot helper has a single source-of-truth lookup; ok=false
 // is returned for any field NOT routed here (the snapshot helper then
 // errors out loudly per its drop-loud contract — see snapshot_base.go's
 // columnFor godoc).
@@ -90,8 +87,7 @@ func motorColumnFor(field string) (string, bool) {
 }
 
 // NewMotorWriter constructs the production motor snapshot writer.
-// Returns the router.Writer for destination motor_snapshot
-// (constructor signature is locked by phase-42a prompt 0013 Decision #1).
+// Returns the router.Writer for destination motor_snapshot.
 //
 // Composes the unexported snapshotWriter from snapshot_base.go: the
 // table is "motor_snapshots" (matches migration 000183) and the

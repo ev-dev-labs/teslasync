@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 
 /**
- * Phase-46 / Prompt 05 — SessionExpiringModal contract.
+ * SessionExpiringModal contract.
  *
  * Mocks {@link useSessionMonitor} so the test focuses on the modal's
  * visibility lifecycle (open mode vs session mode, expiring vs not

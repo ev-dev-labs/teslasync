@@ -5,7 +5,7 @@ import { useShortcut, type ShortcutDefinition } from '@/hooks/useShortcutRegistr
 import { commandRegistry } from '@/lib/commandRegistry'
 
 /**
- * Phase 40 / Prompt 64 — global shortcut seed.
+ * Registers global shortcuts.
  *
  * Mounted once from `<Layout>`. Pours every "global" shortcut into the
  * registry so the cheatsheet has a single source of truth:

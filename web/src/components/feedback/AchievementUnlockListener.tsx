@@ -6,17 +6,17 @@ import { AchievementUnlockedToastStack } from './AchievementUnlockedToast'
 /**
  * AchievementUnlockListener — mounts at the app root, subscribes to the
  * realtime `achievement_unlocked` SSE stream, and renders the celebration
- * toast stack (Phase-40 / Prompt 63).
+ * toast stack ().
  *
  * Behaviour:
  * - When the user has disabled "Show celebration toasts" in settings, the
- *   stack still mounts (so `useAchievementUnlocks` keeps draining the SSE
- *   queue) but no visible toast is rendered. This way the dashboard widget
- *   and the inbox-style surfacing still receive the events; we just don't
- *   pop a transient celebration.
+ * stack still mounts (so `useAchievementUnlocks` keeps draining the SSE
+ * queue) but no visible toast is rendered. This way the dashboard widget
+ * and the inbox-style surfacing still receive the events; we just don't
+ * pop a transient celebration.
  * - Optional unlock chime: when `playSound` is enabled, a short procedural
- *   tone is generated via the WebAudio API (no audio asset required —
- *   keeps the bundle slim and works offline).
+ * tone is generated via the WebAudio API (no audio asset required —
+ * keeps the bundle slim and works offline).
  */
 export function AchievementUnlockListener() {
   const { recent, dismiss } = useAchievementUnlocks()

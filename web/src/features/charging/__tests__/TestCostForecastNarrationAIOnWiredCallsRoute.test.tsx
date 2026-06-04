@@ -1,12 +1,9 @@
-// Phase-50 / 0029 — C4 Cost forecast narration.
-// Phase-50 / W1 inline wiring (per slice prompt 0029) — on-mode
-// wiring test proving the Narrate button opens an SSE stream
-// against the registered backend route POST
-// /api/v1/ai/charging/costs/forecast/narrate.
+// Cost forecast narration on-mode wiring test.
+// Proves the Narrate button opens an SSE stream against the registered
+// backend route POST /api/v1/ai/charging/costs/forecast/narrate.
 //
-// `TestCostForecastNarrationAIOnWiredCallsRoute` is the
-// load-bearing positive wiring proof for slice 0029's W1 inline
-// addendum. It mounts the AICostForecastNarration component with
+// `TestCostForecastNarrationAIOnWiredCallsRoute` is the positive
+// wiring proof. It mounts the AICostForecastNarration component with
 // ai_mode='cloud' + the per-feature toggle on, stubs global fetch
 // with a deterministic SSE byte stream, clicks the Narrate
 // button, and asserts:
@@ -167,7 +164,7 @@ describe('TestCostForecastNarrationAIOnWiredCallsRoute (cost-forecast-narration 
     // route. fireEvent.click bypasses pointer-events behaviour;
     // @testing-library/user-event is intentionally NOT a
     // dependency of this codebase (see web/package.json), so we
-    // use fireEvent.click consistently across the slice tests.
+    // use fireEvent.click consistently across these SSE wiring tests.
     await act(async () => {
       fireEvent.click(button);
     });
@@ -288,8 +285,8 @@ describe('TestCostForecastNarrationAIOnWiredCallsRoute (cost-forecast-narration 
   });
 
   it('TestCostForecastNarrationAIOnWiredCallsRoute: Narrate button is disabled when no vehicleId is available (computed, not literal)', () => {
-    // This test guards W1 Rule A from the slice prompt: the
-    // primary action button's `disabled` prop MUST be a computed
+    // This guards the contract that the primary action button's
+    // `disabled` prop MUST be a computed
     // expression (here: `!canGenerate`), not a literal
     // `disabled` / `disabled={true}`. We prove the dynamic
     // behaviour by rendering the component without a vehicleId

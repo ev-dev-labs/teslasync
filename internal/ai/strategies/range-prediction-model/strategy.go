@@ -1,6 +1,4 @@
-// Package rangepredictionmodel is the Phase-50 / 0063 (ML2)
-// strategy for the LLM-narrated learned per-vehicle range-prediction
-// model surface.
+// Package rangepredictionmodel defines the LLM-narrated learned per-vehicle range-prediction strategy.
 //
 // The strategy declares:
 //
@@ -25,9 +23,7 @@
 //     query (effective baseline), THEN narrate the diff;
 //
 //   - the redaction policy (`PolicyChatbot`, the deny-all tagged
-//     redactor) — the slice prompt mandates "Allowed classes: none;
-//     training is local and provider-free unless user opts into
-//     explanatory narration separately". Every PII class is
+//     redactor). Every PII class is
 //     round-trip tagged so the LLM never sees cleartext beyond the
 //     vehicle_id payload.
 //
@@ -35,7 +31,7 @@
 // drive observations, per-bucket fallback to the heuristic
 // HeuristicWhPerKm curve when fewer than
 // [mlrange.DefaultMinSamplesPerBucket] drives exist) are owned by
-// the internal/ml/range trainer — this ML2 surface ONLY adds a
+// the internal/ml/range trainer; this strategy only adds a
 // human-readable narrator over the trainer's deterministic output.
 // The deterministic heuristic projection on the Projected Range
 // page (built by RangeProjectionHandler at
@@ -44,13 +40,7 @@
 // internal/api/range_projection_handler_compute.go) remains the
 // canonical baseline visible to every off-mode user (ADR-015 §I3).
 //
-// Service-worker chunks: this slice's frontend code is loaded under
-// the page-bundle for /projected-range (and the aliased
-// /analytics/range the slice prompt registers); the off-mode walker
-// validates code chunks via the `withAiFeature` HOC + the
-// AI_FEATURES map. See the slice log for the documented mapping.
-//
-// ADR-015 alignment:
+// ADR-015 constraints:
 //
 //   - I1 default-off:    feature toggle defaults false in features.Registry.
 //   - I3 baseline intact: this strategy never replaces the
@@ -92,9 +82,8 @@ const FeatureID = "range-prediction-model"
 //     train_range_model FIRST then query_range_prediction so the
 //     narration grounds the PROPOSED learned envelope against the
 //     CURRENTLY-effective heuristic baseline before diffing. The
-//     slice prompt's Action Steps list the tools in this exact order
-//     (`train_range_model;query_range_prediction`); reversing them
-//     silently produces a confused narration that quotes the
+//     tools must run in this exact order; reversing them silently
+//     produces a confused narration that quotes the
 //     fallback as if it were the learned proposal.
 //   - Forbids changing the deterministic projection: this is a
 //     NARRATOR over the trainer's output, not a re-projection. The
@@ -102,7 +91,7 @@ const FeatureID = "range-prediction-model"
 //     label, sample_count, wh_per_km, mean, stddev, p5, p95 from
 //     the tool reply; it MUST NOT invent alternate bucket Wh/km,
 //     alternate sample counts, or claim the learned envelope is
-//     "live" (this slice does not persist learned envelopes).
+//     "live" because this strategy does not persist learned envelopes.
 //   - Refuses cross-vehicle requests: the AI handler always scopes
 //     to the caller-supplied vehicle_id from the body; any other
 //     vehicle ID in the user message is by definition out of scope.
@@ -111,8 +100,7 @@ const FeatureID = "range-prediction-model"
 //     paragraphs total) so the surface fits inside the existing
 //     Projected Range page layout.
 //   - Bans claiming the learned envelope has been APPLIED to the
-//     deterministic projection (today it has not — the slice does
-//     not persist). The narrator must say "proposed" or "would
+//     deterministic projection because this strategy does not persist it. The narrator must say "proposed" or "would
 //     refine" rather than "now using".
 //   - Honestly reports per-bucket fallback: when the tool returns
 //     source="linear_fallback" for a bucket, the narrator MUST say
@@ -142,13 +130,12 @@ const SystemPrompt = `You are the TeslaSync learned per-vehicle range-prediction
 // RegisterRangePredictorTools at boot. The dispatcher refuses to
 // mount a strategy that references an unknown tool.
 //
-// ORDER MATTERS: the slice prompt's Action Steps list the tools in
-// exactly this order ("train_range_model;query_range_prediction").
+// ORDER MATTERS: `train_range_model` must run before `query_range_prediction`.
 // Reversing them silently produces a confused narration that quotes
 // the fallback as if it were the learned proposal — the goldens pin
 // the order via the assistant's tool_calls sequence.
 //
-// This slice ships zero mutating tools: range narration only READS
+// Range narration ships zero mutating tools; it only reads
 // the user's existing `drives` rows. A future "create a range alert
 // when the learned envelope diverges from the heuristic" surface
 // would add its own strategy with its own confirm hook.
@@ -200,13 +187,11 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyChatbot wrapped through the F4↔F8 adapter so the dispatcher's
+// PolicyChatbot wrapped through the redaction adapter so the dispatcher's
 // per-request ctx-installation step (dispatch.Run installs the policy
 // via redact.WithPolicy) sees the concrete policy.
 //
-// Per the slice prompt: "Allowed classes: none; training is local
-// and provider-free unless user opts into explanatory narration
-// separately". PolicyChatbot is the project-wide deny-all-tagged
+// PolicyChatbot is the project-wide deny-all-tagged
 // policy (Allow: nil, Mode: ModeRedactedTags) — every PII class is
 // converted into a round-trip tag before the LLM call; the LLM
 // never sees cleartext.

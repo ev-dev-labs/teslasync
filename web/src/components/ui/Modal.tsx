@@ -32,7 +32,7 @@ export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
  * - Surfaces use `--surface-1` and `--glass-border` tokens, not hard-coded
  *   `bg-white dark:bg-gray-800`, so light + dark themes both render correctly.
  *
- * Accessibility (Phase-40 / Prompt 20):
+ * Accessibility:
  * - `role="dialog"` + `aria-modal="true"` so assistive tech announces it as a
  *   modal context.
  * - When `title` is present, the dialog is labelled by the heading via
@@ -120,13 +120,12 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
     if (typeof document === 'undefined') return null;
 
     const overlay = (
-      // Phase-45 / Prompt 04: NOT migrated to <Modal> — this IS the shared
-      // <Modal> source of truth. All other interactive dialogs MUST use this
-      // component instead of hand-rolling full-viewport overlays.
+      // This is the shared <Modal> source of truth. All other interactive
+      // dialogs MUST use this component instead of hand-rolling overlays.
       // eslint-disable-next-line no-restricted-syntax
       <div className="fixed inset-0 z-[60] overflow-y-auto">
         <div
-          // Phase-46 / Prompt 11 — forced-colors mode suppresses
+          // Forced-colors mode suppresses
           // box-shadow + background-image, so a glass backdrop with a
           // semi-transparent rgba turns invisible. Force an opaque
           // Canvas-colour scrim so the dialog reads as modal in
@@ -146,7 +145,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
             className={cn(
               'relative z-10 flex w-full flex-col bg-[var(--surface-1)] text-[var(--text-primary)] shadow-xl outline-none',
               'border border-[var(--glass-border)]',
-              // Phase-46 / Prompt 11 — pin the dialog edge to a system
+              // Pin the dialog edge to a system
               // colour so the modal frame remains perceivable when the
               // glass-border alpha collapses to transparent.
               'forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',

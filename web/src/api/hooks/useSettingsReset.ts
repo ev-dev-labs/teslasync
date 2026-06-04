@@ -1,19 +1,19 @@
-// Phase-46 / Prompt 50 — Settings reset hooks.
-//
-// Two thin wrappers around `request()` that drive ResetSection.tsx:
-//
-//   • useResetSection(section)   → POST /settings/reset { section }
-//   • useResetAllSettings()      → POST /settings/reset {}
-//
+// Settings reset hooks.
+
+// Two thin wrappers around `request` that drive ResetSection.tsx:
+
+//   • useResetSection(section) → POST /settings/reset { section }
+//   • useResetAllSettings → POST /settings/reset {}
+
 // Both invalidate every cached query (no-args invalidate) because a
 // reset can touch alert rules, geofences, channels, automations, the
 // dashboard layout library, the typed settings rows that drive every
 // preference panel, and the per-user quiet-hours window. Listing them
 // individually would be incomplete and brittle; a global flush is
 // honest about what just happened.
-//
-// The shared `request()` client transparently handles SUDO_REQUIRED
-// — when the backend's RequireSudo middleware rejects with 401 +
+
+// The shared `request` client transparently handles SUDO_REQUIRED
+// when the backend's RequireSudo middleware rejects with 401 +
 // SUDO_REQUIRED the cached interceptor opens the existing
 // <ReauthDialog>, replays the request with the resulting step-up
 // token, and returns the result transparently. On user-cancel the
@@ -78,7 +78,7 @@ export function useResetSection(section: string) {
       }),
     onSuccess: (result) => {
       qc.setQueryData<SettingsResetResult>(settingsResetKeys.lastReset, result);
-      // Reset can touch any preference / rule / channel cache —
+      // Reset can touch any preference / rule / channel cache
       // flush everything so the next render reflects defaults.
       qc.invalidateQueries();
     },

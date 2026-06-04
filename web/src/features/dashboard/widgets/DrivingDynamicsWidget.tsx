@@ -71,7 +71,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
 
-  // Phase-40 / Prompt 60 — chart colors derive from active theme.
+  // Chart colors derive from the active theme.
   const palette = useThemeChartPalette();
 
   const maxG = Math.max(

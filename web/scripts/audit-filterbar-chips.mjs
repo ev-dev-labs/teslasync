@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Phase-46 / Prompt 06 — FilterBar / ActiveFilterChips co-mount audit.
+// FilterBar / ActiveFilterChips co-mount audit.
 //
 // Walks every src/features/**/*.tsx (and src/components/forms/*.tsx for
 // shared filter wrappers reused inside features) and asserts that any

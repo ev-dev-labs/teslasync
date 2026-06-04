@@ -1,7 +1,7 @@
 /**
  * Defensive type guards for runtime values from the Go backend.
  *
- * After the per-field MQTT cutover (Phase-42a), `/security/latest` and
+ * After the per-field MQTT cutover, `/security/latest` and
  * other endpoints serialize raw `signal.SignalValue` (`interface{}`)
  * directly. The Go protomodel emits typed values per signal:
  *   - bool   for Locked, ServiceMode, ValetModeEnabled, GuestModeEnabled,
@@ -11,7 +11,7 @@
  *   - string for SentryMode (e.g. "SentryModeStateOff"), DoorState,
  *            Fd/Fp/Rd/RpWindow, CenterDisplay, LightsTurnSignal, ...
  *
- * Frontend TS types pre-Phase-42 commonly declared all these fields as
+ * Older frontend TS types commonly declared all these fields as
  * `string | null`, so consumers blindly called `.trim()`, `.toLowerCase()`,
  * `.split()`, etc. on the runtime value. When a boolean `false` slips into
  * a "string" field the page crashes with React error boundaries (e.g.

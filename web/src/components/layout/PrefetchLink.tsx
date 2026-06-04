@@ -4,7 +4,7 @@ import { GuardedLink } from '../feedback/GuardedLink'
 import { prefetchRoute } from '@/lib/routePrefetch'
 
 /**
- * Phase-46 / Prompt 22 — Route-prefetching navigation link.
+ * Route-prefetching navigation link.
  *
  * Wraps {@link GuardedLink} (so the unsaved-changes navigation guard is
  * preserved) and additionally calls {@link prefetchRoute} on `mouseenter`

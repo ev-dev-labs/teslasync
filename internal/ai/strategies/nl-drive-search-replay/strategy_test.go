@@ -1,5 +1,3 @@
-// Phase-50 / 0021 — D1 Natural-language drive search and replay.
-//
 // Unit tests for the nl-drive-search-replay Strategy. Mirrors the
 // shape of nl-search / drive-coaching / rag-help strategy_test.go.
 // The Strategy is a pure value (no internal state, no IO) so the
@@ -128,7 +126,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs pre-fetched RAG context ships.
+// future feature needs pre-fetched RAG context.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -146,8 +144,8 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 // PolicyChatbot allows NOTHING in cleartext — VINs, place names,
 // addresses, lat/long flow as round-trip tags through the LLM and
 // are restored only in the final response delivered to the
-// requesting user. The slice prompt explicitly mandates
-// PolicyChatbot reuse for nl-drive-search-replay.
+// requesting user. This strategy intentionally reuses
+// PolicyChatbot's deny-all behaviour.
 func TestStrategy_RedactionPolicyChatbot(t *testing.T) {
 	t.Parallel()
 	s := New()

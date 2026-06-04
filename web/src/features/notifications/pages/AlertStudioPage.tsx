@@ -55,7 +55,7 @@ import {
 import { AICrossRuleConflictDetection } from '@/components/ai/AICrossRuleConflictDetection'
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
 
-// Phase-49 / Slice 0008 — editor-only tri-state. Backend column stays
+// Editor-only tri-state. Backend column stays
 // strict ('once' | 'repeat'); 'unset' exists purely so a brand-new
 // rule can be in the "user hasn't decided yet" state and the Save
 // button can block until they do (Decision D3 "force-choose").
@@ -159,7 +159,7 @@ interface EditorState {
   name: string
   enabled: boolean
   /**
-   * Phase-49 / Slice 0006 — discriminated-union vehicle selection.
+   * Discriminated-union vehicle selection.
    * Replaces the legacy free-text `vehicle_id: string` field. Sticky-
    * all means "current + future fleet"; specific means an explicit
    * subset that does NOT auto-grow when new vehicles are added.
@@ -175,7 +175,7 @@ interface EditorState {
   value_max: string
   severity: Severity
   cooldown_min: number
-  // Phase-49 / Slice 0008 — see `TriggerModeOrUnset`. Existing rules
+  // See `TriggerModeOrUnset`. Existing rules
   // hydrated from the server are always 'once' | 'repeat'; only the
   // initial freshEditor() / templateToEditor() result starts as 'unset'.
   trigger_mode: TriggerModeOrUnset
@@ -184,11 +184,10 @@ interface EditorState {
    * because <UiInput type="number"> emits a string and the form lets the
    * user type 3-digit caps; conversion to number happens in
    * buildSavePayload.
-   * Phase-49 / Slice 0003 / Decision D5.
    */
   max_fires_per_resolution: string
   /**
-   * Phase-49 / Slice 0009 — escalation tier. `escalation_enabled`
+   * Escalation tier. `escalation_enabled`
    * gates whether the editor sends the pair. `escalation_after_min`
    * is a string for the same reason as max_fires_per_resolution
    * (UiInput emits strings + the user may type 3-digit values).
@@ -202,14 +201,14 @@ interface EditorState {
   escalation_severity: Severity | ''
   message: string
   /**
-   * Phase-50 / ADR-014 — per-rule notification body template. Empty
+   * Per-rule notification body template. Empty
    * string means "use the op-aware default rendered by
    * internal/alertmsg". Whitespace-only is normalised to '' here AND
    * by the backend's normalizeMsgTemplate.
    */
   msg_template: string
   /**
-   * Phase-50 / ADR-014 — transport title toggle. When FALSE,
+   * Transport title toggle. When FALSE,
    * Discord/Slack/Telegram/ntfy/webhook deliver body-only
    * notifications. Defaults to TRUE.
    */
@@ -240,7 +239,7 @@ function freshEditor(): EditorState {
     value_max: '',
     severity: 'warn',
     cooldown_min: 15,
-    // Phase-49 / Slice 0008 / Decision D2 + D3 — was 'repeat'. The
+    // The default was 'repeat'. The
     // user-reported "locked vehicle alert spam" was caused by every
     // new rule silently inheriting 'repeat'. Now the editor opens
     // in tri-state and the Save button blocks until the user picks.
@@ -305,7 +304,6 @@ function parseOptionalNumber(value: string): number | null {
 // for max_fires_per_resolution: empty/blank → null (unlimited), otherwise
 // a positive integer. Fractional or non-positive inputs collapse to null
 // so we never POST an invalid value the backend would reject with 400.
-// Phase-49 / Slice 0003 / Decision D5.
 function parseOptionalMaxFires(value: string): number | null {
   const trimmed = value.trim()
   if (!trimmed) return null
@@ -313,7 +311,7 @@ function parseOptionalMaxFires(value: string): number | null {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null
 }
 
-// Phase-50 / ADR-014 — collapse a whitespace-only template to NULL so
+// Collapse a whitespace-only template to NULL so
 // the wire payload tells the backend "use the op-aware default". The
 // backend's `normalizeMsgTemplate` performs the same transformation
 // defensively; doing it client-side too keeps the save mutation diff
@@ -327,13 +325,13 @@ function normalizeMsgTemplateForSave(value: string): string | null {
 // state (enabled flag + after_min string + severity string) into the
 // `{ escalation_after_min, escalation_severity }` pair the wire
 // expects. Returns BOTH NULLS when:
-//   - the rule isn't repeat-mode (backend rejects escalation on once-mode)
-//   - the user toggled the checkbox off
-//   - either field is incomplete (Save would have been blocked by canSave)
+//   the rule isn't repeat-mode (backend rejects escalation on once-mode)
+//   the user toggled the checkbox off
+//   either field is incomplete (Save would have been blocked by canSave)
 // Returns the populated pair otherwise. The two fields move together
-// — the backend's mutual-presence CHECK rejects half-set values.
-// Phase-49 / Slice 0009.
-// Phase-49 / Slice 0009 — canonical info < warn < critical ordering
+// because the backend's mutual-presence CHECK rejects half-set values.
+
+// Canonical info < warn < critical ordering
 // used by the escalation higher-severity check. Must match the
 // alertSeverityRank Go helper in internal/api/alert_handler_rules.go.
 const SEVERITY_RANK: Record<Severity, number> = { info: 1, warn: 2, critical: 3 }
@@ -499,7 +497,7 @@ function templateToEditor(template: RuleTemplate, name: string, message: string)
     severity: template.severity,
     cooldown_min: template.cooldown_min,
     message,
-    // Phase-50 / ADR-014 — seed the template from the curated
+    // Seed the template from the curated
     // RuleTemplate.message so users who "clone from template" get a
     // working starter body. The legacy `message` field is kept in
     // parallel until the page-wide cleanup ships.
@@ -510,7 +508,7 @@ function templateToEditor(template: RuleTemplate, name: string, message: string)
 
 function buildSavePayload(state: EditorState): AlertRuleInput {
   const vehiclePayload = buildVehiclePayload(state.vehicle_selection)
-  // Phase-49 / Slice 0008 — defence-in-depth narrowing. `canSave`
+  // Defence-in-depth narrowing. `canSave`
   // already blocks the Save button when trigger_mode is 'unset', so
   // this branch is unreachable from the UI; we throw to keep the
   // backend contract honest in case a future caller bypasses canSave.
@@ -536,7 +534,7 @@ function buildSavePayload(state: EditorState): AlertRuleInput {
       metric_window: state.metric_window || null,
       metric_op: state.metric_op,
       metric_threshold: threshold,
-      // Phase-50 / ADR-014 — propagate the per-rule template + title
+      // Propagate the per-rule template + title
       // toggle. Empty/whitespace template collapses to null so the
       // backend renders the op-aware default body.
       msg_template: normalizeMsgTemplateForSave(state.msg_template),
@@ -563,7 +561,7 @@ function buildSavePayload(state: EditorState): AlertRuleInput {
     max_fires_per_resolution: parseOptionalMaxFires(state.max_fires_per_resolution),
     ...escalation,
     kind: 'signal',
-    // Phase-50 / ADR-014 — see computed_metric branch above.
+    // See computed_metric branch above.
     msg_template: normalizeMsgTemplateForSave(state.msg_template),
     include_title: state.include_title,
   }
@@ -618,7 +616,7 @@ export default function AlertStudio() {
 
   const { data: rules, isLoading, error } = useAlertRules()
   const { data: channels, isLoading: channelsLoading, error: channelsError } = useNotificationChannels()
-  // Phase-49 / Slice 0006 — drives the multi-vehicle picker.
+  // Drives the multi-vehicle picker.
   const { data: vehiclesData } = useVehicles()
   const vehicles = useMemo(() => vehiclesData ?? [], [vehiclesData])
   const saveRuleMut = useSaveAlertRule()
@@ -632,7 +630,7 @@ export default function AlertStudio() {
   const { vehicleId: aiVehicleId } = useSelectedVehicle()
 
   const [selectedId, setSelectedId] = useState<number | null>(null)
-  // Phase-40 / Prompt 51 — multi-row selection for bulk enable/disable.
+  // Multi-row selection for bulk enable/disable.
   const [bulkSelected, setBulkSelected] = useState<Set<number>>(new Set())
   const clearBulk = useCallback(() => setBulkSelected(new Set()), [])
   const toggleBulkSelected = useCallback((id: number, on: boolean) => {
@@ -647,13 +645,13 @@ export default function AlertStudio() {
   const [showTemplates, setShowTemplates] = useState(false)
   const [templateSearch, setTemplateSearch] = useState('')
   const [templateCategory, setTemplateCategory] = useState<string | null>(null)
-  // Phase 40 / Prompt 33 — rule list search lives in the URL.
+  // Rule list search lives in the URL.
   const [ruleSearch, setRuleSearch] = useUrlString('q', '')
   const [testChannelIds, setTestChannelIds] = useState<number[] | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const initialEditorRef = useRef<string>(JSON.stringify(freshEditor()))
 
-  // Phase-49 / Slice 0006 — `useFormDraft` resets its internal state during
+  // `useFormDraft` resets its internal state during
   // render whenever `draftKey` changes (documented React 18 pattern).
   // `setSelectedId(id)` triggers that reset, which races with any in-event
   // `setEditor(hydrated)` call and silently discards the hydration. We stash
@@ -662,7 +660,7 @@ export default function AlertStudio() {
   // render-time reset has committed.
   const pendingHydrationRef = useRef<EditorState | null>(null)
 
-  // Phase-40 / Prompt 55 — `useFormDraft` persists in-progress new-rule
+  // `useFormDraft` persists in-progress new-rule
   // editing to localStorage so a tab close, SW reload, or auth redirect
   // doesn't destroy the user's work. Only the `alert-rule-new` key is
   // persisted (skipPersist returns true for edit-an-existing-rule sessions);
@@ -678,14 +676,14 @@ export default function AlertStudio() {
     draftSavedAt,
     discardDraft,
   } = useFormDraft<EditorState>(draftKey, freshEditor(), {
-    // Phase-49 / Slice 0009 — bumped from 3 to 4. Pre-slice-0009
+    // Bumped from 3 to 4. Earlier
     // drafts lack `escalation_*` fields entirely; restoring them
     // would leave the editor in an undefined-state shape and the
     // checkbox would render as `undefined` (controlled→uncontrolled
     // warning + crash on toggle). Bumping the version forces those
     // drafts to be discarded so the user lands on a fresh editor.
-    //
-    // Phase-50 / ADR-014 — bumped from 4 to 5. Pre-Phase-50 drafts
+
+    // Bumped from 4 to 5. Earlier drafts
     // lack `msg_template` + `include_title`; without the bump the
     // editor would hydrate an old draft and crash when the
     // AlertMessageEditor reads `editor.include_title` (undefined →
@@ -704,7 +702,7 @@ export default function AlertStudio() {
     [editor],
   )
 
-  // Phase-50 / ADR-014 — derive the vehicle name surfaced in the
+  // Derive the vehicle name surfaced in the
   // message-template preview. Mirrors the backend's
   // `dispatchComputedMetricNotification` vehicle-name resolution:
   // pick the first explicit selection, else the first fleet vehicle.
@@ -721,7 +719,7 @@ export default function AlertStudio() {
     return vehicles[0]?.display_name
   }, [editor.vehicle_selection, vehicles])
 
-  // Phase-49 / Slice 0006 — apply pending hydration AFTER the `useFormDraft`
+  // Apply pending hydration AFTER the `useFormDraft`
   // render-time reset has committed (see `pendingHydrationRef` declaration
   // for the race-condition rationale).
   useEffect(() => {
@@ -733,7 +731,7 @@ export default function AlertStudio() {
   }, [selectedId, setEditor])
 
   useDirtyForm(isDirty)
-  // Phase-45 / Prompt 16: in-app navigation guard. Pairs with `useDirtyForm`
+  // In-app navigation guard. Pairs with `useDirtyForm`
   // above (which only handles tab close / reload) so sidebar clicks, browser
   // back, and breadcrumb links also surface a "discard or keep editing"
   // dialog while a new rule is being authored.
@@ -866,7 +864,7 @@ export default function AlertStudio() {
   ], [t])
 
   const alertBehaviorOptions = useMemo(() => [
-    // Phase-49 / Slice 0008 — disabled placeholder option pinned at the
+    // Disabled placeholder option pinned at the
     // top so brand-new rules render in the explicit "user hasn't decided
     // yet" state. Disabled prevents the user from re-selecting unset
     // after they've committed to once/repeat.
@@ -879,7 +877,7 @@ export default function AlertStudio() {
     { value: 'once', label: t('notifications.alertStudio.editor.alertBehavior.onceLabel', 'Notify on event') },
   ], [t])
 
-  // Phase-49 / Slice 0008 — derived recommendation. Pure derivation, no
+  // Derived recommendation. Pure derivation, no
   // setState side effect: changing op recomputes the banner copy on the
   // next render without ever mutating editor.trigger_mode (the user
   // remains in control of the actual choice).
@@ -983,11 +981,11 @@ export default function AlertStudio() {
   const canSave = useMemo(() => {
     if (editor.name.trim().length === 0) return false
     if (editor.cooldown_min <= 0) return false
-    // Phase-49 / Slice 0008 / Decision D3 — force-choose at create
+    // Force-choose at create
     // time. Editing an existing rule preserves whichever value the
     // server already stored (R7: existing rules are never tri-state).
     if (isNewRule && editor.trigger_mode === 'unset') return false
-    // Phase-49 / Slice 0006 — sticky-all is always valid; specific
+    // Sticky-all is always valid; specific
     // requires at least one selected vehicle. The new picker prevents
     // any other invalid intermediate state by construction.
     if (
@@ -996,7 +994,7 @@ export default function AlertStudio() {
     ) {
       return false
     }
-    // Phase-49 / Slice 0009 — escalation pair validity. When the
+    // Escalation pair validity. When the
     // checkbox is on, BOTH fields must be filled AND the escalated
     // severity must rank strictly higher than the base severity.
     // Also rejects the impossible-but-possible state of escalation
@@ -1038,7 +1036,7 @@ export default function AlertStudio() {
         op: nextOp,
         value_kind: valueKindForSignalOp(signalType, nextOp),
       }
-      // Phase-49 / Slice 0006 — `useFormDraft` reset on key change races
+      // `useFormDraft` reset on key change races
       // with the inline `setEditor`. Apply both: the inline call covers the
       // same-key path; the ref + `useEffect` covers the cross-key path.
       pendingHydrationRef.current = finalEditor
@@ -1120,7 +1118,7 @@ export default function AlertStudio() {
       editor.id ? { id: editor.id, ...payload } : payload,
       {
         onSuccess: () => {
-          // Phase-40 / Prompt 55 — successful save promotes the draft into
+          // Successful save promotes the draft into
           // a real rule, so drop both the per-rule and the `new` drafts.
           discardDraft()
           const blank = freshEditor()
@@ -1136,7 +1134,7 @@ export default function AlertStudio() {
   const handleDelete = useCallback((id: number) => {
     deleteRuleMut.mutate(id, {
       onSuccess: () => {
-        // Phase-40 / Prompt 55 — drop any in-progress draft for the deleted
+        // Drop any in-progress draft for the deleted
         // rule so a future visit doesn't restore stale work.
         discardDraft()
         const blank = freshEditor()
@@ -1151,14 +1149,14 @@ export default function AlertStudio() {
 
   const handleApplyAITuningPatch = useCallback(
     (patch: AlertRuleDraftPatch) => {
-      // Phase-50 / 0034 (A1) — copy a typed AI-proposed alert
+      // Copy a typed AI-proposed alert
       // patch onto the editor's local state. The AI panel never
       // persists state directly; the user reviews the merged
       // editor and clicks the canonical Save button next, which
       // flows through saveRuleMut + the unguarded
       // PUT /api/v1/alerts/rules/{id} handler (ADR-015 §I3 +
       // §I8 propose-only contract).
-      //
+
       // EditorState stores value_num / value_min / value_max as
       // strings because <UiInput type="number"> emits strings;
       // we convert proposed numerics to strings here so the
@@ -1207,11 +1205,11 @@ export default function AlertStudio() {
   const handleTest = useCallback(() => {
     const message = editor.message.trim() || t('notifications.alertStudio.test.defaultMessage', 'Test notification from Alert Studio')
     const target = buildTestTarget(testChannelIds, allChannelIds)
-    // Phase-50 / ADR-014 — thread the per-rule template + title
+    // Thread the per-rule template + title
     // toggle through the Test endpoint so the user previews exactly
     // what production would deliver. The legacy `message` field is
     // kept as a fallback for transports that ignored msg_template
-    // pre-Phase-50 (none in current backend, but ConditionalMessage
+    // None in current backend, but ConditionalMessage
     // wrapper still expects a string).
     const msgTemplate = normalizeMsgTemplateForSave(editor.msg_template)
     const baseBody = {
@@ -1346,15 +1344,14 @@ export default function AlertStudio() {
         </>
       }
     >
-      {/* ── Phase-50 / N1: opt-in AI natural-language alert builder ── */}
-      {/* Renders only when ai_mode != 'off' AND the                    */}
-      {/* nl-alert-builder toggle is on. The withAiFeature HOC inside   */}
-      {/* AINLAlertBuilder enforces the gate; the manual AlertStudio    */}
-      {/* form below remains the canonical baseline in off mode         */}
-      {/* (ADR-015 §I3). The component PROPOSES drafts only — saving    */}
-      {/* still flows through the typed handler below                   */}
-      {/* (ADR-015 §I3 baseline-intact + this slice's PROPOSE-only      */}
-      {/* contract).                                                    */}
+      {/* Opt-in AI natural-language alert builder */}
+      {/* Renders only when ai_mode != 'off' AND the */}
+      {/* nl-alert-builder toggle is on. The withAiFeature HOC inside */}
+      {/* AINLAlertBuilder enforces the gate; the manual AlertStudio */}
+      {/* form below remains the canonical baseline in off mode */}
+      {/* (ADR-015 §I3). The component PROPOSES drafts only — saving */}
+      {/* still flows through the typed handler below */}
+      {/* (ADR-015 §I3 baseline-intact + PROPOSE-only contract). */}
       <FadeIn delay={0.04}>
         <AINLAlertBuilder vehicleId={aiVehicleId ?? undefined} />
       </FadeIn>
@@ -1620,7 +1617,7 @@ export default function AlertStudio() {
 
         <div className="lg:col-span-8 space-y-4">
           {(rules?.length ?? 0) >= 2 && (
-            // Phase-50 / 0036 (A3) — opt-in AI cross-rule conflict
+            // Opt-in AI cross-rule conflict
             // detection. Renders only when ai_mode != 'off' AND the
             // cross-rule-conflict-detection toggle is on AND the
             // current rule set has at least two rules to compare.
@@ -1641,7 +1638,7 @@ export default function AlertStudio() {
             </FadeIn>
           )}
           {selectedId != null && (
-            // Phase-50 / 0034 (A1) — opt-in AI alert-rule tuning
+            // Opt-in AI alert-rule tuning
             // suggestions. Renders only when ai_mode != 'off' AND the
             // alert-tuning-suggestions toggle is on AND a rule is
             // selected. The withAiFeature HOC inside
@@ -1861,7 +1858,7 @@ export default function AlertStudio() {
                   onChange={e => {
                     const next = e.target.value as Severity
                     setEditor(s => {
-                      // Phase-49 / Slice 0009 — reset escalation_severity
+                      // Reset escalation_severity
                       // if the new base severity makes it no longer
                       // strictly higher (e.g. user bumps base from warn
                       // to critical, the previously-set warn escalation
@@ -1949,7 +1946,7 @@ export default function AlertStudio() {
                   id="alert-trigger-mode"
                   className="w-full"
                   value={editor.trigger_mode === 'unset' ? '' : editor.trigger_mode}
-                  // Phase-49 / Slice 0008 — placeholder option is
+                  // Placeholder option is
                   // disabled, so this branch only ever sees 'once' or
                   // 'repeat' from real user interaction. Defensive
                   // guard kept for type-narrowing.
@@ -1959,7 +1956,7 @@ export default function AlertStudio() {
                     setEditor(s => ({
                       ...s,
                       trigger_mode: v,
-                      // Phase-49 / Slice 0009 — flipping to once-mode
+                      // Flipping to once-mode
                       // disables the escalation section AND nulls the
                       // pair so a stale value from an earlier 'repeat'
                       // selection can't sneak through buildSavePayload.
@@ -2132,7 +2129,7 @@ export default function AlertStudio() {
                 </div>
               )}
               <div className="sm:col-span-2">
-                {/* Phase-50 / ADR-014 — replaces the legacy single-line
+                {/* Replaces the legacy single-line
                     "Test Message" UiInput with the new per-rule
                     AlertMessageEditor. The editor manages msg_template +
                     include_title; the legacy `editor.message` field is

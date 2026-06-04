@@ -501,7 +501,7 @@ export default function MaintenancePage() {
       </FadeIn>
 
       {/* ── Helix Predictive Maintenance (opt-in AI) ─────────────── */}
-      {/* Phase-50 / 0049 — withAiFeature returns null when           */}
+      {/* withAiFeature returns null when                         */}
       {/* ai_mode='off' OR the predictive-maintenance toggle is off. */}
       {/* The deterministic reminders above remain the canonical    */}
       {/* baseline; this card adds an opt-in narrative section.     */}

@@ -15,8 +15,8 @@ import (
 )
 
 // routerTracerName is the OpenTelemetry tracer name for spans emitted
-// by Router.Route. The Phase-10 trace-coverage audit greps for this
-// exact constant so the router stays accounted for in the
+// by Router.Route. The trace-coverage audit greps for this exact constant
+// so the router stays accounted for in the
 // tesla_signal_ingest_to_db flow.
 const routerTracerName = "tesla.router"
 
@@ -142,7 +142,7 @@ func New(writers map[Destination]Writer) (*Router, error) {
 }
 
 // Route dispatches a single Atomic to the writer for its routed
-// destination AND, per ADR-001 / Phase-42 intent, also dual-writes
+// destination and, per ADR-001, also dual-writes
 // the atomic to signal_log so that signal_log remains the universal
 // durable history of every non-drop signal (see ARCHITECTURE.md
 // ADR-001: "All vehicle telemetry data lives in ONE table:
@@ -227,7 +227,7 @@ func (r *Router) Route(ctx context.Context, atomic codec.Atomic) (err error) {
 		return fmt.Errorf("router: no writer for destination %q (field %s)", e.Destination, atomic.Field)
 	}
 
-	// Phase-10: write.role context value is propagated into the writer so
+	// The write.role context value is propagated into the writer so
 	// the writer's own tesla.writer.<dest> child span can stamp
 	// write.role={primary|dual}. The writer doesn't import the router
 	// package — the key type is shared via the codec.Atomic ctx

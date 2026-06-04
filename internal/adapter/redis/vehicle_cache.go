@@ -14,7 +14,6 @@ type VehicleCache struct {
 	client *cache.Client
 }
 
-// NewVehicleCache creates a new vehicle cache adapter.
 func NewVehicleCache(client *cache.Client) *VehicleCache {
 	return &VehicleCache{client: client}
 }
@@ -23,7 +22,6 @@ func (c *VehicleCache) key(id string) string {
 	return fmt.Sprintf("vehicle:%s:state", id)
 }
 
-// Get retrieves a cached vehicle by ID.
 func (c *VehicleCache) Get(ctx context.Context, id string) (*vehicle.Vehicle, bool) {
 	v, ok := cache.Get[vehicle.Vehicle](ctx, c.client, c.key(id))
 	if !ok {
@@ -37,7 +35,6 @@ func (c *VehicleCache) Set(ctx context.Context, v *vehicle.Vehicle) error {
 	return cache.Set(ctx, c.client, c.key(v.ID), v, 30*time.Second)
 }
 
-// Invalidate removes a vehicle from the cache.
 func (c *VehicleCache) Invalidate(ctx context.Context, id string) error {
 	return cache.Delete(ctx, c.client, c.key(id))
 }
@@ -47,12 +44,10 @@ type SessionCache struct {
 	client *cache.Client
 }
 
-// NewSessionCache creates a new session cache adapter.
 func NewSessionCache(client *cache.Client) *SessionCache {
 	return &SessionCache{client: client}
 }
 
-// Get retrieves a cached session value.
 func (c *SessionCache) Get(ctx context.Context, userID, key string) (string, bool) {
 	cacheKey := fmt.Sprintf("session:%s:%s", userID, key)
 	val, ok := cache.Get[string](ctx, c.client, cacheKey)

@@ -1,4 +1,4 @@
-// Phase-50 / 0057 — PU1 Natural-language SQL playground.
+// Natural-language SQL playground.
 //
 // Unit tests for the nl-sql-playground Strategy. Mirrors the shape
 // of signal-explorer-nl-filter's strategy_test.go (the closest
@@ -99,7 +99,7 @@ func TestStrategy_Tools(t *testing.T) {
 }
 
 // TestStrategy_ToolsIsDefensiveCopy proves Tools() returns a copy —
-// a caller that mutates the slice does NOT leak the mutation back
+// a caller that mutates the feature does NOT leak the mutation back
 // into the strategy. Dispatcher safety relies on this.
 func TestStrategy_ToolsIsDefensiveCopy(t *testing.T) {
 	t.Parallel()
@@ -137,7 +137,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs preferred-greeting or per-vehicle
+// future feature that needs preferred-greeting or per-vehicle
 // preferences ships.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
@@ -153,9 +153,9 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 
 // TestStrategy_RedactionPolicyAlertBuilder proves the strategy
 // hands the dispatcher PolicyAlertBuilder wrapped through the
-// F4↔F8 adapter. PolicyAlertBuilder is a DENY-BY-DEFAULT policy:
+// redaction-policy adapter. PolicyAlertBuilder is a DENY-BY-DEFAULT policy:
 // Allow == nil so EVERY PII class — VIN, lat/long, addresses,
-// place names, AND vehicle-name — is tagged round-trip. The slice
+// place names, AND vehicle-name — is tagged round-trip. The feature
 // prompt explicitly mandates "Allowed classes: none; schema
 // metadata only, no raw telemetry in prompt."
 func TestStrategy_RedactionPolicyAlertBuilder(t *testing.T) {

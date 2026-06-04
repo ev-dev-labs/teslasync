@@ -1,6 +1,6 @@
 // Command pub-test-signal publishes Tesla Fleet Telemetry per-field MQTT
-// messages to the local broker, exercising the post-Phase-49 per-field
-// PipelineSubscriber end-to-end.
+// messages to the local broker, exercising the per-field PipelineSubscriber
+// end-to-end.
 //
 // Per the per-field MQTT cutover, the upstream Tesla fleet-telemetry
 // publisher emits ONE signal per topic in the form
@@ -14,7 +14,7 @@
 //     (signal_log / drive_telemetry / charging_telemetry / positions).
 //     Use for smoke-testing the subscriber.
 //
-//        go run ./cmd/pub-test-signal --vin TEST00000000000VIN --count 3
+//     go run ./cmd/pub-test-signal --vin TEST00000000000VIN --count 3
 //
 //  2. CSV-replay mode (--csv): streams a prod-shape signal CSV
 //     (vehicle_id,signal,value_num,value_str,value_bool,created_at) and
@@ -23,10 +23,10 @@
 //     original event-time is preserved end-to-end. Use for full pipeline
 //     validation against EXPECTED_RESULTS.md fixtures.
 //
-//        go run ./cmd/pub-test-signal --vin TEST00000000000VIN \
-//            --csv D:\copilot\teslasync\prod-signals\signal_history_last_7d.csv \
-//            --start "2026-04-18 00:22:00" \
-//            --end   "2026-04-18 00:46:30"
+//     go run ./cmd/pub-test-signal --vin TEST00000000000VIN \
+//     --csv D:\copilot\teslasync\prod-signals\signal_history_last_7d.csv \
+//     --start "2026-04-18 00:22:00" \
+//     --end   "2026-04-18 00:46:30"
 //
 // After publishing, query the DB to see signals land:
 //
@@ -204,8 +204,8 @@ type csvRow struct {
 
 // runCSVReplay reads the CSV, optionally filters by [start,end], sorts
 // by created_at, and publishes ONE per-field MQTT message per row
-// (wrapped in the codec's value+ts envelope). Pre-Phase-42 captures
-// stored Latitude/Longitude as bare scalars; we pair them into a
+// (wrapped in the codec's value+ts envelope). Older captures stored
+// Latitude/Longitude as bare scalars; we pair them into a
 // single Location compound publish per (vin, timestamp) so the codec
 // flattens back to the canonical LocationLatitude/Longitude atomics.
 func runCSVReplay(client pahomqtt.Client, topicBase, vin, csvPath, startFilter, endFilter string, throttleMS, publishLimit int) {
@@ -278,8 +278,8 @@ func runCSVReplay(client pahomqtt.Client, topicBase, vin, csvPath, startFilter, 
 	}
 
 	// Pre-pass: pair Latitude/Longitude rows that share a timestamp
-	// into a synthetic Location row. Pre-Phase-42 ingests captured
-	// the compound DECOMPOSED into bare scalars; the modern codec
+	// into a synthetic Location row. Older ingests captured the compound
+	// decomposed into bare scalars; the modern codec
 	// has no Field_Latitude / Field_Longitude — only Field_Location.
 	// Pairing here lets historical CSVs still drive the positions
 	// writer end-to-end via Location -> codec flatten ->

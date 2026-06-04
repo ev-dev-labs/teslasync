@@ -1,5 +1,4 @@
-// Package alerttuningsuggestions is the Phase-50 / 0034 A1
-// strategy for the LLM-assisted alert-tuning suggestions surface.
+// Package alerttuningsuggestions defines the LLM-assisted alert-tuning strategy.
 //
 // The strategy declares:
 //
@@ -13,16 +12,15 @@
 //     firing reduction;
 //
 //   - the two tools the LLM is allowed to call —
-//     `draft_alert_rule_patch` (NEW for this slice) and
-//     `validate_alert_rule` (REUSED from N1's
-//     RegisterAlertBuilderTools). Both tools are PROPOSE-ONLY
+//     `draft_alert_rule_patch` and `validate_alert_rule`.
+//     Both tools are PROPOSE-ONLY
 //     pure-functional DTO transforms that read existing fleet
 //     state but do NOT touch the database write path. The actual
 //     mutation flows through the existing typed
 //     PUT /api/v1/alerts/rules/{id} typed handler AFTER the user
 //     explicitly clicks Save in the AlertStudioPage UI;
 //
-//   - the redaction policy (`PolicyAlertBuilder`, REUSED from N1)
+//   - the redaction policy (`PolicyAlertBuilder`)
 //     which allows nothing — alert IDs, signal names, and
 //     thresholds flow through the typed F4 tool envelope, not
 //     through prompt prose. Every PII class is redacted via
@@ -100,7 +98,7 @@ const FeatureID = "alert-tuning-suggestions"
 //     baseline rate or a projection.
 //   - Bans loosening severity (e.g. proposing critical → info):
 //     tuning is for noise reduction via thresholds + cooldown,
-//     not for escalation downgrades. A future slice may add a
+//     not for escalation downgrades. A future feature may add a
 //     dedicated escalation-tuning surface; this strategy stays
 //     focused on the threshold/cooldown axis.
 //   - Asks for short, focused output (2-3 sentences naming the
@@ -123,8 +121,8 @@ const SystemPrompt = `You are the TeslaSync alert tuning assistant. ` +
 // strategy is permitted to invoke. Each name MUST be registered
 // in the process-wide tools.Registry — `draft_alert_rule_patch`
 // is registered by RegisterAlertTuningSuggestionsTools at boot;
-// `validate_alert_rule` is registered by the N1 slice's
-// RegisterAlertBuilderTools and is REUSED here. The dispatcher
+// `validate_alert_rule` is registered by RegisterAlertBuilderTools
+// and reused here. The dispatcher
 // refuses to mount a strategy that references an unknown tool.
 //
 // Both tools are PROPOSE-ONLY:
@@ -162,24 +160,21 @@ func New() *Strategy {
 	return &Strategy{}
 }
 
-// FeatureID implements [strategy.Strategy]. Returns the canonical
-// registry key.
+// FeatureID returns the canonical registry key.
 func (s *Strategy) FeatureID() string { return FeatureID }
 
-// System implements [strategy.Strategy]. Returns the deterministic
-// system prompt.
+// System returns the deterministic system prompt.
 func (s *Strategy) System() string { return SystemPrompt }
 
-// Tools implements [strategy.Strategy]. Returns a defensive copy
-// of the allowed tool names so a caller cannot mutate the
-// package-level allowlist.
+// Tools returns a defensive copy of the allowed tool names so callers
+// cannot mutate the package-level allowlist.
 func (s *Strategy) Tools() []string {
 	out := make([]string, len(allowedTools))
 	copy(out, allowedTools)
 	return out
 }
 
-// Context implements [strategy.Strategy]. The dispatcher seeds
+// Context relies on the dispatcher seeding
 // the conversation from StrategyInput.LastMessage / History, and
 // the AI handler builds the synthesised "tune rule N for vehicle
 // V" prompt before the call, so the strategy itself contributes
@@ -188,34 +183,32 @@ func (s *Strategy) Tools() []string {
 // Future work: this is where a per-vehicle "current alert
 // catalog" snippet would be injected once tuning grows that
 // surface (e.g. for cross-rule de-duplication suggestions).
-// Today's slice keeps Context empty so the dispatcher's behaviour
-// is fully determined by [System] + History.
+// Context stays empty so dispatcher behavior is fully determined by
+// [System] + History.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
 }
 
-// RedactionPolicy implements [strategy.Strategy]. Returns
+// RedactionPolicy returns
 // PolicyAlertBuilder wrapped through the F4↔F8 adapter so the
 // dispatcher's per-request ctx-installation step (dispatch.Run
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyAlertBuilder from
-// internal/ai/redact/policies.go. Allowed classes: none; rule
-// IDs and metrics flow through tools." The policy's Allow list
+// PolicyAlertBuilder allows no cleartext PII; rule IDs and metrics
+// flow through tools. The policy's Allow list
 // is nil, so every PII class — VIN, lat/long, vehicle name,
 // addresses, phone numbers — is redacted to a round-trip tag
-// before the prompt reaches the provider. The policy is REUSED
-// from N1 (nl-alert-builder) intentionally: both surfaces have
-// the same threat model (the LLM never needs cleartext alert
-// identifiers; the typed envelope carries them). Sharing the
+// before the prompt reaches the provider. This strategy shares the
+// alert-builder threat model: the LLM never needs cleartext alert
+// identifiers because the typed envelope carries them. Sharing the
 // policy keeps the F8 redaction surface small and easier to
 // audit.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {
 	return redactadapter.Wrap(redact.PolicyAlertBuilder())
 }
 
-// EvalGoldens implements [strategy.Strategy]. The eval harness
+// EvalGoldens stays nil because the eval harness
 // loads goldens from
 // `internal/ai/strategies/alert-tuning-suggestions/goldens.yaml`
 // directly (see internal/ai/eval/golden.go LoadAllGoldens) — the

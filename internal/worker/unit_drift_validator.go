@@ -1,6 +1,6 @@
-// Package worker — unit-drift validator.
+// Package worker runs the unit-drift validator.
 //
-// Decision 9 (phase-42 ADR-004) mandates dynamic per-vehicle wire units
+// ADR-004 Decision 9 mandates dynamic per-vehicle wire units
 // with a fail-closed "drop value if no unit context" policy. The catch:
 // if Tesla's docs are wrong AND we set interval_seconds=1 on Setting*Unit
 // AND those settings still don't stream as expected, the pipeline could
@@ -34,6 +34,8 @@ import (
 	"sync"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus"
@@ -45,7 +47,7 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 )
 
 // unitDriftTracerName scopes spans for the periodic unit-drift validator.
@@ -53,14 +55,14 @@ const unitDriftTracerName = "internal/worker/unit_drift"
 
 func unitDriftTracer() oteltrace.Tracer { return otel.Tracer(unitDriftTracerName) }
 
-// vehicleRepoAdapter wraps *database.VehicleRepo so its GetAll method
-// (which returns []*models.Vehicle) satisfies vehicleLister (which
+// vehicleRepoAdapter wraps *vehicledb.VehicleRepo so its GetAll method
+// (which returns []*vehiclemodel.Vehicle) satisfies vehicleLister (which
 // returns []int64). The validator never needs the rest of the
 // Vehicle struct — just the ID — so flattening here keeps the
 // interface minimal and the test seam tight.
 type vehicleRepoAdapter struct {
 	repo interface {
-		GetAll(ctx context.Context) ([]*models.Vehicle, error)
+		GetAll(ctx context.Context) ([]*vehiclemodel.Vehicle, error)
 	}
 }
 
@@ -81,9 +83,9 @@ func (a *vehicleRepoAdapter) GetAll(ctx context.Context) ([]int64, error) {
 // driftKind labels for tesla_unit_drift_suspected_total. Closed set —
 // keep this slice in sync with the alert-thresholds runbook.
 const (
-	driftKindSpeed    = "speed"      // VehicleSpeed vs. implied from Location deltas
-	driftKindOdometer = "odometer"   // Odometer trip increment vs. integrated speed
-	driftKindTempHigh = "temp_high"  // InsideTemp / OutsideTemp out of plausible °C range
+	driftKindSpeed    = "speed"     // VehicleSpeed vs. implied from Location deltas
+	driftKindOdometer = "odometer"  // Odometer trip increment vs. integrated speed
+	driftKindTempHigh = "temp_high" // InsideTemp / OutsideTemp out of plausible °C range
 )
 
 // canaryReason labels for tesla_unit_history_canary_total. Same closed-set
@@ -147,8 +149,8 @@ const (
 	// driftSpeedMinMS / driftSpeedMinDistanceM are noise floors. Below
 	// these the GPS quantization error dominates the implied-speed
 	// calculation and the ratio is meaningless.
-	driftSpeedMinMS         = 2.0  // 2 m/s ≈ 4.5 mph (walking pace)
-	driftSpeedMinDistanceM  = 50.0 // 50 m moved across the comparison window
+	driftSpeedMinMS        = 2.0  // 2 m/s ≈ 4.5 mph (walking pace)
+	driftSpeedMinDistanceM = 50.0 // 50 m moved across the comparison window
 
 	// tempPlausibleCelsiusMin/Max gate the temperature sanity check.
 	// Tesla cabins/exteriors stay within these bounds in any
@@ -163,7 +165,7 @@ const (
 	canaryNoHistoryWindow = 7 * 24 * time.Hour
 
 	// defaultLookback is how far back into signal_log a single Run pass
-	// reads for drift comparisons. 1 hour matches the prompt spec.
+	// reads for drift comparisons.
 	defaultLookback = time.Hour
 
 	// defaultCronInterval is the nightly cadence the long-running
@@ -171,8 +173,8 @@ const (
 	defaultCronInterval = 24 * time.Hour
 )
 
-// vehicleLister is the subset of database.VehicleRepo the validator
-// needs. Carved as an interface so unit tests can inject without a
+// vehicleLister is the subset of vehicledb.VehicleRepo the validator
+// needs. Kept as an interface so unit tests can inject without a
 // real DB.
 type vehicleLister interface {
 	GetAll(ctx context.Context) ([]int64, error)
@@ -235,7 +237,7 @@ type UnitDriftValidator struct {
 // VehicleRepo and a SignalLogReader over the given pool. Tests bypass
 // this constructor and inject the interfaces directly via
 // NewUnitDriftValidatorWithDeps.
-func NewUnitDriftValidator(db *database.DB, vehicleRepo *database.VehicleRepo) *UnitDriftValidator {
+func NewUnitDriftValidator(db *database.DB, vehicleRepo *vehicledb.VehicleRepo) *UnitDriftValidator {
 	return &UnitDriftValidator{
 		vehicles: &vehicleRepoAdapter{repo: vehicleRepo},
 		signals:  &pgxSignalReader{pool: db.Pool},
@@ -266,7 +268,6 @@ func (v *UnitDriftValidator) Start(ctx context.Context, opts Options) {
 		Bool("dry_run", opts.DryRun).
 		Msg("unit-drift validator started")
 
-	// Immediate first pass.
 	if err := v.Run(ctx, opts); err != nil && !errors.Is(err, context.Canceled) {
 		log.Warn().Err(err).Msg("unit-drift validator first pass failed")
 	}
@@ -534,8 +535,7 @@ func (v *UnitDriftValidator) incrementDrift(vehicleID int64, kind string) {
 	driftSuspectedTotal.WithLabelValues(fmt.Sprintf("%d", vehicleID), kind).Inc()
 }
 
-// incrementCanary mirrors incrementDrift for the canary metric. Same
-// dry-run gate.
+// incrementCanary mirrors incrementDrift for the canary metric.
 func (v *UnitDriftValidator) incrementCanary(vehicleID int64, reason string) {
 	v.metricsMu.RLock()
 	dry := v.dryRun

@@ -1,5 +1,5 @@
-// Package speedprofileinsights is the Phase-50 / D2 strategy for the
-// LLM-narrated per-drive speed-profile insights surface.
+// Package speedprofileinsights implements the LLM-narrated per-drive
+// speed-profile insights surface.
 //
 // The strategy declares:
 //
@@ -9,9 +9,9 @@
 //     generalises across drives or vehicles;
 //   - the two read-only tools the LLM is allowed to call —
 //     `query_speed_profile` (returns SI aggregates plus a derived
-//     speed regime classification from the existing *models.Drive
+//     speed regime classification from the existing *drivemodel.Drive
 //     row) and `query_drive_context` (returns the drive's temporal +
-//     battery + temperature envelope from the SAME *models.Drive
+//     battery + temperature envelope from the SAME *drivemodel.Drive
 //     row);
 //   - the redaction policy (`PolicySpeedProfileInsights`) which
 //     allows ClassVehicleName so the narration can address the
@@ -28,13 +28,10 @@
 // DriveDetailPage — is unchanged. Off-mode users never see the AI
 // surface at all (ADR-015 §I3, §I5, §I6).
 //
-// Service-worker chunks: this slice's frontend code is loaded under
-// the page-bundle for /drives/:id; the methodology note in slice
-// 0022's Off-mode contract impact lists `ai-speed-profile-insights`
-// for descriptive purposes. The RouteSet struct does not expose a
-// ServiceWorkerChunks field; the off-mode walker validates code
-// chunks via the `withAiFeature` HOC + the AI_FEATURES map. See
-// the slice log for the documented mapping.
+// Service-worker chunks: this frontend code is loaded under the
+// page-bundle for /drives/:id. RouteSet has no ServiceWorkerChunks
+// field; the off-mode walker validates code chunks through the
+// `withAiFeature` HOC and AI_FEATURES map.
 //
 // ADR-015 alignment:
 //
@@ -117,8 +114,8 @@ const SystemPrompt = `You are the TeslaSync speed-profile analyst. ` +
 // RegisterSpeedProfileInsightsTools at boot. The dispatcher refuses
 // to mount a strategy that references an unknown tool.
 //
-// This slice ships zero mutating tools: speed-profile insights only
-// READS already-aggregated drive state from the same *models.Drive
+// This strategy ships zero mutating tools: speed-profile insights only
+// READS already-aggregated drive state from the same *drivemodel.Drive
 // row the deterministic chart already renders from. A future
 // "schedule a maintenance reminder based on this drive" strategy
 // that needs to write would add its own strategy with its own
@@ -168,7 +165,7 @@ func (s *Strategy) Tools() []string {
 //
 // Future work: this is where a per-vehicle "user prefers SI vs US
 // units" preference snippet would be injected once speed-profile
-// insights grows that surface. Today's slice keeps Context empty so
+// insights grows that surface. Today's strategy keeps Context empty so
 // the dispatcher's behaviour is fully determined by [System] +
 // History.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
@@ -176,15 +173,13 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicySpeedProfileInsights wrapped through the F4↔F8 adapter so
+// PolicySpeedProfileInsights wrapped through the redaction adapter so
 // the dispatcher's per-request ctx-installation step
 // (dispatch.Run installs the policy via redact.WithPolicy) sees the
 // concrete policy.
 //
-// Per the slice prompt: "Policy: PolicyDigest from
-// internal/ai/redact/policies.go. Allowed classes: ClassVehicleName
-// only; precise route coordinates remain tagged".
-// PolicySpeedProfileInsights is the per-feature constructor with
+// PolicySpeedProfileInsights allows only ClassVehicleName in cleartext;
+// precise route coordinates remain tagged. It is the per-feature constructor with
 // the same allow-list as PolicyDigest — kept as a distinct
 // identifier so a future per-feature change to speed-profile
 // insights's allow-list does not bleed across to the digest or

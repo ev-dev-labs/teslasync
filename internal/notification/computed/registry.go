@@ -155,11 +155,10 @@ func IsValidComputedMetricOp(op string) bool {
 
 // ─── compute helpers ──────────────────────────────────────────────────────
 
-// Phase-42 (Prompt 0076): all aggregates below were rewritten to read from
-// the SI canonical drives + charging_sessions schemas (migrations 000184 /
-// 000185). Conversions to legacy display units (mi, kWh, minutes) happen
-// inside the SQL so the public metric values returned to the alerting
-// subsystem stay numerically identical to the pre-migration registry.
+// Aggregates below read from the SI-canonical drives and charging_sessions
+// schemas introduced by migrations 000184 and 000185. SQL converts to the
+// legacy display units expected by alert metrics (mi, kWh, minutes) so
+// public metric values remain stable.
 
 func chargingCost(ctx context.Context, db *database.DB, vehicleID int64, start, end time.Time) (float64, error) {
 	var sum *float64

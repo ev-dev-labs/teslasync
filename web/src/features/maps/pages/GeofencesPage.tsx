@@ -129,10 +129,10 @@ export default function GeofencesPage() {
   const [selectedVehicleId, setSelectedVehicleId] = useState<number>(0);
   const [locationLoading, setLocationLoading] = useState(false);
   const [search, setSearch] = useState('');
-  // Phase-50 / 0038 — G2 suggest-new-geofences AI section state.
-  // The AI panel needs a candidate visited-location ID. We expose
+  // The AI geofence suggestion panel needs a candidate visited-location ID.
+  // We expose
   // a small numeric input so the user can paste the ID copied from
-  // the Locations page; future slices may auto-populate this from
+  // the Locations page; future work may auto-populate this from
   // a clustering job. The state is local to this page so the off-
   // mode user never sees it (the AI panel itself is gated by
   // withAiFeature).
@@ -142,8 +142,8 @@ export default function GeofencesPage() {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
   }, [aiLocationIdRaw]);
 
-  // Bulk selection (Phase-45 / Prompt 32) — keys off geofence ids; cleared
-  // when filtered list changes so users don't carry stale selections.
+  // Bulk selection keys off geofence ids and clears when the filtered list
+  // changes so users don't carry stale selections.
   // The frontend Geofence type carries id as string (legacy) but the
   // backend bulk endpoint expects int64s — we convert at the call site.
   const sel = useBulkSelection<string>();
@@ -219,8 +219,8 @@ export default function GeofencesPage() {
     onError: (err: Error) => toast.error(t('Failed to toggle geofence'), err.message),
   });
 
-  // Phase-46 / Prompt 38 — inline rename. Sends a full merged payload
-  // (rather than a partial `{ name }`) so the backend's PUT semantics
+  // Inline rename sends a full merged payload rather than a partial `{ name }`
+  // so the backend's PUT semantics
   // are unambiguous regardless of whether it does field-level merge.
   // Errors are surfaced inline by EditableText, so no toast here.
   const renameMut = useMutation({
@@ -367,8 +367,7 @@ export default function GeofencesPage() {
     setModalOpen(true);
   }, []);
 
-  // Phase-50 / 0038 — G2 suggest-new-geofences. Apply-from-AI
-  // callback. Opens the canonical Add Geofence modal pre-filled
+  // Apply-from-AI opens the canonical Add Geofence modal pre-filled
   // with the typed envelope fields the LLM proposed (name +
   // centroid lat/lon + radius). The user reviews the pre-filled
   // form and clicks Save in the existing baseline modal — the AI
@@ -572,13 +571,12 @@ export default function GeofencesPage() {
         </GlassPanel>
       )}
 
-      {/* Phase-50 / 0038 — G2 AI geofence-suggestion section.
-          The AISuggestNewGeofences component is wrapped with
+      {/* The AISuggestNewGeofences component is wrapped with
           withAiFeature('suggest-new-geofences', …) so the wrapper
           renders nothing in off mode (ADR-015 §I5). Off-mode users
           see no surrounding chrome — the wrapper is `null` and the
           flow shows the geofence list directly under the metric
-          row, exactly as before this slice. */}
+          row, exactly as before this AI section. */}
       {!isLoading && (
         <FadeIn>
           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">

@@ -1,9 +1,7 @@
-// Package worker — Phase-46 / Prompt 41.
-//
-// Tiny periodic heartbeat writer that every long-running worker
+// Package worker provides the periodic heartbeat writer that every long-running worker
 // process (notification, export, automation) is expected to start in
 // its main(). The heartbeater records process liveness via the
-// shared [database.WorkerStatusStore] so the API server's
+// shared [workerdb.WorkerStatusStore] so the API server's
 // /system/queues panel can show operators "is this worker actually
 // running and responsive?".
 //
@@ -31,7 +29,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	workerdb "github.com/ev-dev-labs/teslasync/internal/database/worker"
 )
 
 // DefaultHeartbeatInterval is the cadence the API server's
@@ -67,7 +65,7 @@ type HeartbeaterOptions struct {
 // Heartbeater periodically writes the calling worker's heartbeat to
 // the shared store.
 type Heartbeater struct {
-	store        database.WorkerStatusStore
+	store        workerdb.WorkerStatusStore
 	worker       string
 	version      string
 	interval     time.Duration
@@ -81,7 +79,7 @@ type Heartbeater struct {
 // nil or opts.Worker is empty — both indicate a wire-up bug, and
 // returning nil lets callers no-op gracefully (the production code
 // path tests `if hb != nil { go hb.Start(ctx) }`).
-func NewHeartbeater(store database.WorkerStatusStore, opts HeartbeaterOptions) *Heartbeater {
+func NewHeartbeater(store workerdb.WorkerStatusStore, opts HeartbeaterOptions) *Heartbeater {
 	if store == nil || opts.Worker == "" {
 		return nil
 	}
@@ -146,7 +144,7 @@ func (h *Heartbeater) write(ctx context.Context, startedAt time.Time) {
 	}
 	tickCtx, cancel := context.WithTimeout(ctx, h.writeTimeout)
 	defer cancel()
-	hb := database.WorkerHeartbeat{
+	hb := workerdb.WorkerHeartbeat{
 		Worker:          h.worker,
 		Host:            h.hostname,
 		PID:             h.pid,

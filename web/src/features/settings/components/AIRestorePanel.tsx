@@ -1,7 +1,7 @@
 /**
- * Phase-50 / 0003 — F2 Settings UI for AI.
+ * Restore-previous-selection panel.
  *
- * Restore-previous-selection panel. Surfaced ONLY when:
+ * Surfaced ONLY when:
  *   1. The user is currently in a non-off mode (otherwise there is
  *      no point offering a restore — they need to enable AI first).
  *   2. The server returned a non-empty `ai_features_archived`

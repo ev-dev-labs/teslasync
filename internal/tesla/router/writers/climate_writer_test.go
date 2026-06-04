@@ -26,12 +26,9 @@ func newClimateTestWriter(t *testing.T, rec *recorder) *snapshotWriter {
 	return w
 }
 
-// TestClimateWriter_ColumnMapMatchesRoutingYAML is the reflective
-// coverage gate from phase-42a prompt 0012 Decision #4. It walks
-// router.LoadMap() (which parses the embedded routing.yaml), filters
-// to entries with Destination == DestClimateSnapshot, and asserts the
-// climateColumnByField map in climate_writer.go matches the routing
-// layer entry-for-entry — same field set, same column for each field.
+// TestClimateWriter_ColumnMapMatchesRoutingYAML compares routing.yaml
+// with climateColumnByField. The writer map must match the routing
+// layer exactly: same field set, same column for each climate route.
 //
 // This catches three classes of drift at CI time:
 //
@@ -91,10 +88,9 @@ func TestClimateWriter_ColumnMapMatchesRoutingYAML(t *testing.T) {
 	}
 }
 
-// TestClimateWriter_TypeMatrix exercises one positive write per kind
-// from phase-42a prompt 0012 Decision #5(b): float64, bool, text. We
-// pick representative routed fields so the map lookup AND the
-// snapshotWriter SQL composition are both covered:
+// TestClimateWriter_TypeMatrix exercises one positive write per scalar
+// kind: float64, bool, and text. Representative routed fields cover
+// both map lookup and snapshotWriter SQL composition:
 //
 //   - float64 → InsideTemp → inside_temp_c (DOUBLE PRECISION column)
 //   - bool    → HvacACEnabled → hvac_ac_enabled (BOOLEAN column)
@@ -102,8 +98,8 @@ func TestClimateWriter_ColumnMapMatchesRoutingYAML(t *testing.T) {
 //
 // We additionally include int64 → HvacFanSpeed → hvac_fan_speed
 // (INTEGER column) because climate_snapshots has nine INTEGER columns
-// and the codec emits them as int64. The prompt's wording "one per
-// kind" sets a floor, not a ceiling.
+// and the codec emits them as int64. Covering the INTEGER bucket keeps
+// the matrix aligned with the full writer surface.
 //
 // Each case asserts that the SQL contains the climate_snapshots table
 // identifier and the expected column identifier (both pgx.Identifier-
@@ -155,9 +151,9 @@ func TestClimateWriter_TypeMatrix(t *testing.T) {
 	}
 }
 
-// TestClimateWriter_UnknownFieldReturnsError covers phase-42a prompt
-// 0012 Decision #5(c): a Field that is NOT routed to climate_snapshot
-// must produce a "no column mapping" error and MUST NOT touch the DB.
+// TestClimateWriter_UnknownFieldReturnsError covers fields that are
+// not routed to climate_snapshot: they must return a
+// "no column mapping" error without touching the DB.
 //
 // VehicleSpeed is a deliberate choice — it IS a routed field
 // (dest: drive_telemetry per routing.yaml) so the test also implicitly
@@ -192,10 +188,9 @@ func TestClimateWriter_UnknownFieldReturnsError(t *testing.T) {
 	}
 }
 
-// TestNewClimateWriter_NilPoolPanics locks the constructor's
-// fail-fast contract from phase-42a prompt 0012 Decision #1. A nil
-// pool is a wiring bug and panics so the failure surfaces at process
-// start, not at the first payload.
+// TestNewClimateWriter_NilPoolPanics locks the constructor's fail-fast
+// contract. A nil pool is a wiring bug and panics so the failure
+// surfaces at process start, not at the first payload.
 func TestNewClimateWriter_NilPoolPanics(t *testing.T) {
 	defer func() {
 		r := recover()

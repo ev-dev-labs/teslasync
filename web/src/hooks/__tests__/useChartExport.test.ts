@@ -1,6 +1,5 @@
 /**
- * Phase-46 / Prompt 16 — useChartExport hook contract.
- *
+ * useChartExport hook contract.
  * Validates the PNG/SVG/clipboard primitives without invoking the real
  * html2canvas-pro snapshot pipeline (jsdom has no canvas backend).
  */

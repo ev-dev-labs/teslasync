@@ -1,15 +1,13 @@
 // Package v2h is a vehicle-to-home / vehicle-to-grid decision engine.
 //
-// Phase-50 / p50-v2h.
-//
-// Scope: a pure decider (no actuator). It takes the operator's
+// Pure decider scope: no actuator. It takes the operator's
 // hour-by-hour inputs — ToU electricity rate, solar production
 // forecast, house load forecast, vehicle SoC + capacity + reserve —
 // and returns a 24-hour charge / hold / discharge plan that
 // minimizes cost while keeping the SoC inside the operator-defined
 // guardrails.
 //
-// Why a decider and not an actuator: as of the foundation PR, Tesla
+// Why a decider and not an actuator: Tesla
 // has not exposed a V2H/V2G API to third-party applications.
 // Operators integrate the produced Plan with their own inverter
 // (Enphase IQ8, SolarEdge Energy Hub, SunPower Reserve) or with a
@@ -142,11 +140,11 @@ type SliceDecision struct {
 
 // Plan is the full output of the planner.
 type Plan struct {
-	Slices        []SliceDecision
-	TotalCost     float64 // sum of slice CostDollars; - means profit
-	FinalSoC      float64
-	GridImportedWh float64
-	GridExportedWh float64
+	Slices              []SliceDecision
+	TotalCost           float64 // sum of slice CostDollars; - means profit
+	FinalSoC            float64
+	GridImportedWh      float64
+	GridExportedWh      float64
 	BatteryChargedWh    float64
 	BatteryDischargedWh float64
 }

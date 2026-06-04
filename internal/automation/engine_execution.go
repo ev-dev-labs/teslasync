@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
+
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
@@ -73,13 +75,11 @@ func buildTypedActionConfigs(items []any) ([]action.ActionConfig, error) {
 	return configs, nil
 }
 
-// ── History Helpers ────────────────────────────────────────────────────
-
 // recordSkipped writes a history record for a skipped execution.
 func (e *Engine) recordSkipped(ctx context.Context, a *models.AutomationFull, triggerSnapshot json.RawMessage, triggerKind string, start time.Time, reason string) {
 	durationMs := int(time.Since(start).Milliseconds())
 	completedAt := time.Now().UTC()
-	hist := &models.AutomationHistory{
+	hist := &automationmodel.AutomationHistory{
 		AutomationID:    a.ID,
 		AutomationName:  a.Name,
 		VehicleID:       a.VehicleID,

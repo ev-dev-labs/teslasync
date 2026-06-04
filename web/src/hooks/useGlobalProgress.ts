@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { globalProgress } from '@/lib/globalProgress'
 
 /**
- * Phase-46 / Prompt 07 — opt-in hook for heavy mutations.
+ * Opt-in hook for heavy mutations.
  *
  * Returns the {@link globalProgress} controller (currently just
  * `start()`) so callers can bind a long-running mutation's lifecycle

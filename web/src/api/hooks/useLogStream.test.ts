@@ -1,5 +1,5 @@
 /**
- * useLogStream — Phase-46 / Prompt 34 unit tests.
+ * useLogStream unit tests.
  *
  * Covers the SSE parser plus the React hook lifecycle:
  *   - parseSSEChunk splits multi-event payloads, preserves remainder.

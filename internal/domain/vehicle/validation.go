@@ -42,7 +42,6 @@ func DetectModelFromVIN(vin string) string {
 	if len(vin) < 4 {
 		return "unknown"
 	}
-	// Tesla VIN position 4 encodes model
 	switch vin[3] {
 	case 'S', 's':
 		return "Model S"
@@ -63,9 +62,8 @@ func DetectModelFromVIN(vin string) string {
 	}
 }
 
-// isValidVINChecksum performs a basic VIN character validity check.
-// A full VIN checksum validation per ISO 3779 is complex; this checks
-// that all characters are valid VIN characters (no I, O, Q).
+// isValidVINChecksum is intentionally not full ISO 3779 validation; it
+// only rejects characters forbidden in VINs (I, O, Q).
 func isValidVINChecksum(vin string) bool {
 	for _, c := range vin {
 		if c == 'I' || c == 'O' || c == 'Q' || c == 'i' || c == 'o' || c == 'q' {

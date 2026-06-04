@@ -9,8 +9,8 @@ import (
 )
 
 // ErrFeatureUnknown is returned by [Limiter.Allow] when the supplied
-// feature ID is not registered in [TierResolver]. Per the rubber-duck
-// recommendation we fail-loud rather than fall back to defaults so a
+// feature ID is not registered in [TierResolver]. We fail loudly rather
+// than fall back to defaults so a
 // missing-registry typo surfaces as a 4xx instead of a silent quiet
 // quota.
 var ErrFeatureUnknown = errors.New("ai/limit: feature ID not registered")
@@ -48,7 +48,7 @@ type Limiter struct {
 	clock        Clock
 	tiers        TierResolver
 	quotas       QuotaResolver // optional; nil = always use defaults
-	buckets      sync.Map       // map[bucketKey]*bucket
+	buckets      sync.Map      // map[bucketKey]*bucket
 	suspMu       sync.RWMutex
 	suspProvider map[string]time.Time // provider name -> suspended-until
 }
@@ -114,14 +114,14 @@ type bucket struct {
 	lastRefill time.Time
 
 	// Per-day rolling counter, reset at the next UTC midnight.
-	dayCount    int
-	dayStart    time.Time
+	dayCount int
+	dayStart time.Time
 
 	// Per-minute observed token windows. Reset on every minute
 	// boundary read.
-	minuteStart  time.Time
-	minuteIn     int
-	minuteOut    int
+	minuteStart time.Time
+	minuteIn    int
+	minuteOut   int
 
 	// Inflight count (BurstReq).
 	inflight int
@@ -130,12 +130,12 @@ type bucket struct {
 // Allow checks whether (subject, feature) may dispatch a call right
 // now. Returns:
 //
-//   - Decision{Allowed:true} on success — caller MUST invoke the
-//     returned release() func when the call completes (success or
-//     failure) to decrement the inflight counter. Calling release()
-//     a second time is a no-op.
-//   - Decision{Allowed:false, Reason:...} on rejection — release()
-//     is a no-op on a rejected call (no inflight slot was taken).
+// - Decision{Allowed:true} on success — caller MUST invoke the
+// returned release() func when the call completes (success or
+// failure) to decrement the inflight counter. Calling release()
+// a second time is a no-op.
+// - Decision{Allowed:false, Reason:...} on rejection — release()
+// is a no-op on a rejected call (no inflight slot was taken).
 //
 // The decorator wraps the returned release in the chunk channel for
 // streaming calls so the inflight slot frees on stream close /
@@ -371,11 +371,11 @@ func (l *Limiter) bucketFor(subject, featureID string, q Quota, now time.Time) *
 		return v.(*bucket)
 	}
 	candidate := &bucket{
-		quota:        q,
-		tokens:       float64(q.PerMinute),
-		lastRefill:   now,
-		dayStart:     truncateToUTCDay(now),
-		minuteStart:  truncateToMinute(now),
+		quota:       q,
+		tokens:      float64(q.PerMinute),
+		lastRefill:  now,
+		dayStart:    truncateToUTCDay(now),
+		minuteStart: truncateToMinute(now),
 	}
 	actual, _ := l.buckets.LoadOrStore(key, candidate)
 	return actual.(*bucket)

@@ -43,17 +43,14 @@ func NewMongoClient(cfg config.MongoDBConfig) (*MongoClient, error) {
 	}, nil
 }
 
-// Database returns the underlying mongo.Database.
 func (mc *MongoClient) Database() *mongo.Database {
 	return mc.database
 }
 
-// TTLDays returns the configured TTL in days.
 func (mc *MongoClient) TTLDays() int {
 	return mc.ttlDays
 }
 
-// Close disconnects the MongoDB client.
 func (mc *MongoClient) Close() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

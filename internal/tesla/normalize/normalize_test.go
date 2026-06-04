@@ -18,8 +18,8 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
-	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 	unithistory "github.com/ev-dev-labs/teslasync/internal/tesla/unit_history"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 )
 
 // ---------------------------------------------------------------------------
@@ -47,11 +47,11 @@ type fakeRepo struct {
 }
 
 type fakeOp struct {
-	kind    string             // "record" or "at"
-	at      time.Time          // populated for "at"
-	atKind  unithistory.Kind   // populated for "at"
-	atVeh   int64              // populated for "at"
-	entry   unithistory.Entry  // populated for "record"
+	kind   string            // "record" or "at"
+	at     time.Time         // populated for "at"
+	atKind unithistory.Kind  // populated for "at"
+	atVeh  int64             // populated for "at"
+	entry  unithistory.Entry // populated for "record"
 }
 
 func (r *fakeRepo) Record(_ context.Context, e unithistory.Entry) error {
@@ -114,9 +114,9 @@ func (r *fakeRepo) opsCopy() []fakeOp {
 
 // fakeRouter records every Route call the dispatcher makes. Used as
 // the Routable for every Pipeline test in this file. Substitutes
-// for *router.Router because routing.yaml ships empty as of
-// Prompt 0025 — a real *router.Router would reject every dispatch
-// with ErrNoRoute and never exercise the writer path under test.
+// for *router.Router because routing.yaml ships empty; a real
+// *router.Router would reject every dispatch with ErrNoRoute and never
+// exercise the writer path under test.
 type fakeRouter struct {
 	mu     sync.Mutex
 	routes []codec.Atomic
@@ -509,7 +509,7 @@ func TestSettingUnitProcessedFirstInSamePayload(t *testing.T) {
 // Either of those would constitute a third public ingest entry,
 // which ADR-004 #2 explicitly forbids. The two allowed entries are:
 // Process (bytes-in, MQTT path) and ProcessAtomics (atomics-in, HTTP
-// webhook path; added in Phase-42a/0060). The test is reflective
+// webhook path). The test is reflective
 // rather than convention-only because text-grep gates can be defeated
 // by a rename (e.g. naming the third entry HandleBatch); reading the
 // AST catches the structural shape regardless of naming.
@@ -519,7 +519,7 @@ func TestSinglePipelineInvariant(t *testing.T) {
 	// prompt; do NOT add to this set casually.
 	allowedPublicEntries := map[string]bool{
 		"Process":        true, // bytes-in, MQTT subscriber path
-		"ProcessAtomics": true, // atomics-in, HTTP webhook adapter path (Phase-42a/0060)
+		"ProcessAtomics": true, // atomics-in, HTTP webhook adapter path
 	}
 
 	fset := token.NewFileSet()

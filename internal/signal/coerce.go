@@ -8,7 +8,7 @@ import (
 )
 
 // Float64 is the SINGLE conversion point for any signal-derived value to
-// a Go float64. It mirrors the Phase-42 codec value-kind surface
+// a Go float64. It mirrors the codec value-kind surface
 // (float64/float32 for Float5; int/int8/int16/int32/int64 plus the unsigned
 // counterparts for Int3/Int4) PLUS the JSON-decode artifacts that surface
 // when the same value is round-tripped through JSON or a generic transport
@@ -21,10 +21,10 @@ import (
 //
 //	NEW CALLERS MUST USE THIS HELPER. Do NOT write fresh
 //	`v.Raw.(float64)` / `m["k"].(float64)` narrowings against signal-
-//	derived values. Phase-42 codec stores Float5 as float32 and
-//	Int3/Int4 as int32; a `.(float64)` assertion silently drops every
-//	such value. We have already paid for this lesson with two
-//	post-Phase-42 dashboard regressions; do not pay a third time.
+//	derived values. The codec stores Float5 as float32 and Int3/Int4
+//	as int32; a `.(float64)` assertion silently drops every such value.
+//	Dashboard regressions have already come from this bug class; do not
+//	reintroduce it.
 //
 // Legacy envelope shapes accepted (do not extend without proof of source):
 //

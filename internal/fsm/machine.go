@@ -95,11 +95,10 @@ func (m *VehicleFSM) ProcessSignals(ctx context.Context, vehicleID int64, signal
 // non-pipeline callers that have no event-time (HandleTimeout-driven
 // reconciler ticks, test fixtures).
 //
-// Phase-42a/0030.bis (commit C2 of v3.4 prod-replay accuracy fix)
-// — replaying a 24-minute window of historical signals with the
-// legacy buildSignalContext stamped every transition with the
-// replay-runner's wall-clock, producing micro-drives at the runner's
-// time rather than the original event window. Rule: any caller that
+// Replaying a 24-minute window of historical signals with the legacy
+// buildSignalContext stamped every transition with the replay-runner's
+// wall-clock, producing micro-drives at the runner's time rather than the
+// original event window. Rule: any caller that
 // has the originating signal's EmittedAt MUST pass it through.
 func (m *VehicleFSM) ProcessSignalsAt(ctx context.Context, vehicleID int64, signals map[string]interface{}, payloadTs time.Time) error {
 	m.mu.Lock()
@@ -112,8 +111,8 @@ func (m *VehicleFSM) ProcessSignalsAt(ctx context.Context, vehicleID int64, sign
 
 	sctx := m.buildSignalContextAt(signals, payloadTs)
 
-	// C3 (v3.4 prod-replay accuracy fix): cancel any pending Park-debounce
-	// when the same batch carries contradicting evidence (Gear=D/R or
+	// Cancel any pending Park-debounce when the same batch carries
+	// contradicting evidence (Gear=D/R or
 	// VehicleSpeed > 1.0). Without this, a spurious single-frame Gear=P
 	// would silently arm the debounce and CheckPending would later commit
 	// Driving→Parked even though the vehicle had been moving the entire
@@ -179,7 +178,7 @@ func (m *VehicleFSM) HandleTimeout(ctx context.Context, vehicleID int64) error {
 	defer m.mu.Unlock()
 
 	sctx := &SignalContext{
-		CurrentState: m.current,
+		CurrentState:  m.current,
 		IsGearCapable: m.isGearCapable,
 		Now:           time.Now().UTC(),
 	}
@@ -196,7 +195,7 @@ func (m *VehicleFSM) HandleSignalReceived(ctx context.Context, vehicleID int64) 
 	}
 
 	sctx := &SignalContext{
-		CurrentState: m.current,
+		CurrentState:  m.current,
 		IsGearCapable: m.isGearCapable,
 		Now:           time.Now().UTC(),
 	}
@@ -360,8 +359,7 @@ func (m *VehicleFSM) commit(ctx context.Context, vehicleID int64, tr Transition,
 // existing semantics. When non-zero it stamps SignalContext.Now with
 // payloadTs so transition guards (Debounced timers, CheckPending) and
 // the persisted fsm_transitions row reflect the originating signal's
-// event-time. Per Phase-42a/0030.bis (commit C2 of v3.4 prod-replay
-// accuracy fix), any caller threading EmittedAt MUST pass it here.
+// event-time. Any caller threading EmittedAt MUST pass it here.
 func (m *VehicleFSM) buildSignalContextAt(signals map[string]interface{}, payloadTs time.Time) *SignalContext {
 	now := payloadTs
 	if now.IsZero() {

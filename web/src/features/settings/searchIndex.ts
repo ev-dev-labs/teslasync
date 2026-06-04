@@ -1,4 +1,4 @@
-// Phase-45 / Prompt 24 — Settings find-as-you-type index.
+// Settings find-as-you-type index.
 //
 // Each entry maps a single user-discoverable setting to its target URL,
 // which is usually a hash anchor on `/settings` itself (`#general`,
@@ -286,7 +286,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       keywords: ['volume', 'loud', 'quiet', 'audio', 'level'],
     },
 
-    // ── Quiet hours / Do-Not-Disturb (Phase-46 / Prompt 19) ──────────
+    // ── Quiet hours / Do-Not-Disturb ────────────────────────────────
     {
       id: 'quiet-hours.windows',
       href: '/notifications/quiet-hours',
@@ -396,7 +396,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       ),
       keywords: ['disable', 'remove', 'totp', '2fa', 'unenroll'],
     },
-    // Phase-46 / Prompt 42 — Active sessions / device management.
+    // Active sessions / device management.
     {
       id: 'security.sessions.list',
       href: '/account/sessions',
@@ -455,8 +455,8 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
 
     // ── Backup & Restore — moved to dedicated /backup page ──────────
-    // Was Phase-46 / Prompt 36 inside SettingsPage; promoted to live
-    // alongside the operational backup runs in features/admin/pages/
+    // Promoted out of SettingsPage to live alongside operational backup
+    // runs in features/admin/pages/
     // BackupRestorePage so the DATA category owns every backup surface.
     {
       id: 'backup.export',
@@ -474,7 +474,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       description: t('search.entries.backup.import.desc', 'Restore alert rules, geofences, and quiet-hours windows from a previously exported bundle.'),
       keywords: ['restore', 'upload', 'json', 'load', 'recover', 'configuration'],
     },
-    // ── Webhook channels (Phase-46 / Prompt 37) ─────────────────────
+    // ── Webhook channels ────────────────────────────────────────────
     {
       id: 'webhooks.list',
       href: '/notifications/webhooks',
@@ -517,7 +517,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       ),
       keywords: ['test', 'fire', 'verify', 'debug', 'try'],
     },
-    // ── Reset to defaults (Phase-46 / Prompt 50) ────────────────────
+    // ── Reset to defaults ───────────────────────────────────────────
     {
       id: 'reset.section',
       href: '/settings#reset',

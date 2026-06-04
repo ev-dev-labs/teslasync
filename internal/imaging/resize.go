@@ -1,6 +1,5 @@
-// Package imaging — Phase-46 / Prompt 54.
-//
-// Thin facade over the standard library's image codecs. The vehicle
+// Package imaging is a thin facade over the standard library's image codecs.
+// The vehicle
 // photo handler is the only consumer today; the package is
 // intentionally narrow so a future avatar / charger photo flow can
 // reuse it without inheriting handler-specific concerns.
@@ -16,20 +15,17 @@
 //
 // Pure-stdlib build
 // -----------------
-// Per the prompt's Blocked Path, this package falls back to the Go
-// standard library only — no golang.org/x/image dependency — so
-// go.mod stays untouched (the prompt's allowed-files list does not
-// include go.mod / go.sum). Tradeoffs accepted:
+// This package uses only the Go standard library, with no
+// golang.org/x/image dependency. Tradeoffs accepted:
 //
 //   - Decode supports JPEG and PNG only. WebP requires an external
 //     decoder (golang.org/x/image/webp); operators wanting WebP
-//     uploads can transcode client-side or wait for a follow-up
-//     prompt that adds the dep through the proper allowlist.
+//     uploads can transcode client-side or wait until the dependency
+//     is added deliberately.
 //   - Resize uses bilinear sampling implemented inline below — sharper
-//     than nearest-neighbor (which the Blocked Path explicitly
-//     authorises) but still pure-Go. Catmull-Rom from x/image/draw
-//     would give nicer edges; bilinear is a deliberate compromise
-//     between quality and dependency footprint.
+//     than nearest-neighbor but still pure-Go. Catmull-Rom from x/image/draw
+//     would give nicer edges; bilinear is a deliberate compromise between
+//     quality and dependency footprint.
 //   - EncodeJPEG is the single output path. Quality is fixed at
 //     PreferredJPEGQuality so all three rendered sizes ship with the
 //     same compression character.
@@ -180,11 +176,9 @@ func isAcceptedFormat(format string) bool {
 // returned UNCHANGED (no upscaling — upscaling JPEGs adds artifacts
 // without adding information).
 //
-// Sampling is bilinear, implemented inline with the standard
-// library's image package. See the package doc for the rationale —
-// nearest-neighbor (the Blocked-Path baseline) is uglier on photos
-// and Catmull-Rom from x/image/draw can't land here without bumping
-// go.mod.
+// Sampling is bilinear, implemented inline with the standard library's
+// image package. Nearest-neighbor is too rough for photos, and Catmull-Rom
+// from x/image/draw would require adding a dependency.
 func Resize(src image.Image, maxDim int) image.Image {
 	if maxDim <= 0 {
 		return src

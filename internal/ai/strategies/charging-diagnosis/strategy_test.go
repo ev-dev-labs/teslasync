@@ -1,12 +1,7 @@
-// Phase-50 / 0019 — N5 Per-charging-session diagnosis.
-//
-// Unit tests for the charging-diagnosis Strategy. Mirrors the shape
-// of drive-coaching / anomaly-explanations / nl-search
-// strategy_test.go. The Strategy is a pure value (no internal
-// state, no IO) so the tests are tight: pin the feature ID + system
-// prompt + tool whitelist + redaction policy shape so a future edit
-// that breaks the contract surfaces here before the dispatcher
-// silently changes behaviour.
+// Unit tests for the charging-diagnosis Strategy. The strategy is a
+// pure value, so these tests pin the feature ID, system prompt,
+// tool whitelist, and redaction policy before dispatcher behavior can
+// change silently.
 
 package chargingdiagnosis
 
@@ -114,8 +109,8 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
-// the strategy must not contribute extra prefix messages until a
-// future slice that needs RAG-backed charging context ships.
+// the strategy must not contribute extra prefix messages unless
+// RAG-backed charging context is added later.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -129,12 +124,10 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 }
 
 // TestStrategy_RedactionPolicyChargingDiagnosis proves the strategy
-// hands the dispatcher PolicyChargingDiagnosis wrapped through the
-// F4↔F8 adapter. PolicyChargingDiagnosis allows ClassVehicleName so
-// the diagnosis can name the user's car; every other PII class is
-// redacted to a round-trip tag. The slice prompt explicitly mandates
-// a PolicyDigest-shaped allow-list and "charging location names
-// remain tagged by default".
+// hands the dispatcher PolicyChargingDiagnosis through the redaction
+// adapter. The policy allows ClassVehicleName so the diagnosis can
+// name the user's car; every other PII class is redacted to a
+// round-trip tag, and charging location names remain tagged by default.
 func TestStrategy_RedactionPolicyChargingDiagnosis(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -163,9 +156,8 @@ func TestStrategy_RedactionPolicyChargingDiagnosis(t *testing.T) {
 		t.Errorf("redact.PolicyChargingDiagnosis.Allow does not include ClassVehicleName; got=%v", want.Allow)
 	}
 	// Defence-in-depth: the allow-list must NOT include lat/long
-	// or addresses — the diagnosis narrates flag patterns, not
-	// charging-station coordinates, and the slice prompt says
-	// "charging location names remain tagged by default".
+	// or addresses because diagnosis narrates flag patterns, not
+	// charging-station coordinates.
 	for _, c := range want.Allow {
 		switch c {
 		case redact.ClassLatLong, redact.ClassStreetAddr:
@@ -186,8 +178,6 @@ func TestStrategy_EvalGoldensReturnsNil(t *testing.T) {
 		t.Fatalf("EvalGoldens() = %v, want nil (goldens live in YAML)", g)
 	}
 }
-
-// --- helpers ---------------------------------------------------------
 
 func contains(s, sub string) bool {
 	return len(s) >= len(sub) && (s == sub || indexOf(s, sub) >= 0)

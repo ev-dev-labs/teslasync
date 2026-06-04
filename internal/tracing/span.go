@@ -61,7 +61,7 @@ func TxSpan(ctx context.Context, name string) (context.Context, trace.Span) {
 }
 
 // Attr helpers for common span attributes.
-func VehicleID(id int64) attribute.KeyValue   { return attribute.Int64("vehicle.id", id) }
+func VehicleID(id int64) attribute.KeyValue    { return attribute.Int64("vehicle.id", id) }
 func VehicleVIN(vin string) attribute.KeyValue { return attribute.String("vehicle.vin", vin) }
 func DriveID(id int64) attribute.KeyValue      { return attribute.Int64("drive.id", id) }
 func ChargeID(id int64) attribute.KeyValue     { return attribute.Int64("charge.id", id) }

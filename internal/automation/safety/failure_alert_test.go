@@ -8,7 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 )
 
@@ -16,11 +17,11 @@ import (
 
 type mockChannelLoader struct {
 	mu       sync.Mutex
-	channels []*models.NotificationChannel
+	channels []*notificationmodel.NotificationChannel
 	err      error
 }
 
-func (m *mockChannelLoader) GetAllChannels(_ context.Context) ([]*models.NotificationChannel, error) {
+func (m *mockChannelLoader) GetAllChannels(_ context.Context) ([]*notificationmodel.NotificationChannel, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.err != nil {
@@ -29,7 +30,7 @@ func (m *mockChannelLoader) GetAllChannels(_ context.Context) ([]*models.Notific
 	return m.channels, nil
 }
 
-func newMockChannelLoader(channels ...*models.NotificationChannel) *mockChannelLoader {
+func newMockChannelLoader(channels ...*notificationmodel.NotificationChannel) *mockChannelLoader {
 	return &mockChannelLoader{channels: channels}
 }
 
@@ -110,8 +111,8 @@ func testEvent() FailureEvent {
 	}
 }
 
-func discordChannel() *models.NotificationChannel {
-	return &models.NotificationChannel{
+func discordChannel() *notificationmodel.NotificationChannel {
+	return &notificationmodel.NotificationChannel{
 		ID:      1,
 		Name:    "my-discord",
 		Type:    "discord",
@@ -120,8 +121,8 @@ func discordChannel() *models.NotificationChannel {
 	}
 }
 
-func slackChannel() *models.NotificationChannel {
-	return &models.NotificationChannel{
+func slackChannel() *notificationmodel.NotificationChannel {
+	return &notificationmodel.NotificationChannel{
 		ID:      2,
 		Name:    "my-slack",
 		Type:    "slack",
@@ -130,8 +131,8 @@ func slackChannel() *models.NotificationChannel {
 	}
 }
 
-func disabledChannel() *models.NotificationChannel {
-	return &models.NotificationChannel{
+func disabledChannel() *notificationmodel.NotificationChannel {
+	return &notificationmodel.NotificationChannel{
 		ID:      3,
 		Name:    "disabled-channel",
 		Type:    "telegram",

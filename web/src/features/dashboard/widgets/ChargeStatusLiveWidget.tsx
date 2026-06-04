@@ -10,7 +10,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
 
 export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
@@ -191,7 +191,7 @@ function FullChargingView({ metrics, isTall, toDistanceDisplay, distanceUnit, fo
         <MetricCell
           icon={<Zap className="h-3 w-3 text-[var(--text-muted)]" />}
           label={t('widget.energyAdded', 'Added')}
-          value={`${fmtNumber(energyAdded, 1)} kWh`}
+          value={`${fmtNumber(convertEnergyFromSI(energyAdded, 'kWh'), 1)} kWh`}
         />
       </div>
 
@@ -243,7 +243,7 @@ function IdleView({ metrics, latestSession, t }: IdleViewProps) {
             {t('widget.lastSession', 'Last Session')}
           </p>
           <p className="text-xs font-medium text-[var(--text-secondary)]">
-            +{fmtNumber(latestSession.total_energy_added_wh, 1)} kWh
+            +{fmtNumber(convertEnergyFromSI(latestSession.total_energy_added_wh, 'kWh'), 1)} kWh
           </p>
         </div>
       )}

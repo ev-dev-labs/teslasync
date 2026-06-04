@@ -161,10 +161,10 @@ func TestGetVehicleDataMockResponse(t *testing.T) {
 			"response": map[string]interface{}{
 				"id": 1, "vehicle_id": 100, "vin": "TESTVIN",
 				"display_name": "Car", "state": "online",
-				"charge_state":  map[string]interface{}{"battery_level": 85, "battery_range": 260.0, "charging_state": "Disconnected"},
-				"climate_state": map[string]interface{}{"inside_temp": 21.0, "outside_temp": 15.0},
-				"drive_state":   map[string]interface{}{"latitude": 40.7128, "longitude": -74.0060, "heading": 180},
-				"vehicle_state": map[string]interface{}{"odometer": 30000.0, "locked": false, "software_update": map[string]interface{}{"status": "", "version": ""}},
+				"charge_state":   map[string]interface{}{"battery_level": 85, "battery_range": 260.0, "charging_state": "Disconnected"},
+				"climate_state":  map[string]interface{}{"inside_temp": 21.0, "outside_temp": 15.0},
+				"drive_state":    map[string]interface{}{"latitude": 40.7128, "longitude": -74.0060, "heading": 180},
+				"vehicle_state":  map[string]interface{}{"odometer": 30000.0, "locked": false, "software_update": map[string]interface{}{"status": "", "version": ""}},
 				"vehicle_config": map[string]interface{}{"car_type": "modely"},
 			},
 		})

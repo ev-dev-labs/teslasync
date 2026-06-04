@@ -2,7 +2,7 @@
  * BackupActionsCard — wraps the backup status DefList with a
  * "Run quick backup now" mutation button.
  *
- * UX rules (per Phase 2 backup status):
+ * UX rules:
  *   - Disable the button while the mutation is in flight so a
  *     double-click can't fire two backups.
  *   - Surface success/failure via the app toast system.

@@ -1,7 +1,7 @@
 /**
- * useSignalObservations — Phase-43a contract-drift adapter regression.
+ * useSignalObservations contract-drift adapter regression.
  *
- * Pre-fix (this commit):
+ * Regression guarded here:
  *   The hook sent `signal_name=Foo` (silently ignored by the modern
  *   backend, which expects `field=Foo`) and consumed the response as a
  *   bare `SignalObservation[]` array — but the backend now wraps it in
@@ -57,8 +57,8 @@ describe('useSignalObservations', () => {
       { wrapper },
     )
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    // The frontend-facing opts key is still `signal_name` (no caller
-    // churn), but the wire param MUST be `field=` to match the modern
+    // The frontend-facing opts key is still `signal_name` (callers do
+    // not need to change), but the wire param MUST be `field=` to match the modern
     // backend handler. If the rename ever regresses, every caller's
     // panel will silently render the WRONG signal's value because the
     // backend ignores unknown query params.

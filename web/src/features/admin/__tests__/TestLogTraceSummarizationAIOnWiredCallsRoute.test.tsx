@@ -1,46 +1,10 @@
-// Phase-50 / 0045 — S4 Log and trace summarization.
-// Phase-50 / W1 inline wiring (per slice prompt 0045) — on-mode
-// wiring test proving the Summarize button opens an SSE stream
-// against the registered backend route
-// POST /api/v1/ai/system/logs/summarize.
-//
-// `TestLogTraceSummarizationAIOnWiredCallsRoute` is the
-// load-bearing positive wiring proof for slice 0045's W1 inline
-// addendum. It mounts the AILogTraceSummarization component with
-// ai_mode='cloud' + the per-feature toggle on, stubs global
-// fetch with a deterministic SSE byte stream, clicks the
-// Summarize button, and asserts:
-//
-//   1. Exactly ONE POST against the registered backend route
-//      `/api/v1/ai/system/logs/summarize` is enqueued with
-//      `Content-Type: application/json` and a body containing
-//      the in-scope `from_unix` + `to_unix`. The path MUST match
-//      the registry entry verbatim — a typo here is invisible to
-//      the off-mode test (which only asserts absence) and would
-//      silently 404 in production.
-//   2. The first `delta` event's text renders inside the
-//      AiOutputPanel inside the gated wrapper
-//      `data-testid="ai-feature-log-trace-summarization-root"`.
-//   3. A second click while `state === 'streaming'` is a no-op
-//      — the second fetch call is NOT enqueued (the
-//      double-submit guard inside useAiStream + the visual
-//      `disabled` mirror it from canSummarize). This proves W1
-//      Rule A — the disabled prop is a computed expression that
-//      reacts to state.
-//   4. The Summarize button is `disabled` when the window is
-//      missing OR invalid (to_unix <= from_unix OR window > 24h)
-//      — proving W1 Rule A's computed-expression guarantee
-//      across multiple input states.
-//   5. The off-mode invariant test
-//      (`TestLogTraceSummarizationAIOffShowsRawLogsOnly`)
-//      continues to pass unchanged — wiring MUST NOT regress the
-//      off-mode absence invariant. That assertion lives in the
-//      sibling file and is exercised independently by the npm
-//      test runner.
-//
-// The test name MUST stay
-// `TestLogTraceSummarizationAIOnWiredCallsRoute` per the W1
-// inline addendum naming contract.
+// On-mode wiring test for the log/trace summarization route.
+// Mounts AILogTraceSummarization with ai_mode='cloud', stubs fetch with
+// a deterministic SSE stream, clicks Summarize, and verifies exactly one
+// POST to /api/v1/ai/system/logs/summarize with the expected JSON body.
+// It also checks streamed text rendering, double-submit protection, and
+// disabled states for missing or invalid time windows. The sibling
+// off-mode test continues to prove the raw-log baseline remains intact.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
@@ -294,13 +258,10 @@ describe('TestLogTraceSummarizationAIOnWiredCallsRoute (log-trace-summarization 
   });
 
   it('TestLogTraceSummarizationAIOnWiredCallsRoute: Summarize button is disabled when the window is missing (computed, not literal)', () => {
-    // This test guards W1 Rule A from the slice prompt: the
-    // primary action button's `disabled` prop MUST be a computed
-    // expression (here: `!canSummarize`), not a literal
-    // `disabled` / `disabled={true}`. We prove the dynamic
-    // behaviour by rendering the component without a window and
-    // confirming the button is disabled while the gate is open
-    // — same code path, different prop input.
+    // The primary action button's `disabled` prop must be computed
+    // from state (here: `!canSummarize`), not hardcoded. Rendering
+    // without a window proves the same open gate can still disable
+    // the action from props.
     mockUseSettings.mockReturnValue(
       settingsPayload({
         ai_mode: 'cloud',

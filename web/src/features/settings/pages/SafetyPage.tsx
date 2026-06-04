@@ -1,7 +1,7 @@
 /**
  * SafetyPage — `/settings/safety`.
  *
- * Phase-50 / 0054 — P3 Helix safety setting explainer host page.
+ * Helix safety setting explainer host page.
  *
  * Renders the deterministic, AI-OFF-safe listing of every
  * safety-related TeslaSync setting (notification quiet hours,

@@ -9,6 +9,12 @@ import (
 	"fmt"
 	"time"
 
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
+	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
@@ -22,8 +28,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// ── Repository interfaces ──────────────────────────────────────────────
-
 // AutomationStore provides automation data access needed by the Engine.
 type AutomationStore interface {
 	GetByID(ctx context.Context, id int64) (*models.AutomationFull, error)
@@ -32,7 +36,7 @@ type AutomationStore interface {
 
 // HistoryStore provides execution history persistence.
 type HistoryStore interface {
-	Create(ctx context.Context, h *models.AutomationHistory) error
+	Create(ctx context.Context, h *automationmodel.AutomationHistory) error
 	Complete(ctx context.Context, id int64, status string, errMsg *string, durationMs int) error
 	CountSinceByAutomation(ctx context.Context, automationID int64, since time.Time) (int, error)
 }
@@ -41,15 +45,13 @@ type HistoryStore interface {
 // Implementations may read from Redis signal cache, the in-memory signal
 // store, or any other real-time source.
 type StateProvider interface {
-	GetVehicleState(ctx context.Context, vehicleID int64) (*models.VehicleState, error)
+	GetVehicleState(ctx context.Context, vehicleID int64) (*vehiclemodel.VehicleState, error)
 }
 
 // PlaceProvider retrieves typed place data for geofence condition evaluation.
 type PlaceProvider interface {
-	GetByID(ctx context.Context, id int64) (*models.Place, error)
+	GetByID(ctx context.Context, id int64) (*systemmodel.Place, error)
 }
-
-// ── Engine ─────────────────────────────────────────────────────────────
 
 // Engine is the runtime core that processes typed automation triggers. It
 // implements trigger.AutomationEngine so supported trigger managers call
@@ -64,15 +66,13 @@ type Engine struct {
 	chainExecutor  *action.ChainExecutor
 	auditor        *Auditor
 
-	// Safety guards
 	rateLimiter  *safety.RateLimiter
 	loopDetector *safety.LoopDetector
 
-	// State provider for condition evaluation (reads from Redis / signal store)
+	// State provider for condition evaluation.
 	stateProvider StateProvider
 	placeProvider PlaceProvider
 
-	// Trigger managers — started/stopped by lifecycle methods.
 	cronTrigger     *trigger.CronTrigger
 	signalTrigger   *trigger.SignalTrigger
 	geofenceTrigger *trigger.GeofenceTrigger
@@ -152,8 +152,6 @@ func NewEngine(
 	return e
 }
 
-// ── Lifecycle ──────────────────────────────────────────────────────────
-
 // Start initialises attached schedule managers. Push-driven typed triggers
 // (signal, geofence, event) are called by their domain producers.
 func (e *Engine) Start(ctx context.Context) error {
@@ -205,8 +203,6 @@ const tracerName = "internal/automation"
 
 func tracer() oteltrace.Tracer { return otel.Tracer(tracerName) }
 
-// ── Evaluate (AutomationEngine interface) ──────────────────────────────
-
 // Evaluate is called by triggers when an automation should fire. It runs
 // the full execution pipeline: load → rate-limit → loop-detect → conditions
 // → actions → history → counters.
@@ -221,7 +217,6 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 
 	start := time.Now().UTC()
 
-	// Load the automation.
 	a, err := e.automationRepo.GetByID(ctx, automationID)
 	if err != nil {
 		span.RecordError(err)
@@ -252,12 +247,10 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 	}
 	span.SetAttributes(attribute.String("automation.trigger_kind", triggerKind))
 
-	// Rate limit check — MaxExecutionsHour removed in typed migration (000142).
 	// Per-automation rate-limiting will be re-derived from step-level config
-	// once the CTI children are fully wired. Global rate limiter still guards
-	// against runaway loops via the LoopDetector below.
+	// once the CTI children are fully wired. The global rate limiter still
+	// guards against runaway loops via the LoopDetector below.
 
-	// Loop detection — check context chain and rapid-fire guard.
 	if e.loopDetector != nil {
 		newCtx, err := e.loopDetector.BeforeExecute(ctx, automationID)
 		if err != nil {
@@ -275,7 +268,6 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 		ctx = newCtx
 	}
 
-	// Evaluate conditions.
 	conditionsMet, conditionsSnapshot := e.evaluateConditions(a, start)
 	if !conditionsMet {
 		span.SetAttributes(attribute.String("automation.outcome", "skipped_conditions_unmet"))
@@ -287,8 +279,7 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 		return nil
 	}
 
-	// Create the initial history record (status=running).
-	hist := &models.AutomationHistory{
+	hist := &automationmodel.AutomationHistory{
 		AutomationID:       a.ID,
 		AutomationName:     a.Name,
 		VehicleID:          a.VehicleID,
@@ -319,13 +310,11 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 		return fmt.Errorf("prepare typed actions for automation %d: %w", automationID, err)
 	}
 
-	// Execute the action chain.
-	var vehicle *models.Vehicle
-	// vehicle lookup deferred to ChainExecutor.Execute which handles nil vehicle
-	// StopOnFailure removed in typed migration (000142); default true (safe).
+	var vehicle *vehiclemodel.Vehicle
+	// ChainExecutor handles a nil vehicle when a workflow does not need one.
+	// Default to fail-fast action chains until step-level policy is wired.
 	results := e.chainExecutor.Execute(ctx, actions, vehicle, true)
 
-	// Summarise results.
 	succeeded := action.Succeeded(results)
 	failed := action.Failed(results)
 	skipped := action.SkippedCount(results)
@@ -354,7 +343,6 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 
 	e.completeHistory(ctx, hist.ID, status, errStr, start)
 
-	// Update execution counters.
 	_ = e.automationRepo.IncrementExecution(ctx, automationID, status != "failed")
 
 	e.logger.Info().
@@ -367,15 +355,12 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 		Dur("duration", time.Since(start)).
 		Msg("automation evaluation completed")
 
-	// Audit trail.
 	if e.auditor != nil {
 		e.auditor.LogExecuted(ctx, a.ID, a.Name, triggerKind, status != "failed", time.Since(start).Milliseconds())
 	}
 
 	return nil
 }
-
-// ── Trigger Setters (for two-phase initialization) ─────────────────────
 
 // SetCronTrigger attaches the schedule trigger after construction.
 func (e *Engine) SetCronTrigger(t *trigger.CronTrigger) { e.cronTrigger = t }
@@ -388,8 +373,6 @@ func (e *Engine) SetGeofenceTrigger(t *trigger.GeofenceTrigger) { e.geofenceTrig
 
 // SetEventTrigger attaches the event trigger after construction.
 func (e *Engine) SetEventTrigger(t *trigger.EventTrigger) { e.eventTrigger = t }
-
-// ── Accessors for Push-Driven Triggers ─────────────────────────────────
 
 // SignalTrigger returns the signal trigger evaluator (or nil).
 func (e *Engine) SignalTrigger() *trigger.SignalTrigger { return e.signalTrigger }

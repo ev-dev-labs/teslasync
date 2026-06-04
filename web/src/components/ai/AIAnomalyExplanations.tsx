@@ -1,6 +1,5 @@
-// Phase-50 / 0014 — U4 Anomaly explanation narration.
-// Phase-50 / W1 (slice 0065) — wired the Generate button to
-// POST /api/v1/ai/anomalies/explain.
+// Anomaly explanation narration.
+// The Generate button streams from POST /api/v1/ai/anomalies/explain.
 
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'

@@ -1,7 +1,7 @@
 /**
- * Phase-45 / Prompt 26 — Trip-replay map ↔ chart sync tests.
+ * Trip-replay map ↔ chart sync tests.
  *
- * Verifies the bidirectional cursor-sync wiring introduced in this prompt
+ * Verifies the bidirectional cursor-sync wiring
  * without booting the entire TripReplayPage shell (which would require
  * react-leaflet, recharts, the QueryClient, and a router stack):
  *

@@ -16,6 +16,7 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
 	tsmqtt "github.com/ev-dev-labs/teslasync/internal/mqtt"
 )
 
@@ -24,7 +25,7 @@ const tracerName = "internal/export"
 // Worker subscribes to the internal MQTT export topic and processes
 // export jobs asynchronously with retry logic.
 type Worker struct {
-	repo       *database.ExportJobRepo
+	repo       *exportdb.ExportJobRepo
 	processor  *Processor
 	mqttClient pahomqtt.Client
 	wg         sync.WaitGroup
@@ -33,7 +34,7 @@ type Worker struct {
 // NewWorker creates an export worker.
 func NewWorker(db *database.DB) *Worker {
 	return &Worker{
-		repo:      database.NewExportJobRepo(db),
+		repo:      exportdb.NewExportJobRepo(db),
 		processor: NewProcessor(db),
 	}
 }

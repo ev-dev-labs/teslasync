@@ -1,18 +1,17 @@
 /**
  * @module hooks/useSSE
  *
- * Phase-42 typed-envelope SSE consumer. Subscribes to the per-signal
- * `signal_change` event introduced by `EventHub.BroadcastSignalChange`
- * (Prompt 0071) and surfaces each event as a typed
- * `SignalChangeEvent` so React components can switch on `kind` and
- * trust the typed `value` directly. Forward-only: there is NO fallback
- * for the pre-Phase-42 raw-string value shape.
+ * Typed-envelope SSE consumer. Subscribes to the per-signal `signal_change`
+ * event introduced by `EventHub.BroadcastSignalChange` and surfaces each
+ * event as a typed `SignalChangeEvent` so React components can switch on
+ * `kind` and trust the typed `value` directly. Forward-only: there is NO
+ * fallback for the previous raw-string value shape.
  *
  * The legacy aggregate hooks (`useRealtimeEvents`, `useVehicleLive`)
  * still subscribe through the singleton `sseManager` which only listens
  * for the batched `vehicle_update` channel. To keep the typed channel
- * routing changes scoped to this prompt, this hook opens its own
- * `EventSource` against `/api/v1/events` and listens specifically for
+ * routing isolated, this hook opens its own `EventSource` against
+ * `/api/v1/events` and listens specifically for
  * the `signal_change` event. Browsers multiplex an HTTP/2 connection,
  * so the second EventSource shares the same TCP socket.
  */

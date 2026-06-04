@@ -8,9 +8,9 @@ import path from 'path'
 
 const enablePwaInDev = process.env.VITE_PWA_DEV === 'true'
 
-// Build-time provenance for the footer status bar (Phase-40 / Prompt 59).
-//   - VITE_APP_VERSION: package.json `version`, overridable via env.
-//   - VITE_GIT_SHA:     short HEAD sha; "dev" when not in a git checkout.
+// Build-time provenance for the footer status bar.
+// - VITE_APP_VERSION: package.json `version`, overridable via env.
+// - VITE_GIT_SHA: short HEAD sha; "dev" when not in a git checkout.
 const pkg = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf8')) as { version?: string }
 const appVersion = process.env.VITE_APP_VERSION || pkg.version || 'dev'
 let gitSha = process.env.VITE_GIT_SHA || ''
@@ -40,7 +40,7 @@ export default defineConfig({
       // skipWaiting/clientsClaim listeners in sw.ts (injectManifest mode
       // does not auto-inject them — see src/sw/sw.ts install/activate).
       registerType: 'autoUpdate',
-      // Phase 40 / Prompt 52 — switched from the default `generateSW`
+      // switched from the default `generateSW`
       // strategy to `injectManifest` so we can register a custom `push`
       // event handler in the service worker. Workbox runtime caching
       // (Google Fonts, map tiles) is re-implemented inside `src/sw/sw.ts`

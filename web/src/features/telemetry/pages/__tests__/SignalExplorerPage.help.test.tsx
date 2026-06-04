@@ -1,5 +1,5 @@
 /**
- * Phase-45 / 09 — HelpTooltip adoption guard.
+ * HelpTooltip adoption guard.
  *
  * Shallow-renders {@link SignalExplorerPage} to assert that the technical
  * "Signals" header and Live-mode toggle each surface a `<HelpTooltip>` —

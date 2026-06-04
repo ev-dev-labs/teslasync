@@ -1,5 +1,4 @@
-// Package chatbotllm is the Phase-50 / U1 strategy for the LLM-backed
-// fleet assistant chatbot.
+// Package chatbotllm defines the LLM-backed fleet assistant strategy.
 //
 // The strategy declares:
 //
@@ -56,9 +55,8 @@ const SystemPrompt = `You are the TeslaSync fleet assistant. ` +
 // dispatcher construction time — the dispatcher refuses to mount a
 // strategy that references an unknown tool.
 //
-// This slice ships zero mutating tools: the chatbot only READS state.
-// A future slice (N1, N2, …) that needs to mutate state will add its
-// own strategy with mutating tools + a confirm hook.
+// The chatbot only reads state. Any strategy that mutates state must
+// use mutating tools plus a confirm hook.
 var allowedTools = []string{
 	"query_vehicle_state",
 	"query_drives_recent",
@@ -106,22 +104,19 @@ func (s *Strategy) Tools() []string {
 // strategy itself contributes no extra prefix messages. Returning
 // nil is correct.
 //
-// Future work: this is where retrieved-context (F7 RAG) snippets
-// would be injected once the chatbot grows a knowledge-base lookup.
-// Today's slice keeps Context empty so the dispatcher's behaviour is
-// fully determined by [System] + History — the simplest path that
-// satisfies the slice's "no hidden state" requirement.
+// Future knowledge-base context would be injected here. For now,
+// [System] plus History fully determines dispatcher behaviour.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyChatbot wrapped through the F4↔F8 adapter so the dispatcher's
+// PolicyChatbot through the redaction adapter so the dispatcher's
 // per-request ctx-installation step (dispatch.Run installs the policy
 // via redact.WithPolicy) sees the concrete deny-all policy.
 //
 // PolicyChatbot allows NOTHING in cleartext. Every PII reference is
-// redacted to a round-trip tag like `<vin id='1'/>`; the F8 redact
+// redacted to a round-trip tag like `<vin id='1'/>`; the redaction
 // decorator restores the original value before delivering the LLM's
 // response back to the user.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {

@@ -1,6 +1,3 @@
-// Phase-50 / 0017 — N3 Natural-language search across drives, charges,
-// and alerts.
-//
 // Unit tests for the nl-search Strategy. Mirrors the shape of
 // chatbot-llm / nl-alert-builder / nl-automation-builder's
 // strategy_test.go. The Strategy is a pure value (no internal state,
@@ -131,7 +128,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs pre-fetched RAG context ships.
+// future change needs pre-fetched RAG context.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -145,12 +142,11 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 }
 
 // TestStrategy_RedactionPolicyChatbot proves the strategy hands the
-// dispatcher PolicyChatbot wrapped through the F4↔F8 adapter.
+// dispatcher PolicyChatbot wrapped through the redaction adapter.
 // PolicyChatbot allows NOTHING in cleartext — VINs, place names,
 // addresses, lat/long flow as round-trip tags through the LLM and
 // are restored only in the final response delivered to the requesting
-// user. The slice prompt explicitly mandates PolicyChatbot reuse for
-// nl-search.
+// user. nl-search intentionally reuses PolicyChatbot.
 func TestStrategy_RedactionPolicyChatbot(t *testing.T) {
 	t.Parallel()
 	s := New()

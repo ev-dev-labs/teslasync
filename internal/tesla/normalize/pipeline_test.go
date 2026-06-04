@@ -11,8 +11,8 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
-	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 	unithistory "github.com/ev-dev-labs/teslasync/internal/tesla/unit_history"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 )
 
 // TestPipelineProcess_ObserverInvokedFromBytesEntry exercises the FULL
@@ -98,9 +98,9 @@ func TestPipelineProcess_ObserverInvokedFromBytesEntry(t *testing.T) {
 	}
 }
 
-// TestPipelineProcessAtomics_DelegatesToInternalDispatch is the unit
-// test for the SECOND public ingest entry added in Phase-42a/0060.
-// Whereas TestPipelineProcess_ObserverInvokedFromBytesEntry exercises
+// TestPipelineProcessAtomics_DelegatesToInternalDispatch covers the
+// atomics-in public ingest entry. Whereas
+// TestPipelineProcess_ObserverInvokedFromBytesEntry exercises
 // the bytes-in path (proto.Unmarshal -> codec.Decode -> processAtomics),
 // this test exercises the atomics-in path used by the HTTP webhook
 // adapter — Pipeline.ProcessAtomics(ctx, []codec.Atomic, vehicleID)
@@ -193,4 +193,3 @@ func TestPipelineProcessAtomics_EmptyBatchIsNoOp(t *testing.T) {
 		t.Errorf("router received %d routes for empty batch, want 0: %+v", len(got), got)
 	}
 }
-

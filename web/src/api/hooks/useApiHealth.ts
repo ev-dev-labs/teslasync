@@ -2,8 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { getApiBase } from '@/api/client';
 
 /**
- * useApiHealth — Phase-40 / Prompt 59.
- *
  * Polls the backend `/healthz` endpoint every 15 seconds and reports the
  * round-trip latency plus an `ok | degraded | offline | unknown` summary
  * suitable for the footer status bar's API segment.

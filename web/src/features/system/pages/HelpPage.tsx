@@ -1,4 +1,4 @@
-// Phase-50 / 0020 — N6 RAG-backed app help.
+// RAG-backed app help.
 //
 // HelpPage is the SPA route at /help — the deterministic baseline
 // for the N6 RAG-backed app help slice. It MUST render the same

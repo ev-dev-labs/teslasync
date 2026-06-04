@@ -31,6 +31,7 @@ import { useTranslation } from 'react-i18next';
 
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel, Input } from '@/components/ui';
+import { VisuallyHidden } from '@/components/a11y';
 import { Icons } from '@/lib/icons';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -177,9 +178,9 @@ export default function ExplorePage() {
           data-testid="explore-search-panel"
         >
           <GlassPanel className="p-4 md:p-5">
-            <label htmlFor="explore-search" className="sr-only">
+            <VisuallyHidden as="label" htmlFor="explore-search">
               {t('explore.searchLabel', 'Filter features')}
-            </label>
+            </VisuallyHidden>
             <div className="relative">
               <Icons.search
                 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]"

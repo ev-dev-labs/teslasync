@@ -1,5 +1,4 @@
-// Package datarepairsuggestions is the Phase-50 / 0043 S2 strategy
-// for the LLM-backed data-repair-suggestions surface.
+// Package datarepairsuggestions contains the LLM-backed data-repair-suggestions strategy.
 //
 // The strategy declares:
 //
@@ -17,7 +16,7 @@
 //     {target_kind, target_id, action, update_fields} input and
 //     return a normalised + validated RepairPlan draft envelope.
 //     The tool is per-request scope-bound to the snapshot of stale
-//     IDs the handler installed via tools.WithScopedDataRepairIDs;
+//     IDs the handler installed via diagnostic.WithScopedDataRepairIDs;
 //     the LLM CANNOT propose a repair for a row that is not in
 //     scope. Defence-in-depth against prompt injection in stale-
 //     row metadata fields like the parser-shipped session number.
@@ -192,12 +191,9 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyAlertBuilder from
-// internal/ai/redact/policies.go. Allowed classes: none; IDs flow
-// through tools and proposed repairs require confirmation.
-// Round-trip required: no." PolicyAlertBuilder's deny-by-default
-// stance keeps every PII class round-tripped to a tag before the
-// message ever reaches the provider.
+// PolicyAlertBuilder keeps every PII class round-tripped to a tag
+// before the message reaches the provider. IDs flow through tools,
+// and proposed repairs require confirmation.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {
 	return redactadapter.Wrap(redact.PolicyAlertBuilder())
 }

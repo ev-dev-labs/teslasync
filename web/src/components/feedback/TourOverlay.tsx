@@ -36,8 +36,7 @@ export function TourOverlay({
   const tooltipStyle = getTooltipPosition(step.placement, targetRect);
 
   return (
-    // Phase-45 / Prompt 04: NOT migrated to <Modal>.
-    // Rationale: full-screen tour spotlight with a transparent target cutout.
+    // Not a <Modal>: this is a full-screen tour spotlight with a transparent target cutout.
     // Has no scroll body, no dismiss chrome, and uses a clip-path for the
     // spotlight effect. New interactive dialogs MUST use <Modal>.
     // eslint-disable-next-line no-restricted-syntax

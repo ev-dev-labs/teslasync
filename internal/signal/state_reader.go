@@ -113,8 +113,8 @@ type TimelineOptions struct {
 // # Concurrency contract
 //
 // Implementations MUST be safe for concurrent use by multiple goroutines.
-// The reference signal.LogStateReader implementation (Prompt 04) satisfies
-// this via a shared *pgxpool.Pool, which is itself concurrency-safe. Test
+// The reference signal.LogStateReader implementation satisfies this via a
+// shared *pgxpool.Pool, which is itself concurrency-safe. Test
 // fakes — including any future shared signaltest package — MUST also be
 // concurrency-safe.
 //

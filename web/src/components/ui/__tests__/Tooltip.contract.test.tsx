@@ -1,5 +1,5 @@
 /**
- * Phase-45 / Prompt 34 — Tooltip text-colour contract tests.
+ * Tooltip text-colour contract tests.
  *
  * The shared `<Tooltip>` (web/src/components/ui/Tooltip.tsx) ships an
  * INVERTED surface for high contrast (light card in dark mode / dark card

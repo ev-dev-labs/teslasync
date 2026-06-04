@@ -3,8 +3,6 @@
 // /admin/observability/data-quality so operators can spot a degraded
 // signal field before downstream consumers notice.
 //
-// Phase-46 / p46-dq-lineage.
-//
 // Two primitives:
 //
 //   - Scorer queries signal_log via a narrow Querier interface and
@@ -53,9 +51,9 @@ type FieldScore struct {
 	LastSeenAt       time.Time `json:"last_seen_at"`
 	FreshnessSeconds float64   `json:"freshness_seconds"`
 	MaxGapSeconds    float64   `json:"max_gap_seconds"`
-	DuplicateRatio   float64   `json:"duplicate_ratio"`   // 0..1 fraction of consecutive samples whose value matches the previous
-	CompositeScore   float64   `json:"composite_score"`   // 0..100, higher = healthier
-	Severity         string    `json:"severity"`          // ok | warn | critical
+	DuplicateRatio   float64   `json:"duplicate_ratio"` // 0..1 fraction of consecutive samples whose value matches the previous
+	CompositeScore   float64   `json:"composite_score"` // 0..100, higher = healthier
+	Severity         string    `json:"severity"`        // ok | warn | critical
 }
 
 // Snapshot is the full board response.

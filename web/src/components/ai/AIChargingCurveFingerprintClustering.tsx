@@ -1,12 +1,7 @@
-// Phase-50 / 0028 — C3 Charging-curve fingerprint clustering.
-// Phase-50 / W1 inline wiring (per slice prompt 0028) — wired the
-// Explain button to POST /api/v1/ai/charging/curves/clusters/explain
-// via the canonical useAiStream hook. The slice methodology forbids
-// shipping the visual affordance without end-to-end SSE wiring; this
-// component lands both in one commit so the on-mode wiring test
-// (TestChargingCurveFingerprintClusteringAIOnWiredCallsRoute) can
-// prove the button actually opens an SSE stream against the
-// registered backend route.
+// Charging-curve fingerprint clustering AI surface.
+// The Explain button POSTs to /api/v1/ai/charging/curves/clusters/explain
+// through useAiStream, and the wiring test verifies that it opens an
+// SSE stream against the registered backend route.
 //
 // AIChargingCurveFingerprintClustering is the visible AI surface for
 // the Charging Curves page. It is rendered conditionally via
@@ -25,7 +20,7 @@
 // remains the canonical view visible to every user; this AI section
 // is opt-in read-only narration layered alongside.
 //
-// Render contract (P11/P12 — Wired-or-absent, No-placeholder-buttons):
+// Render contract:
 //   - useAiStream is called unconditionally at the top of the body
 //     (Hooks-rules safe).
 //   - The Explain button's disabled prop is a COMPUTED expression

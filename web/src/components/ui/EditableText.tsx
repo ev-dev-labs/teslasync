@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 38 — `<EditableText>` inline-edit primitive.
+ * `<EditableText>` inline-edit primitive.
  *
  * Replaces "open a Modal to rename" flows with a faster double-click
  * (or Enter/F2) → input → Enter-to-save / Escape-to-cancel pattern.

@@ -94,8 +94,6 @@ func statusAllowed(got int, allowed []int) bool {
 	return false
 }
 
-// containsString avoids strings.Contains in the hot path so we don't
-// allocate when ExpectBodyHas is empty.
 func containsString(haystack, needle string) bool {
 	if needle == "" {
 		return true

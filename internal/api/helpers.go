@@ -4,174 +4,170 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	chimw "github.com/go-chi/chi/v5/middleware"
-
+	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
+	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
+	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	chatbotmodel "github.com/ev-dev-labs/teslasync/internal/models/chatbot"
 )
 
-// globalErrorTracker is set during router initialization.
-var globalErrorTracker *ErrorTracker
-
-// JSON helper to write JSON responses.
+// writeJSON is a transitional wrapper around httpx.WriteJSON kept for
+// the duration of the internal/api -> internal/api/<resource>/
+// subpackage migration (Phase R2). New handlers — and handlers being
+// moved into resource subpackages — MUST call httpx.WriteJSON
+// directly. Deletion of this wrapper is gated on internal/api/
+// reaching its irreducible drained shape at end of Phase R2.
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(status)
-	if data != nil {
-		_ = json.NewEncoder(w).Encode(data)
-	}
+	httpx.WriteJSON(w, status, data)
 }
 
-// httpStatusCode maps HTTP status codes to machine-readable error codes.
+// httpStatusCode is a transitional wrapper around httpx.HTTPStatusCode.
+// New code MUST call httpx.HTTPStatusCode directly. See writeJSON for
+// the broader transitional plan.
 func httpStatusCode(status int) string {
-	switch status {
-	case http.StatusBadRequest:
-		return "BAD_REQUEST"
-	case http.StatusUnauthorized:
-		return "UNAUTHORIZED"
-	case http.StatusForbidden:
-		return "FORBIDDEN"
-	case http.StatusNotFound:
-		return "NOT_FOUND"
-	case http.StatusMethodNotAllowed:
-		return "METHOD_NOT_ALLOWED"
-	case http.StatusConflict:
-		return "CONFLICT"
-	case http.StatusUnprocessableEntity:
-		return "UNPROCESSABLE_ENTITY"
-	case http.StatusTooManyRequests:
-		return "RATE_LIMITED"
-	case http.StatusInternalServerError:
-		return "INTERNAL_ERROR"
-	case http.StatusServiceUnavailable:
-		return "SERVICE_UNAVAILABLE"
-	case http.StatusGatewayTimeout:
-		return "GATEWAY_TIMEOUT"
-	default:
-		return "ERROR"
-	}
+	return httpx.HTTPStatusCode(status)
 }
 
-// Error helper to write JSON error responses with a consistent structure.
+// writeError is a transitional wrapper around httpx.WriteError. See
+// writeJSON for the broader transitional plan.
 func writeError(w http.ResponseWriter, status int, msg string) {
-	writeJSON(w, status, map[string]string{
-		"error": msg,
-		"code":  httpStatusCode(status),
-	})
+	httpx.WriteError(w, status, msg)
 }
 
-// writeErrorCode writes a JSON error response with a custom error code.
+// writeErrorCode is a transitional wrapper around httpx.WriteErrorCode.
+// See writeJSON for the broader transitional plan.
 func writeErrorCode(w http.ResponseWriter, status int, msg, code string) {
-	writeJSON(w, status, map[string]string{
-		"error": msg,
-		"code":  code,
-	})
+	httpx.WriteErrorCode(w, status, msg, code)
 }
 
-// writeTeslaTokenExpired writes the canonical 401 response that the
-// frontend translates into a {@link TeslaAuthExpiredError} and surfaces
-// via the <TeslaReauthBanner> recovery UI (Phase-45 / Prompt 30).
-//
-// Use this from any handler whose underlying call returned
-// {@link tesla.ErrUnauthorized} — i.e. the user's third-party Tesla
-// refresh token has expired and the backend can no longer act on their
-// behalf without a fresh OAuth grant.
-func writeTeslaTokenExpired(w http.ResponseWriter) {
-	writeErrorCode(w, http.StatusUnauthorized, "Tesla account disconnected", ErrCodeTeslaTokenExpired)
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
 }
 
-// writeAppError writes a structured error response using the centralized error catalog
-// and automatically records the error in the global error tracker and Prometheus.
-func writeAppError(w http.ResponseWriter, r *http.Request, appErr *AppError) {
-	writeJSON(w, appErr.Status, map[string]string{
-		"error":    appErr.Message,
-		"code":     appErr.Code,
-		"category": appErr.Category,
-	})
-	APIErrors.WithLabelValues(appErr.Code, appErr.Category).Inc()
-	if globalErrorTracker != nil {
-		reqID := chimw.GetReqID(r.Context())
-		globalErrorTracker.Track(appErr.Code, appErr.Category, appErr.Message, r.URL.Path, r.Method, reqID, appErr.Status)
+func bytesTrim(b []byte) []byte {
+	for len(b) > 0 && (b[0] == ' ' || b[0] == '\t' || b[0] == '\r' || b[0] == '\n') {
+		b = b[1:]
 	}
+	for len(b) > 0 && (b[len(b)-1] == ' ' || b[len(b)-1] == '\t' || b[len(b)-1] == '\r' || b[len(b)-1] == '\n') {
+		b = b[:len(b)-1]
+	}
+	return b
 }
 
-// Pagination helper extracts limit/offset from query params.
-func pagination(r *http.Request) (limit, offset int) {
-	limit = 50
-	offset = 0
-	if v := r.URL.Query().Get("limit"); v != "" {
-		if l, err := strconv.Atoi(v); err == nil && l > 0 && l <= 1000 {
-			limit = l
-		}
-	}
-	if v := r.URL.Query().Get("offset"); v != "" {
-		if o, err := strconv.Atoi(v); err == nil && o >= 0 {
-			offset = o
-		}
-	}
-	return
-}
-
-// urlParamInt64 extracts an int64 URL parameter.
-func urlParamInt64(r *http.Request, key string) (int64, error) {
-	return strconv.ParseInt(chi.URLParam(r, key), 10, 64)
-}
-
-// parseDateRange extracts optional start/end date query params.
-//
-// Two formats are accepted, in this order of precedence per parameter:
-//
-//  1. RFC 3339 instants (e.g. "2026-05-13T07:00:00Z") — used verbatim
-//     for `start`. For `end`, the FE convention is to send the next
-//     local midnight (i.e. an EXCLUSIVE upper bound) so the window
-//     spans `[start, end)` in calendar-day terms. Existing handlers
-//     filter with `ts BETWEEN $2 AND $3` (inclusive); to keep that
-//     contract working we subtract 1 microsecond from the RFC 3339
-//     end so the boundary instant itself is excluded. Net effect:
-//     callers get correct `[start, next_local_midnight)` semantics
-//     regardless of which SQL operator they use. This is the form
-//     the React `useRangeState` hook produces via its
-//     `startInstant` / `endInstantExclusive` outputs and is the
-//     recommended shape for all new UI surfaces.
-//
-//  2. Date-only "YYYY-MM-DD" — backward-compatible legacy form. Parsed
-//     as UTC midnight (start) / UTC end-of-day (end, inclusive).
-//     Suitable for fixed-window reports and audit endpoints that
-//     don't care about timezone. New UI surfaces should switch to
-//     RFC 3339 instants — the legacy form silently dropped today's
-//     local rows for any user east or west of UTC (e.g. a PST user's
-//     evening drives recorded at next-day UTC).
-func parseDateRange(r *http.Request) (startTime, endTime time.Time) {
-	if s := r.URL.Query().Get("start"); s != "" {
-		if t, err := time.Parse(time.RFC3339, s); err == nil {
-			startTime = t
-		} else if t, err := time.Parse("2006-01-02", s); err == nil {
-			startTime = t
-		}
-	}
-	if s := r.URL.Query().Get("end"); s != "" {
-		if t, err := time.Parse(time.RFC3339, s); err == nil {
-			endTime = t.Add(-time.Microsecond) // exclusive → inclusive for BETWEEN
-		} else if t, err := time.Parse("2006-01-02", s); err == nil {
-			endTime = t.Add(24*time.Hour - time.Second) // end of day (UTC)
-		}
-	}
-	return
-}
-
-// nullableTime returns t when use is true, otherwise an interface-typed nil
-// suitable for passing to pgx.Query. Combined with `$N::timestamptz IS NULL`
-// SQL guards this lets a single prepared statement express
-// "scope by [start, end] when supplied; full-history when not".
-func nullableTime(use bool, t time.Time) interface{} {
-	if !use {
+func historyToProviderMessages(rows []*chatbotmodel.ChatMessage, currentUserMessage string) []provider.Message {
+	if len(rows) == 0 {
 		return nil
 	}
-	return t
+	out := make([]provider.Message, 0, len(rows))
+	for i, m := range rows {
+		if i == len(rows)-1 && m.Role == "user" && m.Content == currentUserMessage {
+			continue
+		}
+		out = append(out, provider.Message{
+			Role:    m.Role,
+			Content: m.Content,
+		})
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+type recordingStreamWriter struct {
+	inner *stream.Writer
+	buf   strings.Builder
+}
+
+func (r *recordingStreamWriter) WriteDelta(s string) error {
+	r.buf.WriteString(s)
+	return r.inner.WriteDelta(s)
+}
+
+func (r *recordingStreamWriter) WriteToolCall(call provider.ToolCall) error {
+	return r.inner.WriteToolCall(call)
+}
+
+func (r *recordingStreamWriter) WriteToolResult(name string, result json.RawMessage) error {
+	return r.inner.WriteToolResult(name, result)
+}
+
+func (r *recordingStreamWriter) WriteToolError(name string, err error) error {
+	return r.inner.WriteToolError(name, err)
+}
+
+func (r *recordingStreamWriter) WriteDone() error {
+	return r.inner.WriteDone()
+}
+
+func (r *recordingStreamWriter) EmitLimitError(message, reason string, retryAfterS int, bannerLevel string, baselineAvailable bool) error {
+	return r.inner.WriteLimitError(message, stream.LimitDecisionPayload{
+		Reason:            reason,
+		RetryAfterS:       retryAfterS,
+		BannerLevel:       bannerLevel,
+		BaselineAvailable: baselineAvailable,
+	})
+}
+
+func (r *recordingStreamWriter) text() string {
+	return r.buf.String()
+}
+
+var (
+	_ dispatch.StreamWriter      = (*recordingStreamWriter)(nil)
+	_ dispatch.LimitErrorEmitter = (*recordingStreamWriter)(nil)
+)
+
+// writeTeslaTokenExpired drained to zero callers by R2d batch 8 (carves
+// drained all token-issuing handlers into resource subpackages, which call
+// httpx.WriteTeslaTokenExpired directly). Wrapper deleted per the carve
+// playbook — see writeJSON for the broader transitional plan.
+
+// writeAppError was the transitional wrapper around apperror.Write.
+// Drained to zero callers by R2c (vehicle subpkg carve) — the last
+// users moved to `apperror.Write` directly. Wrapper deleted; handlers
+// being moved into resource subpackages MUST call apperror.Write
+// directly per the carve playbook.
+
+// pagination is a transitional wrapper around apiparams.Pagination
+// kept for the duration of the internal/api -> internal/api/<resource>/
+// subpackage migration (Phase R2). New handlers — and handlers being
+// moved into resource subpackages — MUST call apiparams.Pagination
+// directly. Deletion of this wrapper is gated on internal/api/
+// reaching its irreducible drained shape at end of Phase R2.
+func pagination(r *http.Request) (limit, offset int) {
+	return apiparams.Pagination(r)
+}
+
+// urlParamInt64 was a transitional wrapper around apiparams.URLParamInt64.
+// Removed in R2d batch 9: every parent-package caller has been carved
+// into a resource subpackage that imports apiparams directly. Add a new
+// caller? Use apiparams.URLParamInt64 instead — do not reintroduce this
+// wrapper.
+
+// parseDateRange is a transitional wrapper around apiparams.ParseDateRange.
+// See pagination for the broader transitional plan + the detailed
+// timezone bug-fix docstring on the canonical apiparams.ParseDateRange.
+func parseDateRange(r *http.Request) (startTime, endTime time.Time) {
+	return apiparams.ParseDateRange(r)
+}
+
+// nullableTime drained to zero callers by R2d batch 8 — the last users
+// (carved into resource subpackages) call apiparams.NullableTime
+// directly. Wrapper deleted per the carve playbook.
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 // EstimateBatteryCapacityWh returns the best-effort battery capacity in Wh
@@ -196,7 +192,6 @@ func EstimateBatteryCapacityWh(vin string, model string) (float64, string) {
 			return 100000.0, "vin_estimate"
 		}
 	}
-	// Fallback: model name heuristic
 	m := strings.ToLower(model)
 	if strings.Contains(m, "model s") || strings.Contains(m, "model x") {
 		return 100000.0, "model_estimate"

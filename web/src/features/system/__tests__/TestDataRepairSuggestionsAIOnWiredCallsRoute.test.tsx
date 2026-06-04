@@ -1,16 +1,10 @@
-// Phase-50 / 0043 — S2 Data repair suggestions.
-// Phase-50 / W1 inline wiring (per slice prompt 0043) — on-mode
-// wiring test proving the "Draft repair plan" button opens an SSE
-// stream against the registered backend route
-// POST /api/v1/ai/system/data-repair/draft.
-//
-// `TestDataRepairSuggestionsAIOnWiredCallsRoute` is the load-
-// bearing positive wiring proof for slice 0043's W1 inline
-// addendum. It mounts the AIDataRepairSuggestions component with
+// Data repair suggestions.
+// Verifies that the "Draft repair plan" button opens an SSE stream
+// against POST /api/v1/ai/system/data-repair/draft.
+// This is the positive wiring proof for AIDataRepairSuggestions: it mounts the component with
 // ai_mode='cloud' + the per-feature toggle on, stubs global fetch
 // with a deterministic SSE byte stream, clicks the Draft repair
 // plan button, and asserts:
-//
 //   1. Exactly ONE POST against the registered backend route
 //      `/api/v1/ai/system/data-repair/draft` is enqueued with
 //      `Content-Type: application/json` and a body containing
@@ -31,7 +25,6 @@
 //      off-mode absence invariant. That assertion lives in the
 //      sibling file and is exercised independently by the npm
 //      test runner.
-//
 // The test name MUST stay
 // `TestDataRepairSuggestionsAIOnWiredCallsRoute` per the W1
 // inline addendum naming contract.

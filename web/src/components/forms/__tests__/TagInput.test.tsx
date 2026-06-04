@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 24 — TagInput unit tests.
+ * TagInput unit tests.
  *
  * Locks in the contract documented in TagInput.tsx: separator commit,
  * Backspace-to-delete, dedupe, validateTag, maxTags, paste-splitting,

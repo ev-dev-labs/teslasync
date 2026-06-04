@@ -1,6 +1,4 @@
-// Package mqtt — DLQ inspector.
-//
-// Phase-44 / observability-batch / Prompt F4 — DLQ inspector + replay backend.
+// Package mqtt provides a DLQ inspector and replay backend.
 //
 // The PipelineSubscriber publishes any message that fails codec decode
 // (wraps codec.ErrPayloadDrop) to {dlqTopic}/{vehicleID} as a JSON

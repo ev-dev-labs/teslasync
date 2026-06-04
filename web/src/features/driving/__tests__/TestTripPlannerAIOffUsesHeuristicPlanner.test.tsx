@@ -1,8 +1,6 @@
-// Phase-50 / 0025 — D5 Trip planner LLM agent.
+// Trip planner LLM agent tests.
 //
-// `TestTripPlannerAIOffUsesHeuristicPlanner` (the Vitest sibling
-// to the Go test of the same name) is the slice's load-bearing
-// AI-OFF contract proof on the React side. It mounts the
+// `TestTripPlannerAIOffUsesHeuristicPlanner` mounts the
 // AITripPlannerLLMAgent component with ai_mode='off' (plus the
 // per-feature toggle on, to defeat the obvious "off because
 // nothing is enabled" path) and asserts:
@@ -25,11 +23,8 @@
 // form + manual Plan button + baseline plan envelope regardless
 // of this AI section's visibility.
 //
-// File name MUST stay
-// `TestTripPlannerAIOffUsesHeuristicPlanner.test.tsx` — the slice
-// prompt's verification command runs
-// `vitest --run TestTripPlannerAIOffUsesHeuristicPlanner`, where
-// the positional pattern is matched against the file PATH.
+// File name MUST stay `TestTripPlannerAIOffUsesHeuristicPlanner.test.tsx`
+// because Vitest's positional pattern is matched against the file path.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -83,8 +78,7 @@ describe('TestTripPlannerAIOffUsesHeuristicPlanner (trip-planner-llm-agent AI-of
   it('TestTripPlannerAIOffUsesHeuristicPlanner: renders nothing when ai_mode=off even with the trip-planner-llm-agent toggle on', () => {
     // The toggle is intentionally set to true to defeat the
     // shortcut path "the section hides because the feature flag is
-    // off". The mode='off' check MUST trump the per-feature toggle
-    // (ADR-015 §I7).
+    // off". The mode='off' check MUST trump the per-feature toggle.
     //
     // The vehicleId prop is also intentionally set so the
     // absent-in-DOM assertion proves that the gate (not a missing
@@ -108,8 +102,7 @@ describe('TestTripPlannerAIOffUsesHeuristicPlanner (trip-planner-llm-agent AI-of
 
   it('TestTripPlannerAIOffUsesHeuristicPlanner: renders nothing when ai_mode is non-off but the trip-planner-llm-agent toggle is false', () => {
     // The other half of the gate: even with mode='cloud', a
-    // toggle=false MUST hide the surface (per-feature opt-in,
-    // ADR-015 §I7).
+    // toggle=false MUST hide the surface.
     mockUseSettings.mockReturnValue(
       settingsPayload({
         ai_mode: 'cloud',

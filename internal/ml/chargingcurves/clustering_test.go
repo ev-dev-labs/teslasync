@@ -1,4 +1,4 @@
-// Phase-50 / 0064 — ML3 Charging-curve fingerprint clustering statistical model.
+// Charging-curve fingerprint clustering trainer tests.
 //
 // clustering_test.go pins the deterministic statistical trainer's
 // contract:
@@ -26,14 +26,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 )
 
 // fakeSource is the deterministic in-memory SessionSource used by
 // every test in this file. Pinning the window the trainer passes
 // also lets us assert the time math is correct.
 type fakeSource struct {
-	sessions      []*models.ChargingSession
+	sessions      []*chargingmodel.ChargingSession
 	err           error
 	lastVehicleID int64
 	lastStart     time.Time
@@ -42,7 +42,7 @@ type fakeSource struct {
 	calls         int
 }
 
-func (f *fakeSource) SessionsForVehicle(_ context.Context, vehicleID int64, limit int, start, end time.Time) ([]*models.ChargingSession, error) {
+func (f *fakeSource) SessionsForVehicle(_ context.Context, vehicleID int64, limit int, start, end time.Time) ([]*chargingmodel.ChargingSession, error) {
 	f.lastVehicleID = vehicleID
 	f.lastLimit = limit
 	f.lastStart = start
@@ -77,14 +77,14 @@ func floatPtr(v float64) *float64 { return &v }
 // strPtr returns a pointer to s.
 func strPtr(s string) *string { return &s }
 
-// makeSession builds a *models.ChargingSession with peak/avg/energy
+// makeSession builds a *chargingmodel.ChargingSession with peak/avg/energy
 // + an ended_at 1 hour after started_at so DurationMinutes() returns
 // a non-nil value. id is the row primary key (used by the example
 // IDs assertions).
-func makeSession(id int64, peakW, avgW, energyWh float64, chargerType string) *models.ChargingSession {
+func makeSession(id int64, peakW, avgW, energyWh float64, chargerType string) *chargingmodel.ChargingSession {
 	startedAt := time.Date(2026, 5, 1, 22, 0, 0, 0, time.UTC)
 	endedAt := startedAt.Add(time.Hour)
-	return &models.ChargingSession{
+	return &chargingmodel.ChargingSession{
 		ID:                 id,
 		VehicleID:          42,
 		StartedAt:          startedAt,
@@ -142,7 +142,7 @@ func TestTrainer_NoSourceReturnsErr(t *testing.T) {
 // AI handler can decide whether to 4xx or 5xx.
 func TestTrainer_NonPositiveVehicleIDReturnsEmpty(t *testing.T) {
 	t.Parallel()
-	src := &fakeSource{sessions: []*models.ChargingSession{}}
+	src := &fakeSource{sessions: []*chargingmodel.ChargingSession{}}
 	tr := newTestTrainer(src)
 	out, err := tr.Train(context.Background(), 0, 0)
 	if err != nil {
@@ -161,7 +161,7 @@ func TestTrainer_NonPositiveVehicleIDReturnsEmpty(t *testing.T) {
 // buckets). This is the "I have no charging history" UX.
 func TestTrainer_NoSessionsReturnsEmpty(t *testing.T) {
 	t.Parallel()
-	src := &fakeSource{sessions: []*models.ChargingSession{}}
+	src := &fakeSource{sessions: []*chargingmodel.ChargingSession{}}
 	tr := newTestTrainer(src)
 	out, err := tr.Train(context.Background(), 1, 0)
 	if err != nil {
@@ -178,7 +178,7 @@ func TestTrainer_NoSessionsReturnsEmpty(t *testing.T) {
 func TestTrainer_FallbackBelowMinSessions(t *testing.T) {
 	t.Parallel()
 	// Two L2 sessions — below the MinSessions=3 floor.
-	src := &fakeSource{sessions: []*models.ChargingSession{
+	src := &fakeSource{sessions: []*chargingmodel.ChargingSession{
 		makeSession(1, 7000, 6000, 30000, "wall_connector"),
 		makeSession(2, 7100, 6100, 31000, "wall_connector"),
 	}}
@@ -217,7 +217,7 @@ func TestTrainer_FallbackBelowMinSessions(t *testing.T) {
 func TestTrainer_LearnedAtOrAboveMinSessions(t *testing.T) {
 	t.Parallel()
 	// Five L2 sessions — well above MinSessions=3.
-	src := &fakeSource{sessions: []*models.ChargingSession{
+	src := &fakeSource{sessions: []*chargingmodel.ChargingSession{
 		makeSession(1, 7000, 6000, 30000, "wall_connector"),
 		makeSession(2, 7200, 6200, 31000, "wall_connector"),
 		makeSession(3, 6800, 5800, 29000, "wall_connector"),
@@ -263,7 +263,7 @@ func TestTrainer_LearnedAtOrAboveMinSessions(t *testing.T) {
 func TestTrainer_MultipleClustersDeterministicOrder(t *testing.T) {
 	t.Parallel()
 	// Mix L1 + L2 + DC, each above MinSessions=3.
-	sessions := []*models.ChargingSession{
+	sessions := []*chargingmodel.ChargingSession{
 		// DC fast first to defeat any "first-seen wins" ordering bug.
 		makeSession(10, 50000, 40000, 30000, "supercharger"),
 		makeSession(11, 51000, 41000, 31000, "supercharger"),
@@ -308,7 +308,7 @@ func TestTrainer_PropagatesSourceError(t *testing.T) {
 // TestTrainer_DaysClampedToMax pins the upper-bound clamp.
 func TestTrainer_DaysClampedToMax(t *testing.T) {
 	t.Parallel()
-	src := &fakeSource{sessions: []*models.ChargingSession{}}
+	src := &fakeSource{sessions: []*chargingmodel.ChargingSession{}}
 	tr := newTestTrainer(src)
 	_, err := tr.Train(context.Background(), 42, MaxLookbackDays+1000)
 	if err != nil {
@@ -325,7 +325,7 @@ func TestTrainer_DaysClampedToMax(t *testing.T) {
 // behaviour.
 func TestTrainer_DefaultsLookbackWhenZero(t *testing.T) {
 	t.Parallel()
-	src := &fakeSource{sessions: []*models.ChargingSession{}}
+	src := &fakeSource{sessions: []*chargingmodel.ChargingSession{}}
 	tr := newTestTrainer(src)
 	_, err := tr.Train(context.Background(), 42, 0)
 	if err != nil {
@@ -349,7 +349,7 @@ func TestTrainer_DefensiveFiltersBadValues(t *testing.T) {
 	good1 := makeSession(1, 7000, 6000, 30000, "wall_connector")
 	good2 := makeSession(2, 7200, 6200, 31000, "wall_connector")
 	good3 := makeSession(3, 6800, 5800, 29000, "wall_connector")
-	src := &fakeSource{sessions: []*models.ChargingSession{bad1, bad2, bad3, good1, good2, good3}}
+	src := &fakeSource{sessions: []*chargingmodel.ChargingSession{bad1, bad2, bad3, good1, good2, good3}}
 	tr := newTestTrainer(src)
 	out, err := tr.Train(context.Background(), 42, 0)
 	if err != nil {

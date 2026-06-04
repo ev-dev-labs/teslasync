@@ -1,4 +1,4 @@
-// Package auth — subject extraction primitives (Phase-46 / Prompt 57).
+// Package auth provides subject extraction primitives.
 //
 // Every authenticated handler in TeslaSync needs to answer two
 // questions:

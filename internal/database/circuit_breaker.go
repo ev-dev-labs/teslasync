@@ -31,7 +31,7 @@ func NewDBCircuitBreaker(name string) *DBCircuitBreaker {
 	fullName := fmt.Sprintf("db-%s", name)
 	cb := gobreaker.NewCircuitBreaker(gobreaker.Settings{
 		Name:        fullName,
-		MaxRequests: 1,               // half-open: let 1 request through to probe
+		MaxRequests: 1,                // half-open: let 1 request through to probe
 		Interval:    30 * time.Second, // rolling window for failure count
 		Timeout:     15 * time.Second, // how long to stay open before half-open
 		ReadyToTrip: func(counts gobreaker.Counts) bool {

@@ -20,8 +20,7 @@ export interface VehicleComparisonEntry {
 
 /**
  * MileageStats matches the backend `MileageStatsResponse`
- * (internal/api/mileage_handler.go) — Phase-43a / Prompt 0004
- * restored the endpoint with the snake_case lifetime + window
+ * (internal/api/mileage_handler.go) with the snake_case lifetime + window
  * rollup shape. Distances are kilometres (SI conversion happens
  * in the SELECT list); times are RFC3339 strings nullable for
  * vehicles with zero recorded drives.
@@ -60,8 +59,7 @@ export interface MonthlyMileageResponse {
 
 /**
  * DailyMileageBucket matches the backend `MileageDailyBucket`
- * (internal/api/mileage_handler.go) — Phase-43a / Prompt 0009
- * (fix/misc-fixes) restored per-day buckets so MileagePage can
+ * (internal/api/mileage_handler.go) with per-day buckets so MileagePage can
  * render its Odometer Over Time and Daily Distance charts.
  * Date is 'YYYY-MM-DD'; end_odometer_km is null when no qualifying
  * drive in the bucket recorded a final odometer reading.

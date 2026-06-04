@@ -12,7 +12,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 )
 
-// Phase-10 router tracing contract:
+// Router tracing contract:
 //
 //   - Router.Route emits exactly ONE tesla.router.route span per call.
 //   - The span carries `field`, `destination`, `outcome`,

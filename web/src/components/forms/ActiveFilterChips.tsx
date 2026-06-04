@@ -10,8 +10,6 @@
  * URL-state is owned by the page; chips are a presentation surface — every
  * removal flows through the descriptor's `onRemove` callback so the page
  * stays in charge of how the URL is rewritten.
- *
- * Phase-46 / Prompt 06.
  */
 
 import {

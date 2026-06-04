@@ -1,4 +1,4 @@
-// Phase 44 / Prompt 0081 — metric-coverage audit.
+// Metric coverage audit.
 //
 // Static audit that the RED middleware is wired in front of every route
 // declared in internal/api/router.go and that the three metric series

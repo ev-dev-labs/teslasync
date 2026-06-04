@@ -64,9 +64,9 @@ import {
   computeChargerSpecs,
 } from '../components/charging-list';
 
-/* ------------------------------------------------------------------ */
-/*  URL allowlists                                                    */
-/* ------------------------------------------------------------------ */
+/* ----------------------------------------------------------------*/
+/*  URL allowlists */
+/* ----------------------------------------------------------------*/
 
 const COLLECTIONS = ['all', 'home', 'supercharger', 'dc', 'free', 'anomalies', 'notable', 'tagged'] as const;
 type Collection = typeof COLLECTIONS[number];
@@ -75,9 +75,9 @@ const SORT_FIELDS = ['date', 'energy', 'cost', 'duration', 'power'] as const;
 type SortField = typeof SORT_FIELDS[number];
 const DENSITY_VALUES = ['compact', 'comfortable'] as const;
 
-/* ------------------------------------------------------------------ */
-/*  Thresholds for conditional sections                               */
-/* ------------------------------------------------------------------ */
+/* ----------------------------------------------------------------*/
+/*  Thresholds for conditional sections */
+/* ----------------------------------------------------------------*/
 const THRESHOLD_OPTIMIZER = 10;
 const THRESHOLD_SPECS = 5;
 const THRESHOLD_BATTERY_DIST = 5;
@@ -230,7 +230,7 @@ export default function ChargingListPage() {
             if (!Number.isFinite(target)) return null;
             return compareNumeric(sess.total_energy_added_wh / 1000, token.op, target);
           },
-          // power:>50  (peak power in kW)
+          // power:>50 (peak power in kW)
           power: (sess, token) => {
             const target = Number(token.value);
             if (!Number.isFinite(target)) return null;
@@ -248,13 +248,13 @@ export default function ChargingListPage() {
             const day = localDayKey(sess.started_at, tz);
             return matchesYmdPrefix(day, token.value.trim());
           },
-          // at:Home  (substring against start_place)
+          // at:Home (substring against start_place)
           at: (sess, token) => {
             const want = token.value.trim().toLowerCase();
             const place = (sess.start_place ?? '').toLowerCase();
             return place.includes(want);
           },
-          // free  (bare keyword treated as kv `free:` with empty value)
+          // free (bare keyword treated as kv `free:` with empty value)
           free: (sess) => sess.cost_decimal == null || sess.cost_decimal === 0,
         },
       }),

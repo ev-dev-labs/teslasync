@@ -6,10 +6,10 @@ import (
 	"math"
 	"testing"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
-)
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 
-// ─── Config Parsing Tests ───────────────────────────────
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+)
 
 func TestDecodeLocationSpec_Valid(t *testing.T) {
 	raw := json.RawMessage(`{
@@ -70,8 +70,6 @@ func TestDecodeLocationSpec_InvalidCases(t *testing.T) {
 	}
 }
 
-// ─── Spherical Distance Tests ───────────────────────────
-
 func TestSphericalDistance_SamePoint(t *testing.T) {
 	d := sphericalDistance(37.7749, -122.4194, 37.7749, -122.4194)
 	if d > 1 { // sub-meter tolerance for floating-point rounding
@@ -97,9 +95,7 @@ func TestSphericalDistance_Antipodal(t *testing.T) {
 	}
 }
 
-// ─── Evaluate Tests ─────────────────────────────────────
-
-func makeGeofence(id int64, name string, lat, lon, radius float64) *models.Geofence {
+func makeGeofence(id int64, name string, lat, lon, radius float64) *systemmodel.Geofence {
 	// Build a simple square polygon around the center point
 	// Approximate square whose farthest vertex is radius meters from center.
 	deltaLat := (radius / math.Sqrt2) / earthRadiusM * 180 / math.Pi
@@ -111,7 +107,7 @@ func makeGeofence(id int64, name string, lat, lon, radius float64) *models.Geofe
 		lon-deltaLon, lat+deltaLat,
 		lon-deltaLon, lat-deltaLat,
 	)
-	return &models.Geofence{
+	return &systemmodel.Geofence{
 		ID:         id,
 		Name:       name,
 		PolygonWKT: wkt,
@@ -120,8 +116,7 @@ func makeGeofence(id int64, name string, lat, lon, radius float64) *models.Geofe
 
 func TestEvaluateLocation_Inside(t *testing.T) {
 	cfg := &LocationConfig{GeofenceID: 1, Operator: "inside"}
-	// Vehicle at geofence center
-	state := &models.VehicleState{Latitude: 37.7749, Longitude: -122.4194}
+	state := &vehiclemodel.VehicleState{Latitude: 37.7749, Longitude: -122.4194}
 	geofence := makeGeofence(1, "Home", 37.7749, -122.4194, 500)
 
 	result, snapshot, err := EvaluateLocation(cfg, state, geofence)
@@ -138,8 +133,7 @@ func TestEvaluateLocation_Inside(t *testing.T) {
 
 func TestEvaluateLocation_Outside(t *testing.T) {
 	cfg := &LocationConfig{GeofenceID: 1, Operator: "outside"}
-	// Vehicle is ~559km from geofence center
-	state := &models.VehicleState{Latitude: 34.0522, Longitude: -118.2437}
+	state := &vehiclemodel.VehicleState{Latitude: 34.0522, Longitude: -118.2437}
 	geofence := makeGeofence(1, "Home", 37.7749, -122.4194, 500)
 
 	result, _, err := EvaluateLocation(cfg, state, geofence)
@@ -153,7 +147,7 @@ func TestEvaluateLocation_Outside(t *testing.T) {
 
 func TestEvaluateLocation_InsideButExpectOutside(t *testing.T) {
 	cfg := &LocationConfig{GeofenceID: 1, Operator: "outside"}
-	state := &models.VehicleState{Latitude: 37.7749, Longitude: -122.4194}
+	state := &vehiclemodel.VehicleState{Latitude: 37.7749, Longitude: -122.4194}
 	geofence := makeGeofence(1, "Home", 37.7749, -122.4194, 500)
 
 	result, _, err := EvaluateLocation(cfg, state, geofence)
@@ -167,7 +161,7 @@ func TestEvaluateLocation_InsideButExpectOutside(t *testing.T) {
 
 func TestEvaluateLocation_OutsideButExpectInside(t *testing.T) {
 	cfg := &LocationConfig{GeofenceID: 1, Operator: "inside"}
-	state := &models.VehicleState{Latitude: 34.0522, Longitude: -118.2437}
+	state := &vehiclemodel.VehicleState{Latitude: 34.0522, Longitude: -118.2437}
 	geofence := makeGeofence(1, "Home", 37.7749, -122.4194, 500)
 
 	result, _, err := EvaluateLocation(cfg, state, geofence)
@@ -186,8 +180,7 @@ func TestEvaluateLocation_ExactlyOnBoundary(t *testing.T) {
 	offsetLat := 100.0 / 111320.0
 	geofence := makeGeofence(1, "Office", centerLat, centerLon, 100)
 
-	// Vehicle on boundary — should be inside (<=)
-	state := &models.VehicleState{Latitude: centerLat + offsetLat, Longitude: centerLon}
+	state := &vehiclemodel.VehicleState{Latitude: centerLat + offsetLat, Longitude: centerLon}
 	cfg := &LocationConfig{GeofenceID: 1, Operator: "inside"}
 
 	result, _, err := EvaluateLocation(cfg, state, geofence)
@@ -241,7 +234,7 @@ func TestEvaluateLocation_NearBoundary(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			state := &models.VehicleState{Latitude: tt.lat, Longitude: tt.lon}
+			state := &vehiclemodel.VehicleState{Latitude: tt.lat, Longitude: tt.lon}
 			cfg := &LocationConfig{GeofenceID: 1, Operator: tt.operator}
 			result, _, err := EvaluateLocation(cfg, state, geofence)
 			if err != nil {
@@ -253,8 +246,6 @@ func TestEvaluateLocation_NearBoundary(t *testing.T) {
 		})
 	}
 }
-
-// ─── Error Handling Tests ───────────────────────────────
 
 func TestEvaluateLocation_NilState(t *testing.T) {
 	cfg := &LocationConfig{GeofenceID: 1, Operator: "inside"}
@@ -268,7 +259,7 @@ func TestEvaluateLocation_NilState(t *testing.T) {
 
 func TestEvaluateLocation_NilGeofence(t *testing.T) {
 	cfg := &LocationConfig{GeofenceID: 1, Operator: "inside"}
-	state := &models.VehicleState{Latitude: 37.7749, Longitude: -122.4194}
+	state := &vehiclemodel.VehicleState{Latitude: 37.7749, Longitude: -122.4194}
 
 	_, _, err := EvaluateLocation(cfg, state, nil)
 	if err == nil {
@@ -278,7 +269,7 @@ func TestEvaluateLocation_NilGeofence(t *testing.T) {
 
 func TestEvaluateLocation_GeofenceIDMismatch(t *testing.T) {
 	cfg := &LocationConfig{GeofenceID: 5, Operator: "inside"}
-	state := &models.VehicleState{Latitude: 37.7749, Longitude: -122.4194}
+	state := &vehiclemodel.VehicleState{Latitude: 37.7749, Longitude: -122.4194}
 	geofence := makeGeofence(99, "Wrong", 37.7749, -122.4194, 500)
 
 	_, _, err := EvaluateLocation(cfg, state, geofence)
@@ -287,11 +278,9 @@ func TestEvaluateLocation_GeofenceIDMismatch(t *testing.T) {
 	}
 }
 
-// ─── Snapshot Tests ─────────────────────────────────────
-
 func TestEvaluateLocation_SnapshotContent(t *testing.T) {
 	cfg := &LocationConfig{GeofenceID: 3, Operator: "inside"}
-	state := &models.VehicleState{Latitude: 37.7749, Longitude: -122.4194}
+	state := &vehiclemodel.VehicleState{Latitude: 37.7749, Longitude: -122.4194}
 	geofence := makeGeofence(3, "Work", 37.7749, -122.4194, 1000)
 
 	_, snapshot, err := EvaluateLocation(cfg, state, geofence)
@@ -332,7 +321,7 @@ func TestEvaluateLocation_SnapshotContent(t *testing.T) {
 
 func TestEvaluateLocation_SnapshotOutside(t *testing.T) {
 	cfg := &LocationConfig{GeofenceID: 2, Operator: "outside"}
-	state := &models.VehicleState{Latitude: 34.0522, Longitude: -118.2437}
+	state := &vehiclemodel.VehicleState{Latitude: 34.0522, Longitude: -118.2437}
 	geofence := makeGeofence(2, "Home", 37.7749, -122.4194, 500)
 
 	_, snapshot, err := EvaluateLocation(cfg, state, geofence)
@@ -353,14 +342,11 @@ func TestEvaluateLocation_SnapshotOutside(t *testing.T) {
 	}
 }
 
-// ─── Reason String Tests ────────────────────────────────
-
 func TestEvaluateLocation_ReasonStrings(t *testing.T) {
 	geofence := makeGeofence(1, "Home", 37.7749, -122.4194, 500)
 
-	// Met case: vehicle inside, operator=inside
 	cfg := &LocationConfig{GeofenceID: 1, Operator: "inside"}
-	state := &models.VehicleState{Latitude: 37.7749, Longitude: -122.4194}
+	state := &vehiclemodel.VehicleState{Latitude: 37.7749, Longitude: -122.4194}
 	result, _, _ := EvaluateLocation(cfg, state, geofence)
 	if result.Reason == "" {
 		t.Error("expected non-empty reason")
@@ -369,8 +355,7 @@ func TestEvaluateLocation_ReasonStrings(t *testing.T) {
 		t.Error("expected met=true for vehicle at center")
 	}
 
-	// Not-met case: vehicle far away, operator=inside
-	farState := &models.VehicleState{Latitude: 34.0522, Longitude: -118.2437}
+	farState := &vehiclemodel.VehicleState{Latitude: 34.0522, Longitude: -118.2437}
 	result, _, _ = EvaluateLocation(cfg, farState, geofence)
 	if result.Reason == "" {
 		t.Error("expected non-empty reason")
@@ -382,7 +367,7 @@ func TestEvaluateLocation_ReasonStrings(t *testing.T) {
 
 func TestEvaluateLocation_EmptyGeofenceName(t *testing.T) {
 	cfg := &LocationConfig{GeofenceID: 7, Operator: "inside"}
-	state := &models.VehicleState{Latitude: 37.7749, Longitude: -122.4194}
+	state := &vehiclemodel.VehicleState{Latitude: 37.7749, Longitude: -122.4194}
 	geofence := makeGeofence(7, "", 37.7749, -122.4194, 500)
 
 	result, _, err := EvaluateLocation(cfg, state, geofence)
@@ -392,7 +377,6 @@ func TestEvaluateLocation_EmptyGeofenceName(t *testing.T) {
 	if !result.Met {
 		t.Fatal("expected met=true")
 	}
-	// Should use fallback name
 	if result.Reason == "" {
 		t.Error("expected non-empty reason with fallback name")
 	}

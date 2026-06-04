@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// Phase-45 / Prompt 23 — Chart palette adjacency validator.
+// Chart palette adjacency validator.
 //
 // Verifies that the chart palettes exposed by `web/src/lib/colors.ts`
 // (`CHART_COLORS_CB_SAFE` and `CHART_COLORS_NEON`) keep adjacent series
 // distinguishable. For each adjacent pair (i, i+1) we convert both colours
 // to the OKLCh perceptual colour space and require either:
 //
-//   - Lightness delta dL >= MIN_DELTA_L (default 0.1, range 0–1), OR
-//   - Circular hue delta dH >= MIN_DELTA_H_DEG (default 30°, range 0–180°).
+// - Lightness delta dL >= MIN_DELTA_L (default 0.1, range 0–1), OR
+// - Circular hue delta dH >= MIN_DELTA_H_DEG (default 30°, range 0–180°).
 //
 // If both deltas are below threshold for any adjacent pair, the script exits
 // non-zero and the gate fails. Hue distance uses circular distance so wraps
@@ -19,7 +19,7 @@
 // drift is caught on the next CI run.
 //
 // Run via: `node scripts/auditChartPalette.mjs`
-//          `npm run audit:palette`
+// `npm run audit:palette`
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';

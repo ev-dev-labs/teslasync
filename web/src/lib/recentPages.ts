@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 51 — Recently viewed pages.
+ * Recently viewed pages.
  *
  * Client-side LRU of the user's most recently visited routes. Capped at
  * {@link RECENT_PAGES_MAX} entries. Surfaces in three places:

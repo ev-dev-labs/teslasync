@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
 
 /**
- * useOnboarding — Phase 40 / Prompt 18.
+ * useOnboarding.
  *
  * Hook against `GET /api/v1/onboarding/status` to drive the first-run
  * gate. The backend reports three independent anchors that all must be

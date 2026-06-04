@@ -99,7 +99,7 @@ func TestForwardFold_CarriesForwardAcrossEvents(t *testing.T) {
 func TestForwardFold_DropsLeadingAllNilRows(t *testing.T) {
 	mappings := []FieldMapping{{Signal: "VehicleSpeed", Field: "speed_mph"}}
 
-	// Phase A: only events for an unmapped signal Y → no row should escape.
+	// Scenario A: only events for an unmapped signal Y; no row should escape.
 	eventsOnlyY := []rawEvent{
 		{Ts: ts(5), Signal: "BatteryLevel", Value: 80.0},
 		{Ts: ts(10), Signal: "BatteryLevel", Value: 81.0},
@@ -109,8 +109,8 @@ func TestForwardFold_DropsLeadingAllNilRows(t *testing.T) {
 		t.Fatalf("Phase A: expected 0 rows when no mapped signal ever set, got %d (%+v)", len(gotA), gotA)
 	}
 
-	// Phase B: same plus a later event for the mapped signal X → exactly one
-	// row at the X event's timestamp.
+	// Scenario B: add a later event for the mapped signal X; exactly one row
+	// should appear at the X event's timestamp.
 	eventsB := []rawEvent{
 		{Ts: ts(5), Signal: "BatteryLevel", Value: 80.0},
 		{Ts: ts(10), Signal: "BatteryLevel", Value: 81.0},
@@ -151,13 +151,12 @@ func TestForwardFold_KeepsTrailingAllNilRowsAfterFirstNonNil(t *testing.T) {
 	}
 }
 
-// TestForwardFold_PreservesTypedPrimitives_Phase42 locks in the post-phase-42
-// typed-primitive contract: the codec emits already-typed atomic values
-// (float64, float32, int32, int64, bool, string, time.Time, ...) and pivot
-// is responsible for storing them as-is — no string parsing, no compound
-// flatten, no kind coercion. forwardFold is value-type-agnostic; this test
-// flows a heterogeneous mix through the algorithm and asserts identity is
-// preserved per primitive kind.
+// This test locks in the typed-primitive contract: the codec emits
+// already-typed atomic values (float64, float32,
+// int32, int64, bool, string, time.Time, ...) and pivot stores them as-is — no
+// string parsing, compound flattening, or kind coercion. forwardFold is
+// value-type-agnostic; this test flows a heterogeneous mix through the
+// algorithm and asserts identity is preserved per primitive kind.
 func TestForwardFold_PreservesTypedPrimitives_Phase42(t *testing.T) {
 	mappings := []FieldMapping{
 		{Signal: "VehicleSpeed", Field: "speed_mph"},          // float64

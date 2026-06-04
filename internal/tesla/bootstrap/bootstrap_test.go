@@ -14,13 +14,9 @@ import (
 	dto "github.com/prometheus/client_model/go"
 	"github.com/rs/zerolog"
 
-	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 	unithistory "github.com/ev-dev-labs/teslasync/internal/tesla/unit_history"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 )
-
-// ---------------------------------------------------------------------------
-// Fakes
-// ---------------------------------------------------------------------------
 
 // fakeClient is a recording stand-in for VehicleDataClient. Each call
 // pops the next reply off the queue (or repeats the tail reply if the
@@ -175,13 +171,8 @@ func readPromCounterVec(t *testing.T, vec *prometheus.CounterVec, labels ...stri
 	return *m.Counter.Value
 }
 
-// ---------------------------------------------------------------------------
-// Mapping table coverage
-// ---------------------------------------------------------------------------
-
 // TestSeed_PerKindVariant_All exercises every supported gui_settings
-// string and asserts the resulting Entry per kind. This is the
-// "table tests" deliverable from the prompt's UNIT_TEST section.
+// string and asserts the resulting Entry per kind.
 func TestSeed_PerKindVariant_All(t *testing.T) {
 	cases := []struct {
 		name string
@@ -294,10 +285,6 @@ func TestSeed_PerKindVariant_All(t *testing.T) {
 		})
 	}
 }
-
-// ---------------------------------------------------------------------------
-// Retry policy
-// ---------------------------------------------------------------------------
 
 // TestSeed_TransientRetryExhausted asserts that a fakeClient that
 // always returns ErrTransient triggers exactly len(backoffs)+1

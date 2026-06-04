@@ -83,12 +83,12 @@ func TestParseVector_RejectsMalformed(t *testing.T) {
 	t.Parallel()
 	cases := []string{
 		"",
-		"1,2,3",            // missing brackets
-		"[1,2,",            // unterminated
-		"[abc]",            // not a number
-		"[1, , 3]",         // empty element
-		"[NaN]",            // NaN literal
-		"[Inf]",            // Inf literal
+		"1,2,3",    // missing brackets
+		"[1,2,",    // unterminated
+		"[abc]",    // not a number
+		"[1, , 3]", // empty element
+		"[NaN]",    // NaN literal
+		"[Inf]",    // Inf literal
 	}
 	for _, in := range cases {
 		t.Run(in, func(t *testing.T) {

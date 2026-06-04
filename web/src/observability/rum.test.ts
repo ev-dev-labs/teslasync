@@ -1,5 +1,5 @@
 /**
- * Phase 44 / Prompt 0061 — RUM instrumentation tests.
+ * RUM instrumentation tests.
  *
  * Uses InMemorySpanExporter so we can assert on what would have been sent to
  * the OTel collector without touching the network. Each test runs the

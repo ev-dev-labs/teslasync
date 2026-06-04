@@ -40,8 +40,8 @@ const (
 
 // TransitionRecord captures a completed transition for audit/history.
 type TransitionRecord struct {
-	FSMName  string
-	From     State
-	Event    Event
-	To       State
+	FSMName string
+	From    State
+	Event   Event
+	To      State
 }

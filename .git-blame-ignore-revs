@@ -1,0 +1,425 @@
+# .git-blame-ignore-revs
+#
+# Git commits listed here are skipped by `git blame` and the GitHub
+# blame UI. Use ONLY for purely mechanical, repo-wide reformatting
+# commits — never for behavioural changes.
+#
+# How to use locally:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# GitHub honours this file automatically when present at the repo root.
+#
+# Format: one full 40-char commit SHA per line. Inline `# comment` is
+# allowed after the SHA.
+
+# A2.4a — repo-wide gofmt -s + goimports drift fix (351 files,
+# format-only, prep for adding gofmt/goimports pre-commit hooks).
+# See commit message for full rationale.
+4b97069d738986ff6927c441d24b77d69818befb
+
+# R0.5 — Phase R canary: extract internal/jobs/embeddings subpackage
+# (2 files moved via git mv + idiomatic Go symbol rename to drop
+# stuttering Embeddings* prefix). Zero behavioural change; sole
+# external caller updated to alias-import per ADR-011 convention.
+5dde1443803983d43af565f792b83366ba190006
+
+# R5.1 — Phase R first model cluster: extract internal/models/alert
+# subpackage (2 files + new doc.go). 35 caller files updated to
+# alertmodel.* alias per ADR-011 §3. Pure mechanical move + import
+# rewrites; zero behavioural change.
+59ac8f2b432ab68cc61b484befdcf68f5f671a90
+
+# refactor(R5.2): extract internal/models/auth subpackage
+47075d56aec07315ee251af40a03b0a796d2a635
+
+# refactor(R5.3): extract internal/models/backup subpackage
+0a6f81ae96ced2e3204531bcc02872eedfc05383
+
+# refactor(R5.4): extract internal/models/chatbot subpackage
+2347f1b1f60c2e76b144e784568e95eb1822bfbd
+
+# refactor(R5.5): extract internal/models/energy subpackage
+a78b3c5fa64c1b8e9911d1a20ddd8310f8489123
+
+# refactor(R5.6): extract internal/models/export subpackage
+ef3423f9a77a0d166ac9349b5ea6c8bce520e003
+
+# refactor(R5.7): extract internal/models/geo subpackage
+08192acfcc8a69209f0ed1e5523ed524c46f051f
+
+# refactor(R5.8): extract internal/models/settings subpackage
+4b7fb8fb81a7c44a3cf8b41e7af8c86e59026a8c
+
+# refactor(R5.9): extract internal/models/notification subpackage
+a63a7ae3bc0fe8567a0efd8e1cca0a3ee6d481a9
+
+ad2eb301b5828f307c92dfb041cde45e9bb9c0db # R5.10 carve internal/models/automation subpkg
+
+42e4c61dad89af29c455a52807f61eeec8678675 # R5.11 carve internal/models/tesla subpkg (16 types, 29 callers)
+
+b6ac595742eb9deb1d6242dbb0a8007041a7517b # R5.12 carve internal/models/vehicle subpkg (13 types, 43 callers)
+
+03daee8d30a1f0c74d40fef31f54606d187bc716 # R5.13 carve internal/models/charging subpkg (2 types, 34 callers)
+
+c9009e01d0cdf23e668949c9f2618dbbbc75b0ed # R5.14 carve internal/models/drive subpkg (3 types, 39 callers)
+
+# R5.16 security (refactor: move security.go into bounded-context subpkg)
+5950d663
+# R5.19 telemetry+position move
+aacf69ba268c7ea808c77b3cb18a0b0a614fd4bd
+# R5.17 signal carve-out
+06f0a8b272314eb3c3ad12cfd0aa6ad4aa80f899
+# R5.15 dashboard carve-out
+2b25d1ffc167a7740cdc0f1d68c45a8e1481e0e8
+# R5.18 system carve-out (LARGEST single-file cluster)
+56758be506eb5657462f5b98f50d9bb4d6440605
+# refactor(R6.1): carve internal/jobs/triage subpkg
+c94f18a3e9ceeeb57065fbf9a0323f5b75683c85
+
+# refactor(R6.2): carve internal/jobs/digests subpkg
+8ae2e9bcc11604aa86aaf03ae4a413d3b4394eeb
+
+# refactor(R6.3): carve internal/jobs/indexers subpkg
+29cabf90680afb7bac57bcb630c03accf9e98b3a
+
+# R6.4 — carve internal/ai/tools/feedback/ + mechanical CachedSchema export
+879e78638b3e022d87168350a572398421ff0608
+# R6.5 — carve internal/ai/tools/safety/
+56b18756424767b4a4e55eb68c40ae7b3ea1e4e4
+# R6.6 — carve internal/ai/tools/location/ (auto_name + geofences)
+31b6b3749d89d7226dd204be3754add5ab7e9b02
+# R6.7 — carve internal/ai/tools/alert/ (builder + tuning)
+472ef24fe9cbb6151db66360a52da3f954495527
+# R6.8 — carve internal/ai/tools/forecast/ (cost + period_compare + temperature_impact)
+75c644cb7faf03587f7f78d28066196cce36ee86
+# R6.9 — carve internal/ai/tools/predict/ (battery_health + range + anomaly_baseline)
+dd49ce9e1a89abcbb3eec8776bc45ace55c91c52
+# R6.10 — carve internal/ai/tools/nl/ (signal_filter + watch_face + inbox)
+c3be2d605395a2bcecfab7ba745aa6b1f58973c2
+# R6.11 — carve internal/ai/tools/schedule/ (charge + climate + quiet_hours)
+3c6826da34a9895210af4ef5d0550345e10db7ce
+# R6.12 — carve internal/ai/tools/summary/ (incident_timeline + log_trace + software_update + fsm_trace)
+7e611dab47c059942eb90ab008bb40b6922aac8c
+# R6.13 — carve internal/ai/tools/nlq/ (dashboard + grafana + sql)
+41d91d85a60bf183eda2a7f44013176103aee0f026bd3bd206ddfab8c950671c68ef0e43342c0188 # R6.14 trip cluster carve
+74f85118f555bbd935e54899b2b710376e6f086f # R6.15 diagnostic cluster carve
+1cfe8c3786d6ffb7d6c423fcd45ec19b59555ab7 # R6.16 lifetime cluster carve
+6f493b569f3067edeeb3d54868e1f830b315e25f # R6.17 maintenance cluster carve
+47b4d69318ad1650259e8efd28441c90b6dde2ec # R6.18 charge cluster carve
+c83da7c51f955e23c18776c621f8cb93fbc4bb66 # R6.19 voice cluster carve
+870a4707a3c188d6310d3e1f22a29f9feaae6457  # R6.20: carve ai/tools/export
+d67d2dc1e1a96abfe5d6b6271541bc0f618ca765  # R6.7.5: toolstest exported fixtures prep
+21a351bfb2e2885391dfd989e985782ca531e866  # R6.21: carve ai/tools/paint (1st toolstest consumer)
+dcb84b30b1c90805766613a48f335f5e476013e5  # R6.22: carve ai/tools/digest (lesson 10: cross-tool DoesNotShadow cycle)
+d65d74f149e515b029f1f3a3746d45d7a7dd353a  # R6.23: carve ai/tools/yir (year-in-review)
+b66486d33deba3a99d69ee53d6f9a08f4cc0d807  # R6.24: carve ai/tools/anomaly (lesson 11: anomalytool alias)
+ceb0b71952bd2147f50451f78de61f9eb8e292db  # R6.25: carve ai/tools/coaching (lessons 12-13: ptr helpers promoted + local fake duplication)
+450522501b7bb4628d942dfd4789818aa7b28ab9  # R6.26: carve ai/tools/diagnosis (lesson 14: inline-literal field rename)
+2fdd77e4c1640b0771bf43cbcd738ed5f97a9ec6  # R6.27: carve ai/tools/curve (lesson 15: dotted field-access rename)
+
+# R6.28: carve route_efficiency into internal/ai/tools/route/ (mass rename, no behaviour change)
+068408e14c8e0db23d69c43b0e7ec07842f016e4
+
+# R6.29: carve speed_profile into internal/ai/tools/speed/ (mass rename, no behaviour change)
+dbf849e8fd951e8bfdea276d07a4ac8ca37474bd
+
+# R6.30: carve automation_builder into internal/ai/tools/automation/ (mass rename, no behaviour change)
+d523ce244a91efd56f2576a55f512cf6a3581687
+
+# R6.31: carve trip_planner_llm_agent into internal/ai/tools/tripplan/ (mass rename, no behaviour change; R6 ai/tools carving COMPLETE)
+b697826aff6d280616c8f1c27a838c5bf16f016a
+
+# R4.0.5 canary — achievement_unlock carve
+c656262e32e98968b91f86ecc2ce7ef8d6e26808
+
+# R4.1 sharing/admin/gdpr triple carve
+4aa1aa25fac3c8f362383f4d2a747a4ac12bc97c
+
+# R4.2 admin extension (chart_annotation, pinned, places_cache, saved_views)
+44db40e0dc0922f60c62c6acf27f51415b829fc5
+
+# R4.3 observability/ carve
+b09ed32e57f83f41d88d47701718bdabb1582af2
+0f754484b4fb613ecb6fc43c02c76c3addb10347 # R4.4 carve auth subpackage
+4d3589f5aac56c3b711888610f8eab4d6528d9a1 # R4.5 carve backup subpackage
+ce93f6e5b507f5b7b97ca48a424e554dba27a668 # R4.6 carve notification subpackage
+1eb6113cbadf83ef083e4f349c9a4837b532e23d # R4.7 carve automation subpackage
+d0b0e61a4f88c159111336945150d0fcc584a71d # R4.8 carve user subpackage
+
+# R4.9 alert cluster carve (internal/database/alert/) — bounded-context subpkg restructure
+6619b52dcd2c9e641990bbbc233fcd442e914bd6
+# R4.10 audit cluster carve + Layer regex compliance fix across 23 doc.go files
+e42dfd8d02d9152d1a1449e555804624eeb530f1
+# R4.11 charging cluster carve (internal/database/charging/)
+d397160f446c249f2e2b57e517f561aa12172efe
+# R4.12 drive cluster carve (internal/database/drive/) — 4 src + 3 tests
+bd5812ba58cbd3e441ac77e1855aaf152bbf4db6
+# R4.13 trip cluster carve (internal/database/trip/) — 3 src + 1 test
+cb3900b6b2c77353e7de0f3c0866e6c823a1bdb1
+# R4.14 energy cluster carve (internal/database/energy/) — 4 src files
+5e1f4b2aea2b4a8d9b576ca5ca1d9d6da46b81b3
+# R4.15 ai cluster carve (database/ai_call_log + ai_chat_continuations -> database/ai/)
+6eef54ec1d6cf698d34f49d7096ce914df6638b4
+# R4.16 export cluster carve
+9380a91c379803732dfca3bfb006af8b0115249f
+# R4.17 worker cluster carve
+eca9c378b29e9a4762fab660485f53a3831a6891
+# R4.18 telemetry cluster carve
+6b891fd07aa484a1681056dd698826242f8a15ea
+# R4.19 system cluster carve
+c4ab69e3aedd63b475c410f3039f78a6e17ecf82
+# R4.20 tesla cluster carve
+68c1bff88b8d6eb2777e4e8b67df6aa070857adc
+# R4.21 vehicle cluster carve (heart of system, 38 callers)
+7957ede2441fc9a5477532dd91f61b889bb9eedc
+# R4.22 signal cluster carve (telemetry hot-path, 48 callers)
+7495654f58f5edf25206877cb39d0c4df5a7168e
+# R4.23 position cluster carve (positions table + from_map helper, 9 callers)
+1578a6f31bfd709812a19999f6dd2e59fc1a9c85
+# R4.24 geofence cluster carve (2 src + assertion relocation Lesson 30/34)
+88171082c9adc2d6db30e69008e80b8918fc852f
+# R4.25 quiethours cluster carve (Lesson 35: input stays in parent)
+a827ebb9513ac9ee9642adc83f041c557271c898
+# R4.26 settings cluster carve (LARGEST — 5 src + 3 tests, 51 callers, 5 sweep passes, R4 COMPLETE)
+0ece1726e0cbb8b72009e6016c0c176aab3d7cfb
+# refactor(R2.0a): carve internal/api/httpx (flat-shape HTTP response helpers)
+40947ac54c4db214fc7e71c091d8b4b585492d74
+
+# refactor(R2.0b): carve internal/api/apitest (shared HTTP test helpers)
+c03b89a1365760c5624a8a18dc12b40057e86f86
+
+# refactor(R2.0c): carve internal/api/apiparams (shared request-decoding helpers)
+3785eedc6af02e0dd013614339e5422426d6c9fc
+
+# refactor(R2.0d): carve internal/api/middleware (cross-cutting HTTP middleware)
+3bb29fac10f5de9b2e434b098d02e12e78fd6da3
+
+# R2.0e: carve internal/api/apperror (AppError catalog + Write helper) — wrapper-retained bridge
+673da4e1
+
+# R2a: carve internal/api/backup (first resource handler subpkg) — mass-rewrite pattern
+11ccd511
+
+# R2.0f apibulk carve (catalog + helpers)
+d5bab8b3
+
+# R2b: carve internal/api/geofence (CRUD + bulk handlers)
+927f2b60d5a28e07c2ebd8692e60994f2d968a95
+# R2c: carve internal/api/vehicle (core VehicleHandler)
+6efc0579e0b342a586d0e7a87ea9b355c2cf8dcc
+
+# R2c.1: carve internal/api/vehicleaccess (drivers + invitations)
+2a0ae4ccc73d924921a807fc0570a8bce284f04b
+
+# R2c.2: carve internal/api/vehicleinfo (Tesla account metadata)
+ab372b9926cf41f5bf7a7fac6eb4957d46e3ec43
+
+# R2c.3: carve internal/api/vehicleconfig (config history + latest)
+c6d7985e251cc19be2c7ba4b500c29442a6b2d64
+7670a18eace27b6b49a154eb959239ffe3e04b8f
+737d37702731c5a8c59ef0b2c5b50a353dc81822
+a048e1b2411b43628a066f872976bf555577b9b8
+02265a87e9cc0b60ab6467d11bb764be10bb4547 # refactor(R2d.1): carve internal/api/search subpackage
+faf6e82597540fa2f91b12d250fce74135d779e1 # refactor(R2d.2): carve internal/api/lifetime subpackage
+e57d08bf1d77d7ebb7f530b08f77b40dee8b1c1d # refactor(R2d.3): carve internal/api/notification subpackage
+c1e998296a6d29b662cbbcc7bd7589d7322a5b99 # refactor(R2d.4): carve internal/api/signalinspect subpackage
+44f6e0edb63ff780ac00e2c2dff3ccc3ba6b9933 # refactor(R2d.5): carve internal/api/signalscatalog subpackage
+f6813cacbaea30121f71c1ef0091a75c599707f4 # refactor(R2d.6): carve internal/api/openapi subpackage
+75e1a26fb75e260b46d781392a9b9f09b32a441e # refactor(R2d.7): carve internal/api/synthetic subpackage
+15605b3c86a53ad96b2ec2fea50eaa4eaf3c0d1d # refactor(R2d.8): carve internal/api/visitedlocation subpackage
+c7f283d925bb9e155dae797f6914460cd9cf2f1e # refactor(R2d.9): carve internal/api/apicalllog subpackage
+f9e4498b115230143fe0ef4860eea54a335d548b # refactor(R2d.10): carve internal/api/slo subpackage
+69ebc820f8e08b9cf52373e20db724bd1ce644b0 # refactor(R2d.11): carve internal/api/geocode subpackage
+3b0f64c8776d73fc698ffaa5676a0eca93d41d53 # refactor(R2d.12): carve internal/api/dataquality subpackage
+78adb7edd60f75b8a59ceb86d76451844823e9b7 # refactor(R2d.13): carve internal/api/softwareupdate subpackage
+6d0362ca22bd6c317eae4793a754278606fd008a # refactor(R2d.14): carve internal/api/exportcolumns subpackage
+aae77fbea4d38cefa5c4d9b90accf93584375589 # refactor(R2d.15): carve internal/api/weeklydigest subpackage
+cc38438f002ee94e1e5e1f90960cd8cd09648d1c # refactor(R2d.16): carve internal/api/tco subpackage
+5daf2b00fe4c69bb5f4ca733cf88124d3acec355 # refactor(R2d.19): carve internal/api/onboarding subpackage
+c251f65e11e8f03698200cde9ceecf5dd6b51e5d # refactor(R2d.18): carve internal/api/teslauserprofile subpackage
+d73bdf33f86506e98298ff21e92a55a0f3e32430 # refactor(R2d.20): carve internal/api/trip subpackage
+4eceff2d87bfa8775a7598be8d7990804d46ef64 # refactor(R2d.21): carve internal/api/webhookreceiver subpackage
+a54875e5fe1060992d3daae8a62d51548e9e0eee # refactor(R2d.22): carve internal/api/teslauserorder subpackage
+c9a209a98c9e74ce0b4e16b4dde80c1c2293a382 # refactor(R2d.23): carve internal/api/teslauserconfig subpackage
+79e5df690de0f364d22247e84ae3498f066572e7 # refactor(R2d.24): carve internal/api/gasprice subpackage
+e1740a628bb8938fda7c8468b3576323c7382dad # refactor(R2d.25): carve internal/api/apikey subpackage
+f20f638dfe667b20d761efd0b950798ce57899d2 # refactor(R2d.26): carve internal/api/feedback subpackage
+
+0e758201b72d957586b8ebf9a2651969b7bfdd7d # refactor(R2d.27): carve internal/api/auth subpackage
+9f630e42f00e9062c0d567a03128338cbcd61692 # refactor(R2d.28): carve internal/api/teslaenergylivestatus subpackage
+04373b2ef778431e14d89675866cbd89cb646f17 # refactor(R2d.29): carve internal/api/periodstats subpackage
+0aade8293056e0037188284f39d948f29078a180 # refactor(R2d.30): carve internal/api/user subpackage
+c745a5a77cca212384ba10139a2afcb4f1204404 # refactor(R2d.31): carve internal/api/drivediagnostic subpackage
+4a1867c0533345c5ca3e252fdae8cc95c1152d2c # refactor(R2d.32): carve internal/api/ingestxray subpackage
+ce8839686bc8e59ddbd0b73cd3a2884713c28c06 # refactor(R2d.33): carve internal/api/webvitals subpackage
+fb365ceac02c1530bba52ea1c0b86d924fb655b2 # refactor(R2d.34): carve internal/api/weberrors subpackage
+553b88f84ecb696646fc7f7360fe001bde9e7164 # refactor(R2d.35): carve internal/api/pinned subpackage
+cd8536febd2347af8eafc0ce673fbfec501d120a # refactor(R2d.36): carve internal/api/dlq subpackage
+28818b2d1924670b7f0374b4feff4a1be6a1b63d # refactor(R2d.37): carve internal/api/impersonate subpackage
+ac905218a51a62190b0b646f6694a7d21b62174d # refactor(R2d.38): carve internal/api/tripsdetail subpackage
+7f0b8b5d867137be58dea263a2003bb67babaed4 # refactor(R2d.39): carve internal/api/authsession subpackage
+ac2bbdbeb7b93f871a0d1ad0e59d4dc9d5fb78ea # refactor(R2d.40): carve internal/api/quiethours subpackage
+4a31f90e9220378cd68829ec4a60c4b2d9c868bc # refactor(R2d.41): carve internal/api/apiflagsh subpackage
+eb5bb6c342c6b0c2df48fb89b40aa60134b02227 # refactor(R2d.42): carve internal/api/sysauthmode subpackage
+dd8e91f3cef4e8d05e22d62d000c5f8cda39da29 # refactor(R2d.43): carve internal/api/ratelimit subpackage
+5b0f31579d6160aedabeb88cdd447b9ef16031b2 # refactor(R2d.44): carve internal/api/savedviews subpackage
+e4d35bc20e9145075d81dc1f240bb9ce453aef90 # refactor(R2d.47): carve internal/api/diagnostic subpackage
+1043a85d47c96b390a2950f2b28ee5caeb2b988a # refactor(R2d.45): carve internal/api/mileage subpackage
+8d81e76406af98fe5e322d405b1dfd0964da43ec # refactor(R2d.46): carve internal/api/anomaly subpackage
+ca595dc100cf9d443be43c411978ca4e1ddb56a2 # refactor(R2d.58): carve internal/api/totp subpackage
+fb63443941d888e9140e7ea95bd0d2bb46ce6305 # refactor(R2d.55): carve internal/api/rbac subpackage
+2c03875d3136fddef3be2b958a928bcd71976981 # refactor(R2d.57): carve internal/api/session subpackage
+cba85ea075766ae13d47404399b9efa40808d76f # refactor(R2d.48): carve internal/api/adminfeedback subpackage
+7b719ec699aa833559eaf4700346a6ab84c9ebde # refactor(R2d.49): carve internal/api/adminlogstream subpackage
+476958014f3b137cedd136a5217d0bb3bffde90a # refactor(R2d.50): carve internal/api/adminmaintenance subpackage
+80cfaacc27eb623dce28c2992d34cd8fafbbcdfb # refactor(R2d.51): carve internal/api/chartannotation subpackage
+34b0dceaf4ac2255bbfb1edcf501f08bffae34c9 # refactor(R2d.52): carve internal/api/dashboardlayout subpackage
+6efc81320f19f03dc227d9fecf7e177635e1ca34 # refactor(R2d.53): carve internal/api/guard subpackage
+02e23ce03e351484f3202b02046502683f022d62 # refactor(R2d.54): carve internal/api/push subpackage
+fdbc029402009adf784a0361fd76e04b424b408f # refactor(R2d.56): carve internal/api/scheduledexports subpackage
+a97e4ea536e7017b5e3c333c1a78a731295721cb # refactor(R2d.59): carve internal/api/vampiredrain subpackage
+bdc3d36790b1dee11ab1efc9f2fe77c5550d5872 # refactor(R2d.60): carve internal/api/settingsreset subpackage
+d8ccd3897c8a3706cf7c9ef71afd230ef7dc1808 # refactor(R2d.61): carve internal/api/queuestatus subpackage
+7ce2f45a44e28877631d503930bc1ef389944651 # refactor(R2d.62): carve internal/api/alertmsg subpackage
+3af1a1bbd9a8e22c59d5b397fdf3021859f26a49 # refactor(R2d.63): carve internal/api/chargeheatmap subpackage
+176121b2d52875a3a3b41ac03fedefd14c670e08 # refactor(R2d.64): carve internal/api/chargeopt subpackage
+89a53a618b41c36da8b37362af53d8e93fe7314f # refactor(R2d.65): carve internal/api/chargetelem subpackage
+afdd5035098e31e96c99eab08d7e74ff4185cb57 # refactor(R2d.66): carve internal/api/climate subpackage
+228de7db765912c66b52c0dc76e360a2b2212d0f # refactor(R2d.67): carve internal/api/command subpackage
+42cc13a3b3db96e55a1613f555b5f96540d77457 # refactor(R2d.68): carve internal/api/datarepair subpackage
+854e23788ae24a2b8256a1a99f889c06acea45cb # refactor(R2d.69): carve internal/api/devtools subpackage
+c7d7116c5bc27647a5c51daa2ce7966c765c7cd3 # refactor(R2d.70): carve internal/api/drivedyn subpackage
+64d94906783221664af3cb68652b8ae371b73b07 # refactor(R2d.71): carve internal/api/drivetrain subpackage
+304b94eda178c0cbb4a169f10ae3a31b0e3fd78b # refactor(R2d.72): carve internal/api/drivingcoach subpackage
+42226ae72ab35ccaa407d259969d7159ab6b422d # refactor(R2d.73): carve internal/api/energyflow subpackage
+d0d1c5223594f155898cc4114f366790caac7778 # refactor(R2d.74): carve internal/api/energysite subpackage
+559d94d7df9b250f4a13d365988d466a32e19ed3 # refactor(R2d.75): carve internal/api/locsnap subpackage
+868db65694d4837a45e012279ee867abde4d5f94 # refactor(R2d.76): carve internal/api/media subpackage
+a96cd2b7e02df2f5d7b2775ae09472375cc876ac # refactor(R2d.77): carve internal/api/motor subpackage
+fc850e58b537ecab5ac1953c9447b7fdb48e4b14 # refactor(R2d.78): carve internal/api/rangeproj subpackage
+0fd872aa49b9449ecb8f046705cedcac68cfd256 # refactor(R2d.79): carve internal/api/regen subpackage
+c6b0d11f02e0d8bc47ce9eec705def94ef53eb70 # refactor(R2d.80): carve internal/api/routeeff subpackage
+b75081f38a9bbe292389caa3174faaa9596dbae9 # refactor(R2d.81): carve internal/api/safety subpackage
+3d083ceb5cebaf4e2fc48ea517818d2e5ae4a42b # refactor(R2d.82): carve internal/api/security subpackage
+c4bede836b1639ae4da4713797f5df283088be62 # refactor(R2d.83): carve internal/api/share subpackage
+03e8b73c882281830e1f6fed21d5f3be206160d5 # refactor(R2d.84): carve internal/api/alerts subpackage
+10c55263279bcce3abd3c52b3c456adf64ab8a93 # refactor(R2d.85): carve internal/api/analytics subpackage
+92028bc51ff6a59e1068a8d78b751ab4971ab92f # refactor(R2d.86): carve internal/api/audit subpackage
+68d0c89039cb63780a89d8dd1a41fa9d3498993d # refactor(R2d.87): carve internal/api/automation subpackage
+5d7585b869e46fe22491e9638d7b5e83bddf7f2a # refactor(R2d.88): carve internal/api/battery subpackage
+bfdc91bfa4f9c1b760fc2c20c62c11b6ff19319c # refactor(R2d.89): carve internal/api/charging subpackage
+14672a9efe31349a8854093d3342236e185d4fce # refactor(R2d.90): carve internal/api/chatbot subpackage
+816bf7dcd66cf7eb7e057751a02523a23002c601 # refactor(R2d.91): carve internal/api/drives subpackage
+a7f5219cdeda19da210fa2d4f7254af22c9b17b5 # refactor(R2d.92): carve internal/api/energy subpackage
+b5258ca605381a3fb79e083d1472df1bb9cdbf90 # refactor(R2d.93): carve internal/api/exports subpackage
+c893615e3371663d42370e2ad58485f393334ac9 # refactor(R2d.94): carve internal/api/fleettelemetry subpackage
+e913b4acefd285be4ab59907160c1f7145f16fbb # refactor(R2d.95): carve internal/api/importer subpackage
+2c41a99de3f0fe41a7f9ddff8a266f82c97eec6e # refactor(R2d.96): carve internal/api/inboundwebhook subpackage
+bba05d769cb1a852cbdd9572a46ee73446bd547a # refactor(R2d.97): carve internal/api/polling subpackage
+e18b4d8fec58760cac0f03c46adb552173b780fb # refactor(R2d.98): carve internal/api/settings subpackage
+1880187b11553af6ac8d2ca4a963037bb616662f # refactor(R2d.99): carve internal/api/sleep subpackage
+0ca2de817deb59666313975ae11e4c0ee965c2cc # refactor(R2d.100): carve internal/api/speedprofile subpackage
+fcbd322fa845f5b0a78e2f33c110b95330984ab6 # refactor(R2d.101): carve internal/api/status subpackage
+9775d72e8e8686f99d66b47887e7cd2989059b4f # refactor(R2d.102): carve internal/api/teslachargehist subpackage
+baf64691b4e8cad2a383069a39340a2ecd5d7862 # refactor(R2d.103): carve internal/api/teslachargesess subpackage
+239ee9f190ae0b3980d583c0936d9d21f677a24a # refactor(R2d.104): carve internal/api/teslaenergyhist subpackage
+c69adf5ec47b1a47a4103fa234e43d438fb5ae8b # refactor(R2d.105): carve internal/api/tirepressure subpackage
+38cd0b00e12c27f40f33afa6e65457cb3e6eb87b # refactor(R2d.106): carve internal/api/tripplanner subpackage
+c5af318a9a4db4e638889ac674bc4aaf1806a481 # refactor(R2d.107): carve internal/api/userpref subpackage
+97dc24e5360d8fc3e9739b5e3a98dda73507885e # refactor(R2d.108): convert mountAIRoutes to AIHandlers struct field-bag
+d41a13506ad42bf05df67a9696f6e1967d0d2635 # refactor(R2d.113): carve internal/api/aialert subpackage
+7c30afd7b5900a03799a8b6677fa6264b06cb107 # refactor(R2d.132): carve internal/api/aialerttune subpackage
+fc4e7561f9bd4f1c787576a1bec011c17556e616 # refactor(R2d.112): carve internal/api/aianomaly subpackage
+2e8ce59388a7302cc3eb4f8316902cb86d95bb28 # refactor(R2d.114): carve internal/api/aiautomation subpackage
+bb43cc383be948e73a8f9fbe802b567a54906ad6 # refactor(R2d.122): carve internal/api/aiautotripname subpackage
+f2e557f5437c5db28ed51f512c2a6ce2cc5f052f # refactor(R2d.125): carve internal/api/aibatthealth subpackage
+ece7930dda4b8b5d66c92c74bca75e3c89f4898b # refactor(R2d.126): carve internal/api/aichargcurve subpackage
+c76d0eb8ee77ac554de843cee788fe719215d7fe # refactor(R2d.117): carve internal/api/aichargdiag subpackage
+2360a5cb4dbab5c12c01165303263f42fc216e51 # refactor(R2d.109): carve internal/api/aichatbot subpackage
+e6ca081d5c46f6c70fa9b914d2eb3f78e73a6a10 # refactor(R2d.129): carve internal/api/aiclimate subpackage
+5ffb13aeaa99c55150ce8a633ddebf8465a5f756 # refactor(R2d.127): carve internal/api/aicostfcst subpackage
+0db6eb8b16aa09be3abd80941d4c5def6e745c3b # refactor(R2d.110): carve internal/api/aidigest subpackage
+6ed8d2ef76e7695dbdb0bbff10b2755dbd827121 # refactor(R2d.116): carve internal/api/aidrivecoach subpackage
+82bc5951cd0b2e4277a5c89739fb863dcffd8eb8 # refactor(R2d.119): carve internal/api/aidrivesearch subpackage
+5713e47b127799b1c146d68dbd313a8f3cda7541 # refactor(R2d.118): carve internal/api/airaghelp subpackage
+7547bfc3361ac6484fc4595ec857958727bc0592 # refactor(R2d.121): carve internal/api/airouteeff subpackage
+c59068d6ad21dcb5e745735fad06aa7727140985 # refactor(R2d.115): carve internal/api/aisearch subpackage
+050b02c4d11c2de52b5769aa6a0d799776e457e5 # refactor(R2d.124): carve internal/api/aismartcharge subpackage
+4cadb977e414902b693ff6a8a6df94924028a66e # refactor(R2d.120): carve internal/api/aispeedprof subpackage
+f2b7ff8c1123c125a9d6739335c0b8fe421bc76d # refactor(R2d.130): carve internal/api/aitempimpact subpackage
+26aa1bcb255e8f26d906eb76823fe6eaf4e72fb8 # refactor(R2d.131): carve internal/api/aitirepress subpackage
+b07f1211ba62b7d639cd30014bf0c90a46041fb2 # refactor(R2d.123): carve internal/api/aitripplanllm subpackage
+dfcfd2a1bc957876219f2ae796c54e6309586adc # refactor(R2d.128): carve internal/api/aivampire subpackage
+b8c4a690f0b59f4545ca8c7021efbb414c125264 # refactor(R2d.111): carve internal/api/aiyir subpackage
+
+# R2d.133-162 batch 11 — 30 AI handler subpackage carves + cross-carve conflict resolution
+fbabf0e07fad66249c7f483807359cf03b5c89a1 # refactor(R2d.136): carve internal/api/aiautoname subpackage
+46360ffed1594d22a7fd82171b0b6f183330cf73 # refactor(R2d.135): carve internal/api/aicrossrule subpackage
+6588cfa2a6680e9de5f1347f8f309f59a39a7820 # refactor(R2d.134): carve internal/api/aidatarep subpackage
+4ee1f016c08567f677a40370c4863d3c6d9e7f2e # refactor(R2d.133): carve internal/api/aifeedtri subpackage
+0e9dc507f2f3566fd83c7961ae3e404e7ee9e397 # refactor(R2d.153): carve internal/api/aifsmnar subpackage
+71d31c083d737ed46ee79a01dc83ea7d47a02a05 # refactor(R2d.151): carve internal/api/aigeofautom subpackage
+17508bff96d7008da69f844ace2112e6891ed5a0 # refactor(R2d.149): carve internal/api/aiincident subpackage
+03ba315c7b0f67f5d0184c94c6f441b2bff605a8 # refactor(R2d.150): carve internal/api/aiinboxcat subpackage
+a7a035cb9e7bc6a724d3804d8e78ce140833a403 # refactor(R2d.148): carve internal/api/ailifetime subpackage
+fdcf1c7341e94ae074c27fe00714e2b016dc4a09 # refactor(R2d.147): carve internal/api/ailogtrace subpackage
+37b6aebf237d9f11a4ae7c29ecae6a665779559c # refactor(R2d.146): carve internal/api/aimlanom subpackage
+85750b335d98bcd0adcc7853eac3c6c338f3013f # refactor(R2d.145): carve internal/api/aimlchargcv subpackage
+d646c1073d0472ed05be29108d9f2e07e89a7b02 # refactor(R2d.144): carve internal/api/aimlrange subpackage
+71f4cda733438762603aac954fc863fc58e84085 # refactor(R2d.143): carve internal/api/aimqttsse subpackage
+4283fd7eb9a9312770a5c851593dcd4711ac0118 # refactor(R2d.142): carve internal/api/ainldash subpackage
+a4e76d9669524bdd628e5de4d4c103bdce802c97 # refactor(R2d.141): carve internal/api/ainlgrafana subpackage
+55ffc6a36b3e2b8e35c99c46e2cf10c9b09df366 # refactor(R2d.140): carve internal/api/ainlsql subpackage
+1e61f2283ec3f14da4e93110f96aafb50d2cf13b # refactor(R2d.139): carve internal/api/aiperiodcmp subpackage
+208590c9851bbe922677d9874bc9a9b044062aaa # refactor(R2d.138): carve internal/api/aipiiredact subpackage
+b7ee7ee9239c92dc19903e172c4c89f1a180c8a2 # refactor(R2d.159): carve internal/api/aipostcard subpackage
+c1c7e0c399153301c79ff863ab91f49183a8ba87 # refactor(R2d.137): carve internal/api/aipredmaint subpackage
+0d16bef776953ce78d1ebf1ba873424590e8c7da # refactor(R2d.157): carve internal/api/aiquiethrs subpackage
+41c71846b4eed987a418319b89c1ddacecbf2613 # refactor(R2d.156): carve internal/api/aisafetyexp subpackage
+1462c5ad30362be61748bada23aa4a1e2b49f846 # refactor(R2d.155): carve internal/api/aisignalnl subpackage
+8de412ffe16fa56279faa3fd9dc03e9285316aa3 # refactor(R2d.152): carve internal/api/aisuggeo subpackage
+0199fdb027cbe59ba236237498006a667ec6abe1 # refactor(R2d.154): carve internal/api/aiswupd subpackage
+af332539326a7a9e5c8caf1ff87032cac17560ec # refactor(R2d.160): carve internal/api/aitconar subpackage
+4935ee53c158b0c8c0753395e5bc084e67b05263 # refactor(R2d.158): carve internal/api/aivehpaint subpackage
+6cfc001bf1436d9d51bc25caa504bfda31c497aa # refactor(R2d.162): carve internal/api/aivoice subpackage
+bb7f75962d208bca7f6c6fa81be5c76321bc31d7 # refactor(R2d.161): carve internal/api/aiwatchnl subpackage
+f3b158d22a2cf596c9b13587fdd5abdcfd6e2ccb # fix(R2d): resolve cross-carve conflicts (ainlgrafana/ainlsql, aiautoname/aisuggeo)
+
+# R2d.163-168 batch 12 — 6 non-AI handler subpackage carves + cherry-pick wiring fix
+2e7cefc4fb34b01960fd6d2bf2cfc5420616a650 # refactor(R2d.163): carve internal/api/maintenance subpackage
+7239a625eff242bcb49628523b2b04a46f459b80 # refactor(R2d.164): carve internal/api/batterycells subpackage
+241ab9447d2f66e3063fa09d1c0c997917d9c54f # refactor(R2d.165): carve internal/api/chargeplanner subpackage
+29265295b963da3a854dd884527c59d3293e0b94 # refactor(R2d.166): carve internal/api/watch subpackage
+9270cecd692cee20a9eec3fc84863c1fc5af8bc9 # refactor(R2d.167): carve internal/api/yearreview subpackage
+3d108eb0fae845223d4cca8cc0d7cdf1e81de408 # refactor(R2d.168): carve internal/api/tempimpact subpackage
+b26fab2c8f0c3a2c417b1df94827822191006492 # fix(R2d): resolve duplicate wiring lines from batch 12 cherry-pick (chargeplanner/yearreview)
+
+# R2d.169 batch 13 — aiusage carve (ai_usage + ai_admin)
+ce1bd32de3a75f0a863758b6a885819b87a35b7c # refactor(R2d.169): carve internal/api/aiusage subpackage (ai_usage + ai_admin)
+
+# R2d.170 batch 13 — aisettingsvalidate carve
+a46da7f356cffe6c79b7596229c1d9f7cfc0c09b # refactor(R2d.170): carve internal/api/aisettingsvalidate subpackage
+
+# R2d.171 batterydegradation carve
+04ffc0a83bd53d49a6dc1d9b072595b9b1e5d5b0
+
+# R2d.172 costforecast carve
+6cdea3eeaac660367ccfb14ee255addbe9bb01ff
+
+# R2d.173 system carve
+d28c62b95a4568f248349dd1c4b7b05fb48def0b
+
+# R2d.174 vehiclefsm carve
+1265f0bc0a0afd8e42938f1f6b8ee2a6bf50352f
+
+# R2d.175 sse carve
+8a2a2e6d2449655db2f15072c62e0edc8a8a5bbb
+
+# R2d.176 dead charge-planner leftover removal
+444f1182853849c1889c5af331f783d7d0eb3abe
+
+# R2d.177 carve telemetry cluster into internal/api/telemetry subpackage
+8fbb4be316348db0d3b0c0c7536f72eb9996f595
+
+# R2d.178 move AuditHandler into internal/api/audit subpackage
+aa66bea75befea4d2825c20f66406c8f1ba227f8

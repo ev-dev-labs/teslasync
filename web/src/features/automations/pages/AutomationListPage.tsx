@@ -21,7 +21,7 @@ import { Icons } from '@/lib/icons';
 
 /**
  * AutomationListPage — focused list view of every automation with bulk
- * enable/disable/delete. Phase-45 / Prompt 32.
+ * enable, disable, and delete actions.
  *
  * Acts as the streamlined "manage many at once" alternative to the
  * card-based AutomationsListPage, which surfaces the rich preview UI

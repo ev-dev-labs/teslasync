@@ -1,10 +1,7 @@
-// Phase-50 / 0050 — M2 TCO narration.
-// Phase-50 / W1 inline wiring (per slice prompt 0050) — wired the
-// "Explain ownership cost" button to
+// TCO narration surface. Wires the "Explain ownership cost" button to
 // POST /api/v1/ai/analytics/tco/narrate via the canonical
-// useAiStream hook. The slice methodology forbids shipping the
-// visual affordance without end-to-end SSE wiring; this component
-// lands both in one commit so the on-mode wiring test
+// useAiStream hook. Do not ship the visual affordance without
+// end-to-end SSE wiring; the on-mode wiring test
 // (TestTCONarrationAIOnWiredCallsRoute) can prove the button
 // actually opens an SSE stream against the registered backend
 // route.
@@ -28,7 +25,7 @@
 // every user; this AI section is opt-in read-only narration
 // layered alongside.
 //
-// Render contract (P11/P12 — Wired-or-absent, No-placeholder-buttons):
+// Render contract: wired-or-absent, with no placeholder buttons.
 //   - useAiStream is called unconditionally at the top of the body
 //     (Hooks-rules safe).
 //   - The button's disabled prop is a COMPUTED expression

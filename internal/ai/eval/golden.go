@@ -10,8 +10,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// LoadGoldenSet reads + validates one goldens.yaml file. Returns a
-// fully-populated [GoldenSet] with [GoldenSet.Path] set.
+// LoadGoldenSet loads and validates one goldens.yaml file.
+// The returned [GoldenSet] has [GoldenSet.Path] set.
 func LoadGoldenSet(path string) (*GoldenSet, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -32,9 +32,8 @@ func LoadGoldenSet(path string) (*GoldenSet, error) {
 	return &s, nil
 }
 
-// LoadAllGoldens walks rootDir for files named "goldens.yaml" and
-// loads each into a map keyed by FeatureSpec.ID. Order of discovery
-// is deterministic (lexicographic).
+// LoadAllGoldens loads every goldens.yaml under rootDir into a map keyed by FeatureSpec.ID.
+// Discovery order is deterministic.
 //
 // rootDir is typically `internal/ai/strategies` (the harness scans
 // every feature directory under it).
@@ -71,9 +70,8 @@ func LoadAllGoldens(rootDir string) (map[string]*GoldenSet, error) {
 	return out, nil
 }
 
-// Validate is the in-Go schema check applied to every loaded
-// goldens file. The same code backs `tools/eval-schema-check` so
-// authors get identical errors at the CLI and in the runner.
+// Validate applies the schema checks shared by the runner and tools/eval-schema-check,
+// so CLI and harness errors stay identical.
 //
 // Rules enforced:
 //

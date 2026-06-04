@@ -1,0 +1,4 @@
+[boundaries][warning]: Rule name "boundaries/element-types" is deprecated. Use "boundaries/dependencies" instead.
+  More info: https://www.jsboundaries.dev/docs/releases/migration-guides/v5-to-v6/#rule-element-types-renamed-to-dependencies
+
+

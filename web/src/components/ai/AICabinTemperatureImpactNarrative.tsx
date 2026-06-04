@@ -1,53 +1,15 @@
-// Phase-50 / 0032 — T2 Cabin temperature impact narrative.
-// Phase-50 / W1 inline wiring (per slice prompt 0032) — wired the
-// Narrate button to POST /api/v1/ai/climate/temperature-impact/narrate
-// via the canonical useAiStream hook. The slice methodology forbids
-// shipping the visual affordance without end-to-end SSE wiring; this
-// component lands both in one commit so the on-mode wiring test
-// (TestCabinTemperatureNarrativeAIOnWiredCallsRoute) can prove the
-// button actually opens an SSE stream against the registered backend
-// route.
+// AI narration surface for the Temperature Impact analytics page.
+// It is absent when AI mode or the feature toggle is off. When enabled,
+// the Narrate button streams POST /api/v1/ai/climate/temperature-impact/narrate
+// through useAiStream into the shared AiOutputPanel.
 //
-// AICabinTemperatureImpactNarrative is the visible AI surface for
-// the Temperature Impact analytics page. It is rendered conditionally
-// via withAiFeature('cabin-temperature-impact-narrative', …) so:
+// This read-only section never replaces the deterministic temperature charts,
+// monthly trend, recent-drives table, or other baseline page content.
 //
-//   - When ai_mode='off' it does not render at all (ADR-015 §I5 + §I6).
-//   - When ai_mode is 'local'/'cloud' AND the
-//     cabin-temperature-impact-narrative toggle is on, it renders an
-//     opt-in section with a Narrate button that POSTs to
-//     /api/v1/ai/climate/temperature-impact/narrate. The SSE response
-//     stream accumulates into the shared AiOutputPanel.
-//
-// The component does NOT replace the deterministic temperature-bucket
-// efficiency chart, the monthly seasonal trend, the recent-drives
-// table, or any other content rendered by TemperatureImpactPage. That
-// baseline content remains the canonical view visible to every user;
-// this AI section is opt-in read-only narration layered alongside.
-//
-// Render contract (P11/P12 — Wired-or-absent, No-placeholder-buttons):
-//   - useAiStream is called unconditionally at the top of the body
-//     (Hooks-rules safe).
-//   - The Narrate button's disabled prop is a COMPUTED expression
-//     (`!canGenerate`), never a literal `disabled` or
-//     `disabled={true}`.
-//   - Double-submit protection: stream.start() is a no-op while
-//     state === 'streaming' (the hook coalesces; the button is
-//     also visually disabled to mirror the state machine).
-//   - The streamed text accumulates into AiOutputPanel which
-//     renders the SSE delta stream as-it-arrives.
-//
-// ADR-015 alignment:
-//   - I3 baseline intact: this component never replaces the
-//     deterministic temperature-impact charts; it adds an opt-in
-//     narrative section alongside.
-//   - I5 hidden UI:       the withAiFeature HOC returns null when
-//     the feature is not enabled, so the section is entirely
-//     absent from the DOM in off mode.
-//   - I6 404 routes:      the backend route is guard-wrapped and
-//     returns 404 in off mode; useAiStream surfaces that as
-//     state='error' for the user, but the component is never
-//     rendered in off mode at all because of I5.
+// Render contract:
+//   - useAiStream is called unconditionally so hook order stays stable.
+//   - The Narrate button uses computed disabled state; never a literal disabled.
+//   - stream.start() is a no-op while already streaming to prevent duplicates.
 
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -68,23 +30,10 @@ interface InnerSectionProps {
 }
 
 /**
- * InnerSection is the always-rendered body of the AI cabin
- * temperature impact narration card. The surrounding
- * {@link withAiFeature} HOC handles the visibility gate; this
- * component only describes the surface's appearance.
- *
- * Visual contract:
- *   - One GlassPanel sized to sit above the temperature-bucket
- *     efficiency chart on TemperatureImpactPage.
- *   - Cyan AI badge in the header (matches the chatbot brand
- *     colour).
- *   - Narrate button is disabled while a stream is open OR when no
- *     vehicleId is available from the active-vehicle context.
- *   - Title attribute carries the long-form explanation so a user
- *     hovering for a tooltip understands the privacy contract — only
- *     the vehicle name may be narrated; the bucket / monthly trend
- *     numbers are the same the chart shows. The narrator never
- *     changes the deterministic aggregates — it only explains them.
+ * Body of the gated cabin temperature narration card. The title
+ * explains that narration is read-only and uses the same aggregates
+ * already shown by the deterministic charts. The button stays disabled
+ * while streaming or until a vehicle is selected.
  */
 function InnerSection({ vehicleId }: InnerSectionProps) {
   const { t } = useTranslation()

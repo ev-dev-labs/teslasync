@@ -6,15 +6,15 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useStartImpersonation } from '@/api/hooks/useImpersonation'
 
 /**
- * Phase-46 / Prompt 46 — Per-row "Impersonate" button.
+ * Per-row "Impersonate" button.
  *
  * Mounted in the admin Subjects list. Click flow:
- *   1. Open ConfirmDialog (warning variant, no silence key).
- *   2. On confirm, fire the start mutation. The mutation is
- *      sudo-gated upstream — the SPA's request() interceptor will
- *      surface the reauth dialog before the POST actually hits.
- *   3. On success the global ImpersonationBanner appears (driven by
- *      the status-poll cache invalidation inside the hook).
+ * 1. Open ConfirmDialog (warning variant, no silence key).
+ * 2. On confirm, fire the start mutation. The mutation is
+ * sudo-gated upstream — the SPA's request() interceptor will
+ * surface the reauth dialog before the POST actually hits.
+ * 3. On success the global ImpersonationBanner appears (driven by
+ * the status-poll cache invalidation inside the hook).
  *
  * Hidden in open-mode installs (parent component should gate render
  * on `useImpersonationStatus().data?.mode !== 'open'`); this
@@ -23,16 +23,16 @@ import { useStartImpersonation } from '@/api/hooks/useImpersonation'
  */
 export interface UserImpersonateButtonProps {
   /**
-   * The opaque proxy-issued subject identifier to impersonate. The
-   * backend validates this against the active subjects list, so the
-   * button does not need to filter — it just submits.
-   */
+ * The opaque proxy-issued subject identifier to impersonate. The
+ * backend validates this against the active subjects list, so the
+ * button does not need to filter — it just submits.
+ */
   subject: string
   /**
-   * Disable the button (e.g. when this row IS the current admin or
-   * when impersonation is already active for someone else). The
-   * parent owns the disabled-row decision.
-   */
+ * Disable the button (e.g. when this row IS the current admin or
+ * when impersonation is already active for someone else). The
+ * parent owns the disabled-row decision.
+ */
   disabled?: boolean
 }
 

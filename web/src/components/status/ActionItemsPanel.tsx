@@ -1,6 +1,5 @@
 /**
  * ActionItemsPanel — operator task list.
- *
  * NEVER hides — when no actions exist renders an explicit
  * "Nothing right now ✅" empty state so the operator can
  * distinguish "healthy" from "broken".

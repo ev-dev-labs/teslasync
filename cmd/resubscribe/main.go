@@ -4,12 +4,11 @@
 // Setting*Unit fields whose absence would otherwise cause the ingest
 // pipeline to fail-closed-drop unit-bearing values per ADR-004 #9.
 //
-// This binary is the operator surface for phase-42 Decision 5 (resubscribe
-// = yes, all vehicles after every deploy that touches subscription state).
-// It MUST refuse to run unless TESLASYNC_OPERATOR_TOKEN is set in the
-// environment — that is the operator-credential gate (phase-42 prompt
-// 0090 covenant; the token's value is not validated, presence is enough
-// to make accidental invocation by CI/dev shell history impossible).
+// This binary is the operator surface for resubscribing all vehicles after
+// deploys that touch Fleet Telemetry subscription state. It MUST refuse to
+// run unless TESLASYNC_OPERATOR_TOKEN is set; the token value is not
+// validated, because presence is enough to prevent accidental CI or shell
+// history invocation.
 //
 // Audit trail: a structured zerolog "event=resubscribe.start" line is
 // emitted before the first push and an "event=resubscribe.end" line at
@@ -40,6 +39,8 @@ import (
 	"syscall"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
@@ -49,7 +50,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	teslaconfig "github.com/ev-dev-labs/teslasync/internal/tesla/config"
@@ -88,11 +89,11 @@ type pusher interface {
 	SubscribeFleetTelemetry(ctx context.Context, sub tesla.FleetTelemetrySubscription) ([]byte, int, error)
 }
 
-// vehicleLister is the subset of *database.VehicleRepo that resubscribe
+// vehicleLister is the subset of *vehicledb.VehicleRepo that resubscribe
 // needs. Same rationale as pusher: lets main_test.go inject a fixed
 // vehicle list without a real database connection.
 type vehicleLister interface {
-	GetAll(ctx context.Context) ([]*models.Vehicle, error)
+	GetAll(ctx context.Context) ([]*vehiclemodel.Vehicle, error)
 }
 
 func main() {
@@ -203,7 +204,7 @@ func run(args []string, stdout, stderr *os.File, getenv func(string) string) int
 	defer db.Close()
 
 	teslaClient := tesla.NewClient(cfg.Tesla)
-	vehicleRepo := database.NewVehicleRepo(db)
+	vehicleRepo := vehicledb.NewVehicleRepo(db)
 
 	rc := runConfig{
 		dryRun:            *dryRun,
@@ -302,7 +303,7 @@ func runWithDeps(ctx context.Context, rc runConfig, vehicles vehicleLister, push
 		skipped   atomic.Int64
 	)
 
-	jobs := make(chan *models.Vehicle, rc.workers)
+	jobs := make(chan *vehiclemodel.Vehicle, rc.workers)
 	wg := &sync.WaitGroup{}
 	for i := 0; i < rc.workers; i++ {
 		wg.Add(1)
@@ -373,7 +374,7 @@ const (
 // SubscribeFleetTelemetry through the command proxy. A non-2xx HTTP
 // status is treated as failure (logged WARN, counted as failed) so the
 // summary distinguishes "Tesla rejected" from "we never tried".
-func pushOne(ctx context.Context, rc runConfig, v *models.Vehicle, fields map[string]tesla.FleetTelemetryField, push pusher) pushResult {
+func pushOne(ctx context.Context, rc runConfig, v *vehiclemodel.Vehicle, fields map[string]tesla.FleetTelemetryField, push pusher) pushResult {
 	ctx, span := cmdTracer().Start(ctx, "resubscribe.push_vehicle",
 		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
 		oteltrace.WithAttributes(
@@ -447,9 +448,9 @@ func pushOne(ctx context.Context, rc runConfig, v *models.Vehicle, fields map[st
 // vehicleFilter == 0 returns all vehicles sorted by ID for stable
 // concurrency-independent log ordering. When vehicleFilter != 0
 // returns either the matching single vehicle or an empty slice.
-func filterVehicles(all []*models.Vehicle, vehicleFilter int64) []*models.Vehicle {
+func filterVehicles(all []*vehiclemodel.Vehicle, vehicleFilter int64) []*vehiclemodel.Vehicle {
 	if vehicleFilter == 0 {
-		out := make([]*models.Vehicle, 0, len(all))
+		out := make([]*vehiclemodel.Vehicle, 0, len(all))
 		for _, v := range all {
 			if v != nil {
 				out = append(out, v)
@@ -460,7 +461,7 @@ func filterVehicles(all []*models.Vehicle, vehicleFilter int64) []*models.Vehicl
 	}
 	for _, v := range all {
 		if v != nil && v.ID == vehicleFilter {
-			return []*models.Vehicle{v}
+			return []*vehiclemodel.Vehicle{v}
 		}
 	}
 	return nil

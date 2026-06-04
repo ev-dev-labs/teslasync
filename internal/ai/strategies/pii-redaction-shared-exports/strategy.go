@@ -1,5 +1,5 @@
-// Package piiredactionsharedexports is the Phase-50 / 0052 P1
-// strategy for the Helix export redaction advisor surface.
+// Package piiredactionsharedexports implements the Helix export
+// redaction advisor strategy.
 //
 // The strategy declares:
 //
@@ -19,6 +19,7 @@
 //
 //   - the two read-only typed tools the LLM is allowed to call in
 //     this surface:
+//
 //   - draft_export_redaction_plan — REQUIRED, called FIRST.
 //     Reads a STATIC Go catalog keyed by export_type and returns
 //     a typed envelope listing the PII classes typically present
@@ -26,6 +27,7 @@
 //     ({redact, hash, drop, keep_if_consent}), and limiting-
 //     assumption disclosures (catalog-based, NOT a per-row PII
 //     scan). NO database IO.
+//
 //   - validate_export_redaction_plan — REQUIRED, called SECOND.
 //     Accepts a candidate plan and asserts every cited class is
 //     recognized for the export_type, every "highly recommended"
@@ -56,7 +58,7 @@
 // the /exports page is a list view (past export jobs); the
 // recommendation lands in the user's mental model and they apply
 // it the next time they create an export through the existing
-// baseline flow. A future slice MAY wire a "Apply to form"
+// baseline flow. A future feature may wire an "Apply to form"
 // affordance once an explicit redaction picker ships in the
 // export creation form — at which point the render contract
 // becomes PROPOSAL and this strategy gains a third tool.
@@ -208,14 +210,11 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyAlertBuilder from
-// internal/ai/redact/policies.go. Allowed classes: none; export
-// content is inspected through local structural redaction first.
-// Round-trip required: no." PolicyAlertBuilder's Allow=nil +
-// Mode=ModeRedactedTags satisfies that contract: every PII class
-// is tagged round-trip BEFORE the message reaches the provider so
-// a leaked transcript reveals nothing. The static catalog the
-// tools return is PII-free by construction; this policy is
+// PolicyAlertBuilder's Allow=nil and Mode=ModeRedactedTags enforce
+// the no-cleartext-PII contract: export content is inspected through
+// local structural redaction first, and every PII class is tagged
+// round-trip before the message reaches the provider. The static
+// catalog the tools return is PII-free by construction; this policy is
 // defence-in-depth.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {
 	return redactadapter.Wrap(redact.PolicyAlertBuilder())

@@ -1,7 +1,6 @@
 /**
  * Command palette usage ranking (frecency).
  *
- * Phase-45 / Prompt 27.
  *
  * Tracks per-command usage so the palette can surface a user's go-to commands
  * at the top. "Frecency" combines Frequency × Recency: a command that was used

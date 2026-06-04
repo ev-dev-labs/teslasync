@@ -10,13 +10,13 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
-	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 	unithistory "github.com/ev-dev-labs/teslasync/internal/tesla/unit_history"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 )
 
 // settingUnitTracerName is the OpenTelemetry tracer name for spans
-// emitted by observeSettingUnit. The Phase-10 trace-coverage audit
-// greps for this constant.
+// emitted by observeSettingUnit. Trace-coverage audit greps for this
+// constant.
 const settingUnitTracerName = "normalize"
 
 // observeSettingUnit records a Setting*Unit atomic into
@@ -158,4 +158,3 @@ func settingUnitKindAndValue(field string, value any) (unithistory.Kind, units.A
 		return "", "", fmt.Errorf("%w: %q is not a Setting*Unit field", units.ErrUnsupportedField, field)
 	}
 }
-

@@ -12,18 +12,19 @@ import (
 	"errors"
 	"time"
 
+	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
+
 	"github.com/ev-dev-labs/teslasync/internal/audit"
-	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // Service is the audit viewer orchestrator.
 type Service struct {
-	repo     *database.AuditLogQueryRepo
+	repo     *auditdb.AuditLogQueryRepo
 	recorder *audit.Recorder
 }
 
 // New constructs the service.
-func New(repo *database.AuditLogQueryRepo, recorder *audit.Recorder) *Service {
+func New(repo *auditdb.AuditLogQueryRepo, recorder *audit.Recorder) *Service {
 	return &Service{repo: repo, recorder: recorder}
 }
 
@@ -31,7 +32,7 @@ func New(repo *database.AuditLogQueryRepo, recorder *audit.Recorder) *Service {
 var ErrNotConfigured = errors.New("audit viewer not configured on this deployment")
 
 // Query returns rows matching the filter, ordered newest-first.
-func (s *Service) Query(ctx context.Context, q database.AuditLogQuery) ([]database.AuditLogRow, error) {
+func (s *Service) Query(ctx context.Context, q auditdb.AuditLogQuery) ([]auditdb.AuditLogRow, error) {
 	if s == nil || s.repo == nil {
 		return nil, ErrNotConfigured
 	}

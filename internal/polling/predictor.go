@@ -14,9 +14,9 @@ import (
 // and predicts upcoming state changes. It queries the existing drives and
 // charging_sessions tables — no schema changes required.
 type Predictor struct {
-	mu          sync.RWMutex
-	patterns    map[string]*VehiclePattern // keyed by VIN
-	pool        *pgxpool.Pool
+	mu           sync.RWMutex
+	patterns     map[string]*VehiclePattern // keyed by VIN
+	pool         *pgxpool.Pool
 	refreshEvery time.Duration
 	lastRefresh  time.Time
 	lookbackDays int
@@ -30,10 +30,10 @@ type VehiclePattern struct {
 
 // TimeSlot represents a recurring time window with a confidence score.
 type TimeSlot struct {
-	Hour       int     `json:"hour"`       // 0–23
+	Hour       int     `json:"hour"`        // 0–23
 	DayOfWeek  int     `json:"day_of_week"` // 0=Sun … 6=Sat
-	Frequency  int     `json:"frequency"`  // occurrences in the lookback window
-	Confidence float64 `json:"confidence"` // 0.0–1.0
+	Frequency  int     `json:"frequency"`   // occurrences in the lookback window
+	Confidence float64 `json:"confidence"`  // 0.0–1.0
 }
 
 // NewPredictor creates a predictor that refreshes patterns periodically.
@@ -68,8 +68,6 @@ func (p *Predictor) refresh(ctx context.Context) {
 
 	patterns := make(map[string]*VehiclePattern)
 
-	// Learn departure patterns from drives table.
-	// Phase-42 (Prompt 0076): drives.start_ts → drives.started_at (SI rename).
 	departureRows, err := p.pool.Query(ctx, `
 		SELECT v.vin,
 		       EXTRACT(HOUR FROM d.started_at) AS hour,
@@ -112,8 +110,6 @@ func (p *Predictor) refresh(ctx context.Context) {
 		})
 	}
 
-	// Learn charging patterns from charging_sessions table.
-	// Phase-42 (Prompt 0076): charging_sessions.start_ts → started_at (SI rename).
 	chargeRows, err := p.pool.Query(ctx, `
 		SELECT v.vin,
 		       EXTRACT(HOUR FROM cs.started_at) AS hour,
@@ -212,7 +208,6 @@ func (p *Predictor) findNextSlot(slots []TimeSlot, currentHour, currentDOW int, 
 			continue
 		}
 
-		// Calculate time until this slot occurs
 		daysUntil := slot.DayOfWeek - currentDOW
 		if daysUntil < 0 {
 			daysUntil += 7
@@ -224,7 +219,6 @@ func (p *Predictor) findNextSlot(slots []TimeSlot, currentHour, currentDOW int, 
 		target := time.Date(now.Year(), now.Month(), now.Day()+daysUntil, slot.Hour, 0, 0, 0, now.Location())
 		estimatedIn := target.Sub(now)
 
-		// Only predict within 24 hours
 		if estimatedIn > 24*time.Hour {
 			continue
 		}

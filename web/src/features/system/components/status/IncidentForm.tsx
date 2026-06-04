@@ -1,5 +1,5 @@
 /**
- * IncidentForm — Phase-2 manual incident logging dialog.
+ * Manual incident logging dialog.
  *
  * Operator UX:
  *   1. Click "Log incident" on /system-status → open this modal.

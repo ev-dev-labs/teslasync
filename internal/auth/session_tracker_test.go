@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 42 — session tracker middleware tests.
+// Session tracker middleware tests.
 //
 // Coverage:
 //
@@ -28,23 +28,23 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 )
 
 // fakeSessionStore is an in-memory SessionStore for tests. The HMAC
 // secret is fixed so we can recompute hashes from the test body.
 type fakeSessionStore struct {
-	rowsByHash map[string]*database.AuthSessionRow
-	mintToken  string
-	mintErr    error
-	createErr  error
-	bumpedID   uuid.UUID
-	bumpCalls  int32
+	rowsByHash  map[string]*dbauth.AuthSessionRow
+	mintToken   string
+	mintErr     error
+	createErr   error
+	bumpedID    uuid.UUID
+	bumpCalls   int32
 	createCalls int32
 }
 
 func newFakeStore() *fakeSessionStore {
-	return &fakeSessionStore{rowsByHash: make(map[string]*database.AuthSessionRow)}
+	return &fakeSessionStore{rowsByHash: make(map[string]*dbauth.AuthSessionRow)}
 }
 
 func (s *fakeSessionStore) HashCookie(token string) []byte {
@@ -70,7 +70,7 @@ func (s *fakeSessionStore) Create(_ context.Context, subject string, cookieHash 
 		return uuid.Nil, s.createErr
 	}
 	id := uuid.New()
-	row := &database.AuthSessionRow{
+	row := &dbauth.AuthSessionRow{
 		ID:         id,
 		Subject:    subject,
 		UserAgent:  ua,
@@ -82,10 +82,10 @@ func (s *fakeSessionStore) Create(_ context.Context, subject string, cookieHash 
 	return id, nil
 }
 
-func (s *fakeSessionStore) GetByCookieHash(_ context.Context, cookieHash []byte) (*database.AuthSessionRow, error) {
+func (s *fakeSessionStore) GetByCookieHash(_ context.Context, cookieHash []byte) (*dbauth.AuthSessionRow, error) {
 	row, ok := s.rowsByHash[string(cookieHash)]
 	if !ok {
-		return nil, database.ErrAuthSessionNotFound
+		return nil, dbauth.ErrAuthSessionNotFound
 	}
 	return row, nil
 }
@@ -223,7 +223,7 @@ func TestMiddleware_ValidCookieBumpsAndPropagates(t *testing.T) {
 	id := uuid.New()
 	const token = "validtoken"
 	hash := store.HashCookie(token)
-	store.rowsByHash[string(hash)] = &database.AuthSessionRow{
+	store.rowsByHash[string(hash)] = &dbauth.AuthSessionRow{
 		ID:         id,
 		Subject:    "alice",
 		LastSeenAt: time.Now().Add(-2 * time.Minute),
@@ -257,7 +257,7 @@ func TestMiddleware_DebounceBumps(t *testing.T) {
 	id := uuid.New()
 	const token = "validtoken"
 	hash := store.HashCookie(token)
-	store.rowsByHash[string(hash)] = &database.AuthSessionRow{ID: id, Subject: "alice"}
+	store.rowsByHash[string(hash)] = &dbauth.AuthSessionRow{ID: id, Subject: "alice"}
 
 	frozen := time.Date(2026, 5, 5, 12, 0, 0, 0, time.UTC)
 	mw := Middleware(testHeader, store, SessionTrackerOptions{
@@ -284,7 +284,7 @@ func TestMiddleware_RevokedCookieReturns401(t *testing.T) {
 	const token = "revokedtoken"
 	hash := store.HashCookie(token)
 	revokedAt := time.Now().Add(-time.Minute)
-	store.rowsByHash[string(hash)] = &database.AuthSessionRow{
+	store.rowsByHash[string(hash)] = &dbauth.AuthSessionRow{
 		ID:        id,
 		Subject:   "alice",
 		RevokedAt: &revokedAt,
@@ -316,7 +316,7 @@ func TestMiddleware_SubjectMismatchReturns401(t *testing.T) {
 	id := uuid.New()
 	const token = "alicetoken"
 	hash := store.HashCookie(token)
-	store.rowsByHash[string(hash)] = &database.AuthSessionRow{
+	store.rowsByHash[string(hash)] = &dbauth.AuthSessionRow{
 		ID:      id,
 		Subject: "alice",
 	}

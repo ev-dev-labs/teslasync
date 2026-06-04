@@ -1,4 +1,4 @@
-// Phase 44 / Prompt 0060 — RUM bootstrap.
+// RUM bootstrap.
 //
 // Bootstraps the OpenTelemetry browser SDK and ships browser spans (page
 // loads, route changes, fetch/XHR) to the cluster's OTel collector via OTLP
@@ -20,8 +20,7 @@
 //                            Defaults to MODE (dev/prod/test).
 //
 // Sampling: this module does NOT install a tail sampler — it sends every
-// span and lets the OTel collector apply tail sampling per
-// docs/runbooks/phase-44-trace-sampling.md.
+// span and lets the OTel collector apply tail sampling.
 
 import { WebTracerProvider, BatchSpanProcessor } from '@opentelemetry/sdk-trace-web';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
@@ -97,9 +96,9 @@ export function initRum(): void {
     ],
   });
 
-  // Phase 44 / Prompt 0061 — explicit instrumentation on top of the
-  // auto-instrumentations: route-change spans + global error capture.
-  // Each is idempotent and safe to call multiple times.
+  // Explicit instrumentation on top of auto-instrumentations: route-change
+  // spans + global error capture. Each is idempotent and safe to call
+  // multiple times.
   installRouteSpanEmitter();
   installGlobalErrorRecorder();
 
@@ -107,7 +106,7 @@ export function initRum(): void {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Phase 44 / Prompt 0061 — Route-change spans.
+// Route-change spans.
 //
 // React Router v6 uses `history.pushState` / `history.replaceState` under the
 // hood. We monkey-patch both so we don't need to touch RouterProvider or any
@@ -171,7 +170,7 @@ export function installRouteSpanEmitter(): void {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Phase 44 / Prompt 0061 — Global error recorder.
+// Global error recorder.
 //
 // Listens for uncaught synchronous errors and unhandled promise rejections
 // and records them on a dedicated short-lived span. Uses recordException so

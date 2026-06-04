@@ -239,7 +239,9 @@ func TestEndpointHash_TruncatesLongValues(t *testing.T) {
 	}
 }
 
-func contains(s, sub string) bool { return len(sub) == 0 || (len(s) >= len(sub) && (indexOf(s, sub) >= 0)) }
+func contains(s, sub string) bool {
+	return len(sub) == 0 || (len(s) >= len(sub) && (indexOf(s, sub) >= 0))
+}
 
 func indexOf(s, sub string) int {
 	for i := 0; i+len(sub) <= len(s); i++ {
@@ -250,10 +252,9 @@ func indexOf(s, sub string) int {
 	return -1
 }
 
-// ---------------------------------------------------------------------
-// Phase-49 / Slice 0010 — duplicate notification icon fix.
+// Regression coverage for duplicate notification icons.
 //
-// Both regression tests below exist to keep a future contributor from
+// Both tests below exist to keep a future contributor from
 // re-introducing the user-reported "two lightning bolts on the same
 // notification" bug by accident:
 //
@@ -267,9 +268,8 @@ func indexOf(s, sub string) int {
 //
 // If you intentionally want to bring per-event contextual icons back,
 // design the new payload field with an explicit category (e.g.
-// `EventKind string`) and a SW mapping table — see prompt 0010 for the
-// rationale.
-// ---------------------------------------------------------------------
+// `EventKind string`) and a service-worker mapping table so the payload
+// contract remains explicit.
 
 func TestPayload_NoIconField(t *testing.T) {
 	t.Parallel()

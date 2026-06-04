@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 
 /**
- * Phase-46 / Prompt 63 — BrowserCompatBanner contract.
+ * BrowserCompatBanner contract.
  *
  * The component composes <AlertBanner> and reads detection from
  * @/lib/browserCompat. Tests use the `testHookMissing` prop to

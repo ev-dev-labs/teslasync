@@ -1,8 +1,7 @@
-// Phase-50 / 0016 — N2 Natural-language automation builder.
+// Natural-language automation builder.
 //
 // `TestNLAutomationBuilderAIOffHidesPanelAndManualBuilderWorks` (the
-// Vitest sibling to the Go test of the same name) is the slice's
-// load-bearing AI-OFF contract proof on the React side. It mounts
+// Vitest sibling to the Go test of the same name) is the AI-off contract test on the React side. It mounts
 // the AINLAutomationBuilder component with ai_mode='off' (plus the
 // per-feature toggle on, to defeat the obvious "off because nothing
 // is enabled" path) and asserts:
@@ -23,7 +22,7 @@
 //
 // File name MUST stay
 // `TestNLAutomationBuilderAIOffHidesPanelAndManualBuilderWorks.test.tsx`
-// — the slice prompt's verification command runs
+// — the targeted verification command runs
 // `vitest --run TestNLAutomationBuilderAIOffHidesPanelAndManualBuilderWorks`,
 // where the positional pattern is matched against the file PATH.
 

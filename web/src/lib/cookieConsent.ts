@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 70 — Cookie / GDPR consent storage helper.
+ * Cookie / GDPR consent storage helper.
  *
  * Stores the user's consent decision in localStorage as the literal
  * string "accepted" or "declined" under `teslasync:consent:v1`. The
@@ -150,11 +150,11 @@ export function subscribeConsent(cb: (state: ConsentState) => void): () => void 
  * deployment's consent policy.
  *
  * - When the server reports `requireCookieConsent === false` (the
- *   default for self-hosted single-user installs), reporting is
- *   always allowed: there is no banner and no consent UI.
+ * default for self-hosted single-user installs), reporting is
+ * always allowed: there is no banner and no consent UI.
  * - When the server reports `requireCookieConsent === true`, reporting
- *   is allowed only after the user has clicked Accept. The `unknown`
- *   and `declined` states both block reporting.
+ * is allowed only after the user has clicked Accept. The `unknown`
+ * and `declined` states both block reporting.
  *
  * Subscribers (webVitalsReporter, errorReporter) call this in their
  * send paths so a `decline` between two metric callbacks immediately

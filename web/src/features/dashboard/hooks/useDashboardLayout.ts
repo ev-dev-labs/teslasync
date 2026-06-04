@@ -217,8 +217,8 @@ const DEFAULT_DASHBOARD = makePreset(
   'default',
   'Default',
   [
-    // Phase-40 / Prompt 68 — onboarding checklist is included by default for
-    // new users so they have a clear path through first-run setup. The widget
+    // Include the onboarding checklist by default for new users so they
+    // have a clear path through first-run setup. The widget
     // self-hides once dismissed or the celebration window after 100 % expires.
     // Existing users with persisted layouts are unaffected (their layouts
     // hydrate from backend / localStorage and bypass this default seed).
@@ -495,7 +495,7 @@ export function useDashboardLayout() {
     localStorage.setItem(ACTIVE_KEY, finalActiveId);
   }, [backendLayouts, hydratedFromBackend]);
 
-  /* ─── Cross-tab sync (Phase-40 / Prompt 69) ─── */
+  /* ─── Cross-tab sync ─── */
   // When another tab mutates the dashboard layout, re-read from
   // localStorage so this tab's React state reflects the change. The
   // sibling tab already wrote the new snapshot via persist/updateActive.
@@ -544,8 +544,8 @@ export function useDashboardLayout() {
       localStorage.setItem(ACTIVE_KEY, active);
     }
     syncToBackend(dbs, resolvedActive);
-    // Phase-40 / Prompt 69 — let other tabs reload their layout state
-    // from the freshly-written localStorage snapshot.
+    // Let other tabs reload their layout state from the freshly-written
+    // localStorage snapshot.
     broadcast({ type: 'dashboard.layout' });
   }, [activeId, syncToBackend]);
 

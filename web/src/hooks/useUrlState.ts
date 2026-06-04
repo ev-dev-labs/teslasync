@@ -5,7 +5,7 @@ import { useSearchParams } from 'react-router-dom';
  * useUrlState — small `useState`-compatible hook that mirrors a single piece
  * of UI state into the URL query string. Designed for filters, tabs and
  * expansion state that the user might share, bookmark or want to restore on
- * reload (Phase 40 / Prompt 33).
+ * reload.
  *
  * Sister convenience hooks (`useUrlBoolean`, `useUrlString`, `useUrlNumber`,
  * `useUrlEnum`, `useUrlArray`) are exported below for the common cases.

@@ -87,21 +87,13 @@ export function useSettings() {
   const density: 'compact' | 'comfortable' | 'spacious' =
     s.ui_density === 'compact' || s.ui_density === 'spacious' ? s.ui_density : 'comfortable'
 
-  // Sync global precision/locale so fmtNumber/fmtPercent/etc. use them
-  // automatically. Phase-45/06: moved into useEffect so the side effect
-  // runs in commit phase (not during render) — this avoids
-  // double-application under React.StrictMode and makes the contract
-  // consistent with <FormatterPrefsBridge /> at the app root.
+    // Sync global precision/locale after render so formatters stay aligned with settings.
   useEffect(() => {
     setGlobalPrecision(decimals)
     setGlobalLocale(locale)
   }, [decimals, locale])
 
-  // Phase-45/06: listen for cross-tab `settings.changed` broadcasts so
-  // even if this tab's `['settings']` query was never fetched (e.g. the
-  // bridge tore down for some reason), we still refetch on a peer's
-  // mutation. Coexists harmlessly with <FormatterPrefsBridge /> which
-  // does the same — TanStack Query dedupes concurrent invalidations.
+  // Refetch when another tab saves settings; TanStack Query dedupes overlaps.
   useEffect(() => {
     return subscribe((msg) => {
       if (msg.type !== TOPICS.SETTINGS_CHANGED) return

@@ -1,7 +1,7 @@
 /**
- * Phase-46 / Prompt 30 — `<ContextMenu>` primitive contract tests.
+ * `<ContextMenu>` primitive contract tests.
  *
- * Covers the six behaviour points from the prompt:
+ * Covers the core behaviour contract:
  *
  *   1. Right-click triggers the menu (via openContextMenu / hook trigger).
  *   2. ArrowDown focuses the first enabled item; Enter activates it.

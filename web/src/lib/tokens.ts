@@ -60,8 +60,8 @@ export const glassCardClasses = {
 
 // ── Table styling tokens ──
 //
-// Extended in Phase-40 / Prompt 25 with sticky-header, selection-row, bulk-bar,
-// resizer-handle, and expanded-row tokens used by DataTable's optional features.
+// Includes sticky-header, selection-row, bulk-bar, resizer-handle, and
+// expanded-row tokens used by DataTable's optional features.
 
 export const tableTokens = {
   wrapper: 'w-full text-sm',
@@ -70,7 +70,6 @@ export const tableTokens = {
   body: 'divide-y divide-white/[0.03]',
   row: 'hover:bg-white/[0.02] transition-colors',
   cell: 'px-4 py-3',
-  // Phase-40 / Prompt 25 additions:
   /** Wrapper applied when stickyHeader / maxHeight is in use — needs scroll + relative for sticky thead. */
   scrollContainer: 'relative overflow-auto rounded-xl',
   /** Applied to <thead> rows when stickyHeader is true. The bg matches GlassPanel
@@ -110,7 +109,7 @@ export const transitions = {
   slow: { duration: animationDuration.slow, ease: 'easeOut' as const },
 } as const
 
-// ── Motion tokens (Phase-45 / Prompt 21) ────────────────────────────────────
+// ── Motion tokens ─────────────────────────────────────────────────────────────
 //
 // One source of truth for transition durations and easings used across the
 // app. Three semantic buckets so motion timings can't drift between

@@ -1,22 +1,18 @@
-// Package autotripnaming is the Phase-50 / D4 strategy for the
-// LLM-assisted "auto trip naming" surface.
+// Package autotripnaming implements the LLM-assisted auto-trip-naming surface.
 //
 // The strategy declares:
 //
 //   - the system prompt that frames the suggestion as a propose-only
-//     assistant — produce a structured trip-name proposal via the F4
+//     assistant — produce a structured trip-name proposal via typed
 //     tools, do NOT save anything, NEVER write SQL, refuse
 //     cross-trip / cross-user requests, refuse to modify existing
 //     trip names without explicit confirmation;
 //   - the two propose-only tools the LLM is allowed to call —
 //     `draft_trip_name` and `validate_trip_name` — both of which
 //     read the *models.Trip header plus the constituent drive
-//     summaries and run a deterministic name-validation pass. The
-//     actual persistence flows through the user's explicit
-//     confirmation in the TripDetailPage UI (the slice prompt:
-//     "while requiring explicit user confirmation before saving"),
-//     which lands in a future slice; this strategy ships zero write
-//     paths;
+//     summaries and run a deterministic name-validation pass. Actual
+//     persistence flows through the user's explicit confirmation in
+//     the TripDetailPage UI; this strategy ships zero write paths;
 //   - the redaction policy (`PolicyAutoTripNaming`) which allows
 //     ClassVehicleName so the proposed name can reasonably include
 //     a vehicle reference (e.g. "Roadie's October Road Trip"); every
@@ -35,10 +31,9 @@
 // the canonical baseline; off-mode users never see the AI surface
 // at all (ADR-015 §I3, §I5, §I6).
 //
-// Service-worker chunks: this slice's frontend code is loaded
-// under the page-bundle for /trips/:id; the off-mode walker
-// validates code chunks via the `withAiFeature` HOC + the
-// AI_FEATURES map. See the slice log for the documented mapping.
+// Service-worker chunks for this surface load under the /trips/:id
+// page bundle. The off-mode walker validates chunks via the
+// `withAiFeature` HOC and the AI_FEATURES map.
 //
 // ADR-015 alignment:
 //
@@ -169,25 +164,22 @@ func (s *Strategy) Tools() []string {
 //
 // Future work: this is where a per-user "favoured naming style"
 // preference snippet would be injected once auto-trip-naming grows
-// that surface. Today's slice keeps Context empty so the
-// dispatcher's behaviour is fully determined by [System] + History.
+// that surface. Context stays empty so the dispatcher's behaviour
+// is fully determined by [System] + History.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyAutoTripNaming wrapped through the F4↔F8 adapter so the
+// PolicyAutoTripNaming wrapped through the redaction adapter so the
 // dispatcher's per-request ctx-installation step (dispatch.Run
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyDigest from
-// internal/ai/redact/policies.go. Allowed classes: ClassVehicleName
-// only; places stay tagged unless restored to same user".
-// PolicyAutoTripNaming is the per-feature constructor with the same
-// allow-list as PolicyDigest — kept as a distinct identifier so a
-// future per-feature change to auto-trip-naming's allow-list does
-// not bleed across to the digest or other read-only narrators.
+// PolicyAutoTripNaming allows ClassVehicleName only; places stay
+// tagged unless restored to the same user. It intentionally keeps a
+// distinct identifier so future auto-trip-naming allow-list changes
+// do not bleed across to digest or other read-only narrators.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {
 	return redactadapter.Wrap(redact.PolicyAutoTripNaming())
 }

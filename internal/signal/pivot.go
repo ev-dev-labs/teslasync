@@ -1,13 +1,13 @@
 // Package signal owns state-read semantics over signal_log. See ADR-002.
 //
 // pivot.go is the DB-agnostic core of the forward-fold algorithm consumed by
-// the (Prompt 05+) signal_log-backed StateReader implementation. Splitting the
+// the signal_log-backed StateReader implementation. Splitting the
 // algorithm out of the SQL impl keeps it unit-testable without a live
 // TimescaleDB instance: callers feed in a seed map plus a time-ordered slice
 // of (ts, signal, value) tuples, and the helpers return the projected
 // TimelineRow slice expected by Timeline.
 //
-// Phase-42 typed-primitive contract: values flowing into forwardFold are the
+// Typed-primitive contract: values flowing into forwardFold are the
 // typed primitives produced by the Tesla codec (codec.Atomic.Value: float64,
 // float32, int32, int64, bool, string, time.Time, etc.) and persisted by the
 // SI-canonical signal_log row decoder. pivot.go does NO string parsing and
@@ -31,19 +31,19 @@ import (
 // the entire algorithm boundary.
 //
 // rawEvent is unexported because it is purely an internal handoff between
-// the SQL impl (Prompt 05+) and the pivot helpers. Public callers go through
+// the SQL implementation and the pivot helpers. Public callers go through
 // the StateReader interface.
 type rawEvent struct {
 	// Ts is the change-feed emission time. Callers MUST sort events by Ts
 	// ascending before invoking forwardFold.
 	Ts time.Time
 	// Signal is the Tesla Fleet Telemetry signal name (e.g. "VehicleSpeed").
-	// Post-phase-42 the codec emits already-flattened atomic names
+	// The codec emits already-flattened atomic names
 	// (e.g. "LocationLatitude", "DoorStateDriverFront",
 	// "TpmsHardWarningsFrontLeft") rather than parent compound names —
 	// pivot does not split or rejoin these.
 	Signal string
-	// Value is the opaque payload observed at Ts. Post-phase-42 this is a
+	// Value is the opaque payload observed at Ts. This is a
 	// typed primitive emitted by the codec: float64/float32, int32/int64,
 	// bool, string, or time.Time, plus JSON-decoded slices/maps for the
 	// few signals that are still structured at the wire. forwardFold treats

@@ -15,7 +15,7 @@ package provider
 // time live inside it), audit records what got sent, cost cap checks
 // budget before rate limiter consumes a token, rate limiter blocks or
 // rejects, redaction strips PII as the very last thing before the
-// outbound HTTP. F1 ships only [WithTrace]; F3/F8/F9 add the others.
+// outbound HTTP. Keep this order stable as new cross-cuts are added.
 type Decorator func(Provider) Provider
 
 // Chain returns base wrapped by each decorator in slice order. The

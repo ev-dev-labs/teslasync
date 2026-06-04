@@ -12,12 +12,9 @@ import (
 // TestEmbeddedRoutingIsLoadable verifies the embedded routing.yaml
 // parses cleanly and that LoadMap and Load agree on the entry count.
 //
-// The original prompt-0025 form of this test asserted len(entries)==0
-// to lock the empty-file contract for the per-category prompts. Now
-// that prompts 0040-0047 incrementally populate the file, the
-// invariant is "the loader succeeds and Load/LoadMap agree" — the
-// reflective coverage test in prompt 0048 enforces the per-category
-// coverage from the protomodel side.
+// The invariant is that the loader succeeds and Load/LoadMap agree. The
+// reflective coverage test enforces per-category coverage from the
+// protomodel side.
 func TestEmbeddedRoutingIsLoadable(t *testing.T) {
 	entries, err := Load()
 	if err != nil {
@@ -37,8 +34,7 @@ func TestEmbeddedRoutingIsLoadable(t *testing.T) {
 // (wrapped via fmt.Errorf %w) for any Field not present in
 // routing.yaml. The test stands up a Router with a nopWriter for
 // every destination currently referenced by the embedded routing.yaml
-// so that New() succeeds even after per-category prompts (0040-0047)
-// have populated the file, then asserts an unrouted Field still
+// so that New() succeeds as routes are added, then asserts an unrouted Field still
 // fails LOUDLY.
 //
 // The probe Field is a fixed sentinel that intentionally has no
@@ -85,8 +81,7 @@ func TestRouterRejectsUnknownField(t *testing.T) {
 //
 // This is the structural enforcement of ADR-004's "every Field has
 // exactly one routing entry" invariant from the loader side; the
-// reflective coverage test in prompt 0038 enforces it from the
-// codegen side.
+// reflective coverage test enforces it from the codegen side.
 func TestLoaderRejectsDuplicateField(t *testing.T) {
 	yaml := []byte(`routes:
   - field: VehicleSpeed

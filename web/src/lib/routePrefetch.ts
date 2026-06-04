@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 22 — Route prefetch on link hover/focus.
+ * Route prefetch on link hover/focus.
  *
  * Every route in `App.tsx` is code-split via `React.lazy()`. The first
  * navigation to a route pays the full chunk-fetch + parse cost, which

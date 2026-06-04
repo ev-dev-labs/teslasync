@@ -41,7 +41,7 @@ func NewPublisher(cfg config.MQTTConfig) (*Publisher, error) {
 
 func (p *Publisher) Publish(ctx context.Context, topic string, payload []byte) error {
 	token := p.client.Publish(topic, p.qos, false, payload)
-	if token.WaitTimeout(5 * time.Second) && token.Error() != nil {
+	if token.WaitTimeout(5*time.Second) && token.Error() != nil {
 		return fmt.Errorf("publishing to %s: %w", topic, token.Error())
 	}
 	return nil

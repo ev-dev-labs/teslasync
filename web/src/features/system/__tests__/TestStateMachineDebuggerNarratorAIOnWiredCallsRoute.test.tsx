@@ -1,12 +1,9 @@
-// Phase-50 / 0048 — S7 State-machine debugger narrator.
-// Phase-50 / W1 inline wiring (per slice prompt 0048) — on-mode
-// wiring test proving the "Narrate transitions" button opens an
-// SSE stream against the registered backend route
-// POST /api/v1/ai/system/fsm/narrate.
+// State-machine debugger narrator on-mode wiring test.
+// Proves the "Narrate transitions" button opens an SSE stream against
+// the registered backend route POST /api/v1/ai/system/fsm/narrate.
 //
-// `TestStateMachineDebuggerNarratorAIOnWiredCallsRoute` is the
-// load-bearing positive wiring proof for slice 0048's W1 inline
-// addendum. It mounts the AIStateMachineDebuggerNarrator
+// `TestStateMachineDebuggerNarratorAIOnWiredCallsRoute` is the positive
+// wiring proof. It mounts the AIStateMachineDebuggerNarrator
 // component with ai_mode='cloud' + the per-feature toggle on,
 // stubs global fetch with a deterministic SSE byte stream,
 // clicks the "Narrate transitions" button, and asserts:
@@ -256,8 +253,8 @@ describe('TestStateMachineDebuggerNarratorAIOnWiredCallsRoute (state-machine-deb
   });
 
   it('TestStateMachineDebuggerNarratorAIOnWiredCallsRoute: Narrate transitions button is disabled when vehicleId is missing (computed, not literal)', () => {
-    // This test guards W1 Rule A from the slice prompt: the
-    // primary action button's `disabled` prop MUST be a computed
+    // This guards the contract that the primary action button's
+    // `disabled` prop MUST be a computed
     // expression (here: `!canStart`), not a literal `disabled` /
     // `disabled={true}`. We prove the dynamic behaviour by
     // rendering the component without a vehicleId and confirming

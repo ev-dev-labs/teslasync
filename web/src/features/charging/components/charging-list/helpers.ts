@@ -4,6 +4,7 @@ import { CHARGER_COLORS } from '@/lib/colors';
 import { getChargerCategory } from '../ChargingSessionCard';
 import type { ChargingSession } from '@/api/types';
 import { durationMinutes } from '../charging-curve/helpers';
+import { convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 import type { TFunction } from 'i18next';
 
 // ── Types ──────────────────────────────────────────────────────────────
@@ -78,12 +79,14 @@ export interface StartLevelBucket { range: string; count: number }
 
 export function computeStats(sessions: ChargingSession[]): ChargingStats | null {
   if (sessions.length === 0) return null;
-  const totalEnergy = sessions.reduce((sum, s) => sum + s.total_energy_added_wh, 0);
+  const totalEnergy = convertEnergyFromSI(sessions.reduce((sum, s) => sum + s.total_energy_added_wh, 0), 'kWh');
   const totalCost = sessions.reduce((sum, s) => sum + (s.cost_decimal ?? 0), 0);
   const totalDuration = sessions.reduce((sum, s) => sum + durationMinutes(s.started_at, s.ended_at), 0);
   const withPower = sessions.filter((s) => s.peak_power_w);
-  const avgPower =
-    withPower.reduce((sum, s) => sum + (s.peak_power_w ?? 0), 0) / Math.max(withPower.length, 1);
+  const avgPower = convertPowerFromSI(
+    withPower.reduce((sum, s) => sum + (s.peak_power_w ?? 0), 0) / Math.max(withPower.length, 1),
+    'kW',
+  );
   const avgCostPerKwh = totalEnergy > 0 ? totalCost / totalEnergy : 0;
   const homeCount = sessions.filter((s) => getChargerCategory(s.charger_type) === 'home').length;
   const scCount = sessions.filter((s) => getChargerCategory(s.charger_type) === 'supercharger').length;
@@ -146,7 +149,7 @@ export function computeAcDcBreakdown(sessions: ChargingSession[]): AcDcBreakdown
   const ac: AcDcBucket = { energy: 0, energyUsed: 0, cost: 0, count: 0, totalDuration: 0, freeCount: 0, freeEnergy: 0 };
   const dc: AcDcBucket = { energy: 0, energyUsed: 0, cost: 0, count: 0, totalDuration: 0, freeCount: 0, freeEnergy: 0 };
   sessions.forEach((s) => {
-    const isDC = !!(s.charger_type || (s.peak_power_w && s.peak_power_w > 22));
+    const isDC = !!(s.charger_type || (s.peak_power_w && s.peak_power_w > 22_000));
     const bucket = isDC ? dc : ac;
     bucket.energy += s.total_energy_added_wh;
     bucket.energyUsed += s.total_energy_added_wh;
@@ -228,7 +231,12 @@ export function computeChargerSpecs(sessions: ChargingSession[]): ChargerSpecsDa
 
   const toArr = (obj: Record<string, { count: number; energy: number; power?: number }>) =>
     Object.entries(obj)
-      .map(([name, v]) => ({ name, ...v, avgPower: v.power ? v.power / v.count : undefined }))
+      .map(([name, v]) => ({
+        name,
+        ...v,
+        energy: convertEnergyFromSI(v.energy, 'kWh'),
+        avgPower: v.power ? convertPowerFromSI(v.power / v.count, 'kW') : undefined,
+      }))
       .sort((a, b) => b.count - a.count);
 
   return { voltage: toArr(byVoltage), phase: toArr(byPhase), cable: toArr(byCable), brand: toArr(byType) };

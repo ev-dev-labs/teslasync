@@ -6,7 +6,7 @@ import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import type { PinnedItem, PinnedItemType } from '../types';
 
 /**
- * Phase 40 / Prompt 48 — TanStack Query hooks for the unified pin storage.
+ * TanStack Query hooks for unified pin storage.
  *
  * Surfaces (vehicle picker, dashboard widgets, alerts, geofences,
  * automations, commands) call `usePinned(type, context?)` to know which

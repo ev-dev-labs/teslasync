@@ -39,7 +39,7 @@ type Tool interface {
 
 	// Mutates reports whether [Execute] changes server-side state.
 	// True ⇒ the dispatcher pauses for user confirmation before
-	// invoking the tool (per P2 / ADR-015). False ⇒ the
+	// invoking the tool (per ADR-015). False ⇒ the
 	// dispatcher runs the tool unattended.
 	Mutates() bool
 

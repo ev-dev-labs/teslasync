@@ -2,8 +2,7 @@ package models
 
 // This file defines a typed string enum for the notification_channel_kind
 // Postgres ENUM so callers cannot pass arbitrary strings. Values mirror the
-// ENUM declared in migrations/_baseline_source/19-notification-channels.sql
-// (see also .github/prompts/db-refactor/phase-3-schema/19-create-notification-channels.prompt.md).
+// ENUM declared in migrations/_baseline_source/19-notification-channels.sql.
 //
 // ADR-001: typed-by-default — no jsonb config blob; per-kind typed config
 // children (notification_channel_discord, _slack, _telegram, _email,

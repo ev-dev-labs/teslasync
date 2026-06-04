@@ -16,7 +16,7 @@ import {
 } from '@/lib/broadcast'
 
 /**
- * Phase-46 / Prompt 66 — useEditLease contract.
+ * useEditLease contract.
  *
  * The election protocol is a same-origin handshake on the shared
  * BroadcastChannel `'teslasync'`. Tests simulate a "peer tab" by

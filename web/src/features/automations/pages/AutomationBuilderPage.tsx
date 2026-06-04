@@ -253,7 +253,7 @@ export default function AutomationBuilderPage() {
   const isEdit = id != null;
   const automationId = id ? Number.parseInt(id, 10) : undefined;
 
-  // Phase-46 / Prompt 66 — per-automation edit lease so a second tab
+  // Per-automation edit lease so a second tab
   // editing the SAME automation surfaces a conflict banner before its
   // save can silently overwrite this tab's work. New-automation drafts
   // are scoped per-preset (or "new") because two tabs editing two
@@ -296,7 +296,7 @@ export default function AutomationBuilderPage() {
   const updateMutation = useUpdateAutomationFull();
   const testRunMutation = useTestRunAutomation();
 
-  // Phase-40 / Prompt 55 — `useFormDraft` autosaves the in-progress
+  // `useFormDraft` autosaves the in-progress
   // automation to localStorage so a tab close, SW reload, or auth redirect
   // doesn't destroy the user's work. Scoped per-automation (or
   // "new"/"preset:X") so two tabs editing different automations keep
@@ -393,7 +393,7 @@ export default function AutomationBuilderPage() {
   // wiring; also exposes localized strings reused by the in-app discard
   // confirm dialog below.
   const dirtyForm = useDirtyForm(dirty);
-  // Phase-45 / Prompt 16: in-app navigation guard. Sidebar clicks, browser
+  // In-app navigation guard. Sidebar clicks, browser
   // back, breadcrumb links, etc. now surface the same discard prompt as the
   // explicit Cancel button below.
   useNavigationGuard(dirty, t('forms.unsavedAutomation', 'You have an unsaved automation.'));
@@ -617,7 +617,7 @@ export default function AutomationBuilderPage() {
           <AIGeofenceAwareAutomationSuggestions
             vehicleId={aiVehicleId ?? undefined}
             onApplyDraft={(proposedDraft) => {
-              // Phase-50 / 0039 — copy the typed Automation graph
+              // Copy the typed Automation graph
               // proposed by the AI panel into the canonical
               // baseline form state. The AI panel never persists
               // directly; the user reviews the populated form and

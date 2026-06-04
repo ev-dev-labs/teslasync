@@ -66,7 +66,7 @@ import { useDynamicAppIcon } from '../../hooks/useDynamicAppIcon'
 import { useCriticalAlertFlash } from '../../hooks/useCriticalAlertFlash'
 import { useToast } from '../feedback/Toast'
 import { NotificationBellPopover } from './NotificationBellPopover'
-import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough'
+import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough'
 import { Icons } from '@/lib/icons';
 import { HelixMark } from '@/components/branding/HelixMark';
 
@@ -474,7 +474,7 @@ function findNavItemByExactPath(to: string) {
 }
 
 /**
- * Phase-46 / Prompt 28 — header bell trigger.
+ * Header bell trigger.
  *
  * Replaced the original NavLink-only bell with `NotificationBellPopover`,
  * which renders the same bell + badge but opens an in-place triage panel
@@ -485,7 +485,7 @@ function findNavItemByExactPath(to: string) {
  */
 
 /**
- * Phase-40 / Prompt 60 — top-bar quick theme switcher.
+ * Top-bar quick theme switcher.
  *
  * A small palette icon button that opens a popover containing a compact
  * `<ThemePicker>`. The popover hides the custom-color builder to keep it
@@ -703,7 +703,7 @@ export default function Layout() {
     },
   })
   useNotificationListener()
-  // Browser tab badging — Phase 40 / Prompt 32. These three hooks
+  // Browser tab badging. These three hooks
   // share the SSE singleton with `useNotificationListener` above; no
   // additional EventSource connection is opened.
   // `useDynamicAppIcon` MUST run before `useFaviconBadge` so the badge
@@ -714,7 +714,7 @@ export default function Layout() {
   useFaviconBadge()
   useCriticalAlertFlash()
   const { mode: shortcutMode, showCheatSheet, toggleCheatSheet } = useKeyboardShortcuts()
-  // Footer status bar (Phase-40 / Prompt 59). When the user has hidden the
+  // Footer status bar. When the user has hidden the
   // bar the main content reclaims the space — track the prefs reactively
   // so the layout reflows on toggle.
   const statusBarPrefs = useStatusBarPrefs()
@@ -728,7 +728,7 @@ export default function Layout() {
     return () => window.removeEventListener('toggle-keyboard-shortcuts', handler)
   }, [toggleCheatSheet])
 
-  // Phase-46 / Prompt 08 — in-app feedback modal. Same decoupled-event
+  // In-app feedback modal. Same decoupled-event
   // pattern as the cheat sheet above so the Cmd+K palette ("feedback.open")
   // and the sidebar footer button can both open it without prop-drilling.
   const [feedbackOpen, setFeedbackOpen] = useState(false)
@@ -738,7 +738,7 @@ export default function Layout() {
     return () => window.removeEventListener('open-feedback-modal', handler)
   }, [])
 
-  // Onboarding tour — Phase-40 / Prompt 65.
+  // Onboarding tour.
   // Only one tour can be active at a time. The launcher (or a CustomEvent
   // dispatched from anywhere) sets `activeTourId`; we wire the matching
   // definition into useTour so completion is persisted under the per-tour
@@ -761,7 +761,7 @@ export default function Layout() {
     return () => window.removeEventListener(TOUR_START_EVENT, handler)
   }, [])
 
-  // Phase-46 / Prompt 61 — Cross-tab replay sync. When a sibling tab calls
+  // Cross-tab replay sync. When a sibling tab calls
   // `startTour(id)` from `@/lib/tourLauncher`, it broadcasts
   // `tour.replay-requested`. The bus filters self-broadcasts (per
   // `subscribe()` in `broadcast.ts`), so this only fires for peer tabs;
@@ -804,7 +804,7 @@ export default function Layout() {
   }, [tour.isActive, tour.currentStep, tour.targetRect])
 
   // Build version intentionally not fetched here; canonical provenance lives
-  // in the footer <VersionSegment> (Phase-40 / 59 + Phase-46 / 58).
+  // in the footer <VersionSegment>.
 
   // Live data for sidebar
   const { data: alerts } = useQuery({ queryKey: ['alerts-sidebar'], queryFn: () => request<Alert[]>('/alerts?limit=50&offset=0'), refetchInterval: 30_000, retry: 1 })
@@ -1047,13 +1047,13 @@ export default function Layout() {
     <>
       {/* Skip to content (WCAG 2.4.1). MUST be the very first interactive
           element in the DOM so a single Tab press from page load reveals
-          it before any sidebar / header / banner control. Phase-46 /
-          Prompt 60 — supersedes the previous `a11y.skipToMain` link.
+          it before any sidebar / header / banner control. Supersedes the
+          previous `a11y.skipToMain` link.
           Audit anchor: skipToContent|skip.to.content */}
       <SkipToContent />
       <BreadcrumbOverridesProvider>
       <div className="flex h-dvh bg-[var(--bg)] text-[var(--text-primary)]">
-      {/* Phase-46 / Prompt 12 — global SR announcer. Mounted once here
+      {/* Global SR announcer. Mounted once here
           so any component can fire imperative live-region messages via
           `useAnnouncer()` without rendering its own hidden region. */}
       <AnnouncerRegion />
@@ -1072,7 +1072,7 @@ export default function Layout() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            // Phase-45 / Prompt 04: NOT migrated to <Modal>.
+            // Not migrated to <Modal>.
             // Rationale: drawer scrim — pure backdrop with no content. Pairs
             // with the <aside> sidebar (drawer pattern), not a dialog. New
             // interactive dialogs MUST use <Modal>.
@@ -1094,7 +1094,7 @@ export default function Layout() {
           'fixed start-0 bottom-0 z-[66] w-[clamp(240px,70vw,256px)] transform transition-transform duration-normal ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
           'flex flex-col border-r border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-2xl backdrop-blur-xl lg:shadow-none',
           sidebarOpen ? 'top-0 translate-x-0' : 'top-14 -translate-x-full',
-          // Reserve space for the fixed footer StatusBar (Phase-40 / Prompt 59)
+          // Reserve space for the fixed footer StatusBar
           // so the bottom "Take a tour / Report bug" row never slides under
           // it. Mobile open-state already overlays StatusBar (sidebar z-66 >
           // StatusBar z-55), so the reservation only matters on desktop where
@@ -1103,8 +1103,7 @@ export default function Layout() {
         )}
       >
         {/* Mobile sidebar brand. Build version intentionally not rendered
-            here; canonical provenance lives in the footer <VersionSegment>
-            (Phase-40 / 59 + Phase-46 / 58). */}
+            here; canonical provenance lives in the footer <VersionSegment>. */}
         <div className="flex items-center gap-2 border-b border-[var(--glass-border)] px-5 py-4 shrink-0 lg:hidden">
           <GuardedNavLink to="/" className="min-w-0 flex flex-1 items-center gap-3 rounded-xl transition-colors" onClick={() => setSidebarOpen(false)}>
             <Logo size={32} showWordmark />
@@ -1124,7 +1123,7 @@ export default function Layout() {
 
         {/* Logo — desktop sidebar header. Build version intentionally not
             rendered here; canonical provenance lives in the footer
-            <VersionSegment> (Phase-40 / 59 + Phase-46 / 58). */}
+            <VersionSegment>. */}
         <div className="hidden lg:flex items-center gap-2 px-5 py-5 border-b border-[var(--glass-border)] shrink-0">
           <GuardedNavLink to="/" className="flex flex-1 items-center gap-3 hover:bg-[var(--surface-2)] -mx-2 px-2 py-1 rounded-md transition-colors" onClick={() => setSidebarOpen(false)}>
             <Logo size={32} showWordmark />
@@ -1138,7 +1137,7 @@ export default function Layout() {
           <CommandPaletteTrigger />
         </div>
 
-        {/* Persistent vehicle scope picker — Phase 40 / Prompt 16.
+        {/* Persistent vehicle scope picker.
             Renders its own bordered wrapper; returns null for single-vehicle
             owners so no empty padding is visible. */}
         <VehiclePicker />
@@ -1422,14 +1421,14 @@ export default function Layout() {
         {/* Spacer for fixed mobile header */}
         <div className="h-14 shrink-0 lg:hidden" />
 
-        {/* Browser-compat warning (Phase-46 / Prompt 63) — topmost banner
+        {/* Browser-compat warning — topmost banner
             in the main content column so users on outdated browsers see
             WHY the SPA is breaking instead of staring at a white page.
             Sits BELOW the SkipToContent link in DOM order so keyboard
             users still hit the WCAG bypass-blocks link first. */}
         <BrowserCompatBanner />
-        {/* Time-machine "viewing data as of …" banner (Phase-46 / Prompt 64)
-            — visible only when ?as_of= is set or the inline picker is
+        {/* Time-machine "viewing data as of …" banner — visible only
+            when ?as_of= is set or the inline picker is
             open. Stacked between BrowserCompatBanner and ServiceStatusBanner
             so the historical-mode warning sits at the top of the main
             content column without displacing the higher-priority compat
@@ -1444,7 +1443,7 @@ export default function Layout() {
           tabIndex={-1}
           className={cn(
             'flex-1 overflow-y-auto outline-none pb-16 lg:pb-0',
-            // Reserve space for the footer status bar (Phase-40 / Prompt 59)
+            // Reserve space for the footer status bar
             // so it never overlaps page content. On mobile it stacks ABOVE
             // the BottomTabBar (which already adds 56px via pb-16), so we
             // bump pb-16 → pb-20 (24px footer + tab bar). On desktop a
@@ -1471,7 +1470,7 @@ export default function Layout() {
       {/* Mobile bottom tab bar */}
       <BottomTabBar />
 
-      {/* Footer status bar (Phase-40 / Prompt 59) — always-on health/version
+      {/* Footer status bar — always-on health/version
           surface pinned to the bottom of the viewport. Hides itself when the
           user toggles it off in Settings → Appearance. */}
       <StatusBar />
@@ -1482,7 +1481,7 @@ export default function Layout() {
       {/* PWA Install Prompt */}
       <InstallPrompt />
 
-      {/* Route-change / mutation progress bar (Phase-46 / Prompt 07) —
+      {/* Route-change / mutation progress bar —
           mounted ABOVE every banner so the slim 2 px strip at the very
           top of the viewport is never occluded by a stacked banner.
           Activated by SuspenseProgressBoundary at every lazy() route
@@ -1493,21 +1492,21 @@ export default function Layout() {
       {/* Offline status banner (PWA / mobile) */}
       <OfflineBanner />
 
-      {/* Impersonation banner (Phase-46 / Prompt 46) — security context,
+      {/* Impersonation banner — security context,
           highest priority. Mounted ABOVE every other banner because an
           admin viewing the app as another subject must see the
           impersonation flag at all times; everything else (maintenance,
           rate-limit, etc.) is secondary while a session is active. */}
       <ImpersonationBanner />
 
-      {/* Service-mode banner (Phase-46 / Prompt 04) — operator-controlled
+      {/* Service-mode banner — operator-controlled
           maintenance/degraded banner. Mounted ABOVE the rate-limit and
           version banners because an operator-declared outage is the
           highest-priority operational message and should not be hidden
           under transient client-side notices. */}
       <MaintenanceBanner />
 
-      {/* Rate-limit / circuit-breaker banner (Phase-45 / Prompt 33) —
+      {/* Rate-limit / circuit-breaker banner —
           most-transient surface, sits on top so the user sees the
           countdown before any of the slower-cycling banners. Stack
           order from top to bottom: rate-limit → tesla-reauth →
@@ -1515,17 +1514,17 @@ export default function Layout() {
           under 144 px even when all three fire simultaneously. */}
       <RateLimitBanner />
 
-      {/* New-version banner (Phase-45 / Prompt 11) — proactive reload nudge
+      {/* New-version banner — proactive reload nudge
           when the backend redeploys mid-session, before the next chunk-load
           failure surfaces as an ErrorBoundary fallback. */}
       <NewVersionBanner />
 
-      {/* Tesla third-party token expiry banner (Phase-45 / Prompt 30) —
+      {/* Tesla third-party token expiry banner —
           sticky top-of-page recovery surface for the partial-failure case
           where Tesla-backed calls 401 but non-Tesla data still loads. */}
       <TeslaReauthBanner />
 
-      {/* ForwardAuth session-expiry modals (Phase-46 / Prompt 05) —
+      {/* ForwardAuth session-expiry modals —
           SessionExpiringModal opens ~60s before the proxy cookie ages
           out (soft-dismissible countdown with unsaved-draft list).
           SessionExpiredModal hard-blocks the UI when the cookie has
@@ -1540,7 +1539,7 @@ export default function Layout() {
       <GotoIndicator visible={shortcutMode === 'goto'} />
       <KeyboardShortcutsModal open={showCheatSheet} onClose={toggleCheatSheet} />
 
-      {/* In-app feedback modal (Phase-46 / Prompt 08) — opened via the
+      {/* In-app feedback modal — opened via the
           sidebar footer button, the Cmd+K palette ("feedback.open"
           command), or any other surface that dispatches the
           `open-feedback-modal` window event. */}
@@ -1559,21 +1558,21 @@ export default function Layout() {
         />
       )}
 
-      {/* Tour launcher (Phase-40 / Prompt 65) — opens via TOUR_OPEN_LAUNCHER_EVENT */}
+      {/* Tour launcher — opens via TOUR_OPEN_LAUNCHER_EVENT */}
       <TourLauncher />
 
-      {/* "What's new since last visit" modal (Phase-40 / Prompt 67) — auto-shows
+      {/* "What's new since last visit" modal — auto-shows
           once-per-24h after the OnboardingWizard, or on demand via the command
           palette ("What's new") and footer status bar version segment. */}
       <ChangelogModal />
 
-      {/* Phase-46 / Prompt 47 — surfaces unsaved form drafts after a
+      {/* Surfaces unsaved form drafts after a
           tab close, browser crash, PWA reload, or auth redirect. The
           component is a no-op when no drafts exist and self-throttles
           via a per-session sessionStorage flag. */}
       <DraftRestorePrompt />
 
-      {/* Phase-46 / Prompt 70 — Cookie / GDPR consent banner. Renders
+      {/* Cookie / GDPR consent banner. Renders
           ONLY when the deployment opts in via TESLASYNC_REQUIRE_COOKIE_CONSENT
           (default OFF on self-hosted installs) AND the user has not
           recorded a decision. Mounted last so the bottom-of-screen

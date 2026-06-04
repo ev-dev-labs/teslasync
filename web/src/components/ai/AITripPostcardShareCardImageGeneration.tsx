@@ -1,67 +1,12 @@
-// Phase-50 / 0060 — GEN1 trip postcard and share-card image generation.
-// Phase-50 / W1 inline wiring (per slice prompt 0060) — wired the
-// "Generate share card" button to
-// POST /api/v1/ai/share-cards/trip-image/draft via the canonical
-// useAiStream hook. The slice methodology forbids shipping the
-// visual affordance without end-to-end SSE wiring; this component
-// lands both in one commit so the on-mode wiring test
-// (TestTripPostcardShareCardImageGenerationAIOnWiredCallsRoute) can
-// prove the button actually opens an SSE stream against the
-// registered backend route.
-//
-// AITripPostcardShareCardImageGeneration is the visible AI surface
-// for the SharingTripsPage (/sharing/trips). It is rendered
-// conditionally via withAiFeature('trip-postcard-share-card-image-generation', …) so:
-//
-//   - When ai_mode='off' it does not render at all (ADR-015 §I5 + §I6).
-//   - When ai_mode is 'local'/'cloud' AND the
-//     trip-postcard-share-card-image-generation toggle is on, it
-//     renders an opt-in section with a "Generate share card" button
-//     that POSTs to /api/v1/ai/share-cards/trip-image/draft. The
-//     SSE response stream accumulates into the shared
-//     AiOutputPanel inside AIFeatureCard.
-//
-// The component does NOT replace the deterministic static
-// share-card surface served at /s/:token (the canonical SharedDrivePage)
-// or the per-drive "Share" button workflow. Those baseline
-// surfaces remain the canonical way to share trips with anyone;
-// this AI section is opt-in propose-only image-prompt drafting
-// layered alongside.
-//
-// Render contract (P11/P12 — Wired-or-absent, No-placeholder-buttons):
-//   - useAiStream is called unconditionally at the top of the body
-//     (Hooks-rules safe).
-//   - The button's disabled prop is a COMPUTED expression
-//     (`!haveInputs || stream.state === 'streaming'` via the
-//     `canStart` prop on AIFeatureCard), never a literal
-//     `disabled` or `disabled={true}`.
-//   - Double-submit protection: stream.start() is a no-op while
-//     state === 'streaming' (the hook coalesces; the button is
-//     also visually disabled to mirror the state machine).
-//   - The streamed text accumulates into AiOutputPanel which
-//     renders the SSE delta stream as-it-arrives.
-//
-// HX (Helix UX) contract:
-//   - The surface renders through the shared AIFeatureCard
-//     scaffold — NOT a bespoke GlassPanel + Button + AiOutputPanel
-//     composition.
-//   - The per-feature verb "Generate share card" is passed via
-//     `buttonLabel`. The card composes the accessible name as
-//     "Ask Helix · Generate share card".
-//   - User-visible i18n keys say "Helix", not "AI" (per the HX
-//     addendum).
-//
-// ADR-015 alignment:
-//   - I3 baseline intact: this component never replaces the
-//     deterministic /s/:token static share-card surface; it adds
-//     an opt-in propose-only draft section alongside.
-//   - I5 hidden UI:       the withAiFeature HOC returns null when
-//     the feature is not enabled, so the section is entirely
-//     absent from the DOM in off mode.
-//   - I6 404 routes:      the backend route is guard-wrapped and
-//     returns 404 in off mode; useAiStream surfaces that as
-//     state='error' for the user, but the component is never
-//     rendered in off mode at all because of I5.
+// Trip postcard/share-card image prompt drafter for /sharing/trips.
+// The Generate share card button POSTs to
+// /api/v1/ai/share-cards/trip-image/draft through useAiStream and
+// streams output into the shared AIFeatureCard panel. This does not
+// replace the /s/:token share-card surface or the per-drive Share flow;
+// Helix drafts a prompt/preview only, and the existing Share workflow
+// remains the publishing path. withAiFeature removes this section when
+// the feature is off. The action's disabled state is computed from the
+// selected trip and stream state, never from a hardcoded disabled prop.
 
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -108,7 +53,7 @@ interface InnerSectionProps {
  *     reading the panel hint understands the privacy contract +
  *     the propose-only guarantee: Helix drafts an image prompt
  *     and a preview spec, but the user has to click the existing
- *     baseline "Share" button to actually publish a share card.
+ *     "Share" button to actually publish a share card.
  */
 function InnerSection({ tripId, styleHint }: InnerSectionProps) {
   const { t } = useTranslation()

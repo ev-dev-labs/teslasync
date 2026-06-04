@@ -1,36 +1,12 @@
-// Phase-50 / 0028 — C3 Charging-curve fingerprint clustering.
+// React-side AI-off contract for charging-curve clustering. The test
+// verifies the AI section is absent when ai_mode='off', then uses cloud mode
+// with the feature toggle enabled as a positive control for the gate.
 //
-// `TestChargingCurveClusteringAIOffShowsChartsOnly` (the Vitest
-// sibling to the Go test of the same name) is the slice's
-// load-bearing AI-OFF contract proof on the React side. It mounts
-// the AIChargingCurveFingerprintClustering component with
-// ai_mode='off' (plus the per-feature toggle on, to defeat the
-// obvious "off because nothing is enabled" path) and asserts:
+// The backend test covers the 404-off-mode route behavior; this unit test only
+// checks DOM visibility and that deterministic ChargingCurvePage content remains
+// available without the AI section.
 //
-//   1. The AI section's rooted test ID is absent from the DOM.
-//   2. The wrapper renders no children (empty container).
-//   3. With ai_mode='cloud' AND
-//      charging-curve-fingerprint-clustering=true, the section IS
-//      present + carries the expected test ID. This is the
-//      positive control that proves the gate actually works
-//      (otherwise the "absent in off mode" assertion is trivially
-//      true).
-//
-// The HTTP POST /api/v1/ai/charging/curves/clusters/explain
-// 404-in-off-mode invariant is proven by the Go-side
-// TestChargingCurveClusteringAIOffShowsChartsOnly in
-// internal/api/ai_charging_curve_clustering_handler_test.go — the
-// network layer does not exist in the React unit-test scope. The
-// "shows charts only" semantic refers to the parent
-// ChargingCurvePage which keeps rendering the deterministic charts,
-// per-session labels, distribution panels, and time-to-charge
-// section regardless of this AI section's visibility.
-//
-// File name MUST stay
-// `TestChargingCurveClusteringAIOffShowsChartsOnly.test.tsx` —
-// the slice prompt's verification command runs
-// `vitest --run TestChargingCurveClusteringAIOffShowsChartsOnly`,
-// where the positional pattern is matched against the file PATH.
+// Keep this filename stable because targeted Vitest runs match it by path.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';

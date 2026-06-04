@@ -86,34 +86,34 @@ func Tiers() []BurnRateTier {
 
 // TierStatus is one tier's evaluation against the live samples.
 type TierStatus struct {
-	Tier        BurnRateTier `json:"tier"`
-	LongRatio   *float64     `json:"long_ratio,omitempty"`  // bad-event ratio over the long window
-	ShortRatio  *float64     `json:"short_ratio,omitempty"` // bad-event ratio over the short window
-	Threshold   float64      `json:"threshold"`             // (1-objective)*burn_rate
-	Firing      bool         `json:"firing"`                // both windows above threshold
-	Error       string       `json:"error,omitempty"`
+	Tier       BurnRateTier `json:"tier"`
+	LongRatio  *float64     `json:"long_ratio,omitempty"`  // bad-event ratio over the long window
+	ShortRatio *float64     `json:"short_ratio,omitempty"` // bad-event ratio over the short window
+	Threshold  float64      `json:"threshold"`             // (1-objective)*burn_rate
+	Firing     bool         `json:"firing"`                // both windows above threshold
+	Error      string       `json:"error,omitempty"`
 }
 
 // Status is the per-SLO live snapshot returned by Tracker.Snapshot.
 type Status struct {
-	Name                string       `json:"name"`
-	Description         string       `json:"description"`
-	Objective           float64      `json:"objective"`
-	Window              string       `json:"window"`
-	Owner               string       `json:"owner"`
-	Tags                []string     `json:"tags"`
-	CurrentRatio        *float64     `json:"current_ratio,omitempty"`         // live good/valid over `Window`
-	ErrorBudgetRemaining *float64    `json:"error_budget_remaining,omitempty"` // 0..1 fraction of budget left
-	Tiers               []TierStatus `json:"tiers"`
-	HighestSeverity     string       `json:"highest_severity"` // page > ticket > none
-	Error               string       `json:"error,omitempty"`
+	Name                 string       `json:"name"`
+	Description          string       `json:"description"`
+	Objective            float64      `json:"objective"`
+	Window               string       `json:"window"`
+	Owner                string       `json:"owner"`
+	Tags                 []string     `json:"tags"`
+	CurrentRatio         *float64     `json:"current_ratio,omitempty"`          // live good/valid over `Window`
+	ErrorBudgetRemaining *float64     `json:"error_budget_remaining,omitempty"` // 0..1 fraction of budget left
+	Tiers                []TierStatus `json:"tiers"`
+	HighestSeverity      string       `json:"highest_severity"` // page > ticket > none
+	Error                string       `json:"error,omitempty"`
 }
 
 // Snapshot is the response shape of /admin/observability/slo.
 type Snapshot struct {
-	GeneratedAt time.Time `json:"generated_at"`
-	SLOs        []Status  `json:"slos"`
-	PromAvailable bool    `json:"prom_available"`
+	GeneratedAt   time.Time `json:"generated_at"`
+	SLOs          []Status  `json:"slos"`
+	PromAvailable bool      `json:"prom_available"`
 }
 
 // Snapshot queries Prometheus for every SLO in the catalog and returns

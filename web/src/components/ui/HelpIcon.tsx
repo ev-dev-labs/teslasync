@@ -6,14 +6,14 @@ import { cn } from '@/lib/cn';
 import { Tooltip } from './Tooltip';
 
 /**
- * Phase-46 / Prompt 68 — `<HelpIcon>` field-level help primitive.
+ * Field-level `<HelpIcon>` help primitive.
  *
  * A tiny `(?)` icon you place next to a form `<Label>`. Hover, focus, or
  * tap reveals the explanatory text via the shared `<Tooltip>` (which
  * carries the inverted-surface contract, ARIA wiring, and dev-time text
  * colour guard).
  *
- * Differs from `<HelpTooltip>` (Phase-40 / Prompt 47):
+ * Differs from `<HelpTooltip>`:
  *   - HelpTooltip is page-level — used next to deeply technical metric
  *     titles like "Vampire Drain" or "Drive Score". Larger lucide
  *     `<HelpCircle>` (h-3.5+), often paired with a "Learn more" link.

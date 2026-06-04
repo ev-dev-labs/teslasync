@@ -1,5 +1,4 @@
-// Phase-50 / 0064 — ML3 Charging-curve fingerprint clustering
-// statistical model. Wires the "Train charging-curve clusters"
+// ML charging-curve fingerprint clustering model. Wires the "Train charging-curve clusters"
 // button to POST /api/v1/ai/ml/charging-curves/cluster. The
 // narration walks the user through the per-cluster (L1 overnight /
 // L2 workplace / DC fast / unknown) LEARNED charging envelope
@@ -19,7 +18,7 @@
 //
 // Sibling distinction: this is the ML3-tier *statistical
 // clustering* model. The C3-tier *charging-curve-fingerprint-
-// clustering* slice 0028 is a separate LLM narrator over the C3
+// clustering* feature is a separate LLM narrator over the C3
 // aggregator's output; both surfaces coexist on /charging/curves
 // with independent per-feature toggles and independent test IDs.
 
@@ -53,9 +52,8 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     body,
     onEvent: () => {},
   })
-  // Computed disabled — never literal-true. P12/W1-A enforces this
-  // statically at slice 0065+, but the explicit boolean expression
-  // also keeps the on-mode wiring test honest: a regression that
+  // Keep the disabled state computed rather than hard-coded; the explicit
+  // boolean expression keeps the on-mode wiring test honest: a regression that
   // pins the button as always-disabled would silently falsify the
   // double-submit guard test.
     return (

@@ -1,12 +1,7 @@
-// Phase-50 / 0033 — T3 Tire-pressure trend reasoning.
-// Phase-50 / W1 inline wiring (per slice prompt 0033) — wired the
-// Narrate button to POST /api/v1/ai/tire-pressure/trends/explain
-// via the canonical useAiStream hook. The slice methodology forbids
-// shipping the visual affordance without end-to-end SSE wiring; this
-// component lands both in one commit so the on-mode wiring test
-// (TestTirePressureTrendReasoningAIOnWiredCallsRoute) can prove the
-// button actually opens an SSE stream against the registered backend
-// route.
+// Tire-pressure trend reasoning.
+// The Narrate button POSTs to /api/v1/ai/tire-pressure/trends/explain
+// via the canonical useAiStream hook. The on-mode wiring test proves
+// the button opens an SSE stream against the registered backend route.
 //
 // AITirePressureTrendReasoning is the visible AI surface for the
 // Tire Pressure vehicle-systems page. It is rendered conditionally
@@ -26,7 +21,7 @@
 // view visible to every user; this AI section is opt-in read-only
 // narration layered alongside.
 //
-// Render contract (P11/P12 — Wired-or-absent, No-placeholder-buttons):
+// Render contract:
 //   - useAiStream is called unconditionally at the top of the body
 //     (Hooks-rules safe).
 //   - The Narrate button's disabled prop is a COMPUTED expression

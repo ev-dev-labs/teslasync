@@ -1,8 +1,6 @@
 /**
  * MyActivityPage — per-user activity feed.
  *
- * Phase-40 / Prompt 49 — Recent Activity Discoverability.
- *
  * Renders the current user's own audit-log entries (`/users/me/activity`) so
  * non-admins can answer questions like "what did I change last week?" without
  * needing the admin-wide audit view.

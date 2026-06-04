@@ -42,7 +42,7 @@ const ALL_TYPES: SearchHitType[] = [
 ]
 
 /**
- * Phase-40 / Prompt 41 — dedicated app-wide search page.
+ * Dedicated app-wide search page.
  *
  * Reads `?q=` and `?types=` from the URL so links from the command palette
  * (and shared URLs) restore the same view. Per-type LIMIT is bumped to 25
@@ -102,12 +102,11 @@ export default function SearchPage() {
   return (
     <PageContainer title={t('search.title', 'Search')}>
       {/*
-        Phase-50 / 0017 — N3 Natural-language search across drives,
-        charges, and alerts. Rendered above the typed-filter panel
-        so the AI affordance is discoverable but never replaces the
-        canonical typed search baseline. Returns null when ai_mode is
-        'off' OR the nl-search feature toggle is off (ADR-015 §I5),
-        so users on the default install never see this surface.
+        Natural-language search across drives, charges, and alerts. Rendered
+        above the typed-filter panel so the AI affordance is discoverable but
+        never replaces the canonical typed search baseline. Returns null when
+        ai_mode is 'off' or the nl-search feature toggle is off, so users on the
+        default install never see this surface.
       */}
       <AINLSearch />
       <GlassPanel className="p-4 sm:p-6">

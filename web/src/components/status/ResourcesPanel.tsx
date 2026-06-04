@@ -6,9 +6,8 @@
  * progress bar where a max value is supplied; otherwise just label
  * + value. Status driven by % thresholds (warn 70%, critical 90%).
  *
- * NOTE: CPU% and disk-usage are not yet exposed by the backend
+ * NOTE: CPU% and disk usage are not yet exposed by the backend
  * (would need /system/resources with gopsutil or syscall.Statfs).
- * Phase 1 surfaces what's available today; CPU/disk land in Phase 2.
  */
 
 import { type ReactNode } from 'react'

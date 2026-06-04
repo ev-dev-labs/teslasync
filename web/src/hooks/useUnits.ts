@@ -19,29 +19,28 @@ import {
 } from '../lib/unitConversion'
 
 /**
- * Phase-43 / Prompt 0013 — `useUnits` is the per-render bridge between the
+ * `useUnits` is the per-render bridge between the
  * user's settings preference and SI-floor formatters.
  *
  * Contract:
- *   - Reads `useSettings()` once per render and derives a stable `UnitPref`.
-  *   - Exposes `formatDistance / formatSpeed / formatTemperature /
-  *     formatPressure / formatEnergy / formatDuration / formatPower`. Every formatter
- *     delegates to the corresponding `formatX(value, pref, options)` in
- *     `@/lib/unitConversion` — this hook performs NO unit math itself.
- *     Inline math here was the source of legacy drift that prompt 0010
- *     consolidated; rule of thumb: never reach for a hand-typed mile-to-km
- *     factor or a Fahrenheit offset in this file — let the lib do it.
- *   - Returns a stable `unitPrefs` so non-hook utilities (chart-axis label
- *     resolvers, custom report builders) can pass it to the same
- *     `formatX(value, pref)` lib functions outside of the React tree.
+ * - Reads `useSettings()` once per render and derives a stable `UnitPref`.
+ * - Exposes `formatDistance / formatSpeed / formatTemperature /
+ * formatPressure / formatEnergy / formatDuration / formatPower`. Every formatter
+ * delegates to the corresponding `formatX(value, pref, options)` in
+ * `@/lib/unitConversion` — this hook performs NO unit math itself.
+ * Inline math here was the source of legacy drift that * consolidated; rule of thumb: never reach for a hand-typed mile-to-km
+ * factor or a Fahrenheit offset in this file — let the lib do it.
+ * - Returns a stable `unitPrefs` so non-hook utilities (chart-axis label
+ * resolvers, custom report builders) can pass it to the same
+ * `formatX(value, pref)` lib functions outside of the React tree.
  *
  * Reference stability:
- *   - `unitPrefs`, every `formatX`, and the outer return object are
- *     memoized over the primitive preference dependencies (distance,
- *     speed, temperature, pressure, energy, duration prefs + locale +
- *     precision). Re-renders that don't change those primitives return
- *     identical references, so memoized child components / `useMemo`
- *     hooks downstream don't recompute.
+ * - `unitPrefs`, every `formatX`, and the outer return object are
+ * memoized over the primitive preference dependencies (distance,
+ * speed, temperature, pressure, energy, duration prefs + locale +
+ * precision). Re-renders that don't change those primitives return
+ * identical references, so memoized child components / `useMemo`
+ * hooks downstream don't recompute.
  */
 
 /** Per-call formatter override surface. Mirrors lib `FormatOptions`. */

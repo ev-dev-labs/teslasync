@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 43 — Per-vehicle settings section.
+ * Per-vehicle settings section.
  *
  * Mounted in <VehicleDetailPage> as a section (this page uses the
  * sectional FadeIn pattern, not Tabs). Renders one row per supported
@@ -50,7 +50,7 @@ interface VehicleSettingDescriptor {
 }
 
 /**
- * The 6 Phase-1 keys, mirroring vehicleSettingDefs in
+ * The supported keys mirror vehicleSettingDefs in
  * internal/database/vehicle_settings_repo.go. The order here drives
  * row rendering order; do not reorder unless the i18n labels change.
  */

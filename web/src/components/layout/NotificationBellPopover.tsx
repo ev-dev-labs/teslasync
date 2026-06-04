@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 28 — Notification bell popover.
+ * Notification bell popover.
  *
  * Replaces the bell-as-NavLink pattern with an in-place triage panel that
  * opens from the header bell. Industry pattern: latest 10 unread, plus a
@@ -14,8 +14,8 @@
  *                    push).
  *   - Open trigger:  desktop click → popover. Mobile (viewport ≤ 640 px,
  *                    detected via `useIsMobile`) → direct navigation to
- *                    `/notifications`. Per Blocked Path in the prompt:
- *                    popover positioning conflicts with narrow viewports,
+ *                    `/notifications`. Popover positioning conflicts with
+ *                    narrow viewports,
  *                    so we fall back to the full-page route there.
  *   - Body:          `useUnreadNotifications({ limit: 10 })`. Hook is
  *                    only mounted while the popover is open — Layout is

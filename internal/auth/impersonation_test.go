@@ -1,5 +1,5 @@
-// Phase-46 / Prompt 46 — Tests for the impersonation middleware,
-// store, and helpers in impersonation.go.
+// Tests for the impersonation middleware, store, and helpers in
+// impersonation.go.
 //
 // The store covers Mint/Verify roundtrip, expiry, signature
 // tampering, and self-target rejection. The middleware covers the

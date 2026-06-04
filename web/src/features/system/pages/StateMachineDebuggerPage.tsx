@@ -81,7 +81,7 @@ export default function StateMachineDebuggerPage() {
   const { t } = useTranslation();
   usePageTitle(t('fsm.title', 'FSM Debugger'));
 
-  /* ─── Vehicle selector — global sticky picker (Phase 40 / Prompt 16) ─── */
+  /* ─── Vehicle selector — global sticky picker ─── */
   const { vehicleId: selectedVehicleId, vehicles, setVehicleId: setStoreVehicleId } = useSelectedVehicle();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeId = selectedVehicleId != null ? String(selectedVehicleId) : '';
@@ -123,7 +123,7 @@ export default function StateMachineDebuggerPage() {
     return id ? Number(id) : null;
   });
 
-  /* ─── Phase 40 / Prompt 58 — live/freeze + timeline window ─── */
+  /* ─── Live/freeze + timeline window ─── */
   const initialAt = searchParams.get('at');
   const [isLive, setIsLive] = useState<boolean>(!initialAt);
   const [windowMinutes, setWindowMinutes] = useState(10);
@@ -346,7 +346,7 @@ export default function StateMachineDebuggerPage() {
     [transitions],
   );
 
-  /* ─── Phase 40 / Prompt 58 — derived selection + step navigation ─── */
+  /* ─── Derived selection + step navigation ─── */
   const sortedByTime = useMemo(
     () => [...transitions].sort(
       (a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime(),
@@ -373,7 +373,7 @@ export default function StateMachineDebuggerPage() {
     return sortedByTime.filter((tr) => new Date(tr.ts) >= bufferClearedAt);
   }, [sortedByTime, bufferClearedAt]);
 
-  /* Phase 45 / Prompt 35 — single source of truth for windowing. The page,
+  /* Single source of truth for windowing. The page,
    * toolbar counter, timeline ticks, and inspector empty-state all derive
    * their view of "what's in/outside the active window" from this one call,
    * so the toolbar can never disagree with the timeline again. */
@@ -561,7 +561,7 @@ export default function StateMachineDebuggerPage() {
         <FSMHealthPanel transitions={transitions} />
       </FadeIn>
 
-      {/* ──── Section 2b: AI FSM narrator (Phase-50 / 0048, S7) ──── */}
+      {/* ──── Section 2b: AI FSM narrator ──── */}
       {/* withAiFeature returns null in off mode so this section is
           entirely absent from the DOM when the
           state-machine-debugger-narrator toggle is off or
@@ -651,7 +651,7 @@ export default function StateMachineDebuggerPage() {
         <FSMSubFSMPanel activeSubs={statsData?.active_subs} fsmType={fsmType === 'all' ? 'vehicle' : fsmType} />
       </FadeIn>
 
-      {/* ──── Phase 40 / Prompt 58 — Live controls + state timeline + inspector ──── */}
+      {/* ──── Live controls + state timeline + inspector ──── */}
       <FadeIn delay={0.18}>
         <GlassPanel className="p-4 sm:p-5 space-y-4" data-tour="debugger-timeline">
           <div data-tour="debugger-controls">

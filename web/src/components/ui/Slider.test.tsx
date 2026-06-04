@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 23 — `<Slider>` primitive.
+ * `<Slider>` primitive tests.
  *
  * Validates the bare `<input type="range">` contract: visible label
  * association, formatted value display, `aria-valuetext` for screen

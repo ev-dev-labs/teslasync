@@ -35,7 +35,7 @@ type APICallSink interface {
 // APICallRecord is the wire-format struct passed from LoggedTransport to
 // APICallSink. Defined locally in httputil so the package never imports
 // internal/database or internal/models. The api package adapter
-// (APICallSinkAdapter) converts each record into a *models.APICallLog
+// (APICallSinkAdapter) converts each record into a *teslamodel.APICallLog
 // before handing it to the existing async writer.
 //
 // Fields:

@@ -22,7 +22,6 @@ interface WidgetShellProps {
    * render `<DataFreshnessAuto query={query} />` in the header. Mutually
    * exclusive with the granular `updatedAt`/`isFetching`/`isStale`/`isError`/
    * `onRefresh` props (those win when supplied for backward compatibility).
-   * Phase-40 / Prompt 66.
    */
   query?: FreshnessQuery;
   /** Freshness: ms timestamp from dataUpdatedAt (0 = never) */
@@ -38,13 +37,13 @@ interface WidgetShellProps {
   /**
    * Optional help metadata. When provided AND the widget has a visible
    * `title`, a small "?" tooltip is rendered next to the title with the
-   * provided text/i18nKey. Phase-40 / Prompt 47.
+   * provided text/i18nKey.
    */
   help?: WidgetHelp;
   /**
    * Stable widget identifier. When supplied alongside `dashboardId`, a
    * <PinButton> is rendered in the header so the user can pin this widget
-   * to the top of the dashboard. Phase-40 / Prompt 48.
+   * to the top of the dashboard.
    */
   widgetId?: string;
   /** Dashboard ID — used as the pin context so pins are per-dashboard. */

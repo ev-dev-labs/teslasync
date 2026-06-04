@@ -12,9 +12,9 @@ import (
 )
 
 // =============================================================================
-// Phase-42a/0040 — production wiring tests
+// Production wiring tests
 //
-// Decision #5(a): verify the configured ClientOptions has AutoAckDisabled=true
+// Verify the configured ClientOptions has AutoAckDisabled=true
 // (and the rest of the manual-ack/persistence settings from Decision #2).
 // paho.Client does NOT expose its options post-construction, so the test
 // inspects the *ClientOptions returned by the package-private
@@ -22,20 +22,20 @@ import (
 // AutoAckDisabled / CleanSession / KeepAlive / etc. fields, so this is a
 // genuine value assertion, not a regex grep.
 //
-// Decision #5(b): connection failure is wrapped with the broker URL so triage
+// Connection failure is wrapped with the broker URL so triage
 // from a log line alone identifies which broker the operator should inspect.
 // We force a connection failure by pointing at a closed local TCP port so the
 // test runs offline (no test broker required).
 //
-// Decision #5(c): testcontainers / in-memory paho test broker — neither is
+// testcontainers / in-memory paho test broker — neither is
 // available in this repo's go.mod. The tests therefore skip the
 // connect-success path and rely on the options-inspection seam in #5(a) to
 // verify the manual-ack contract holds at the wire level, plus the
 // connection-failure path in #5(b) for the disconnect/wrap behavior.
 // =============================================================================
 
-// TestProductionPipelineOptions_ManualAckContract pins every setting from
-// Decision #2. This is the test that catches a future refactor accidentally
+// TestProductionPipelineOptions_ManualAckContract pins the manual-ack and
+// persistence settings. This catches a future refactor accidentally
 // dropping SetAutoAckDisabled(true) — without manual ack the PipelineSubscriber
 // would silently lose data on crash + silently drop poison pills (see the
 // manual-ack contract block at mqtt.go:224-236).
@@ -134,9 +134,9 @@ func TestNewProductionPipelineMQTT_RejectsEmptyArgs(t *testing.T) {
 	}
 }
 
-// TestNewProductionPipelineMQTT_ConnectionFailureWrapped exercises Decision
-// #5(b): point at a closed local port to force a connection refused, then
-// assert the returned error wraps the broker URL so an operator can identify
+// TestNewProductionPipelineMQTT_ConnectionFailureWrapped points at a closed
+// local port to force connection refused, then asserts the returned error
+// wraps the broker URL so an operator can identify
 // which broker is unreachable from the log line alone. Also asserts that
 // nothing leaks (returned client + dlq are nil). Runs offline — no real
 // broker required.
@@ -183,7 +183,7 @@ func TestNewProductionPipelineMQTT_ConnectionFailureWrapped(t *testing.T) {
 }
 
 // TestNewProductionPipelineMQTT_ContextCancelledDuringConnect covers the
-// shutdown-during-connect path of Decision #3. We cancel the ctx immediately
+// shutdown-during-connect path. We cancel the ctx immediately
 // so the select branches on ctx.Done() before token.Wait() has any chance
 // to finish — the function MUST disconnect the client and return an error
 // wrapping context.Canceled.

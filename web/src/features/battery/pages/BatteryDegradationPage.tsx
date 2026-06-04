@@ -104,7 +104,7 @@ export default function BatteryDegradationPage() {
   const { t } = useTranslation();
   usePageTitle(t('battery.degradation.title', 'Battery Degradation'));
 
-  /* Vehicle selector — Phase 40 / Prompt 16: header picker is the source of truth */
+  /* Vehicle selector: header picker is the source of truth. */
   const { vehicleId: activeId } = useSelectedVehicle();
   const activeIdStr = activeId != null ? String(activeId) : null;
 
@@ -115,15 +115,15 @@ export default function BatteryDegradationPage() {
   /* Degradation data (for prediction, risk factors, trend) */
   const { data: degradation } = useBatteryDegradation(activeIdStr);
 
-  /* Phase-46 / Prompt 67 — URL-persisted hidden-series state for the
-     trend chart so users can declutter (and share) the projection view. */
+  /* URL-persisted hidden-series state lets users declutter and share
+     the projection view. */
   const trendHidden = useHiddenSeries('battery-degradation-trend');
 
-  /* Phase-43 / Prompt 0023 — backend `range_km` and `odometer` fields are
-     derived SI in km. Convert km → metres → user-pref display via the
-     SI-canonical helper so users with `unit_of_length=mi` see miles
-     (the legacy useSettings.toDistanceDisplay helper expected miles input
-     and would silently double-convert here). */
+  /* Backend `range_km` and `odometer` fields are derived SI in km.
+     Convert km → metres → user-pref display via the SI-canonical helper
+     so users with `unit_of_length=mi` see miles (the legacy
+     useSettings.toDistanceDisplay helper expected miles input and would
+     silently double-convert here). */
   const { unitPrefs, formatEnergy } = useUnits();
   const fromKm = useCallback(
     (km: number): number => convertDistanceFromSI(km * 1000, unitPrefs.distance),
@@ -467,10 +467,10 @@ export default function BatteryDegradationPage() {
                     hide={trendHidden.isHidden('projected')}
                   />
                   {/*
-                    Phase 40 / Prompt 26: brush enables zooming into specific
-                    months of the projection. Standalone chart — no
-                    ChartTimeRangeProvider needed since the range chart below
-                    uses a different X-axis dataKey ("date" vs "label").
+                    Brush enables zooming into specific months of the
+                    projection. Standalone chart — no ChartTimeRangeProvider
+                    needed since the range chart below uses a different X-axis
+                    dataKey ("date" vs "label").
                   */}
                   <ChartBrush dataKey="label" />
                 </ComposedChart>

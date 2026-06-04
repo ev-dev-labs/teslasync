@@ -1,12 +1,9 @@
-// useLogStream — Phase-46 / Prompt 34
-//
 // Subscribe to the admin SSE log tail at GET /admin/logs/stream and
 // surface the rolling event buffer + connection status to the
 // LiveLogsPage. The browser EventSource API can't attach
 // X-Sudo-Token (or any custom header), so we implement the SSE
 // transport on top of fetch + ReadableStream + a hand-rolled parser.
-// That also lets us honour an injected AbortSignal for the
-// route-change abort discipline established in Phase-46 / Prompt 02.
+// That also lets us honor an injected AbortSignal for route-change cleanup.
 //
 // Updates land via requestAnimationFrame batching: zerolog can
 // produce thousands of events per second on a hot system and a naive

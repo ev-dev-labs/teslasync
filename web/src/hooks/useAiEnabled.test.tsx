@@ -1,5 +1,3 @@
-// Phase-50 / 0001 — F0 AI-Off Contract.
-//
 // Unit tests for `useAiEnabled`. Exercises every state path that
 // must yield `false` to satisfy ADR-015's fail-closed posture, plus
 // the single positive path. The hook composes `useSettings`, so we

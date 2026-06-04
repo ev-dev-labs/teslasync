@@ -8,7 +8,7 @@ import { Currency } from '@/components/data-display';
 import { AreaChartWrapper } from '@/components/charts/AreaChartWrapper';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { formatDateShort } from '@/lib/dateFormat';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
 import type { FleetAnalytics, Drive, ChargingSession } from '../types';
 
 /* Relative time helper */
@@ -53,7 +53,7 @@ export function RecentActivity({
   recentCharges?.forEach((s) =>
     activityItems.push({
       type: 'charge',
-      title: `${fmtNumber(s.total_energy_added_wh ?? 0, 1)} kWh ${t('activity.charged', 'charged')}`,
+      title: `${fmtNumber(convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh'), 1)} kWh ${t('activity.charged', 'charged')}`,
       subtitle: `${s.start_soc_pct ?? '?'}% → ${s.end_soc_pct ?? '?'}%${typeof s.cost === 'number' ? ` · ${formatCurrency(s.cost, 2)}` : ''}`,
       time: new Date(s.started_at),
     }),

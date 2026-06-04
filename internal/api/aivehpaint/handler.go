@@ -1,0 +1,265 @@
+package aivehpaint
+
+// Handler for vehicle paint preview drafts.
+//
+// Serves the opt-in SSE draft route at
+// POST /api/v1/ai/vehicles/{vehicleID}/paint-preview/draft. The route stays
+// behind guard.Wrap("vehicle-paint-preview") so off-mode users keep the
+// deterministic vehicle-config surface unchanged (ADR-015 §I3, §I6).
+//
+// The vehicleID and optional body are validated before opening SSE, and the
+// 16 KiB body cap prevents amplification through style_hint.
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"strconv"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/rs/zerolog/log"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
+	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
+	vehiclepaintpreview "github.com/ev-dev-labs/teslasync/internal/ai/strategies/vehicle-paint-preview"
+	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
+	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
+	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
+)
+
+// maxIterations bounds the dispatcher's
+// tool-loop. The strategy is at most draft-then-answer (with
+// optional retries on validator rejection) — a hard ceiling of 6 is
+// generous and matches the aiAutoTripNamingMaxIterations precedent.
+const maxIterations = 6
+
+// maxBodyBytes is the hard cap on the request
+// body. 16 KiB is generous for an optional {style_hint} envelope
+// and defends against amplification or accidental payload bombs.
+const maxBodyBytes = 16 * 1024
+
+// maxStyleHintLen mirrors the tool's
+// paintPreviewMaxStyleHintLen so a body that would be rejected by
+// the tool is rejected by the handler first (faster failure mode +
+// no SSE stream opened for a doomed request).
+const maxStyleHintLen = 80
+
+// request is the JSON body shape the handler
+// accepts. Body is optional (empty body is accepted). StyleHint is
+// optional free-text the LLM may quote when seeding the
+// draft_paint_preview_prompt tool.
+type request struct {
+	StyleHint string `json:"style_hint,omitempty"`
+}
+
+// Handler is the HTTP handler for
+// POST /api/v1/ai/vehicles/{vehicleID}/paint-preview/draft.
+//
+// Stateless beyond its constructor inputs; safe for concurrent use
+// across requests. Construction is in router.go so the dispatcher's
+// tool registry + provider registry are wired once at boot.
+type Handler struct {
+	registry   *provider.Registry
+	tools      *tools.Registry
+	strategy   strategy.Strategy
+	headerName string
+	maxIters   int
+}
+
+// NewHandler constructs the handler. All
+// non-pointer arguments are required; the constructor panics on a
+// nil so the wiring bug surfaces at boot, not at first request.
+//
+// registry:   AI provider registry (decorator chain already applied).
+// toolReg:    process-wide tool registry. MUST contain
+//
+//	draft_paint_preview_prompt (registered by
+//	paint.RegisterVehiclePaintPreviewTools in router.go).
+//
+// strat:      the vehicle-paint-preview Strategy (one per process).
+// headerName: forward-auth header name; used to extract subject for audit.
+func NewHandler(
+	registry *provider.Registry,
+	toolReg *tools.Registry,
+	strat strategy.Strategy,
+	headerName string,
+) *Handler {
+	switch {
+	case registry == nil:
+		panic("aivehpaint: NewHandler: nil provider.Registry")
+	case toolReg == nil:
+		panic("aivehpaint: NewHandler: nil tools.Registry")
+	case strat == nil:
+		panic("aivehpaint: NewHandler: nil strategy.Strategy")
+	}
+	return &Handler{
+		registry:   registry,
+		tools:      toolReg,
+		strategy:   strat,
+		headerName: headerName,
+		maxIters:   maxIterations,
+	}
+}
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// parseURL extracts and validates the
+// vehicleID URL parameter. Pulled out so the unit tests can
+// exercise the parser without constructing a full handler.
+//
+// vehicleID MUST be a positive integer; zero or negative values are
+// rejected with a 400.
+func parseURL(w http.ResponseWriter, r *http.Request) (int64, bool) {
+	raw := chi.URLParam(r, "vehicleID")
+	if raw == "" {
+		httpx.WriteError(w, http.StatusBadRequest, "vehicleID URL parameter is required")
+		return 0, false
+	}
+	id, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("vehicleID must be a positive integer (got %q)", raw))
+		return 0, false
+	}
+	if id <= 0 {
+		httpx.WriteError(w, http.StatusBadRequest, "vehicleID must be > 0")
+		return 0, false
+	}
+	return id, true
+}
+
+// parseBody extracts and validates the
+// optional request JSON body. Empty body is accepted (returns the
+// zero request). On parse failure writes a 4xx and returns false.
+func parseBody(w http.ResponseWriter, r *http.Request) (request, bool) {
+	var req request
+	if r.Body == nil {
+		return req, true
+	}
+	limited := io.LimitReader(r.Body, maxBodyBytes+1)
+	body, err := io.ReadAll(limited)
+	if err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("failed to read request body: %v", err))
+		return req, false
+	}
+	if int64(len(body)) > maxBodyBytes {
+		httpx.WriteError(w, http.StatusRequestEntityTooLarge, fmt.Sprintf("request body exceeds %d byte cap", maxBodyBytes))
+		return req, false
+	}
+	if len(body) == 0 {
+		return req, true
+	}
+	if err := json.Unmarshal(body, &req); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
+		return req, false
+	}
+	if len([]rune(req.StyleHint)) > maxStyleHintLen {
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("style_hint must be at most %d characters", maxStyleHintLen))
+		return req, false
+	}
+	return req, true
+}
+
+// ServeHTTP implements [http.Handler]. The vehicleID is parsed from
+// the URL, the optional body is parsed, the dispatcher is invoked,
+// and the SSE stream is closed via the dispatcher's deferred
+// WriteDone. Every error path either writes a structured frame
+// onto the SSE stream (when the writer has been opened) or a plain
+// JSON 4xx/5xx (before it has).
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// 1) Parse + validate URL parameters and optional body.
+	vehicleID, ok := parseURL(w, r)
+	if !ok {
+		return
+	}
+	req, ok := parseBody(w, r)
+	if !ok {
+		return
+	}
+
+	// 2) Resolve provider via the registry. Per-request resolution
+	// honours mid-flight settings changes (model swap, mode flip)
+	// without restart. A resolve failure must NOT open the SSE
+	// stream — emit JSON 502 so the frontend falls back
+	// gracefully.
+	if _, err := h.registry.For(r.Context(), vehiclepaintpreview.FeatureID); err != nil {
+		log.Error().Err(err).Msg("ai vehicle-paint-preview: provider.For failed")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
+		return
+	}
+
+	// 3) Subject + feature-id annotations for audit/rate-limit.
+	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
+	ctx := provider.WithSubject(r.Context(), subject)
+	ctx = provider.WithFeatureID(ctx, vehiclepaintpreview.FeatureID)
+
+	// 4) Open the SSE writer.
+	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(vehiclepaintpreview.FeatureID))
+	if err != nil {
+		log.Error().Err(err).Msg("ai vehicle-paint-preview: stream.New failed (non-flushable writer)")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
+		return
+	}
+
+	// 5) Resolve the per-feature provider from the (now-annotated)
+	// context.
+	prov, err := h.registry.For(ctx, vehiclepaintpreview.FeatureID)
+	if err != nil {
+		log.Error().Err(err).Msg("ai vehicle-paint-preview: provider.For (post-stream) failed")
+		_ = sseW.WriteError(err)
+		return
+	}
+
+	// 6) Build the dispatcher with the deny-all confirm hook.
+	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
+
+	// 7) Synthesise the user message. The handler is NOT
+	// conversational — there is no chat history. We hand the LLM
+	// a deterministic prompt that asks it to call the propose-only
+	// tool and narrate the result. The vehicleID from the URL is
+	// the authoritative scope; the system prompt + refusal_other_vehicle
+	// golden prove the LLM refuses cross-vehicle requests.
+	styleClause := ""
+	if req.StyleHint != "" {
+		styleClause = fmt.Sprintf(" Prefer the %q style if it fits.", req.StyleHint)
+	}
+	userMsg := fmt.Sprintf(
+		"Propose a paint-preview image prompt for vehicle %d.%s "+
+			"Call draft_paint_preview_prompt with the vehicle_id, your proposed paint color "+
+			"name, and the optional style hint. Narrate the result in one or two short "+
+			"sentences grounded strictly in the tool's evidence, naming the proposed color "+
+			"and one short rationale referencing the vehicle's model / trim / current color "+
+			"(NEVER the display name, VIN, license plate, or location). Remember: you NEVER "+
+			"save, upload, or apply anything; you NEVER call an external image-generation "+
+			"provider; the user reviews the structured proposal in the AI panel and applies "+
+			"the new paint color via the existing manual per-vehicle Color setting themselves.",
+		vehicleID, styleClause,
+	)
+
+	// 8) Run the dispatcher.
+	in := strategy.StrategyInput{
+		LastMessage: userMsg,
+		History:     nil,
+	}
+	if err := d.Run(ctx, h.strategy, in, sseW); err != nil {
+		// A canceled context is a normal client-disconnect /
+		// SSE-cancel signal; don't pollute logs at error level.
+		if errors.Is(err, dispatch.ErrConfirmationDenied) {
+			log.Info().Int64("vehicle_id", vehicleID).Msg("ai vehicle-paint-preview: dispatcher denied confirm")
+			return
+		}
+		log.Error().Err(err).
+			Int64("vehicle_id", vehicleID).
+			Msg("ai vehicle-paint-preview: dispatcher returned error")
+	}
+}
+
+// Compile-time assertion: Handler satisfies
+// http.Handler.
+var _ http.Handler = (*Handler)(nil)

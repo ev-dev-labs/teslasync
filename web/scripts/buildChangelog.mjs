@@ -1,23 +1,23 @@
 #!/usr/bin/env node
 /**
- * Phase-40 / Prompt 67 — Changelog generator.
+ * Changelog generator.
  *
  * Parses the repo-root CHANGELOG.md (single source of truth) and emits
  * web/src/generated/changelog.ts as a typed, immutable list. The generated
  * file is consumed by:
- *   - features/system/pages/ChangelogPage.tsx        (full timeline view)
- *   - components/feedback/ReleaseNotes.tsx           (collapsible cards)
- *   - components/feedback/ChangelogModal.tsx         ("what's new since X")
- *   - hooks/useChangelog.ts                          (unseen-version tracking)
+ * - features/system/pages/ChangelogPage.tsx (full timeline view)
+ * - components/feedback/ReleaseNotes.tsx (collapsible cards)
+ * - components/feedback/ChangelogModal.tsx ("what's new since X")
+ * - hooks/useChangelog.ts (unseen-version tracking)
  *
  * The generated file is committed (mirroring web/src/lib/routeRegistry.ts) so
  * PR diffs surface changelog drift. `prebuild` / `predev` re-run this script
  * automatically; commit the regenerated diff alongside CHANGELOG.md edits.
  *
  * Source format:
- *   ## [<version>] - <date>           top-level version header
- *   ### <section>                     canonical sub-section (Added/Changed/...)
- *   - <bullet>                        change item (markdown-as-text)
+ * ## [<version>] - <date> top-level version header
+ * ### <section> canonical sub-section (Added/Changed/...)
+ * - <bullet> change item (markdown-as-text)
  *
  * The parser is lenient by design — TeslaSync's CHANGELOG.md uses emoji-
  * decorated section headers (e.g. "### 🚀 New Features", "### 🐛 Bug Fixes")

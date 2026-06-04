@@ -1,5 +1,5 @@
 /**
- * Phase-45 / Prompt 06 — Centralized broadcast topic registry.
+ * Centralized broadcast topic registry.
  *
  * String constants that mirror the discriminator values in {@link
  * BroadcastMessage} (see `./broadcast.ts`). Publishers and subscribers
@@ -59,8 +59,8 @@ export const TOPICS = {
   TOUR_COMPLETED: 'tour.completed',
   TOUR_RESET: 'tour.reset',
   /**
-   * Phase-46 / Prompt 61 — A user clicked "Replay" on a tour from the
-   * Settings → Product tours panel (or any other UI surface). Receivers
+   * A user clicked "Replay" on a tour from the Settings → Product tours
+   * panel (or any other UI surface). Receivers
    * should clear their per-tour completion flag and start the tour. The
    * publisher already does this for the local tab; this topic exists so
    * peer tabs stay in sync.
@@ -79,7 +79,7 @@ export const TOPICS = {
   FORM_DRAFT_ACQUIRED: 'formDraft.acquired',
   FORM_DRAFT_RELEASED: 'formDraft.released',
   FORM_DRAFT_COMMITTED: 'formDraft.committed',
-  // ── Edit leases (Phase-46 / Prompt 66 — useEditLease) ────────────────────
+  // ── Edit leases ──────────────────────────────────────────────────────────
   /** A tab is asking who currently owns the edit lease for a resource. */
   LEASE_REQUEST: 'lease.request',
   /** A tab is asserting it owns the edit lease (or has just taken over). */
@@ -88,7 +88,7 @@ export const TOPICS = {
   LEASE_RELEASED: 'lease.released',
   // ── TanStack Query ───────────────────────────────────────────────────────
   QUERY_INVALIDATE: 'queryInvalidate',
-  // ── Settings (Phase-45 / Prompt 06) ──────────────────────────────────────
+  // ── Settings ─────────────────────────────────────────────────────────────
   /**
    * Umbrella event for any AppSettings mutation (units, locale, decimals,
    * theme persistence, currency, etc). Subscribers should NOT trust the

@@ -40,7 +40,7 @@ interface TourState {
  * the hook still works for ad-hoc tours but does not persist any state.
  *
  * The legacy single global `teslasync-tour-completed` flag is no longer
- * written by this hook — call `resetAllTours()` once to clear it for
+ * written by this hook — call `resetAllTours` once to clear it for
  * existing users.
  */
 export interface TourPersistenceContext {

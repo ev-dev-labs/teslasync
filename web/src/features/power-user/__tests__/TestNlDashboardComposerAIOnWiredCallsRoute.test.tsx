@@ -1,12 +1,9 @@
-// Phase-50 / 0059 — PU3 Natural-language dashboard composer.
-// Phase-50 / W1 inline wiring (per slice prompt 0059) —
-// on-mode wiring test proving the "Draft dashboard" button
+// Natural-language dashboard composer on-mode wiring test. Proves the "Draft dashboard" button
 // opens an SSE stream against the registered backend route
 // POST /api/v1/ai/power/dashboard/draft.
 //
 // `TestNlDashboardComposerAIOnWiredCallsRoute` is the
-// load-bearing positive wiring proof for slice 0059's W1
-// inline addendum. It mounts the AINLDashboardComposer
+// load-bearing positive wiring proof. It mounts the AINLDashboardComposer
 // component with ai_mode='cloud' + the per-feature toggle on,
 // stubs global fetch with a deterministic SSE byte stream,
 // types a prompt, clicks the Draft dashboard button, and
@@ -43,8 +40,7 @@
 //      the npm test runner.
 //
 // The test name MUST stay
-// `TestNlDashboardComposerAIOnWiredCallsRoute` per the W1
-// inline addendum naming contract.
+// `TestNlDashboardComposerAIOnWiredCallsRoute` so targeted test commands keep working.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';

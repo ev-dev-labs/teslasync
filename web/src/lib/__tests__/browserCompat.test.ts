@@ -8,7 +8,7 @@ import {
 } from '../browserCompat'
 
 /**
- * Phase-46 / Prompt 63 — browserCompat helper contract.
+ * browserCompat helper contract.
  *
  * Each test redefines a single global to simulate an unsupported
  * browser. Globals are restored via the original-value snapshot in

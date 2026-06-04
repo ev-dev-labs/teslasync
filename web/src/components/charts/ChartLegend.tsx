@@ -39,7 +39,7 @@ export interface ChartLegendProps {
   /**
    * Optional toggle source. When omitted, the legend pulls state from the
    * surrounding `<ChartContainer chartKey="…">` via
-   * {@link useChartHiddenSeries} (Phase-46 / Prompt 67). When neither a
+   * {@link useChartHiddenSeries}. When neither a
    * `state` prop nor a context provider is present, the legend renders
    * passively (no click-to-hide UX, no dimming).
    */

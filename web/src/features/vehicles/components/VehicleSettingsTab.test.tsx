@@ -1,11 +1,8 @@
 /**
- * Phase-46 / Prompt 43 — VehicleSettingsTab unit tests.
+ * VehicleSettingsTab unit tests.
  *
- * Co-located alongside the component (NOT under __tests__/) because
- * the gate's allowed-files regex matches the substring
- * 'features/vehicles/components/VehicleSettingsTab' — moving the
- * test into __tests__/VehicleSettingsTab.test.tsx would push the
- * file out of scope.
+ * Co-located alongside the component because path-scoped checks match
+ * 'features/vehicles/components/VehicleSettingsTab' as a contiguous substring.
  *
  * Coverage:
  *   1. Loading skeleton renders while the GET is in flight.

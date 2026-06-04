@@ -100,33 +100,33 @@ func AllowedDecision() Decision {
 
 // FeatureTier is the canonical feature tier code (e.g. "U", "GEN",
 // "M") that the per-feature quota table is keyed by. Tier strings
-// match the methodology slice prefix exactly so adding a new tier
+// match the feature registry prefix exactly so adding a new tier
 // requires touching one place in [DefaultQuotaForTier] only.
 type FeatureTier string
 
-// Tier constants mirror the Phase-50 methodology slice prefixes.
+// Tier constants mirror the feature-tier prefixes.
 // Keep in lockstep with [internal/ai/features.Feature.Tier].
 const (
-	TierFoundation     FeatureTier = "F"
-	TierUpgrade        FeatureTier = "U"
-	TierNew            FeatureTier = "N"
-	TierDriving        FeatureTier = "D"
-	TierCharging       FeatureTier = "C"
-	TierThermal        FeatureTier = "T"
-	TierAlerts         FeatureTier = "A"
-	TierGeofence       FeatureTier = "G"
-	TierAnalytics      FeatureTier = "X"
-	TierSystem         FeatureTier = "S"
-	TierMaintenance    FeatureTier = "M"
-	TierPrivacy        FeatureTier = "P"
-	TierVoice          FeatureTier = "V"
-	TierPowerUser      FeatureTier = "PU"
-	TierGenerative     FeatureTier = "GEN"
-	TierMachineLearn   FeatureTier = "ML"
+	TierFoundation   FeatureTier = "F"
+	TierUpgrade      FeatureTier = "U"
+	TierNew          FeatureTier = "N"
+	TierDriving      FeatureTier = "D"
+	TierCharging     FeatureTier = "C"
+	TierThermal      FeatureTier = "T"
+	TierAlerts       FeatureTier = "A"
+	TierGeofence     FeatureTier = "G"
+	TierAnalytics    FeatureTier = "X"
+	TierSystem       FeatureTier = "S"
+	TierMaintenance  FeatureTier = "M"
+	TierPrivacy      FeatureTier = "P"
+	TierVoice        FeatureTier = "V"
+	TierPowerUser    FeatureTier = "PU"
+	TierGenerative   FeatureTier = "GEN"
+	TierMachineLearn FeatureTier = "ML"
 )
 
 // DefaultQuotaForTier returns the conservative default quota for a
-// tier per Phase-50 methodology PD6 + the F9 prompt's table:
+// tier:
 //
 //	Conversational (U/N/D/C/T/A/G/X/S/P/V/PU/F): burst=2, pm=20, pd=200
 //	Generative one-shot (GEN):                   burst=1, pm=5,  pd=30

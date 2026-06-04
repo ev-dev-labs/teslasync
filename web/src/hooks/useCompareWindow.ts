@@ -75,8 +75,6 @@ function startOfYear(d: Date): Date {
  * `useCompareWindow` — returns ranges + localised labels for "this period vs
  * previous period" comparisons. Used together with `<Delta>` to render
  * "↑ 12% vs last week"-style indicators.
- *
- * Phase-40 / Prompt 45.
  */
 export function useCompareWindow(window: CompareWindow, anchor: Date = new Date()): CompareWindowResult {
   const { t } = useTranslation();

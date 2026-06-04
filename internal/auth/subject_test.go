@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 57 — Auth subject + recorder middleware tests.
+// Auth subject and recorder middleware tests.
 //
 // Covers:
 //

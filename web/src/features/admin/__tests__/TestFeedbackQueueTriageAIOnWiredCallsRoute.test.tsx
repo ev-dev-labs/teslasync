@@ -1,12 +1,9 @@
-// Phase-50 / 0046 — S5 Feedback queue triage.
-// Phase-50 / W1 inline wiring (per slice prompt 0046) — on-mode
-// wiring test proving the "Suggest triage" button opens an SSE
-// stream against the registered backend route
+// Feedback queue triage AI wiring test.
+// Proves the "Suggest triage" button opens an SSE stream against
 // POST /api/v1/ai/feedback/triage/draft.
 //
-// `TestFeedbackQueueTriageAIOnWiredCallsRoute` is the load-
-// bearing positive wiring proof for slice 0046's W1 inline
-// addendum. It mounts the AIFeedbackQueueTriage component with
+// `TestFeedbackQueueTriageAIOnWiredCallsRoute` mounts the
+// AIFeedbackQueueTriage component with
 // ai_mode='cloud' + the per-feature toggle on, stubs global
 // fetch with a deterministic SSE byte stream, clicks the
 // "Suggest triage" button, and asserts:
@@ -24,13 +21,10 @@
 //   3. A second click while `state === 'streaming'` is a no-op
 //      — the second fetch call is NOT enqueued (the
 //      double-submit guard inside useAiStream + the visual
-//      `disabled` mirror it from canDraft). This proves W1
-//      Rule A — the disabled prop is a computed expression that
-//      reacts to state.
+//      `disabled` mirror it from canDraft).
 //   4. The "Suggest triage" button is `disabled` when the
 //      feedback id is missing OR invalid (zero, negative,
-//      non-finite) — proving W1 Rule A's computed-expression
-//      guarantee across multiple input states.
+//      non-finite).
 //   5. The off-mode invariant test
 //      (`TestFeedbackTriageAIOffManualLabelsWork`)
 //      continues to pass unchanged — wiring MUST NOT regress the
@@ -38,9 +32,7 @@
 //      sibling file and is exercised independently by the npm
 //      test runner.
 //
-// The test name MUST stay
-// `TestFeedbackQueueTriageAIOnWiredCallsRoute` per the W1
-// inline addendum naming contract.
+// The test name is part of the cross-stack wiring contract.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
@@ -235,13 +227,11 @@ describe('TestFeedbackQueueTriageAIOnWiredCallsRoute (feedback-queue-triage on-m
   });
 
   it('TestFeedbackQueueTriageAIOnWiredCallsRoute: Suggest triage button is disabled when the feedback id is missing (computed, not literal)', () => {
-    // This test guards W1 Rule A from the slice prompt: the
-    // primary action button's `disabled` prop MUST be a computed
-    // expression (here: `!canDraft`), not a literal `disabled` /
-    // `disabled={true}`. We prove the dynamic behaviour by
-    // rendering the component without a feedback id and
-    // confirming the button is disabled while the gate is open
-    // — same code path, different prop input.
+    // The primary action button's `disabled` prop must be computed
+    // (here: `!canDraft`), not a literal `disabled` /
+    // `disabled={true}`. Rendering without a feedback id proves the
+    // dynamic behavior while the gate is open — same code path,
+    // different prop input.
     mockUseSettings.mockReturnValue(
       settingsPayload({
         ai_mode: 'cloud',

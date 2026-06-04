@@ -1,21 +1,19 @@
-// Phase-50 / 0062 — ML1 Learned per-vehicle anomaly baselines.
+// Tests for the deterministic per-vehicle anomaly baseline trainer cover:
 //
-// baseline_test.go covers:
-//
-//   1. The trainer's wiring contract (nil source ⇒ ErrNoSource;
-//      vehicle_id <= 0 ⇒ empty; days clamped to MaxDays).
-//   2. Per-signal fallback semantics (sample count below MinSamples
-//      ⇒ SourceSafeRangesFallback with the static envelope's
-//      bounds; sample count missing entirely ⇒ same fallback).
-//   3. Per-signal learned semantics (sample count >= MinSamples
-//      ⇒ SourceLearned with p5/p95 bounds clamped to the static
-//      envelope; mean/stddev populated; SampleCount honest).
-//   4. Determinism: Train() output is alphabetically ordered by
-//      signal name across calls — the AI tool's JSON envelope
-//      depends on this.
-//   5. CurrentEffectiveEnvelope is byte-stable and always emits
-//      SourceSafeRangesFallback for every static signal (today's
-//      "no learned baselines persisted" contract).
+//  1. The trainer's wiring contract (nil source ⇒ ErrNoSource;
+//     vehicle_id <= 0 ⇒ empty; days clamped to MaxDays).
+//  2. Per-signal fallback semantics (sample count below MinSamples
+//     ⇒ SourceSafeRangesFallback with the static envelope's
+//     bounds; sample count missing entirely ⇒ same fallback).
+//  3. Per-signal learned semantics (sample count >= MinSamples
+//     ⇒ SourceLearned with p5/p95 bounds clamped to the static
+//     envelope; mean/stddev populated; SampleCount honest).
+//  4. Determinism: Train() output is alphabetically ordered by
+//     signal name across calls — the AI tool's JSON envelope
+//     depends on this.
+//  5. CurrentEffectiveEnvelope is byte-stable and always emits
+//     SourceSafeRangesFallback for every static signal (today's
+//     "no learned baselines persisted" contract).
 package anomaly
 
 import (

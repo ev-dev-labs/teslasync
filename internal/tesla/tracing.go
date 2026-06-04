@@ -1,7 +1,7 @@
-// Package tesla — tracing helpers.
+// Package tesla contains tracing helpers.
 //
-// Phase-44 / Prompt 0013: every exported method that initiates a Tesla
-// Fleet API call, OAuth exchange, or Vehicle Command Proxy call opens an
+// Every exported method that initiates a Tesla Fleet API call, OAuth
+// exchange, or Vehicle Command Proxy call opens an
 // OpenTelemetry span so the entire car → Fleet API → DB hop is a single
 // trace.
 //

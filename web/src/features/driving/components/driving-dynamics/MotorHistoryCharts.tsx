@@ -35,7 +35,7 @@ export default function MotorHistoryCharts({ motorHistory }: MotorHistoryChartsP
   const { t } = useTranslation();
   const { formatTime } = useDateFormat();
 
-  // Phase-46 / Prompt 67 — URL-persisted hidden-series state for the
+  // URL-persisted hidden-series state for the
   // power-vs-regen trace; users often want to isolate one or the other
   // when looking at a regen-heavy descent or a sustained throttle pull.
   const powerHidden = useHiddenSeries('motor-power-history');

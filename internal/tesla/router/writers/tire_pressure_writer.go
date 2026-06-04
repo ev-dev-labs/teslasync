@@ -16,9 +16,7 @@ import (
 
 // tirePressureColumnByField is the static field→column map for
 // destination tire_pressure_snapshot. Built at file-edit time from
-// routing.yaml entries with `dest: tire_pressure_snapshot`
-// (8 routes — see the AUDIT_EVIDENCE section of phase-42a/0014's
-// log for the verbatim extraction).
+// routing.yaml entries with `dest: tire_pressure_snapshot`.
 //
 // The 8 routed fields decompose into TWO families that the writer
 // must persist DIFFERENTLY:
@@ -36,19 +34,18 @@ import (
 //     lines 917-922 explicitly assign the epoch→TIMESTAMPTZ
 //     conversion to THIS writer:
 //
-//       "the tire_pressure_snapshots writer converts to TIMESTAMPTZ
-//       when populating the per-corner *_last_seen_at columns.
-//       UnitKindNone so normalize.toSI is a pass-through — the
-//       writer owns the epoch→timestamp conversion."
+//     "the tire_pressure_snapshots writer converts to TIMESTAMPTZ
+//     when populating the per-corner *_last_seen_at columns.
+//     UnitKindNone so normalize.toSI is a pass-through — the
+//     writer owns the epoch→timestamp conversion."
 //
 //     snapshotWriter.bindSnapshotValue rejects time.Time, so the
 //     timestamp branch CANNOT delegate; it implements its own
 //     INSERT path that mirrors snapshot_base.go byte-for-byte
 //     except for the time.Time bind. See writeTimestamp below.
 //
-// Per phase-42a prompt 0014 Decision #3 (mirrors prompt 0012/0013)
-// this map is a static var, NOT a runtime read of routing.yaml: the
-// routing layer's loader already validated every entry at process
+// This map is a static declaration, not a runtime read of routing.yaml:
+// the routing layer's loader already validated every entry at process
 // start, the per-payload hot path must not re-parse a 1000-line
 // YAML file, and a compile-time declaration here lets the reflective
 // coverage test in tire_pressure_writer_test.go catch any drift
@@ -108,8 +105,8 @@ var tirePressureTimestampColumns = map[string]struct{}{
 }
 
 // tirePressureColumnFor is the columnFor callback supplied to
-// snapshotWriter per phase-42a prompt 0014 Decision #2. Closes over
-// tirePressureColumnByField so the snapshot helper has a single
+// snapshotWriter. It closes over tirePressureColumnByField so the
+// snapshot helper has a single
 // source-of-truth lookup; ok=false is returned for any field NOT
 // routed here (the snapshot helper then errors out loudly per its
 // drop-loud contract — see snapshot_base.go's columnFor godoc).
@@ -119,11 +116,10 @@ func tirePressureColumnFor(field string) (string, bool) {
 }
 
 // tirePressureWriter is the router.Writer for destination
-// tire_pressure_snapshot. It composes snapshotWriter for the
-// 4 pressure (DOUBLE PRECISION) routes per phase-42a prompt 0014
-// Decision #2 and implements its own INSERT path for the 4
-// last_seen_at (TIMESTAMPTZ) routes because snapshotWriter rejects
-// time.Time bindings.
+// tire_pressure_snapshot. It composes snapshotWriter for the four
+// pressure (DOUBLE PRECISION) routes and implements its own INSERT path
+// for the four last_seen_at (TIMESTAMPTZ) routes because snapshotWriter
+// rejects time.Time bindings.
 //
 // The timestamp branch deliberately mirrors snapshot_base.go's SQL
 // shape, identifier sanitisation, error-wrapping format, and
@@ -291,11 +287,9 @@ func coerceEpochToTime(v any) (time.Time, error) {
 }
 
 // NewTirePressureWriter constructs the production tire-pressure
-// snapshot writer. Returns the router.Writer for destination
-// tire_pressure_snapshot (constructor signature is locked by
-// phase-42a prompt 0014 Decision #1).
+// snapshot writer for destination tire_pressure_snapshot.
 //
-// Per Decision #2 the writer composes snapshotWriter for the four
+// The writer composes snapshotWriter for the four
 // pressure (DOUBLE PRECISION) routes; the four last_seen_at
 // (TIMESTAMPTZ) routes are owned by writeTimestamp because
 // snapshotWriter rejects time.Time bindings. See

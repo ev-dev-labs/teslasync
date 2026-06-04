@@ -1,4 +1,4 @@
-// Package user models the user domain (account, preferences, auth state). groups domain entities and value objects shared across bounded contexts.
+// Package user models accounts, preferences, auth state, and shared value objects.
 //
 // Layer: domain
 //

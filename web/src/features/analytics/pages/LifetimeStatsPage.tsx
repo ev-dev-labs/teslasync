@@ -53,7 +53,7 @@ export default function LifetimeStatsPage() {
   const achievements = stats?.achievements ?? [];
   const unlockedCount = achievements.filter(a => a.unlocked).length;
 
-  // ── Phase-40 / Prompt 63: deep-link `?achievement={id}` ──────────────────
+  // Deep-link `?achievement={id}`.
   // When the lifetime page mounts (or the query param changes) with a target
   // achievement id, scroll the matching badge into view and apply a 3-second
   // pulse highlight. After the pulse, strip the query param via `replace`

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Phase-46 / Prompt 13 — chart accessibility audit.
+// chart accessibility audit.
 //
-// Walks `web/src/**` and fails if any `<ChartContainer ...>` JSX
+// Walks `web/src/**` and fails if any `<ChartContainer...>` JSX
 // opening tag is missing the `ariaLabel` prop (REQUIRED), or — when
 // `data` is supplied — its companion `dataColumns` prop. When `data`
 // is absent the caller MUST justify the omission with a
@@ -12,11 +12,11 @@
 // ---------------
 // Recharts renders pure SVG with no semantic structure. Screen-reader
 // users hear "graphic" and nothing else; Windows High Contrast users
-// see SVG strokes collapse to monochrome line noise. Phase-46 / 13
+// see SVG strokes collapse to monochrome line noise. 
 // fixes both at the source by:
-//   1. Always exposing an `aria-label` summary on the chart figure;
-//   2. Rendering a visually-hidden `<table>` (made visible in
-//      forced-colors mode) carrying the same data the chart shows.
+// 1. Always exposing an `aria-label` summary on the chart figure;
+// 2. Rendering a visually-hidden `<table>` (made visible in
+// forced-colors mode) carrying the same data the chart shows.
 // This audit locks the contract in so a regression can't ship.
 //
 // Allowed escape hatch

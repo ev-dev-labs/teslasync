@@ -1,7 +1,7 @@
 /**
- * NotificationGroupRow — Phase-46 / Prompt 27.
+ * Renders one server-aggregated notification thread.
  *
- * Renders one server-aggregated notification thread (a group of repeated
+ * Represents a group of repeated
  * deliveries for the same alert rule + severity). Composes the existing
  * `NotificationRow` so the latest member always renders identically to a
  * row in the flat view; the grouping affordances live OUTSIDE that row:

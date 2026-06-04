@@ -5,9 +5,8 @@
  * the day's status + (optional) summary in a Popover. Caption shows
  * overall uptime % across the window.
  *
- * Phase 1 callers typically pass synthesised data (today = current
- * status, prior days = healthy by default) until the backend gains
- * a real day-by-day health-history endpoint in Phase 2.
+ * Some callers pass synthesized data (today = current status, prior days
+ * = healthy by default) until day-by-day health history is available.
  */
 
 import { useMemo } from 'react'

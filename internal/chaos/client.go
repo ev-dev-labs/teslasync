@@ -1,8 +1,6 @@
 // Package chaos provides a scripted fault-injection harness for
 // TeslaSync's runtime dependencies (MQTT, Redis, Postgres).
 //
-// Phase-49 / p49-chaos.
-//
 // The harness drives Toxiproxy (https://github.com/Shopify/toxiproxy) —
 // a programmable TCP proxy that can inject latency, drops, and bandwidth
 // limits between TeslaSync and its backing services. It is intentionally

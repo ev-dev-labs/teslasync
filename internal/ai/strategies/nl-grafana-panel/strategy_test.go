@@ -1,5 +1,3 @@
-// Phase-50 / 0058 — PU2 Natural-language Grafana panel.
-//
 // Unit tests for the nl-grafana-panel Strategy. Mirrors the shape
 // of nl-sql-playground's strategy_test.go (the closest precedent:
 // a propose-only DTO drafter strategy with a deny-all redaction
@@ -143,8 +141,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs preferred-greeting or per-vehicle
-// preferences ships.
+// a feature needs preferred-greeting or per-vehicle preferences.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -161,9 +158,8 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 // hands the dispatcher PolicyAlertBuilder wrapped through the
 // F4↔F8 adapter. PolicyAlertBuilder is a DENY-BY-DEFAULT policy:
 // Allow == nil so EVERY PII class — VIN, lat/long, addresses,
-// place names, AND vehicle-name — is tagged round-trip. The slice
-// prompt explicitly mandates "Allowed classes: none; schema and
-// metric metadata are sufficient."
+// place names, AND vehicle-name — is tagged round-trip. Schema and
+// metric metadata are sufficient for this strategy.
 func TestStrategy_RedactionPolicyAlertBuilder(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -193,7 +189,7 @@ func TestStrategy_EvalGoldensReturnsNil(t *testing.T) {
 	}
 }
 
-// --- helpers ---------------------------------------------------------
+// Helpers.
 
 func contains(s, sub string) bool {
 	return len(s) >= len(sub) && (s == sub || indexOf(s, sub) >= 0)

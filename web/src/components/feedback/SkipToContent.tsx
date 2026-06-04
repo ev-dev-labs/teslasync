@@ -18,7 +18,7 @@ import { VisuallyHidden } from '@/components/a11y';
  * `sr-only` utility (enforced by `audit:sr-only`). The `focus:*`
  * utilities below position + style the link's visible-on-focus state.
  *
- * Phase-46 / Prompt 60. Audit anchor: skipToContent|skip.to.content.
+ * Audit anchor: skipToContent|skip.to.content.
  */
 export function SkipToContent() {
   const { t } = useTranslation();

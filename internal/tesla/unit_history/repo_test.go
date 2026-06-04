@@ -485,11 +485,11 @@ type recordedExec struct {
 }
 
 type fakeDBTX struct {
-	mu       sync.Mutex
-	execs    []recordedExec
-	queries  []recordedExec
-	scanFn   func(args ...any) error
-	execErr  error
+	mu      sync.Mutex
+	execs   []recordedExec
+	queries []recordedExec
+	scanFn  func(args ...any) error
+	execErr error
 }
 
 func (f *fakeDBTX) Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {

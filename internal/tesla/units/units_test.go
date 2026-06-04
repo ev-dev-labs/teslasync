@@ -6,8 +6,7 @@ import (
 	"testing"
 )
 
-// TestToSI is the table-driven coverage for ToSI. Per the prompt's
-// minimum table requirements:
+// TestToSI covers the required conversion matrix:
 //
 //	5 distance fields x {miles, km}
 //	5 temperature fields x {F, C}
@@ -45,7 +44,7 @@ func TestToSI(t *testing.T) {
 		eps       float64
 		wantErrIs error
 	}{
-		// --- DISTANCE: fixed-mile fields (Odometer, RatedRange, etc.) ---
+		// Fixed-mile fields: Odometer, RatedRange, etc.
 		// These fields are ALWAYS emitted in miles over the wire
 		// regardless of SettingDistanceUnit; the active arg must be
 		// ignored. Mirror the TpmsPressure fixed-bar coverage pattern:
@@ -68,7 +67,7 @@ func TestToSI(t *testing.T) {
 		{name: "SelfDrivingMilesSinceReset/active=mi_treated_as_mi", field: "SelfDrivingMilesSinceReset", raw: 25, active: ActiveUnitMiles, want: 25 * 1609.344, eps: epsTight},
 		{name: "SelfDrivingMilesSinceReset/active=km_treated_as_mi", field: "SelfDrivingMilesSinceReset", raw: 25, active: ActiveUnitKilometers, want: 25 * 1609.344, eps: epsTight},
 
-		// --- TEMPERATURE: 5 fields x {F, C} = 10 rows ---
+		// Temperature fields.
 		{name: "DiHeatsinkTR/F", field: "DiHeatsinkTR", raw: 32, active: ActiveUnitFahrenheit, want: 0, eps: epsTight},
 		{name: "DiHeatsinkTR/C", field: "DiHeatsinkTR", raw: 25, active: ActiveUnitCelsius, want: 25, eps: epsTight},
 		{name: "DiStatorTempR/F", field: "DiStatorTempR", raw: 212, active: ActiveUnitFahrenheit, want: 100, eps: epsLoose},
@@ -80,7 +79,7 @@ func TestToSI(t *testing.T) {
 		{name: "OutsideTemp/F", field: "OutsideTemp", raw: -40, active: ActiveUnitFahrenheit, want: -40, eps: epsTight},
 		{name: "OutsideTemp/C", field: "OutsideTemp", raw: 0, active: ActiveUnitCelsius, want: 0, eps: epsTight},
 
-		// --- PRESSURE (TpmsPressure*): always bar over the wire,
+		// TpmsPressure* fields are always bar over the wire,
 		// regardless of SettingTirePressureUnit (the user setting only
 		// controls the in-car display unit, not the wire format). The
 		// active arg is therefore ignored for these fields — both the
@@ -99,12 +98,12 @@ func TestToSI(t *testing.T) {
 		// depend on unit-history context.
 		{name: "TpmsPressureFl/no_active_still_converts", field: "TpmsPressureFl", raw: 3.15, active: "", want: 315000, eps: epsTight},
 
-		// --- SPEED: VehicleSpeed x {mi, km} (prompt minimum) + CruiseSetSpeed for breadth ---
+		// Speed fields.
 		{name: "VehicleSpeed/mph_to_ms", field: "VehicleSpeed", raw: 60, active: ActiveUnitMiles, want: 60 * 0.44704, eps: epsLoose},
 		{name: "VehicleSpeed/kmh_to_ms", field: "VehicleSpeed", raw: 100, active: ActiveUnitKilometers, want: 100 * (1000.0 / 3600.0), eps: epsLoose},
 		{name: "CruiseSetSpeed/mph_to_ms", field: "CruiseSetSpeed", raw: 70, active: ActiveUnitMiles, want: 70 * 0.44704, eps: epsLoose},
 
-		// --- ERROR PATHS ---
+		// Error paths.
 		// The Odometer no_active / wrong_unit cases moved to the
 		// fixed-mile success arm above. VehicleSpeed retains its
 		// active-unit-required contract since speed follows the user
@@ -173,8 +172,8 @@ func TestToSI_PurityNoMutation(t *testing.T) {
 }
 
 // TestActiveUnit_StringValuesStable pins the wire-format string of
-// every ActiveUnit constant. The unit-history layer (prompt 0022)
-// persists ActiveUnit as a TEXT column so any change to these strings
+// every ActiveUnit constant. The unit-history layer persists ActiveUnit
+// as a TEXT column so any change to these strings
 // would silently invalidate historical rows.
 func TestActiveUnit_StringValuesStable(t *testing.T) {
 	t.Parallel()
@@ -198,11 +197,9 @@ func TestActiveUnit_StringValuesStable(t *testing.T) {
 	}
 }
 
-// TestRangeAddedMetersPerHour_R2_AuditPin pins the Phase-48 R2 risk-register
-// finding so a future codec / metadata change cannot silently re-classify
-// the field and corrupt charge-rate JSON output.
-//
-// R2 finding (.github/prompts/db-refactor/phase-48-si-canonical/0000-methodology.prompt.md):
+// TestRangeAddedMetersPerHour_R2_AuditPin pins the ChargeRateMilePerHour
+// proto-field semantics so a future codec or metadata change cannot
+// silently re-classify the field and corrupt charge-rate JSON output.
 //
 //	The ChargeRateMilePerHour proto field is metadata-typed
 //	UnitKindDistance, NOT UnitKindSpeed. After ToSI(...) with a Miles
@@ -211,10 +208,8 @@ func TestActiveUnit_StringValuesStable(t *testing.T) {
 //	a true SI velocity in m/s.
 //
 // The downstream JSON field name `range_added_meters_per_hour` is therefore a
-// misnomer — the value at runtime is m/h, not mph. Slice 2 of the SI
-// canonical mega-PR renames the JSON field to a name that reflects the
-// real semantics (e.g. `range_added_meters_per_hour`) and is documented
-// in the Slice 2 plan.
+// misnomer: the value at runtime is m/h, not mph. Any JSON-boundary
+// rename must stay coordinated with this conversion path.
 //
 // This test fails loudly if anyone retypes the field as
 // UnitKindSpeed (which would require a /3600 division and a different
@@ -226,9 +221,9 @@ func TestRangeAddedMetersPerHour_R2_AuditPin(t *testing.T) {
 
 	const field = "ChargeRateMilePerHour"
 
-	// Pin: the field MUST be UnitKindDistance per the methodology's
-	// R2 finding. A future rename PR that changes this MUST also
-	// rename the field at the JSON boundary in lockstep.
+	// Pin: the field MUST remain UnitKindDistance. A future rename PR
+	// that changes this MUST also rename the field at the JSON boundary
+	// in lockstep.
 	{
 		out, err := ToSI(field, 28.5, ActiveUnitMiles)
 		if err != nil {

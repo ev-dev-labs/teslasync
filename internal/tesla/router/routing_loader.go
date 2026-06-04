@@ -81,10 +81,8 @@ func loadFrom(b []byte) ([]Entry, error) {
 
 // validateEntries enforces the two startup invariants from ADR-004 #8:
 // no duplicate Field across entries, and every Destination is in the
-// closed validDestinations set. We do not enforce per-destination
-// column requirements here because per-category prompts 0030-0037
-// will lock those down alongside their writer wiring; this loader
-// stays intentionally minimal.
+// closed validDestinations set. Per-destination column requirements live
+// with each writer's tests, so this loader stays intentionally minimal.
 func validateEntries(entries []Entry) error {
 	seen := make(map[string]struct{}, len(entries))
 	for i, e := range entries {
@@ -104,9 +102,8 @@ func validateEntries(entries []Entry) error {
 
 // parseRoutingYAML is a deliberately tiny YAML parser tailored to the
 // restricted shape routing.yaml is allowed to take. It exists because
-// pulling in gopkg.in/yaml.v3 as a direct dependency would expand
-// go.mod beyond what this prompt is permitted to touch (the gate
-// only allows changes inside internal/tesla/router/).
+// pulling in gopkg.in/yaml.v3 as a direct dependency would be excessive
+// for this constrained routing format.
 //
 // The grammar handled is:
 //
@@ -120,8 +117,7 @@ func validateEntries(entries []Entry) error {
 //
 // Anything outside this grammar — quoted multi-line scalars, anchors,
 // flow-style mappings beyond `[]`, alternative top-level keys — is a
-// parse error so subsequent prompts cannot slip in subtly malformed
-// entries that this parser would silently accept.
+// parse error so subtly malformed entries cannot be accepted silently.
 func parseRoutingYAML(b []byte) ([]Entry, error) {
 	var (
 		entries []Entry

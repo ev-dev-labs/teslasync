@@ -12,7 +12,7 @@ import type { WidgetProps } from './types';
 
 /**
  * RecentlyUnlockedAchievementsWidget — surfaces the user's most recently
- * unlocked achievements directly on the dashboard (Phase-40 / Prompt 63).
+ * unlocked achievements directly on the dashboard.
  *
  * Backed by the same `/analytics/lifetime` payload as the Lifetime Stats page,
  * so a fresh unlock from the SSE celebration will show up on the next
@@ -20,7 +20,7 @@ import type { WidgetProps } from './types';
  *
  * Sort order: `unlocked_at desc`. Achievements with no `unlocked_at` (still
  * locked) are excluded entirely. Click a badge → deep-link into the lifetime
- * page with `?achievement={id}` so the Phase-40 /63 deep-link logic scrolls
+ * page with `?achievement={id}` so the deep-link logic scrolls
  * to + pulses the badge.
  *
  * Honours `useAchievementCelebrationPrefs.showOnDashboard`: when off, the

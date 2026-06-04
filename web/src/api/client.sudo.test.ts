@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 /**
- * Phase-46 / Prompt 31 — request() interceptor for SUDO_REQUIRED.
+ * request() interceptor for SUDO_REQUIRED.
  *
  * Coverage:
  *   • 401+SUDO_REQUIRED triggers the registered challenge provider,

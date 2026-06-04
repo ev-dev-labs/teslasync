@@ -1,12 +1,12 @@
-// Package metrics — Phase-44 prompt 0022: business SLI gauges/counters.
+// Package metrics defines business SLI gauges and counters.
 //
 // These metrics track business-critical observability signals beyond the
 // generic HTTP RED metrics. Each metric has a documented source and update
 // path; helper functions in this file are the canonical way to mutate them
 // so wiring stays consistent across packages.
 //
-// See docs/runbooks/phase-44-business-slis.md for label vocabulary,
-// recording rules, and burn-rate alert templates.
+// See the business SLI runbook for label vocabulary, recording rules,
+// and burn-rate alert templates.
 package metrics
 
 import (

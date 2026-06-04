@@ -34,7 +34,6 @@ interface MetricCardProps {
    * Optional contextual help. When provided, a small "?" tooltip is
    * rendered next to the label. Accepts the full `HelpTooltipProps` so
    * call sites can pass `i18nKey`, `defaultValue`, `learnMore`, etc.
-   * Phase-40 / Prompt 47.
    */
   help?: HelpTooltipProps
 }

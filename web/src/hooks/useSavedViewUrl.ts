@@ -2,13 +2,11 @@ import { useCallback } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 
 /**
- * Phase 40 / Prompt 50 — wires the URL querystring into the
+ * Wires the URL query string into the
  * `<SavedViewMenu>` contract.
- *
  * Returns the canonical current querystring (no leading '?') and an
  * `apply` callback that replaces it. Pages call `apply('')` to reset to
  * the unfiltered URL when the user clicks the badge's clear button.
- *
  * Why a separate hook: every adopting page would otherwise duplicate the
  * same `location.search.replace(/^\?/, '')` + `setSearchParams(new
  * URLSearchParams(q))` boilerplate.

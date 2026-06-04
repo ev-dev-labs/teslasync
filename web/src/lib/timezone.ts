@@ -2,18 +2,8 @@ import { useSettings } from '@/hooks/useSettings';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 
 /**
- * Time-zone display modes — see Phase 40 / Prompt 22.
- *
- * - `vehicle` renders timestamps in the car's local time (using the
- *   IANA name reported by Tesla in `vehicle_state.timezone`). Falls
- *   back to the user's browser tz when the vehicle hasn't yet been
- *   polled (`timezone` field is empty or `'UTC'`), so streaming-only
- *   fleets degrade gracefully without ever showing "UTC".
- * - `user` always renders in the browser's tz, optionally overridden
- *   by `Settings.timezone_user` (useful when the user is travelling
- *   but wants timestamps in their home zone).
- * - `utc` always renders in literal UTC. Used for forensic / audit
- *   surfaces where the operator needs an unambiguous wall-clock.
+ * Time-zone display modes for rendering timestamps in vehicle, browser, or UTC
+ * time while data remains in UTC.
  */
 export type TzMode = 'vehicle' | 'user' | 'utc';
 

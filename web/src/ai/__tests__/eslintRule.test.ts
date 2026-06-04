@@ -1,4 +1,4 @@
-// Phase-50 / 0001 — F0 AI-Off Contract.
+// AI-Off Contract.
 //
 // Direct-Linter test for `teslasync/ai-component-must-be-wrapped`.
 //

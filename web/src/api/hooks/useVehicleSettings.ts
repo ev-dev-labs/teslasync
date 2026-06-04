@@ -1,13 +1,13 @@
 /**
  * @module api/hooks/useVehicleSettings
  *
- * Phase-46 / Prompt 43 — Per-vehicle settings layer hooks.
+ * Per-vehicle settings layer hooks.
  *
  * Three hooks back the <VehicleSettingsTab> section:
  *
  *   • useVehicleSettings(vehicleId)
  *       Fetches the resolver's full per-key effective payload.
- *       Always returns the complete Phase-1 whitelist — the SPA can
+ *       Always returns the complete key whitelist so the SPA can
  *       render every row without presence checks.
  *
  *   • useUpsertVehicleSetting()

@@ -5,7 +5,7 @@ import { AlertCircle, Clock, X } from 'lucide-react'
 import { Button } from '../ui/Button'
 
 /**
- * Phase-45 / Prompt 33 — Rate-limit / upstream-breaker UX banner.
+ * Rate-limit / upstream-breaker UX banner.
  *
  * Listens for two document-level CustomEvents emitted by `resilientFetch`:
  *   • teslasync:rate-limited  — fired on a 429 response. The detail
@@ -32,7 +32,7 @@ import { Button } from '../ui/Button'
  * banner is ≤ 48 px tall so the stack stays under 144 px even when all
  * three fire simultaneously.
  *
- * Out of scope (per prompt):
+ * Out of scope:
  *   • Per-resource rate-limit policies (banner is global per scope).
  *   • Persisting the cooldown across page reload — fresh load
  *     optimistically retries; if upstream is still limited it

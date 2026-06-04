@@ -67,7 +67,7 @@ func TestRepoColumnsMatchSchema(t *testing.T) {
 		table  string
 		column string
 	}{
-		// drives — Phase-42 mig 000185 SI canonical schema.
+		// drives — migration 000185 SI canonical schema.
 		{"drives", "id"},
 		{"drives", "vehicle_id"},
 		{"drives", "started_at"},
@@ -93,7 +93,7 @@ func TestRepoColumnsMatchSchema(t *testing.T) {
 	}
 
 	// Also assert these columns do NOT exist (commonly confused old names
-	// or columns dropped by the SI canonical migration 000185).
+	// or columns dropped by SI canonical migration 000185).
 	mustNotExist := []struct {
 		table  string
 		column string
@@ -104,7 +104,7 @@ func TestRepoColumnsMatchSchema(t *testing.T) {
 		{"drives", "distance"},
 		{"drives", "speed_max"},
 
-		// drives — pre-SI legacy column names (mig 000185 renamed these).
+		// drives — pre-SI legacy column names renamed by migration 000185.
 		{"drives", "start_ts"},
 		{"drives", "end_ts"},
 		{"drives", "duration_min"},

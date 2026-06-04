@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Phase-46 / Prompt 11 — Forced-colors / Windows High Contrast audit.
+ * Forced-colors / Windows High Contrast audit.
  *
  * Walks the critical-component allow-list below and fails when any of
  * the listed files lacks an explicit `forced-colors:` Tailwind variant

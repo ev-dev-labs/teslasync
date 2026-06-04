@@ -1,0 +1,619 @@
+package aivoice
+
+// Voice mode streams a chatbot turn from text produced by the browser STT layer.
+// The handler persists chat turns best-effort and binds the session in context so tools cannot cross-read transcripts.
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"math"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/rs/zerolog/log"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
+	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
+	voicemode "github.com/ev-dev-labs/teslasync/internal/ai/strategies/voice-mode"
+	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
+	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/voice"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
+	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
+	chatbotmodel "github.com/ev-dev-labs/teslasync/internal/models/chatbot"
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
+)
+
+// aiVoiceModeMaxIterations bounds the dispatcher's tool-loop.
+// The strategy is exactly stream_chatbot_response → answer; a
+// hard ceiling of 6 matches the chatbot handler and tolerates
+// the dispatcher's tool-call retry path without bounding any
+// realistic conversation.
+const aiVoiceModeMaxIterations = 6
+
+// aiVoiceModeMaxBodyBytes caps the request body. The body has
+// at most two small fields (message + session_id); bound it
+// cheaply. 16 KiB matches the other body-driven AI handlers.
+const aiVoiceModeMaxBodyBytes = 16 * 1024
+
+// aiVoiceModeMaxMessageLen caps the user-message free-text
+// field. 2000 chars matches the chatbot handler's bound — a
+// voice transcript longer than this is almost certainly a
+// stuck-mic runaway and would burn tokens before reaching any
+// useful tool calls.
+const aiVoiceModeMaxMessageLen = 2000
+
+// aiVoiceModeHistoryLimit is the upper bound on how many prior
+// messages the handler hands the LLM as context. Picked to
+// balance:
+//
+//   - Token budget: ~16 messages × ~80 tokens avg ≈ 1.3K input
+//     tokens. Comfortably under every supported provider's
+//     context.
+//   - Conversational continuity: voice questions ("what's my
+//     battery now?", "how about yesterday?") fit in the last
+//     few turns.
+//
+// History older than this is silently dropped. The full record
+// is always kept in the chatbot_messages table for audit and
+// the existing /chatbot/history endpoint.
+const aiVoiceModeHistoryLimit = 16
+
+// aiVoiceModeRequest is the wire shape for POST
+// /api/v1/ai/voice/chat. Mirrors the existing /chatbot endpoint
+// so the SPA can call either route without DTO drift.
+type aiVoiceModeRequest struct {
+	// Message is the user's spoken-and-transcribed text. The
+	// SPA's STT layer concatenates browser SpeechRecognition
+	// final results into this field before posting.
+	Message string `json:"message"`
+
+	// SessionID is the in-scope chat session. The SPA
+	// generates one per component-mount and reuses it across
+	// turns so the LLM sees the conversation context.
+	SessionID string `json:"session_id"`
+}
+
+// Handler is the HTTP handler for POST
+// /api/v1/ai/voice/chat.
+//
+// Construction is in router.go (so the dispatcher's tool
+// registry + provider registry are wired once at boot). The
+// handler itself is stateless beyond its constructor inputs and
+// is safe for concurrent use across requests.
+type Handler struct {
+	chat       *dbnotif.ChatRepo
+	registry   *provider.Registry
+	tools      *tools.Registry
+	strategy   strategy.Strategy
+	headerName string
+	maxIters   int
+	historyN   int
+}
+
+// NewHandler constructs the handler. All non-pointer
+// arguments are required; the constructor panics on a nil so
+// the wiring bug surfaces at boot, not at first request.
+//
+// chat:       persistence for user/assistant turns.
+// registry:   AI provider registry (decorator chain already
+//
+//	applied).
+//
+// toolReg:    process-wide tool registry. MUST contain
+//
+//	stream_chatbot_response (registered by
+//	voice.RegisterVoiceModeTools in router.go).
+//
+// strat:      the voice-mode Strategy (one per process).
+// headerName: forward-auth header name; used to extract
+//
+//	subject for audit.
+func NewHandler(
+	chat *dbnotif.ChatRepo,
+	registry *provider.Registry,
+	toolReg *tools.Registry,
+	strat strategy.Strategy,
+	headerName string,
+) *Handler {
+	switch {
+	case chat == nil:
+		panic("aivoice: NewHandler: nil ChatRepo")
+	case registry == nil:
+		panic("aivoice: NewHandler: nil provider.Registry")
+	case toolReg == nil:
+		panic("aivoice: NewHandler: nil tools.Registry")
+	case strat == nil:
+		panic("aivoice: NewHandler: nil strategy.Strategy")
+	}
+	return &Handler{
+		chat:       chat,
+		registry:   registry,
+		tools:      toolReg,
+		strategy:   strat,
+		headerName: headerName,
+		maxIters:   aiVoiceModeMaxIterations,
+		historyN:   aiVoiceModeHistoryLimit,
+	}
+}
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+func historyToProviderMessages(rows []*chatbotmodel.ChatMessage, currentUserMessage string) []provider.Message {
+	if len(rows) == 0 {
+		return nil
+	}
+	out := make([]provider.Message, 0, len(rows))
+	for i, m := range rows {
+		if m == nil {
+			continue
+		}
+		if i == len(rows)-1 && m.Role == "user" && m.Content == currentUserMessage {
+			continue
+		}
+		out = append(out, provider.Message{
+			Role:    m.Role,
+			Content: m.Content,
+		})
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+type recordingStreamWriter struct {
+	inner *stream.Writer
+	buf   strings.Builder
+}
+
+func (r *recordingStreamWriter) WriteDelta(s string) error {
+	r.buf.WriteString(s)
+	return r.inner.WriteDelta(s)
+}
+
+func (r *recordingStreamWriter) WriteToolCall(call provider.ToolCall) error {
+	return r.inner.WriteToolCall(call)
+}
+
+func (r *recordingStreamWriter) WriteToolResult(name string, result json.RawMessage) error {
+	return r.inner.WriteToolResult(name, result)
+}
+
+func (r *recordingStreamWriter) WriteToolError(name string, err error) error {
+	return r.inner.WriteToolError(name, err)
+}
+
+func (r *recordingStreamWriter) WriteDone() error {
+	return r.inner.WriteDone()
+}
+
+func (r *recordingStreamWriter) EmitLimitError(message, reason string, retryAfterS int, bannerLevel string, baselineAvailable bool) error {
+	return r.inner.WriteLimitError(message, stream.LimitDecisionPayload{
+		Reason:            reason,
+		RetryAfterS:       retryAfterS,
+		BannerLevel:       bannerLevel,
+		BaselineAvailable: baselineAvailable,
+	})
+}
+
+func (r *recordingStreamWriter) text() string {
+	return r.buf.String()
+}
+
+var (
+	_ dispatch.StreamWriter      = (*recordingStreamWriter)(nil)
+	_ dispatch.LimitErrorEmitter = (*recordingStreamWriter)(nil)
+)
+
+// parseVoiceModeRequest drains the body, enforces the size cap
+// + the per-field length cap, and rejects unknown fields so a
+// future schema drift surfaces explicitly. Returns (req, true)
+// when the body is acceptable.
+func parseVoiceModeRequest(w http.ResponseWriter, r *http.Request) (aiVoiceModeRequest, bool) {
+	var req aiVoiceModeRequest
+	if r.Body == nil {
+		httpx.WriteError(w, http.StatusBadRequest, "request body is required")
+		return req, false
+	}
+	defer r.Body.Close()
+	bodyBytes, readErr := io.ReadAll(io.LimitReader(r.Body, aiVoiceModeMaxBodyBytes))
+	if readErr != nil {
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("failed to read body: %v", readErr))
+		return req, false
+	}
+	if strings.TrimSpace(string(bodyBytes)) == "" {
+		httpx.WriteError(w, http.StatusBadRequest, "request body is required")
+		return req, false
+	}
+	dec := json.NewDecoder(strings.NewReader(string(bodyBytes)))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
+		return req, false
+	}
+	req.Message = strings.TrimSpace(req.Message)
+	if req.Message == "" {
+		httpx.WriteError(w, http.StatusBadRequest, "message is required")
+		return req, false
+	}
+	if len(req.Message) > aiVoiceModeMaxMessageLen {
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf(
+			"message length %d exceeds the maximum %d characters",
+			len(req.Message), aiVoiceModeMaxMessageLen))
+		return req, false
+	}
+	if req.SessionID == "" {
+		// Generate a deterministic per-request session ID
+		// when the SPA omits one. Voice mode requires a
+		// session for the tool's scope binding to work, so
+		// we synthesise one rather than refusing the
+		// request — matching the chatbot handler's
+		// behaviour.
+		req.SessionID = fmt.Sprintf("voice_%d", time.Now().UnixNano())
+	}
+	return req, true
+}
+
+// ServeHTTP implements [http.Handler]. The body is parsed, the
+// dispatcher is invoked, and the assistant's full reply is
+// persisted after the SSE stream closes. Every error path either
+// writes a structured frame onto the SSE stream (when the writer
+// has been opened) or a plain JSON 4xx/5xx (before it has).
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	req, ok := parseVoiceModeRequest(w, r)
+	if !ok {
+		return
+	}
+
+	userMsg := &chatbotmodel.ChatMessage{
+		SessionID: req.SessionID,
+		Role:      "user",
+		Content:   req.Message,
+	}
+	if err := h.chat.SaveMessage(r.Context(), userMsg); err != nil {
+		log.Warn().Err(err).Str("session_id", req.SessionID).Msg("ai voice-mode: failed to persist user message")
+	}
+
+	rawHistory, err := h.chat.GetHistory(r.Context(), req.SessionID, h.historyN)
+	if err != nil {
+		log.Warn().Err(err).Str("session_id", req.SessionID).Msg("ai voice-mode: failed to load history; continuing with empty context")
+		rawHistory = nil
+	}
+	history := historyToProviderMessages(rawHistory, req.Message)
+
+	if _, err := h.registry.For(r.Context(), voicemode.FeatureID); err != nil {
+		log.Error().Err(err).Msg("ai voice-mode: provider.For failed")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
+		return
+	}
+
+	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
+	ctx := provider.WithSubject(r.Context(), subject)
+	ctx = provider.WithFeatureID(ctx, voicemode.FeatureID)
+
+	ctx = voice.WithScopedVoiceModeSession(ctx, voice.ScopedVoiceModeSession{
+		SessionID:    req.SessionID,
+		HistoryLimit: h.historyN / 2,
+	})
+
+	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(voicemode.FeatureID))
+	if err != nil {
+		log.Error().Err(err).Msg("ai voice-mode: stream.New failed (non-flushable writer)")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
+		return
+	}
+
+	prov, err := h.registry.For(ctx, voicemode.FeatureID)
+	if err != nil {
+		log.Error().Err(err).Msg("ai voice-mode: provider.For (post-stream) failed")
+		_ = sseW.WriteError(err)
+		return
+	}
+
+	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
+
+	rec := &recordingStreamWriter{inner: sseW}
+
+	in := strategy.StrategyInput{
+		LastMessage: req.Message,
+		History:     history,
+	}
+	if err := d.Run(ctx, h.strategy, in, rec); err != nil {
+		log.Error().Err(err).
+			Str("subject", subject).
+			Str("session_id", req.SessionID).
+			Msg("ai voice-mode: dispatcher returned error")
+	}
+
+	assistantText := strings.TrimSpace(rec.text())
+	if assistantText != "" {
+		assistantMsg := &chatbotmodel.ChatMessage{
+			SessionID: req.SessionID,
+			Role:      "assistant",
+			Content:   assistantText,
+		}
+		if perr := h.chat.SaveMessage(context.Background(), assistantMsg); perr != nil {
+			log.Warn().Err(perr).Str("session_id", req.SessionID).Msg("ai voice-mode: failed to persist assistant message")
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Production source adapter: ChatContextSource
+// ---------------------------------------------------------------------------
+
+// ChatContextSource is the production adapter
+// satisfying voice.ChatContextSource. It wraps the canonical
+// *dbnotif.ChatRepo so the AI tool reads from the SAME data
+// source the deterministic Settings UI's chat history endpoint
+// already does — no new SQL, no duplicate read paths.
+//
+// The adapter performs ONE call against ChatRepo.GetHistory per
+// tool invocation. The read is cheap: the canonical table is
+// indexed on (session_id, created_at).
+type ChatContextSource struct {
+	chat *dbnotif.ChatRepo
+}
+
+// NewChatContextSource constructs the production
+// adapter. The repo is required; the constructor panics on a
+// nil so the wiring bug surfaces at boot, not at first request.
+func NewChatContextSource(c *dbnotif.ChatRepo) *ChatContextSource {
+	if c == nil {
+		panic("aivoice: NewChatContextSource: nil chat *dbnotif.ChatRepo")
+	}
+	return &ChatContextSource{chat: c}
+}
+
+// LoadRecentTurns implements voice.ChatContextSource. Reads the
+// canonical chatbot_messages rows via ChatRepo.GetHistory and
+// projects them into the typed VoiceModeChatTurn shape the LLM
+// consumes. NO new SQL is written — GetHistory is the canonical
+// chat-history reader.
+//
+// Filters out non-{user,assistant} roles defensively — the
+// existing chatbot_messages schema only writes those two roles
+// today, but a future addition of a "system" sentinel row
+// should NOT leak into the LLM's context (the strategy's
+// deterministic SystemPrompt is the only system message the
+// dispatcher injects).
+func (a *ChatContextSource) LoadRecentTurns(ctx context.Context, sessionID string, limit int) ([]voice.VoiceModeChatTurn, error) {
+	rows, err := a.chat.GetHistory(ctx, sessionID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("ai voice-mode: load chat history: %w", err)
+	}
+	out := make([]voice.VoiceModeChatTurn, 0, len(rows))
+	for _, m := range rows {
+		if m == nil {
+			continue
+		}
+		if m.Role != "user" && m.Role != "assistant" {
+			continue
+		}
+		out = append(out, voice.VoiceModeChatTurn{
+			Role:    m.Role,
+			Content: m.Content,
+		})
+	}
+	return out, nil
+}
+
+// ---------------------------------------------------------------------------
+// Production source adapter: VehicleSnapshotSource
+// ---------------------------------------------------------------------------
+
+// VehicleSnapshotSource is the production adapter
+// satisfying voice.VehicleSnapshotSource. It wraps the canonical
+// *vehicledb.VehicleRepo + *drivedb.DriveRepo +
+// signal.LiveStateReader so the AI tool reads from the SAME
+// data sources the rest of the API surface already does — no
+// new SQL, no duplicate read paths.
+//
+// The adapter is intentionally NARROW: only the install's
+// PRIMARY (first-enrolled, non-archived) vehicle is projected.
+// V1 voice mode is single-vehicle; a future per-vehicle
+// selection slice would add a vehicle_id binding via the
+// ScopedVoiceModeSession scope and the adapter would project
+// the bound vehicle instead. For now the install-wide snapshot
+// keeps the SPA wiring trivial.
+//
+// GPS coordinates, precise street addresses, charger network
+// labels, and other location-specific fields are DELIBERATELY
+// ABSENT from the projection — voice mode is hands-free, the
+// LLM has no reason to surface them, and a leaked transcript
+// should not contain them.
+type VehicleSnapshotSource struct {
+	vehicles  *vehicledb.VehicleRepo
+	drives    *drivedb.DriveRepo
+	liveState signal.LiveStateReader
+}
+
+// NewVehicleSnapshotSource constructs the production
+// adapter. The repos are required; the constructor panics on a
+// nil so the wiring bug surfaces at boot, not at first request.
+// liveState may be nil in test builds — when absent, the
+// snapshot's soc_percent + charging_state fields render empty
+// and the system prompt's "no current data" branch handles it
+// gracefully.
+func NewVehicleSnapshotSource(
+	v *vehicledb.VehicleRepo,
+	d *drivedb.DriveRepo,
+	live signal.LiveStateReader,
+) *VehicleSnapshotSource {
+	switch {
+	case v == nil:
+		panic("aivoice: NewVehicleSnapshotSource: nil vehicles *vehicledb.VehicleRepo")
+	case d == nil:
+		panic("aivoice: NewVehicleSnapshotSource: nil drives *drivedb.DriveRepo")
+	}
+	return &VehicleSnapshotSource{
+		vehicles:  v,
+		drives:    d,
+		liveState: live,
+	}
+}
+
+// LoadVehicleSnapshot implements voice.VehicleSnapshotSource.
+// Performs THREE narrow read-only fetches:
+//
+//  1. VehicleRepo.GetAll → pick the first non-archived row
+//     (oldest enrollment ID). Empty install ⇒ zero envelope.
+//  2. LiveStateReader.LiveState(vehicle.ID) → project
+//     battery_level (soc_percent) + charging_state. Missing
+//     state ⇒ leave those fields empty so the LLM honestly
+//     says "I don't have current vehicle data right now"
+//     rather than fabricating one.
+//  3. DriveRepo.GetByVehicle(vehicleID, 1, 0, zero-times) →
+//     most recent drive; project its distance + start-time
+//     into a one-line spoken-style summary. No drive ⇒ leave
+//     last_drive_summary empty.
+//
+// Never returns an error — every fetch failure falls back to
+// the partial snapshot so the LLM can still answer with what
+// IS available. The strategy's system prompt explicitly handles
+// the "I don't have that data" case.
+func (a *VehicleSnapshotSource) LoadVehicleSnapshot(ctx context.Context) (voice.VoiceModeVehicleSnapshot, error) {
+	out := voice.VoiceModeVehicleSnapshot{}
+
+	vehicles, err := a.vehicles.GetAll(ctx)
+	if err != nil {
+		log.Warn().Err(err).Msg("ai voice-mode: load vehicles failed; snapshot will be empty")
+		return out, nil
+	}
+	var primary *vehiclemodel.Vehicle
+	for _, v := range vehicles {
+		if v == nil || !v.IsActive() {
+			continue
+		}
+		primary = v
+		break
+	}
+	if primary == nil {
+		return out, nil
+	}
+	out.VIN = primary.VIN
+	out.DisplayName = primary.DisplayName
+
+	if a.liveState != nil {
+		live, lerr := a.liveState.LiveState(ctx, primary.ID)
+		if lerr != nil {
+			log.Warn().Err(lerr).Int64("vehicle_id", primary.ID).Msg("ai voice-mode: live state read failed; soc + charging_state will be empty")
+		} else {
+			if raw, ok := live["battery_level"]; ok {
+				if pct, ok := coerceVoiceModeIntPercent(raw); ok {
+					out.SOCPercent = &pct
+				}
+			}
+			if raw, ok := live["charging_state"]; ok {
+				if s, ok := raw.(string); ok && strings.TrimSpace(s) != "" {
+					out.ChargingState = s
+				}
+			}
+		}
+	}
+
+	zero := time.Time{}
+	drives, derr := a.drives.GetByVehicle(ctx, primary.ID, 1, 0, zero, zero)
+	if derr != nil {
+		log.Warn().Err(derr).Int64("vehicle_id", primary.ID).Msg("ai voice-mode: last drive read failed; last_drive_summary will be empty")
+	} else if len(drives) > 0 && drives[0] != nil {
+		out.LastDriveSummary = formatVoiceModeLastDriveSummary(drives[0])
+	}
+
+	return out, nil
+}
+
+// coerceVoiceModeIntPercent normalises the battery_level signal
+// value into an integer percent in [0, 100]. The signal store
+// historically wrote floats AND ints (the canonical SI cutover
+// stores percent as a float; older rows may still surface as
+// int). Returns (0, false) for any value outside [0, 100] so a
+// runaway sensor reading does NOT leak into the LLM's context.
+func coerceVoiceModeIntPercent(raw any) (int, bool) {
+	var pct float64
+	switch v := raw.(type) {
+	case float64:
+		pct = v
+	case float32:
+		pct = float64(v)
+	case int:
+		pct = float64(v)
+	case int32:
+		pct = float64(v)
+	case int64:
+		pct = float64(v)
+	default:
+		return 0, false
+	}
+	if pct < 0 || pct > 100 {
+		return 0, false
+	}
+	return int(math.Round(pct)), true
+}
+
+// formatVoiceModeLastDriveSummary projects a *drivemodel.Drive into
+// a one-line spoken-style summary the strategy can quote
+// verbatim. Pulled out for hermetic unit testing.
+//
+// Format: "<distance_miles> miles on <relative_day>" where
+// relative_day is "today", "yesterday", or the date in "Jan 2"
+// form. Distance is rounded to the nearest whole mile because
+// voice mode renders in the user's display units AND TTS
+// reads fractional miles awkwardly. NEVER includes street
+// names, GPS coordinates, or destination labels.
+//
+// SI canonicalisation note: distance is stored in meters
+// (DistanceM). The voice-mode tool envelope's
+// last_drive_summary is the ONE place the backend renders a
+// display-unit value before the LLM consumes it — this matches
+// the `cToFPtr` precedent in drive_coaching.go that emits both
+// SI + display fields when the LLM cannot be trusted to do
+// arithmetic on negative or fractional values.
+func formatVoiceModeLastDriveSummary(d *drivemodel.Drive) string {
+	if d == nil || d.DistanceM <= 0 {
+		return ""
+	}
+	miles := d.DistanceM / 1609.344
+	if miles < 0.5 {
+		// A sub-half-mile drive is almost certainly a
+		// telemetry artefact (parking lot maneuver) — skip
+		// it rather than letting the LLM open with "you
+		// drove 0 miles".
+		return ""
+	}
+	rounded := int(math.Round(miles))
+
+	when := "recently"
+	if !d.StartTs.IsZero() {
+		now := time.Now()
+		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		yesterday := today.AddDate(0, 0, -1)
+		startDay := time.Date(d.StartTs.Year(), d.StartTs.Month(), d.StartTs.Day(), 0, 0, 0, 0, d.StartTs.Location())
+		switch {
+		case startDay.Equal(today):
+			when = "today"
+		case startDay.Equal(yesterday):
+			when = "yesterday"
+		default:
+			when = d.StartTs.Format("January 2")
+		}
+	}
+
+	noun := "miles"
+	if rounded == 1 {
+		noun = "mile"
+	}
+	return fmt.Sprintf("%d %s %s", rounded, noun, when)
+}

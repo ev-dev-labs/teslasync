@@ -10,9 +10,9 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/port/messaging"
 )
 
-// TestMessageHandlerSignature locks the Phase-42 handler shape:
-// (ctx, payload, vehicleID) → error. No topic, no decoded values,
-// no enum parsing across this seam.
+// TestMessageHandlerSignature locks the handler seam to
+// (ctx, payload, vehicleID) → error. No topic, decoded values, or enum
+// parsing crosses this boundary.
 func TestMessageHandlerSignature(t *testing.T) {
 	t.Parallel()
 
@@ -46,9 +46,9 @@ func TestMessageHandlerSignature(t *testing.T) {
 	}
 }
 
-// TestSubscriberInterfaceSurface locks the Phase-42 Subscriber port:
-// only Subscribe(topic, MessageHandler) error and Close(). Unsubscribe
-// and any decode/enum methods MUST stay out of this seam.
+// TestSubscriberInterfaceSurface locks the Subscriber port to
+// Subscribe(topic, MessageHandler) error and Close(). Unsubscribe and
+// decode/enum methods must stay out of this seam.
 func TestSubscriberInterfaceSurface(t *testing.T) {
 	t.Parallel()
 
@@ -103,8 +103,8 @@ func TestSubscriberInterfaceSurface(t *testing.T) {
 	}
 }
 
-// TestMQTTPublisherInterfaceSurface verifies the publisher port is
-// untouched by this prompt: Publish(ctx, topic, payload) error.
+// TestMQTTPublisherInterfaceSurface verifies the publisher port remains
+// Publish(ctx, topic, payload) error.
 func TestMQTTPublisherInterfaceSurface(t *testing.T) {
 	t.Parallel()
 

@@ -2,8 +2,7 @@
  * AIUsageCard (Settings) — wires `useAiUsageToday()` into the live
  * "Usage today" panel on the Helix settings page.
  *
- * Phase L follow-up: the original F2 placeholder hardcoded "—" for
- * every cell because F3 wasn't wired. This test locks in:
+ * The original placeholder hardcoded "—" for every cell. This test locks in:
  *
  *   1. The card calls `/ai/usage/today` (TanStack Query).
  *   2. Tokens-in / tokens-out / cost render the live values.

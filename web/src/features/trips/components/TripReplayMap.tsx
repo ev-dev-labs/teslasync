@@ -23,10 +23,6 @@ import {
 } from '@/lib/geo';
 import type { DrivePosition } from '@/types/driving';
 
-/* ------------------------------------------------------------------ */
-/*  Phase-45 / Prompt 26 — Trip-replay map                             */
-/* ------------------------------------------------------------------ */
-
 /**
  * Thin wrapper around the trip-replay leaflet map.
  *

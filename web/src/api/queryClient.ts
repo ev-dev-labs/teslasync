@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 53 — Pause polling when document hidden.
+ * Pause polling when the document is hidden.
  *
  * Centralises the QueryClient defaults shared between `main.tsx` (the
  * production bootstrap) and `queryClient.test.ts` (the behavioural
@@ -7,7 +7,7 @@
  * a single source-of-truth and makes the defaults independently
  * testable without booting React.
  *
- * The defining behaviour of this prompt is `refetchIntervalInBackground:
+ * The defining behaviour is `refetchIntervalInBackground:
  * false` at the `defaultOptions.queries` layer. With that flip, every
  * `refetchInterval`-driven query in the SPA automatically stops firing
  * while `document.hidden === true` (TanStack Query consults its own
@@ -39,8 +39,8 @@ import { QueryClient, type QueryClientConfig } from '@tanstack/react-query'
  *
  * Mirrors the previous inline `main.tsx` configuration verbatim except
  * for the new `refetchIntervalInBackground: false` line. Existing
- * networkMode / retry / staleTime semantics are preserved so this
- * prompt is a strictly additive change for callers.
+ * networkMode / retry / staleTime semantics are preserved, so this
+ * remains a strictly additive change for callers.
  */
 export const DEFAULT_QUERY_CLIENT_CONFIG: QueryClientConfig = {
   defaultOptions: {
@@ -55,10 +55,10 @@ export const DEFAULT_QUERY_CLIENT_CONFIG: QueryClientConfig = {
       // refetches. Combined with `<OfflineBanner>` this gives Tesla owners a
       // usable app inside tunnels / dead-zones without a hard error wall.
       networkMode: 'offlineFirst',
-      // Phase-46 / Prompt 53: pause `refetchInterval`-driven polling
-      // while the document is hidden. Saves Tesla API quota + CPU +
-      // battery for users who leave TeslaSync open in a background
-      // tab. Hooks that must keep polling in the background MUST
+      // Pause `refetchInterval` polling while the document is hidden.
+      // This saves Tesla API quota, CPU, and battery for users who leave
+      // TeslaSync open in a background tab. Hooks that must keep polling
+      // in the background MUST
       // override this per-query and add an `// ALLOW-BG-POLLING:
       // <reason>` annotation; the `audit:bg-polling` script enforces
       // the annotation requirement.
@@ -68,8 +68,7 @@ export const DEFAULT_QUERY_CLIENT_CONFIG: QueryClientConfig = {
       retry: 1,
       // PWA: queue mutations triggered while offline (instead of erroring) and
       // replay them automatically when the connection returns. Long-term
-      // durability across full page reloads requires a persister — see the
-      // out-of-scope note in phase-40 prompt 36.
+      // durability across full page reloads requires a persister.
       networkMode: 'offlineFirst',
     },
   },

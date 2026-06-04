@@ -11,28 +11,22 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// IndexDocs walks fsys rooted at `root` and indexes every Markdown
-// (`*.md` / `*.markdown`) file under [SourceDocs]. Each file becomes
-// one source — the file's path-relative-to-root is the source_id.
+// IndexDocs indexes Markdown files under [SourceDocs]. Each file becomes
+// one source keyed by its path relative to root.
 //
 // Non-Markdown files, hidden files, and directories named `_*` (a
 // VitePress convention for partials) are skipped silently so a
 // future docs reorganisation doesn't accidentally embed
 // build artifacts.
 //
-// Returns the number of files indexed (NOT the number of chunks),
-// useful for boot-log lines like "indexed 47 docs".
+// Returns the number of files indexed, not the number of chunks.
 //
-// IndexDocs is a pure library function — it does NOT decide WHEN to
-// run. F7 ships only the function; the actual scheduling lives in
-// N6's RAG-help slice where the per-feature gate is registered.
-// Calling IndexDocs against a [NoopRetriever] is a no-op (every
-// Index call returns nil after validation), so a slice can wire it
-// behind any feature flag without an off-mode branch here.
+// IndexDocs is a pure library function; callers decide when to run it.
+// Calling it with a [NoopRetriever] is a no-op after validation, so
+// feature-gated callers do not need a separate off-mode branch.
 //
-// The userSubject argument is "" for global docs (matches the
-// single-tenant DEFAULT in migration 000206). N6 may pass a real
-// subject if it later supports per-user doc corpora.
+// The userSubject argument is empty for global docs and non-empty for
+// per-user doc corpora.
 func IndexDocs(
 	ctx context.Context,
 	retriever Retriever,
@@ -75,7 +69,7 @@ func IndexDocs(
 			return nil
 		}
 
-		// File filter — Markdown only.
+		// Markdown files only.
 		ext := strings.ToLower(filepath.Ext(d.Name()))
 		if ext != ".md" && ext != ".markdown" {
 			return nil

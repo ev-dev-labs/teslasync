@@ -9,7 +9,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 )
@@ -30,7 +30,7 @@ type ConnectionFSM struct {
 	staleThreshold   time.Duration
 	offlineThreshold time.Duration
 
-	transRepo  *database.FSMTransitionRepo
+	transRepo  *dbobs.FSMTransitionRepo
 	mqttClient *mqtt.Client
 	eventBus   *events.Bus
 	logger     zerolog.Logger
@@ -50,7 +50,7 @@ func WithOfflineThreshold(d time.Duration) Option {
 }
 
 // WithTransitionRepo enables logging transitions to the fsm_transitions table.
-func WithTransitionRepo(repo *database.FSMTransitionRepo) Option {
+func WithTransitionRepo(repo *dbobs.FSMTransitionRepo) Option {
 	return func(f *ConnectionFSM) { f.transRepo = repo }
 }
 

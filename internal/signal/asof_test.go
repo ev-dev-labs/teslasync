@@ -228,10 +228,10 @@ func TestSnapshotAt_DelegatesToReader(t *testing.T) {
 	reader := &fakeAsOfReader{
 		stateFn: func(ctx context.Context, vehicleID int64, at time.Time) (State, error) {
 			return State{
-				"VehicleSpeed":  float64(65),
-				"BatteryLevel":  float64(72),
-				"Latitude":      float64(37.7),
-				"Longitude":     float64(-122.4),
+				"VehicleSpeed": float64(65),
+				"BatteryLevel": float64(72),
+				"Latitude":     float64(37.7),
+				"Longitude":    float64(-122.4),
 			}, nil
 		},
 	}

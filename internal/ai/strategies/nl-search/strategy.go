@@ -1,5 +1,5 @@
-// Package nlsearch is the Phase-50 / N3 strategy for the LLM-assisted
-// "natural-language search across drives, charges, and alerts".
+// Package nlsearch provides LLM-assisted search across drives, charges,
+// and alerts.
 //
 // The strategy declares:
 //
@@ -14,8 +14,8 @@
 //     not appear in the retriever's output;
 //
 //   - the two read-only tools the LLM is allowed to call —
-//     `retrieve_chunks` (a thin wrapper over the F7 rag.Retriever
-//     scoped to the calling user_subject) and `hydrate_search_result`
+//     `retrieve_chunks` (a thin wrapper over rag.Retriever scoped to
+//     the calling user_subject) and `hydrate_search_result`
 //     (a narrow lookup that converts a chunk reference into a
 //     {title, subtitle, url, when} envelope by delegating to a
 //     read-only Hydrator port). Neither tool touches the database
@@ -26,7 +26,7 @@
 //     cleartext: VINs, place names, addresses, lat/long, phone
 //     numbers, emails, etc. are redacted to round-trip tags
 //     (`<vin id='1'/>`) before the prompt + retrieved chunks reach
-//     the provider. The F8 redact decorator restores them only in the
+//     the provider. The redaction decorator restores them only in the
 //     final response delivered to the requesting user.
 //
 // The strategy is consumed by the AI HTTP handler at
@@ -41,18 +41,18 @@
 //
 //   - I1 default-off:    feature toggle defaults false in features.Registry.
 //   - I3 baseline intact: this strategy never replaces the typed
-//                         SearchHandler or the SearchPage typed-filter
-//                         form. Result rendering still flows through
-//                         the existing canonical query path; the AI
-//                         only proposes a NARRATIVE over already-
-//                         retrieved entities.
-//   - I4 zero egress:     all retrieval is local (F7 pgvector against
-//                         a self-hosted database); the LLM call
-//                         itself only fires when ai_mode != 'off' AND
-//                         the per-feature toggle is on.
+//     SearchHandler or the SearchPage typed-filter
+//     form. Result rendering still flows through
+//     the existing canonical query path; the AI
+//     only proposes a NARRATIVE over already-
+//     retrieved entities.
+//   - I4 zero egress:     all retrieval is local (pgvector against
+//     a self-hosted database); the LLM call
+//     itself only fires when ai_mode != 'off' AND
+//     the per-feature toggle is on.
 //   - I7 per-feature:     the AI route is gated by guard.Wrap("nl-search").
 //   - I9 redaction:       PolicyChatbot denies all classes; identifiers
-//                         flow through tools, not prose.
+//     flow through tools, not prose.
 package nlsearch
 
 import (
@@ -88,9 +88,9 @@ const FeatureID = "nl-search"
 //     LLM has no write tool.
 //   - Restricts the source-type allowlist: the assistant may only
 //     search drive_summary, charge_session, and alert_history (the
-//     three corpora the F7 retriever serves for this feature).
+//     three corpora the retriever serves for this feature).
 //   - Refuses cross-tenant requests: the AI handler always scopes
-//     to the calling user_subject (the F7 retriever enforces this
+//     to the calling user_subject (the retriever enforces this
 //     at the SQL boundary), and the LLM must refuse politely if
 //     asked to search another user's data.
 const SystemPrompt = `You are the TeslaSync natural-language search assistant. ` +
@@ -107,7 +107,7 @@ const SystemPrompt = `You are the TeslaSync natural-language search assistant. `
 // dispatcher construction time — the dispatcher refuses to mount a
 // strategy that references an unknown tool.
 //
-// Both tools are READ-ONLY: retrieve_chunks calls the F7 retriever
+// Both tools are READ-ONLY: retrieve_chunks calls the retriever
 // (pgvector cosine similarity scoped to the calling user_subject);
 // hydrate_search_result calls a narrow Hydrator port that resolves
 // a chunk reference to a {title, subtitle, url, when} envelope
@@ -157,27 +157,23 @@ func (s *Strategy) Tools() []string {
 // query" prompt before the call, so the strategy itself contributes
 // no extra prefix messages. Returning nil is correct.
 //
-// Future work: this is where pre-fetched RAG snippets would be
-// injected if a future variant decides to do retrieval BEFORE the
-// dispatcher loop (saving one round-trip). The current slice keeps
-// retrieval in-loop via the retrieve_chunks tool so the LLM can
-// re-query with refined terms if the first result set is empty.
+// This is where pre-fetched RAG snippets belong if a later variant
+// retrieves before the dispatcher loop. Current retrieval stays in-loop
+// via retrieve_chunks so the LLM can re-query with refined terms when
+// the first result set is empty.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyChatbot wrapped through the F4↔F8 adapter so the dispatcher's
-// per-request ctx-installation step (dispatch.Run installs the policy
-// via redact.WithPolicy) sees the concrete deny-all policy.
+// PolicyChatbot through the redaction adapter so the dispatcher's
+// per-request policy installation sees the concrete deny-all policy.
 //
-// Per the slice prompt: "Policy: PolicyChatbot from
-// internal/ai/redact/policies.go. Allowed classes: none; results are
-// restored only to the requesting user via round-trip tags". The
+// The
 // policy's Allow list is nil, so every PII class — VIN, lat/long,
 // vehicle name, addresses, phone numbers, emails — is redacted to a
 // round-trip tag before the prompt + tool outputs reach the provider.
-// The F8 redact decorator restores the original values in the final
+// The redaction decorator restores the original values in the final
 // SSE frame delivered to the requesting user; the provider only ever
 // sees `<vin id='1'/>` etc.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {
@@ -192,5 +188,4 @@ func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {
 // keeps the YAML path the single source of truth.
 func (s *Strategy) EvalGoldens() []strategy.EvalGolden { return nil }
 
-// Compile-time assertion: Strategy satisfies the port.
 var _ strategy.Strategy = (*Strategy)(nil)

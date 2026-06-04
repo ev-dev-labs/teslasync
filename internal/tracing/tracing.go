@@ -106,7 +106,7 @@ func Init(ctx context.Context, cfg *config.Config, opts ...Option) (func(context
 	// one decision. Tail-based filtering (errors, > 1s) is applied
 	// downstream by the OTel collector — see
 	// helm/teslasync/files/otel-collector/config.yaml and
-	// docs/runbooks/phase-44-trace-sampling.md.
+	// the trace-sampling runbook.
 	sampler := sdktrace.ParentBased(sdktrace.TraceIDRatioBased(ratio))
 	bsp := sdktrace.NewBatchSpanProcessor(exporter)
 	tp := sdktrace.NewTracerProvider(

@@ -2,13 +2,14 @@ package models
 
 import "time"
 
-// Notification mirrors the post-migration `notifications` schema (Phase 3, ADR-001).
+// Notification mirrors the typed `notifications` schema.
 // Append-only delivery log: each row represents one rendered+dispatched
 // notification attempt. Status changes are tracked via DeliveryStatus and
 // Attempts (no UpdatedAt — table is effectively immutable per row).
 //
 // Schema source: .github/prompts/db-refactor/schema/20-notifications.sql
-//   (migrations/000142_baseline_typed.up.sql, table `notifications`).
+//
+//	(migrations/000142_baseline_typed.up.sql, table `notifications`).
 //
 // ADR-005: no `raw_json` / JSONB carve-out. All fields are typed columns.
 type Notification struct {

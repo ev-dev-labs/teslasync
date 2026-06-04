@@ -1,4 +1,4 @@
-// Package automation models the automation state machine. houses finite-state-machine implementations used by services.
+// Package automation models automation execution state machines.
 //
 // Layer: platform
 package automation

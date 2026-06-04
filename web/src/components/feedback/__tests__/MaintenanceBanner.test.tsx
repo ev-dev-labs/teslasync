@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 
 /**
- * Phase-46 / Prompt 04 — MaintenanceBanner contract.
+ * MaintenanceBanner contract.
  *
  * Mocks {@link useSystemHealth} so the test focuses on the banner's
  * visibility lifecycle, dismissal persistence, and re-surfacing

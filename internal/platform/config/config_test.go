@@ -66,12 +66,12 @@ func TestLoad_CustomEnv(t *testing.T) {
 
 func TestDSN(t *testing.T) {
 	cfg := DatabaseConfig{
-		Host:    "localhost",
-		Port:    5432,
-		User:    "user",
+		Host:     "localhost",
+		Port:     5432,
+		User:     "user",
 		Password: "pass",
-		Name:    "db",
-		SSLMode: "disable",
+		Name:     "db",
+		SSLMode:  "disable",
 	}
 	want := "postgres://user:pass@localhost:5432/db?sslmode=disable"
 	if got := cfg.DSN(); got != want {

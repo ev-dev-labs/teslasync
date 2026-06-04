@@ -338,10 +338,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     broadcast({ type: 'theme.changed', themeId: 'custom', modeId })
   }
 
-  // Phase-40 / Prompt 69 — cross-tab theme sync. When another tab switches
-  // theme/mode/custom-colors, mirror the change here without re-broadcasting
-  // (which would loop) and without re-persisting to the backend (the
-  // originating tab already did that).
+  // Cross-tab theme sync: mirror changes from other tabs without rebroadcasting
+  // or re-persisting, which would loop and duplicate backend writes.
   const themesRef = useRef(themes)
   const modesRef = useRef(modes)
   themesRef.current = themes

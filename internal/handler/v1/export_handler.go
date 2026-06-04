@@ -17,18 +17,16 @@ type ExportHandler struct {
 	svc *exportsvc.Service
 }
 
-// NewExportHandler creates a new export handler.
+// NewExportHandler wires export endpoints to the export service.
 func NewExportHandler(svc *exportsvc.Service) *ExportHandler {
 	return &ExportHandler{svc: svc}
 }
 
-// Register registers export routes on the given router.
 func (h *ExportHandler) Register(r chi.Router) {
 	r.Post("/exports", h.Create)
 	r.Get("/exports/{exportID}", h.GetByID)
 }
 
-// Create creates a new export job.
 func (h *ExportHandler) Create(w http.ResponseWriter, r *http.Request) {
 	claims, ok := middleware.UserFromContext(r.Context())
 	if !ok {
@@ -59,7 +57,6 @@ func (h *ExportHandler) Create(w http.ResponseWriter, r *http.Request) {
 	httputil.Respond(w, http.StatusCreated, job)
 }
 
-// GetByID returns an export job by ID.
 func (h *ExportHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "exportID")
 

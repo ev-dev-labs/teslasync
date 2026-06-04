@@ -8,7 +8,7 @@ import { _resetFrecency } from '@/lib/commandFrecency'
 export type { LucideIcon }
 
 /**
- * Command registry — Phase 40 / Prompt 19.
+ * Command registry.
  *
  * Static, declarative list of "global" palette commands. The list is intentionally
  * decoupled from React/hooks — it's pure data so it can be unit-tested and
@@ -121,13 +121,13 @@ export const commandRegistry: CommandDefinition[] = [
     keywords: ['theme', 'color', 'picker', 'preferences', 'appearance', 'customize'],
     shortcut: 'T',
     perform: () => {
-      // Phase-40 / Prompt 60 — Layout listens for this event to open the
+      // Layout listens for this event to open the
       // top-bar theme popover (no navigation away from the current page).
       window.dispatchEvent(new CustomEvent('open-theme-popover'))
     },
   },
 
-  // ── Per-theme switch commands (Phase-40 / Prompt 60) ──────────────────────
+  // ── Per-theme switch commands ──────────────────────
   // Surfacing every named theme so power users can `Cmd+K → tesla red → ↵`.
   {
     id: 'pref.theme.neonCyan',
@@ -276,7 +276,7 @@ export const commandRegistry: CommandDefinition[] = [
     perform: (ctx) => ctx.navigate('/system-status'),
   },
   {
-    // Phase-46 / Prompt 64 — open the global time-machine date picker.
+    // open the global time-machine date picker.
     // The banner (rendered in Layout) listens for the
     // 'time-machine.open-picker' window event and reveals an inline
     // <input type="datetime-local"> seeded with yesterday at noon. The
@@ -334,7 +334,7 @@ export const commandRegistry: CommandDefinition[] = [
     },
   },
   {
-    // Phase-46 / Prompt 08 — opens the in-app <FeedbackModal>. The
+    // opens the in-app <FeedbackModal>. The
     // command id MUST stay literally "feedback.open"; the prompt's
     // audit gate scans this file for that exact string.
     id: 'feedback.open',
@@ -376,7 +376,7 @@ export const commandRegistry: CommandDefinition[] = [
     },
   },
 
-  // ── Dashboard customization (Phase 40 / Prompt 30) ────────────────────────
+  // ── Dashboard customization ────────────────────────
   // The DashboardPage listens for these CustomEvents (`dashboard:*`) and
   // routes them through useDashboardLayout. The palette navigates to /dashboard
   // first so the listener is mounted, then dispatches on the next tick.
@@ -438,7 +438,7 @@ export const commandRegistry: CommandDefinition[] = [
     },
   },
 
-  // ── Privacy / housekeeping (Phase-45 / Prompt 27) ─────────────────────────
+  // ── Privacy / housekeeping ─────────────────────────
   // Lets users on shared devices clear the per-command usage counts that drive
   // the palette's "Most Used" section. Pure local action — no server round-trip.
   {

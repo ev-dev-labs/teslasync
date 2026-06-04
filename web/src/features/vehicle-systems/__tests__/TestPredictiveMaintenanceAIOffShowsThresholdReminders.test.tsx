@@ -1,7 +1,7 @@
-// Phase-50 / 0049 — M1 Predictive maintenance.
+// Predictive maintenance AI gate coverage.
 //
 // `TestPredictiveMaintenanceAIOffShowsThresholdReminders` is the
-// slice's load-bearing AI-OFF contract proof on the React side. It
+// React-side AI-off contract proof. It
 // mounts the AIPredictiveMaintenance component with ai_mode='off'
 // (plus the per-feature toggle on, to defeat the obvious "off
 // because nothing is enabled" path) and asserts:
@@ -38,7 +38,7 @@
 //
 // File name MUST stay
 // `TestPredictiveMaintenanceAIOffShowsThresholdReminders.test.tsx`
-// — the slice prompt's verification command runs
+// because external verification runs
 // `vitest --run TestPredictiveMaintenanceAIOffShowsThresholdReminders`,
 // where the positional pattern is matched against the file PATH.
 

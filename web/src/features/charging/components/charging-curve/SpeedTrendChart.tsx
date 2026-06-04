@@ -17,6 +17,7 @@ import {
 } from '@/components/charts';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { isDcSession, avg } from './helpers';
+import { convertPowerFromSI } from '@/lib/unitConversion';
 import type { MonthlySpeed } from './types';
 
 interface SpeedTrendChartProps {
@@ -34,7 +35,7 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
       const month = (s.started_at ?? '').slice(0, 7);
       if (!byMonth.has(month)) byMonth.set(month, { dc: [], ac: [] });
       const group = byMonth.get(month)!;
-      const power = s.peak_power_w ?? 0;
+      const power = convertPowerFromSI(s.peak_power_w ?? 0, 'kW');
       if (isDcSession(s)) group.dc.push(power);
       else group.ac.push(power);
     });

@@ -1,5 +1,3 @@
-// Phase-50 / 0027 — C2 Battery health forecast narrative.
-//
 // Unit tests for the battery-health-forecast-narrative Strategy.
 // Mirrors the shape of smart-charge-schedule-suggestion's
 // strategy_test.go (the propose/narrate precedent). The Strategy is
@@ -129,8 +127,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs preferred-forecast-horizon preferences
-// ships.
+// future feature that needs preferred-forecast-horizon preferences.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -145,11 +142,11 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 
 // TestStrategy_RedactionPolicyBatteryHealthForecastNarrative proves
 // the strategy hands the dispatcher PolicyBatteryHealthForecastNarrative
-// wrapped through the F4↔F8 adapter.
+// through the redaction-policy adapter.
 // PolicyBatteryHealthForecastNarrative allows ClassVehicleName so the
 // narration can address the user's car; every other PII class is
-// redacted to a round-trip tag. The slice prompt explicitly mandates
-// a PolicyDigest-shaped allow-list with round-trip tags.
+// redacted to a round-trip tag. This preserves the same allow-list
+// shape as the other read-only narrators.
 func TestStrategy_RedactionPolicyBatteryHealthForecastNarrative(t *testing.T) {
 	t.Parallel()
 	s := New()

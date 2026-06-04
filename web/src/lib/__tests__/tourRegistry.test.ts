@@ -1,10 +1,10 @@
 /**
- * Phase-46 / Prompt 61 — Tour registry storage primitives.
+ * Tour registry storage primitives.
  *
  * Focused regression tests for the storage helpers that `startTour` (in
  * `../tourLauncher.ts`) leans on. Broader end-to-end registry coverage
  * lives in `web/src/features/onboarding/__tests__/tours.test.ts`; these
- * tests pin the surface area that prompt-61 specifically depends on so a
+ * tests pin the storage contract so a
  * future renaming of the storage key shape doesn't silently break the
  * Settings → Product tours panel.
  */

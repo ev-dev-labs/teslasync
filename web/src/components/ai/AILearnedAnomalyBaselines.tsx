@@ -1,4 +1,4 @@
-// Phase-50 / 0062 — ML1 Learned per-vehicle anomaly baselines.
+// Learned per-vehicle anomaly baselines.
 // Wires the "Train baseline" button to
 // POST /api/v1/ai/ml/anomaly-baselines/train. The narration walks
 // the user through the per-signal learned envelope returned by
@@ -39,11 +39,8 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     body,
     onEvent: () => {},
   })
-  // Computed disabled — never literal-true. P12/W1-A enforces this
-  // statically at slice 0065+, but the explicit boolean expression
-  // also keeps the on-mode wiring test honest: a regression that
-  // pins the button as always-disabled would silently falsify the
-  // double-submit guard test.
+  // Keep this computed rather than literal-true so on-mode tests catch
+  // regressions that pin the button as always disabled.
     return (
     <AIFeatureCard
       title={t('anomaly.aiBaseline.title', 'Learn per-vehicle baseline')}

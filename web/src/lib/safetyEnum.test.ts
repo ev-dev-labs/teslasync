@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { cleanSafetyEnum, isSafetyEnumActive } from './safetyEnum';
 
 // ---------------------------------------------------------------------------
-// safetyEnum — Phase-42a hardening
+// safetyEnum hardening
 //
 // Backend serializes raw signal.SignalValue (`interface{}`) so the same
 // "string" enum field can arrive as string / boolean / number / null.

@@ -1,5 +1,5 @@
 /**
- * SI-floor unit conversion module (phase-43, prompt 0010).
+ * SI-floor unit conversion module (, ).
  *
  * Every conversion / formatter in this file accepts canonical SI input
  * ONLY. There is NO runtime fallback that "guesses the input unit" —
@@ -8,29 +8,29 @@
  *
  * Authoritative SI baseline (mirrors `internal/tesla/units` Go package
  * for the Tesla telemetry pipeline; pressure and energy SI baselines
- * are scoped to the frontend display contract per prompt 0010):
+ * are scoped to the frontend display contract per ):
  *
- *   distance     → meters                  (m)
- *   speed        → meters per second       (m/s)
- *   temperature  → degrees Celsius         (°C)
- *   pressure     → kilopascals             (kPa)
- *   energy       → watt-hours              (Wh)
- *   duration     → seconds                 (s)
+ * distance → meters (m)
+ * speed → meters per second (m/s)
+ * temperature → degrees Celsius (°C)
+ * pressure → kilopascals (kPa)
+ * energy → watt-hours (Wh)
+ * duration → seconds (s)
  *
  * Public surface (NEW, SI-floor):
  *
- *   const SI                 — informational map of canonical SI units.
- *   type UnitPref            — user display preference bag.
- *   formatDistance(meters, pref): string
- *   formatSpeed(mps, pref): string
- *   formatTemperature(celsius, pref): string
- *   formatPressure(kpa, pref): string
- *   formatEnergy(wh, pref): string
- *   formatDuration(seconds, pref): string
- *   formatPower(watts, pref): string
- *   convertDistanceFromSI / convertSpeedFromSI / convertTempFromSI /
- *   convertPressureFromSI / convertEnergyFromSI / convertDurationFromSI /
- *   convertPowerFromSI
+ * const SI — informational map of canonical SI units.
+ * type UnitPref — user display preference bag.
+ * formatDistance(meters, pref): string
+ * formatSpeed(mps, pref): string
+ * formatTemperature(celsius, pref): string
+ * formatPressure(kpa, pref): string
+ * formatEnergy(wh, pref): string
+ * formatDuration(seconds, pref): string
+ * formatPower(watts, pref): string
+ * convertDistanceFromSI / convertSpeedFromSI / convertTempFromSI /
+ * convertPressureFromSI / convertEnergyFromSI / convertDurationFromSI /
+ * convertPowerFromSI
  */
 
 // ---------------------------------------------------------------------------
@@ -192,7 +192,7 @@ export function convertPressureFromSI(
 /**
  * Convert energy from SI watt-hours to the user's display unit.
  * @param wh - energy in watt-hours (SI for the FE display contract;
- *             matches the new Go struct's energy_*_wh JSON tags).
+ * matches the new Go struct's energy_*_wh JSON tags).
  * @param to - target display unit
  */
 export function convertEnergyFromSI(wh: number, to: EnergyUnitPref): number {

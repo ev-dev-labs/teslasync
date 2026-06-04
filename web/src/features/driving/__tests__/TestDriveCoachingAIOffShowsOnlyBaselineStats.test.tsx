@@ -1,8 +1,7 @@
-// Phase-50 / 0018 — N4 Per-drive coaching narrative.
+// Per-drive coaching AI-off contract test.
 //
-// `TestDriveCoachingAIOffShowsOnlyBaselineStats` (the Vitest
-// sibling to the Go test of the same name) is the slice's
-// load-bearing AI-OFF contract proof on the React side. It mounts
+// `TestDriveCoachingAIOffShowsOnlyBaselineStats` is the React-side companion
+// to the Go test of the same name. It mounts
 // the AIDriveCoaching component with ai_mode='off' (plus the
 // per-feature toggle on, to defeat the obvious "off because nothing
 // is enabled" path) and asserts:
@@ -22,10 +21,9 @@
 // does not exist in the React unit-test scope.
 //
 // File name MUST stay
-// `TestDriveCoachingAIOffShowsOnlyBaselineStats.test.tsx` — the
-// slice prompt's verification command runs
-// `vitest --run TestDriveCoachingAIOffShowsOnlyBaselineStats`,
-// where the positional pattern is matched against the file PATH.
+// `TestDriveCoachingAIOffShowsOnlyBaselineStats.test.tsx` because
+// `vitest --run TestDriveCoachingAIOffShowsOnlyBaselineStats` matches the
+// positional pattern against the file path.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';

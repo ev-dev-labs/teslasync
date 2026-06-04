@@ -1,5 +1,3 @@
-// Phase-50 / 0063 — ML2 Range-prediction model.
-//
 // Unit tests for the range-prediction-model Strategy. Mirrors the
 // shape of learned-per-vehicle-anomaly-baselines /
 // charging-curve-fingerprint-clustering / battery-health-forecast-narrative
@@ -65,7 +63,7 @@ func TestStrategy_System(t *testing.T) {
 
 // TestStrategy_Tools pins the exact whitelist AND the prescribed
 // order: train_range_model FIRST, then query_range_prediction. The
-// slice prompt's Action Steps list the tools in this exact order
+// strategy contract requires the tools in this exact order
 // ("train_range_model;query_range_prediction"). Reversing them
 // silently produces a confused narration that quotes the fallback
 // as if it were the learned proposal — the eval harness loads the
@@ -131,7 +129,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs preferred-window preferences ships.
+// future feature that needs preferred-window preferences.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -145,13 +143,11 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 }
 
 // TestStrategy_RedactionPolicyChatbot proves the strategy hands the
-// dispatcher PolicyChatbot wrapped through the F4↔F8 adapter.
+// dispatcher PolicyChatbot through the redaction-policy adapter.
 // PolicyChatbot is the project-wide deny-all-tagged policy: every
 // PII class is converted into a round-trip tag before the LLM call
-// (Allow: nil, Mode: ModeRedactedTags). The slice prompt explicitly
-// mandates "Allowed classes: none; training is local and
-// provider-free unless user opts into explanatory narration
-// separately".
+// (Allow: nil, Mode: ModeRedactedTags). Training remains local and
+// provider-free unless the user opts into explanatory narration.
 func TestStrategy_RedactionPolicyChatbot(t *testing.T) {
 	t.Parallel()
 	s := New()

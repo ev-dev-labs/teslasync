@@ -4,7 +4,7 @@ import { Caption } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
 /**
- * Phase 40 / Prompt 58 — Live/Freeze/Step toolbar for the FSM debugger.
+ * Live/Freeze/Step toolbar for the FSM debugger.
  *
  * Centralizes the buffer/window controls so the page wrapper stays focused
  * on layout. The toolbar is purely controlled — the page owns all of:
@@ -13,12 +13,12 @@ import { cn } from '@/lib/cn';
  *   - the index into the transition buffer (for stepping)
  *   - whether step-prev / step-next are valid right now
  *
- * Phase 45 / Prompt 35 — the toolbar's right-hand counter now distinguishes
- * the *Window* dropdown's slice from the underlying 24 h fetch:
+ * The right-hand counter distinguishes the *Window* dropdown's slice
+ * from the underlying 24 h fetch:
  *   "{{n}} in window · {{N}} in 24 h"
  * with a hover Tooltip that explains the scope difference. The legacy
  * single-scope `bufferCount` prop is preserved as a deprecated fallback
- * for one Phase so external callers don't break mid-migration.
+ * so external callers don't break mid-migration.
  */
 export interface LiveControlsProps {
   isLive: boolean;

@@ -1,11 +1,11 @@
-// Phase-50 / refactor — reusable AI feature card scaffold.
+// Reusable AI feature card scaffold.
 //
 // Every AI feature whose primary surface is a "header + Generate
 // button + streaming output" card was duplicating ~50 lines of the
 // same JSX (GlassPanel wrapper, flex header, AI badge pill,
 // description, optional empty-state hint, action Button with
 // streaming-aware label, AiOutputPanel). The duplication compounded
-// as new slices landed (38 instances by phase-50/0046) and the
+// as more features landed and the
 // per-page result was visibly inconsistent: button placement, label
 // styling, empty-state copy, and "Generating…" affordances all
 // drifted between features even though the intent was identical.
@@ -36,7 +36,7 @@
 // feature test files keep passing without edits):
 //
 //   - Action button is rendered via [Button] with the universal
-//     visible label "Ask Helix" (Phase 50/UX) but its
+//     visible label "Ask Helix", but its
 //     `aria-label` still includes the per-feature `buttonLabel`,
 //     so `getByRole('button', { name: /<label>/ })` keeps
 //     working. Anchored regexes (`/^Summarize$/i`) need to be
@@ -89,23 +89,17 @@ export interface AIFeatureCardProps {
    * Per-feature contextual hint describing what Helix will do
    * (e.g. "Summarize", "Detect conflicts", "Generate coaching").
    *
-   * Phase 50/UX: the visible button text is now a universal
-   * Helix-branded CTA ("Ask Helix") rendered by this card so
-   * every AI feature presents a single, consistent signature
-   * action — the way "Hey Google", "Alexa", "Hey Siri" promote
-   * their assistants. The per-feature verb is no longer painted
-   * onto the button (it's redundant with the card title +
-   * description above it). It is still consumed as:
-   *   - the button's `title` attribute (hover tooltip) so the
-   *     contextual hint is one keypress away, and
+   * Visible button text is the universal Helix-branded CTA
+   * ("Ask Helix") so every AI feature has one consistent
+   * signature action. The per-feature verb is redundant with the
+   * card title and description, so it is exposed through:
+   *   - the button's `title` attribute for hover/tooltips, and
    *   - the button's `aria-label` so screen-reader users hear the
-   *     specific Helix action that will fire (better than just
-   *     "Ask Helix" without context).
+   *     specific Helix action.
    *
-   * Keeping the prop required preserves the call-site contract
-   * (38 features) and keeps the contextual a11y/tooltip text
-   * available without forcing every callsite to invent a separate
-   * prop.
+   * Keeping the prop required preserves the call-site contract and
+   * keeps contextual a11y/tooltip text available without forcing
+   * every callsite to invent a separate prop.
    */
   buttonLabel: string
 

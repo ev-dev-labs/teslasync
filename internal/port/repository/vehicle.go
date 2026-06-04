@@ -16,7 +16,7 @@ type VehicleRepository interface {
 	GetByIDForUpdate(ctx context.Context, id string) (*vehicle.Vehicle, error)
 }
 
-// Phase-42 (prompt 0077): VehicleStateRepository was deleted alongside the
-// vehicle_states table. Current vehicle state is now derived from the
+// VehicleStateRepository was deleted alongside the vehicle_states table.
+// Current vehicle state is now derived from the
 // in-memory FSM (internal/api/fsm_handler.go) and durably logged via
 // fsm_transitions; the snapshot-row contract had no SI replacement.

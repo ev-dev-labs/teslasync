@@ -5,7 +5,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 )
@@ -34,7 +34,7 @@ func componentDisplayName(name string) string {
 // enabled notification channel via MQTT. Best-effort: a missing MQTT
 // client or a per-channel publish failure does not propagate.
 // Mirrors the legacy cmd/teslasync/lifecycle.go helper.
-func sendSystemNotification(ctx context.Context, notifRepo *database.NotificationRepo, mqttClient *mqtt.Client, title, message string) {
+func sendSystemNotification(ctx context.Context, notifRepo *dbnotif.NotificationRepo, mqttClient *mqtt.Client, title, message string) {
 	if mqttClient == nil {
 		return
 	}

@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 
 /**
- * Phase-40 / Prompt 69 — Cross-tab synchronization.
+ * Cross-tab synchronization.
  *
  * A small, typed message bus that lets multiple tabs of the same SPA react to
  * each other's writes without a page reload. Backed by `BroadcastChannel` in
@@ -55,7 +55,7 @@ export type BroadcastMessage =
   | { type: 'changelog.seen'; version: string }
   | { type: 'tour.completed'; tourId: string; version: number }
   | { type: 'tour.reset'; tourId?: string }
-  // Phase-46 / Prompt 61 — Replay-requested by Settings UI / command palette.
+  // Replay requested by Settings UI / command palette.
   // Same-tab callers MUST also dispatch the window CustomEvent
   // `TOUR_START_EVENT` because the bus filters self-messages out by design;
   // the broadcast variant exists so peer tabs that have Layout mounted can
@@ -70,11 +70,11 @@ export type BroadcastMessage =
   // ── Layout / saved-state ─────────────────────────────────────────────────
   | { type: 'dashboard.layout' }
   | { type: 'savedView.changed'; pageId: string }
-  // ── Form drafts (composes with useFormDraft / Prompt 55) ────────────────
+  // ── Form drafts (composes with useFormDraft) ────────────────────────────
   | { type: 'formDraft.acquired'; draftKey: string; tabId: string; ts: number }
   | { type: 'formDraft.released'; draftKey: string; tabId: string }
   | { type: 'formDraft.committed'; draftKey: string }
-  // ── Edit leases (Phase-46 / Prompt 66 — useEditLease) ────────────────────
+  // ── Edit leases (useEditLease) ───────────────────────────────────────────
   // Coordinates "I am editing X" between tabs of the same origin so a tab
   // that opened a stale view of a shared resource can warn the user before
   // their save silently overwrites a peer tab's changes. The protocol is
@@ -88,7 +88,7 @@ export type BroadcastMessage =
   | { type: 'lease.released'; resourceKey: string; tabId: string }
   // ── TanStack Query ───────────────────────────────────────────────────────
   | { type: 'queryInvalidate'; keys: ReadonlyArray<ReadonlyArray<unknown>> }
-  // ── Settings / preferences (Phase-45 / Prompt 06) ────────────────────────
+  // ── Settings / preferences ───────────────────────────────────────────────
   // Umbrella event for any AppSettings mutation (units, locale, decimals,
   // theme, currency, etc). `keys` is a hint for debug/tracing — subscribers
   // MUST re-read from `useSettings()` rather than trust the payload to be

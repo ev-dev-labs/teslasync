@@ -4,8 +4,8 @@ import { useSearchParams } from 'react-router-dom';
 /**
  * useAlertContext — read drill-through query params from the URL.
  *
- * Phase 40 / Prompt 14. When a user clicks an alert (toast, alerts page,
- * dashboard widget, browser notification) we navigate to a context page like
+ * When a user clicks an alert (toast, alerts page, dashboard widget, browser
+ * notification) we navigate to a context page like
  * `/battery?vehicle_id=12&t=2026-04-30T13:00:00Z&signal=BatteryLevel`. Pages
  * call this hook to read those params and:
  *   - preselect the relevant vehicle in their picker, and

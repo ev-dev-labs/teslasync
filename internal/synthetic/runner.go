@@ -4,8 +4,6 @@
 // failures roll into the same alertmsg + Prometheus surface) but can
 // also be invoked from cmd/synthetic-probe as a one-shot CI gate.
 //
-// Phase-46 / p46-synthetic.
-//
 // Probes are deliberately small + idempotent — they create a single
 // synthetic vehicle (`synthetic_canary`), publish a known signal via
 // the existing pub-test-signal pathway, and then poll the read side
@@ -45,7 +43,7 @@ type Result struct {
 	LastDurMs   int64     `json:"last_duration_ms"`
 	LastError   string    `json:"last_error,omitempty"`
 	OK          bool      `json:"ok"`
-	Streak      int       `json:"streak"`        // consecutive successes (>=0) or failures (<=0)
+	Streak      int       `json:"streak"` // consecutive successes (>=0) or failures (<=0)
 	TotalRuns   int64     `json:"total_runs"`
 	TotalFailed int64     `json:"total_failed"`
 }

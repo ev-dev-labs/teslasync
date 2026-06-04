@@ -2,7 +2,7 @@ import { Suspense, useEffect, type PropsWithChildren, type ReactNode } from 'rea
 import { globalProgress } from '@/lib/globalProgress'
 
 /**
- * Phase-46 / Prompt 07 — Suspense → globalProgress bridge.
+ * Suspense → globalProgress bridge.
  *
  * Wraps `<Suspense>` so that whenever the fallback mounts (because a
  * lazy-loaded route chunk is being downloaded) the global progress

@@ -27,8 +27,7 @@ interface PowerOutputChartProps {
 export function PowerOutputChart({ data }: PowerOutputChartProps) {
   const { t } = useTranslation();
 
-  // Phase-46 / Prompt 67 — URL-persisted hidden-series state for the
-  // peak vs regen power chart so users can declutter to a single trace.
+  // URL-persisted hidden-series state lets users declutter to one trace.
   const hidden = useHiddenSeries('drivetrain-power-output');
 
   if (data.length <= 1) return null;

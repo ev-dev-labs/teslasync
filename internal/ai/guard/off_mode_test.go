@@ -1,17 +1,17 @@
-// Phase-50 / 0001 — F0 AI-Off Contract.
+// AI-off contract tests.
 //
 // This test is the canonical Go-side proof of ADR-015 §I6 ("off mode
 // handlers return 404") for every feature in the registry. It walks
 // every Backend route from features.Registry and asserts:
 //
-//   1. With ai_mode = "off", the wrapped handler returns 404.
-//   2. With ai_mode = "local" but the per-feature toggle = false, the
-//      wrapped handler still returns 404 (ADR-015 §I7 "per-feature
-//      opt-in inside non-off modes").
-//   3. With ai_mode = "local" AND the feature toggle = true, the
-//      wrapped handler is reached (proving the gate is correctly
-//      open in the on case — without this assertion the test could
-//      pass by always returning 404).
+//  1. With ai_mode = "off", the wrapped handler returns 404.
+//  2. With ai_mode = "local" but the per-feature toggle = false, the
+//     wrapped handler still returns 404 (ADR-015 §I7 "per-feature
+//     opt-in inside non-off modes").
+//  3. With ai_mode = "local" AND the feature toggle = true, the
+//     wrapped handler is reached (proving the gate is correctly
+//     open in the on case — without this assertion the test could
+//     pass by always returning 404).
 //
 // The test uses a deterministic in-memory fake of the Settings
 // interface so it has no DB / network / time dependency.
@@ -106,7 +106,7 @@ func TestGuard_OffModeReturns404(t *testing.T) {
 // ai_mode is non-off, each feature must be individually opted in
 // before its route returns anything other than 404.
 func TestGuard_PerFeatureOptInRequired(t *testing.T) {
-	// local mode but no per-feature flags set
+	// Local mode still requires an explicit per-feature opt-in.
 	g := New(&fakeSettings{mode: "local", enabled: map[string]bool{}})
 	hits := &atomic.Int32{}
 

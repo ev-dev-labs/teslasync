@@ -1,5 +1,5 @@
 /**
- * StatusApiDocsPage — Phase-2 docs page for /api/v1/status/* endpoints.
+ * StatusApiDocsPage — docs page for /api/v1/status/* endpoints.
  *
  * Self-hosted operators wire TeslaSync into their own dashboards
  * (Grafana, Uptime Kuma, Home Assistant). This page documents the

@@ -7,18 +7,21 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 )
 
 // --- Mocks ---
 
 type mockChannelRepo struct {
-	channels []*models.NotificationChannel
+	channels []*notificationmodel.NotificationChannel
 	err      error
 }
 
-func (m *mockChannelRepo) GetAllChannels(_ context.Context) ([]*models.NotificationChannel, error) {
+func (m *mockChannelRepo) GetAllChannels(_ context.Context) ([]*notificationmodel.NotificationChannel, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -223,7 +226,7 @@ func TestResolveTemplate(t *testing.T) {
 // --- filterChannels Tests ---
 
 func TestFilterChannels(t *testing.T) {
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord #alerts", Type: "discord", Enabled: true},
 		{ID: 2, Name: "Slack ops", Type: "slack", Enabled: true},
 		{ID: 3, Name: "Disabled Telegram", Type: "telegram", Enabled: false},
@@ -273,14 +276,14 @@ func TestNotifyExecute_AllChannels(t *testing.T) {
 		return nil
 	}
 
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord", Type: "discord", Config: map[string]string{"webhook_url": "http://example.com"}, Enabled: true},
 		{ID: 2, Name: "Slack", Type: "slack", Config: map[string]string{"webhook_url": "http://example.com"}, Enabled: true},
 	}
 
 	exec := NewNotifyExecutor(
 		&mockChannelRepo{channels: channels},
-		&mockVehicleRepo{byID: map[int64]*models.Vehicle{1: {ID: 1, DisplayName: "Model 3"}}},
+		&mockVehicleRepo{byID: map[int64]*vehiclemodel.Vehicle{1: {ID: 1, DisplayName: "Model 3"}}},
 		sender,
 	)
 
@@ -323,7 +326,7 @@ func TestNotifyExecute_SingleChannel(t *testing.T) {
 		return nil
 	}
 
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord", Type: "discord", Enabled: true, Config: map[string]string{}},
 		{ID: 2, Name: "Slack", Type: "slack", Enabled: true, Config: map[string]string{}},
 		{ID: 3, Name: "Ntfy", Type: "ntfy", Enabled: true, Config: map[string]string{}},
@@ -331,7 +334,7 @@ func TestNotifyExecute_SingleChannel(t *testing.T) {
 
 	exec := NewNotifyExecutor(
 		&mockChannelRepo{channels: channels},
-		&mockVehicleRepo{byID: map[int64]*models.Vehicle{}},
+		&mockVehicleRepo{byID: map[int64]*vehiclemodel.Vehicle{}},
 		sender,
 	)
 
@@ -367,14 +370,14 @@ func TestNotifyExecute_PartialFailure(t *testing.T) {
 		return nil
 	}
 
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord", Type: "discord", Enabled: true, Config: map[string]string{}},
 		{ID: 2, Name: "Slack", Type: "slack", Enabled: true, Config: map[string]string{}},
 	}
 
 	exec := NewNotifyExecutor(
 		&mockChannelRepo{channels: channels},
-		&mockVehicleRepo{byID: map[int64]*models.Vehicle{}},
+		&mockVehicleRepo{byID: map[int64]*vehiclemodel.Vehicle{}},
 		sender,
 	)
 
@@ -418,13 +421,13 @@ func TestNotifyExecute_PartialFailure(t *testing.T) {
 }
 
 func TestNotifyExecute_NoMatchingChannels(t *testing.T) {
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord", Type: "discord", Enabled: true, Config: map[string]string{}},
 	}
 
 	exec := NewNotifyExecutor(
 		&mockChannelRepo{channels: channels},
-		&mockVehicleRepo{byID: map[int64]*models.Vehicle{}},
+		&mockVehicleRepo{byID: map[int64]*vehiclemodel.Vehicle{}},
 		func(req *notification.Request) error { return nil },
 	)
 
@@ -440,14 +443,14 @@ func TestNotifyExecute_NoMatchingChannels(t *testing.T) {
 }
 
 func TestNotifyExecute_AllDisabledChannels(t *testing.T) {
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord", Type: "discord", Enabled: false, Config: map[string]string{}},
 		{ID: 2, Name: "Slack", Type: "slack", Enabled: false, Config: map[string]string{}},
 	}
 
 	exec := NewNotifyExecutor(
 		&mockChannelRepo{channels: channels},
-		&mockVehicleRepo{byID: map[int64]*models.Vehicle{}},
+		&mockVehicleRepo{byID: map[int64]*vehiclemodel.Vehicle{}},
 		func(req *notification.Request) error { return nil },
 	)
 
@@ -465,7 +468,7 @@ func TestNotifyExecute_AllDisabledChannels(t *testing.T) {
 func TestNotifyExecute_ChannelRepoError(t *testing.T) {
 	exec := NewNotifyExecutor(
 		&mockChannelRepo{err: fmt.Errorf("db connection failed")},
-		&mockVehicleRepo{byID: map[int64]*models.Vehicle{}},
+		&mockVehicleRepo{byID: map[int64]*vehiclemodel.Vehicle{}},
 		func(req *notification.Request) error { return nil },
 	)
 
@@ -483,7 +486,7 @@ func TestNotifyExecute_ChannelRepoError(t *testing.T) {
 func TestNotifyExecute_InvalidConfig(t *testing.T) {
 	exec := NewNotifyExecutor(
 		&mockChannelRepo{},
-		&mockVehicleRepo{byID: map[int64]*models.Vehicle{}},
+		&mockVehicleRepo{byID: map[int64]*vehiclemodel.Vehicle{}},
 		func(req *notification.Request) error { return nil },
 	)
 
@@ -519,13 +522,13 @@ func TestNotifyExecute_TemplateResolution(t *testing.T) {
 		return nil
 	}
 
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord", Type: "discord", Enabled: true, Config: map[string]string{}},
 	}
 
 	exec := NewNotifyExecutor(
 		&mockChannelRepo{channels: channels},
-		&mockVehicleRepo{byID: map[int64]*models.Vehicle{
+		&mockVehicleRepo{byID: map[int64]*vehiclemodel.Vehicle{
 			42: {ID: 42, DisplayName: "Model Y LR"},
 		}},
 		sender,
@@ -569,7 +572,7 @@ func TestNotifyExecute_VehicleRepoError(t *testing.T) {
 		return nil
 	}
 
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord", Type: "discord", Enabled: true, Config: map[string]string{}},
 	}
 
@@ -599,13 +602,13 @@ func TestNotifyExecute_NilVehicleID(t *testing.T) {
 		return nil
 	}
 
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord", Type: "discord", Enabled: true, Config: map[string]string{}},
 	}
 
 	exec := NewNotifyExecutor(
 		&mockChannelRepo{channels: channels},
-		&mockVehicleRepo{byID: map[int64]*models.Vehicle{}},
+		&mockVehicleRepo{byID: map[int64]*vehiclemodel.Vehicle{}},
 		sender,
 	)
 
@@ -625,13 +628,13 @@ func TestNotifyExecute_ContextCancelled(t *testing.T) {
 		return nil
 	}
 
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord", Type: "discord", Enabled: true, Config: map[string]string{}},
 	}
 
 	exec := NewNotifyExecutor(
 		&mockChannelRepo{channels: channels},
-		&mockVehicleRepo{byID: map[int64]*models.Vehicle{}},
+		&mockVehicleRepo{byID: map[int64]*vehiclemodel.Vehicle{}},
 		sender,
 	)
 
@@ -656,13 +659,13 @@ func TestNotifyExecute_TimestampResolved(t *testing.T) {
 		return nil
 	}
 
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord", Type: "discord", Enabled: true, Config: map[string]string{}},
 	}
 
 	exec := NewNotifyExecutor(
 		&mockChannelRepo{channels: channels},
-		&mockVehicleRepo{byID: map[int64]*models.Vehicle{}},
+		&mockVehicleRepo{byID: map[int64]*vehiclemodel.Vehicle{}},
 		sender,
 	)
 
@@ -689,13 +692,13 @@ func TestNotifyExecute_VarsOverrideAutoResolved(t *testing.T) {
 		return nil
 	}
 
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord", Type: "discord", Enabled: true, Config: map[string]string{}},
 	}
 
 	exec := NewNotifyExecutor(
 		&mockChannelRepo{channels: channels},
-		&mockVehicleRepo{byID: map[int64]*models.Vehicle{
+		&mockVehicleRepo{byID: map[int64]*vehiclemodel.Vehicle{
 			1: {ID: 1, DisplayName: "Model 3"},
 		}},
 		sender,

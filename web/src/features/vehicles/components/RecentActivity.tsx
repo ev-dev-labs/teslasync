@@ -8,7 +8,7 @@ import { InlineMetric } from '@/components/data-display/InlineMetric'
 import { AnimatedNumber } from '@/components/data-display/AnimatedNumber'
 import { TimeStamp } from '@/components/data-display'
 import { useUnits } from '@/hooks/useUnits'
-import { convertDistanceFromSI } from '@/lib/unitConversion'
+import { convertDistanceFromSI, convertEnergyFromSI } from '@/lib/unitConversion'
 import { fmtInt } from '@/lib/numberFormat'
 import type { Drive, ChargingSession } from '@/api/types'
 
@@ -111,7 +111,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                   <div className="flex-1 text-sm">
                     <p className="text-[var(--text-primary)] font-medium group-hover:text-emerald-300 transition-colors">
                       <AnimatedNumber
-                        value={s.total_energy_added_wh}
+                        value={convertEnergyFromSI(s.total_energy_added_wh, 'kWh')}
                         decimals={1}
                         suffix=" kWh"
                       />

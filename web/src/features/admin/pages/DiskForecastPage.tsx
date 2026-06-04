@@ -1,5 +1,5 @@
 /**
- * Disk Forecast Page — Phase-45 admin observability surface.
+ * Disk Forecast page.
  *
  * Per-hypertable disk usage with compressed/uncompressed split,
  * growth rate (bytes/day), and an estimate of days-to-quota when the
@@ -65,7 +65,7 @@ export default function DiskForecastPage() {
         header: t('admin.diskForecast.colTable', 'Hypertable'),
         render: (r) => (
           <div className="flex flex-col">
-            <span className="font-medium text-white/90">{r.hypertable_name}</span>
+            <span className="font-medium text-[var(--text-primary)]">{r.hypertable_name}</span>
             <Caption>
               {t('admin.diskForecast.chunkCount', '{{count}} chunks', {
                 count: r.chunk_count,
@@ -184,6 +184,7 @@ export default function DiskForecastPage() {
             <PanelTitle className="mb-4">{t('admin.diskForecast.tableTitle', 'Hypertables')}</PanelTitle>
             <SectionErrorBoundary name="disk-forecast-table">
               {rows.length === 0 && !query.isLoading && !subsystemMissing ? (
+                // no-action: hypertable inventory is a TimescaleDB system state; users cannot create hypertables from the UI
                 <EmptyState
                   icon={<Database className="h-8 w-8" />}
                   title={t('admin.diskForecast.emptyTitle', 'No hypertables')}
@@ -194,6 +195,7 @@ export default function DiskForecastPage() {
                 />
               ) : (
                 <DataTable
+                  tableId="admin:disk-forecast"
                   columns={columns}
                   data={rows}
                   keyExtractor={(r) => r.hypertable_name}

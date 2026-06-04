@@ -24,7 +24,7 @@ export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement
   /**
    * Sizing scale. Defaults to `'md'` for back-compat. Pass `'auto'` to
    * follow the user's `ui_density` setting via density-aware Tailwind
-   * utilities. (Phase 40 / Prompt 44.)
+   * utilities.
    */
   size?: 'sm' | 'md' | 'lg' | 'auto';
 }

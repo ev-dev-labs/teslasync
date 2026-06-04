@@ -5,12 +5,221 @@ linters:
   disable:
     - errcheck
   enable:
+    - depguard
     - govet
     - staticcheck
     - unused
     - gosimple
     - ineffassign
     - typecheck
+
+linters-settings:
+  # depguard mirrors the Clean Architecture DAG enforced in
+  # tools/archmetrics/main.go forbiddenEdges. Two independent
+  # enforcement layers by design (ADR-A3):
+  #
+  #   * archmetrics runs in CI (make arch / `go run ./tools/archmetrics
+  #     -compare baseline.json`) and ratchets against baseline.json so a
+  #     net-new violation fails the build even if its layer was
+  #     previously dirty.
+  #   * depguard runs inside golangci-lint (IDE hints + editor underlines
+  #     + CI lint stage) and gives developers immediate per-import
+  #     feedback before commit.
+  #
+  # KEEP the two lists in sync — Phase-A3 sequence is: update DAG in
+  # tools/archmetrics/main.go forbiddenEdges + internal/arch/rules.go
+  # ForbiddenEdges, then mirror here, then `make arch-baseline` to
+  # refresh tools/archmetrics/baseline.json.
+  #
+  # `files:` patterns are doublestar GLOBS matched against the
+  # ABSOLUTE file path (golangci-lint v1.64 + OpenPeeDeeP/depguard v2.x).
+  # Use `**/internal/<layer>/**` to match any file at any depth under
+  # that layer's directory.
+  #
+  # Composition-root exception (mirrors archmetrics ExceptFrom): the
+  # ONLY package allowed to import the FROZEN internal/api or the
+  # transport-layer internal/handler/* is internal/app top-level
+  # (composition.go etc.). Subpackages internal/app/<name>svc/** are
+  # use cases and MUST NOT depend on transport.
+  depguard:
+    rules:
+      # ──────────────────────────────────────────────────────────────
+      # Default: allow stdlib + this module + 3rd-party deps. Each
+      # rule below NARROWS scope by `files:` regex and ADDS deny
+      # entries for that layer.
+      # ──────────────────────────────────────────────────────────────
+      main:
+        list-mode: lax
+        files:
+          - $all
+        allow:
+          - $gostd
+          - github.com/ev-dev-labs/teslasync
+        deny: []
+
+      # ──────────────────────────────────────────────────────────────
+      # Layer: domain (entities). MUST be a pure leaf — knows nothing
+      # about adapters, persistence, transport, ports, app, or models.
+      # Mirrors archmetrics rules: domain -> adapter|database|models|
+      # port|handler|api|app.
+      # ──────────────────────────────────────────────────────────────
+      domain:
+        list-mode: lax
+        files:
+          - '**/internal/domain/**'
+        allow:
+          # internal/apilog is a logging utility (not the FROZEN HTTP
+          # internal/api). depguard HasPrefix-matches deny entries, so
+          # `internal/api` would otherwise catch `internal/apilog`.
+          - github.com/ev-dev-labs/teslasync/internal/apilog
+        deny:
+          - pkg: github.com/ev-dev-labs/teslasync/internal/adapter
+            desc: 'ADR-006: domain MUST NOT import adapters (adapters depend on domain, not the other way around).'
+          - pkg: github.com/ev-dev-labs/teslasync/internal/database
+            desc: 'ADR-006: domain MUST NOT import persistence (use repository ports declared in internal/port instead).'
+          - pkg: github.com/ev-dev-labs/teslasync/internal/models
+            desc: 'ADR-006: domain MUST NOT import DTOs (models map to/from domain, not the other way around).'
+          - pkg: github.com/ev-dev-labs/teslasync/internal/port
+            desc: 'ADR-006: domain MUST NOT import ports — ports live at the consumer (svc) boundary.'
+          - pkg: github.com/ev-dev-labs/teslasync/internal/handler
+            desc: 'ADR-006: domain MUST NOT import HTTP transport (handlers depend on domain via svcs, not the other way around).'
+          - pkg: github.com/ev-dev-labs/teslasync/internal/api
+            desc: 'ADR-006: domain MUST NOT import the FROZEN internal/api package.'
+          - pkg: github.com/ev-dev-labs/teslasync/internal/app
+            desc: 'ADR-006: domain MUST NOT import use cases (app/*svc depend on domain, not the other way around).'
+
+      # ──────────────────────────────────────────────────────────────
+      # Layer: port (interface contracts). MUST depend only on stdlib,
+      # sibling internal/port/* packages, and internal/domain/*.
+      # Mirrors archmetrics rules: port -> adapter|database|handler|
+      # app|api.
+      # ──────────────────────────────────────────────────────────────
+      port:
+        list-mode: lax
+        files:
+          - '**/internal/port/**'
+        allow:
+          - github.com/ev-dev-labs/teslasync/internal/apilog
+        deny:
+          - pkg: github.com/ev-dev-labs/teslasync/internal/adapter
+            desc: 'ADR-007: port packages declare interfaces only; adapters implement them, not the reverse.'
+          - pkg: github.com/ev-dev-labs/teslasync/internal/database
+            desc: 'ADR-007: port MUST NOT depend on persistence — repository ports describe DB operations abstractly.'
+          - pkg: github.com/ev-dev-labs/teslasync/internal/handler
+            desc: 'ADR-007: port MUST NOT depend on HTTP transport.'
+          - pkg: github.com/ev-dev-labs/teslasync/internal/app
+            desc: 'ADR-007: port MUST NOT depend on use cases (app/*svc IS the consumer of ports).'
+          - pkg: github.com/ev-dev-labs/teslasync/internal/api
+            desc: 'ADR-007: port MUST NOT depend on the FROZEN internal/api package.'
+
+      # ──────────────────────────────────────────────────────────────
+      # Layer: adapter (port implementations). MUST NOT reach UP to
+      # transport or use cases. Mirrors archmetrics rules: adapter ->
+      # handler|app|api.
+      # ──────────────────────────────────────────────────────────────
+      adapter:
+        list-mode: lax
+        files:
+          - '**/internal/adapter/**'
+        allow:
+          - github.com/ev-dev-labs/teslasync/internal/apilog
+        deny:
+          - pkg: github.com/ev-dev-labs/teslasync/internal/handler
+            desc: 'ADR-007: adapters implement ports; they MUST NOT depend on HTTP transport.'
+          - pkg: github.com/ev-dev-labs/teslasync/internal/app
+            desc: 'ADR-007: adapters MUST NOT depend on use cases — app/*svc CONSUMES adapters via ports.'
+          - pkg: github.com/ev-dev-labs/teslasync/internal/api
+            desc: 'ADR-007: adapters MUST NOT depend on the FROZEN internal/api package.'
+
+      # ──────────────────────────────────────────────────────────────
+      # Layer: app/*svc (use cases). MUST NOT depend on transport
+      # (handler|api). The composition root internal/app top-level
+      # (composition.go, wire.go etc.) IS the carve-out — that's the
+      # ONLY place where transport, adapters, and svcs meet. The regex
+      # matches files at least 2 path segments deep under internal/app
+      # — i.e. all internal/app/<name>svc/** files but NOT
+      # internal/app/*.go directly.
+      # ──────────────────────────────────────────────────────────────
+      app-svc:
+        list-mode: lax
+        files:
+          - '**/internal/app/*/**'
+        allow:
+          - github.com/ev-dev-labs/teslasync/internal/apilog
+        deny:
+          - pkg: github.com/ev-dev-labs/teslasync/internal/handler
+            desc: 'ADR-007: use cases MUST NOT depend on HTTP transport. Handlers depend on svcs, not the reverse.'
+          - pkg: github.com/ev-dev-labs/teslasync/internal/api
+            desc: 'ADR-007: use cases MUST NOT depend on the FROZEN internal/api package.'
+
+      # ──────────────────────────────────────────────────────────────
+      # Layer: handler (thin HTTP transport adapters). MUST NOT touch
+      # persistence, infra adapters, vendor SDKs, or infrastructure
+      # clients directly. Everything goes through internal/app/*svc +
+      # ports.
+      # ──────────────────────────────────────────────────────────────
+      handler:
+        list-mode: lax
+        files:
+          - '**/internal/handler/**'
+        allow:
+          # internal/tesla_pipeline is the legacy in-process pipeline
+          # (not the vendor SDK internal/tesla). Some handlers still
+          # call it directly during the Phase-42a transition.
+          - github.com/ev-dev-labs/teslasync/internal/tesla_pipeline
+        deny:
+          - pkg: github.com/ev-dev-labs/teslasync/internal/database
+            desc: 'ADR-009: handlers MUST be thin — call an internal/app/*svc use case instead of querying the DB directly.'
+          - pkg: github.com/ev-dev-labs/teslasync/internal/adapter
+            desc: 'ADR-009: handlers MUST NOT call adapters directly — go through internal/app/*svc + ports.'
+          - pkg: github.com/ev-dev-labs/teslasync/internal/tesla
+            desc: 'ADR-009: handlers MUST NOT call Tesla vendor code directly — go through internal/app/*svc + ports.'
+          - pkg: github.com/ev-dev-labs/teslasync/internal/mqtt
+            desc: 'ADR-009: handlers MUST NOT publish to MQTT directly — go through internal/app/*svc + ports.'
+          - pkg: github.com/ev-dev-labs/teslasync/internal/redis
+            desc: 'ADR-009: handlers MUST NOT call Redis directly — go through internal/app/*svc + ports.'
+          - pkg: github.com/ev-dev-labs/teslasync/internal/geocoding
+            desc: 'ADR-009: handlers MUST NOT call geocoding adapters directly — go through internal/app/*svc + ports.'
+
+      # ──────────────────────────────────────────────────────────────
+      # Layer: models (persistence + transport DTOs, ADR-006 leaf).
+      # MUST NOT depend on any other layer. Handlers/adapters/svcs map
+      # to/from models, not the reverse. Phase-R5 made every
+      # internal/models/<sub> subpackage inherit this same DTO-leaf
+      # contract.
+      # ──────────────────────────────────────────────────────────────
+      models:
+        list-mode: lax
+        files:
+          - '**/internal/models/**'
+        allow:
+          - github.com/ev-dev-labs/teslasync/internal/apilog
+        deny:
+          - pkg: github.com/ev-dev-labs/teslasync/internal/database
+            desc: 'ADR-006: models are DTOs only — they MUST NOT import persistence.'
+          - pkg: github.com/ev-dev-labs/teslasync/internal/adapter
+            desc: 'ADR-006: models are DTOs only — they MUST NOT import adapters.'
+          - pkg: github.com/ev-dev-labs/teslasync/internal/handler
+            desc: 'ADR-006: models are DTOs only — they MUST NOT import HTTP transport.'
+          - pkg: github.com/ev-dev-labs/teslasync/internal/app
+            desc: 'ADR-006: models are DTOs only — they MUST NOT import use cases.'
+          - pkg: github.com/ev-dev-labs/teslasync/internal/api
+            desc: 'ADR-006: models are DTOs only — they MUST NOT import the FROZEN internal/api package.'
+
+      # ──────────────────────────────────────────────────────────────
+      # Layer: cmd (entry points). The composition root for the HTTP
+      # API lives in internal/app (since phase-47/56de7194), so NO cmd
+      # should import internal/api directly.
+      # ──────────────────────────────────────────────────────────────
+      cmd:
+        list-mode: lax
+        files:
+          - '**/cmd/**'
+        allow:
+          - github.com/ev-dev-labs/teslasync/internal/apilog
+        deny:
+          - pkg: github.com/ev-dev-labs/teslasync/internal/api
+            desc: 'ADR-007: cmd entry points wire the composition root in internal/app — do NOT import internal/api directly.'
 
 issues:
   exclude-dirs:

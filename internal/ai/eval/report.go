@@ -121,11 +121,11 @@ type junitTestSuite struct {
 }
 
 type junitTestCase struct {
-	Classname string         `xml:"classname,attr"`
-	Name      string         `xml:"name,attr"`
-	Time      float64        `xml:"time,attr"`
-	Failure   *junitFailure  `xml:"failure,omitempty"`
-	SystemOut string         `xml:"system-out,omitempty"`
+	Classname string        `xml:"classname,attr"`
+	Name      string        `xml:"name,attr"`
+	Time      float64       `xml:"time,attr"`
+	Failure   *junitFailure `xml:"failure,omitempty"`
+	SystemOut string        `xml:"system-out,omitempty"`
 }
 
 type junitFailure struct {

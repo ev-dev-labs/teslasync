@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// Phase-46 / Prompt 53 — Background polling audit.
+// Background polling audit.
 //
 // TanStack Query's `refetchInterval` continues firing while the tab is
 // in the background unless `refetchIntervalInBackground` is `false`.
-// Phase-46 / Prompt 53 flips the default to `false` at the QueryClient
+// flips the default to `false` at the QueryClient
 // level (see web/src/api/queryClient.ts) so every hook automatically
 // pauses refetches while `document.hidden === true` — saving Tesla
 // Fleet API quota, CPU, and battery for users who park TeslaSync in a
@@ -12,13 +12,13 @@
 // Hooks that genuinely need to keep polling in the background MUST
 // override the default per-query AND annotate the override:
 //
-//     useQuery({
-//       refetchInterval: 30_000,
-//       // ALLOW-BG-POLLING: SSE bridge bootstrap requires a ticking
-//       // poller while the tab is suspended so the next-event cursor
-//       // doesn't drift past the server's retention window.
-//       refetchIntervalInBackground: true,
-//     })
+// useQuery({
+// refetchInterval: 30_000,
+// // ALLOW-BG-POLLING: SSE bridge bootstrap requires a ticking
+// // poller while the tab is suspended so the next-event cursor
+// // doesn't drift past the server's retention window.
+// refetchIntervalInBackground: true,
+// })
 //
 // This audit walks every `.ts` / `.tsx` file under web/src and fails
 // when a `refetchIntervalInBackground: true` is found without an
@@ -77,7 +77,7 @@ function* walk(dir) {
 }
 
 /**
- * Strip block comments (`/* ... *​/`) AND single-line comments (`//`)
+ * Strip block comments (`/*... *​/`) AND single-line comments (`//`)
  * from a source file, replacing the comment characters with spaces so
  * line numbers and column offsets are preserved. We deliberately do
  * NOT strip comments inside string literals — strings can't legally
@@ -139,17 +139,17 @@ for (const file of walk(ROOT)) {
   const rawLines = rawText.split(/\r?\n/)
   for (let i = 0; i < codeLines.length; i += 1) {
     // Match against the comment-stripped view so a JSDoc example like
-    //   * refetchIntervalInBackground: true,
+    // * refetchIntervalInBackground: true,
     // does not count as a real opt-in.
     if (!OPTION_RE.test(codeLines[i])) continue
 
-    // 1. Trailing-comment form: `refetchIntervalInBackground: true, // ALLOW-BG-POLLING: ...`
-    //    Annotation check uses the RAW line (still has its // comment).
+    // 1. Trailing-comment form: `refetchIntervalInBackground: true, // ALLOW-BG-POLLING:...`
+    // Annotation check uses the RAW line (still has its // comment).
     if (ANNOTATION_RE.test(rawLines[i])) continue
 
     // 2. Preceding-non-blank-line form: walk backwards past blank
-    //    lines (which a formatter may insert between a JSDoc-style
-    //    block and the option) until the first line with content.
+    // lines (which a formatter may insert between a JSDoc-style
+    // block and the option) until the first line with content.
     let j = i - 1
     while (j >= 0 && rawLines[j].trim() === '') j -= 1
     if (j >= 0 && ANNOTATION_RE.test(rawLines[j])) continue

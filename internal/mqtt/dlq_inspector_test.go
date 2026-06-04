@@ -1,7 +1,5 @@
 // DLQ inspector unit tests.
 //
-// Phase-44 / observability-batch / Prompt F4.
-//
 // These tests use an in-file fakeDLQInspectorClient that satisfies the
 // subset of pahomqtt.Client the inspector touches (Subscribe + Publish +
 // Unsubscribe). We deliberately do NOT share fakePahoClient from
@@ -343,13 +341,13 @@ func deliverDLQ(fc *fakeDLQInspectorClient, topic string, body []byte) {
 // inspector's needs (Subscribe + Publish + Unsubscribe). All other methods
 // panic — accidental dependency on broker-side behaviour surfaces loudly.
 type fakeDLQInspectorClient struct {
-	mu               sync.Mutex
-	subTopic         string
-	subHandler       pahomqtt.MessageHandler
-	publishCalls     int
-	lastPubTopic     string
-	lastPubPayload   []byte
-	publishBlocks    bool // true → Publish returns a never-completing token
+	mu             sync.Mutex
+	subTopic       string
+	subHandler     pahomqtt.MessageHandler
+	publishCalls   int
+	lastPubTopic   string
+	lastPubPayload []byte
+	publishBlocks  bool // true → Publish returns a never-completing token
 }
 
 func (f *fakeDLQInspectorClient) Subscribe(topic string, _ byte, h pahomqtt.MessageHandler) pahomqtt.Token {
@@ -411,15 +409,15 @@ func (f *fakeDLQInspectorClient) lastPublishPayload() []byte {
 }
 
 // Unused pahomqtt.Client methods.
-func (f *fakeDLQInspectorClient) IsConnected() bool                                    { return true }
-func (f *fakeDLQInspectorClient) IsConnectionOpen() bool                               { return true }
-func (f *fakeDLQInspectorClient) Connect() pahomqtt.Token                              { panic("not used") }
-func (f *fakeDLQInspectorClient) Disconnect(_ uint)                                    { panic("not used") }
+func (f *fakeDLQInspectorClient) IsConnected() bool       { return true }
+func (f *fakeDLQInspectorClient) IsConnectionOpen() bool  { return true }
+func (f *fakeDLQInspectorClient) Connect() pahomqtt.Token { panic("not used") }
+func (f *fakeDLQInspectorClient) Disconnect(_ uint)       { panic("not used") }
 func (f *fakeDLQInspectorClient) SubscribeMultiple(_ map[string]byte, _ pahomqtt.MessageHandler) pahomqtt.Token {
 	panic("not used")
 }
-func (f *fakeDLQInspectorClient) AddRoute(_ string, _ pahomqtt.MessageHandler)         {}
-func (f *fakeDLQInspectorClient) OptionsReader() pahomqtt.ClientOptionsReader          { panic("not used") }
+func (f *fakeDLQInspectorClient) AddRoute(_ string, _ pahomqtt.MessageHandler) {}
+func (f *fakeDLQInspectorClient) OptionsReader() pahomqtt.ClientOptionsReader  { panic("not used") }
 
 // blockingPahoToken simulates a Publish that never completes (broker hung,
 // network gone). Used by TestDLQInspector_Replay_RespectsContext.

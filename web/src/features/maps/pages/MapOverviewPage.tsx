@@ -77,12 +77,12 @@ export default function MapOverviewPage() {
   const { t } = useTranslation('maps');
   usePageTitle(t('mapOverview.pageTitle', 'Map Overview'));
 
-  /* ---- unit prefs (Phase-43 SI-floor display) ---- */
+  /* ---- unit prefs ---- */
   const { unitPrefs } = useUnits();
   const speedUnit = unitPrefs.speed;
   const distanceUnit = unitPrefs.distance;
 
-  /* ---- vehicle selector — Phase 40 / Prompt 16: header VehiclePicker is the source of truth ---- */
+  /* ---- vehicle selector: header VehiclePicker is the source of truth ---- */
   const { vehicleId } = useSelectedVehicle();
   // Map style lives in the URL so a satellite view can be shared.
   const [mapStyle, setMapStyle] = useUrlEnum<MapStyle>(
@@ -231,7 +231,7 @@ export default function MapOverviewPage() {
     [t, speedUnit],
   );
 
-  // Defensive guard: no vehicle selected (Phase 40 / Prompt 18).
+  // Defensive guard: no vehicle selected.
   if (vehicleId == null) {
     return <NoVehicleSelected pageTitle={t('mapOverview.title', 'Map Overview')} />;
   }

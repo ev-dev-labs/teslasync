@@ -45,7 +45,7 @@ import VehicleSettingsTab from '../components/VehicleSettingsTab'
 import { useVehicleSettings, findEffectiveSetting } from '@/api/hooks/useVehicleSettings'
 import { AIVehiclePaintPreview } from '@/components/ai/AIVehiclePaintPreview'
 
-/* ─── Loading skeleton (Phase-45 / Prompt 18) ─────────────────────── */
+/* ─── Loading skeleton ─────────────────────── */
 
 /**
  * Mirrors the VehicleDetailPage layout while the vehicle record loads:
@@ -88,9 +88,8 @@ export default function VehicleDetailPage() {
     enabled: vehicleId > 0,
   })
 
-  // Phase-46 / Prompt 43 — per-vehicle settings. Nickname override
-  // feeds the page title + breadcrumb; falls back to vehicles.display_name
-  // when no override is present.
+  // Nickname override feeds the page title and breadcrumb; falls back to
+  // vehicles.display_name when no override is present.
   const { data: vehicleSettings } = useVehicleSettings(vehicleId)
   const nicknameSetting = findEffectiveSetting(vehicleSettings, 'nickname')
   const effectiveName =
@@ -176,7 +175,7 @@ export default function VehicleDetailPage() {
   const state = stateData?.state
   const status: VehicleStatus = vehicle ? deriveStatus(state) : 'offline'
 
-  /* ─── Loading short-circuit (Phase-45 / Prompt 18) ─────────── */
+  /* ─── Loading short-circuit ─────────── */
   if (vehicleLoading) {
     return <VehicleDetailSkeleton />
   }

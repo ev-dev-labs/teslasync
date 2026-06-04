@@ -1,6 +1,4 @@
-// Package softwareupdatechangelogsummarizer is the Phase-50 / 0051
-// M3 strategy for the LLM-summarized firmware update changelog
-// surface.
+// Package softwareupdatechangelogsummarizer implements the LLM-summarized firmware update changelog strategy.
 //
 // The strategy declares:
 //
@@ -20,10 +18,12 @@
 //
 //   - the two read-only tools the LLM is allowed to call in
 //     this surface:
+//
 //   - query_vehicle_software — REQUIRED, called FIRST. Loads
 //     the in-scope vehicle's deterministic software-updates
 //     envelope (current installed version, recent
 //     install/scheduled history, derived install cadence).
+//
 //   - retrieve_update_notes — OPTIONAL, called AFTER
 //     query_vehicle_software when the LLM wants to ground a
 //     per-version commentary in the cached release-note
@@ -198,16 +198,13 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyChatbot wrapped through the F4↔F8 adapter so the
+// PolicyChatbot through the redaction-policy adapter so the
 // dispatcher's per-request ctx-installation step (dispatch.Run
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyChatbot from
-// internal/ai/redact/policies.go. Allowed classes: none; release
-// notes are public text and vehicle identifiers stay tagged.
-// Round-trip required: yes." PolicyChatbot's Allow=nil + Mode=
-// ModeRedactedTags satisfies that contract: every PII class
+// PolicyChatbot's Allow=nil + ModeRedactedTags satisfies the
+// privacy contract: every PII class
 // (vehicle name included) is tagged round-trip BEFORE the message
 // reaches the provider so a leaked transcript reveals nothing
 // beyond the public version strings themselves.

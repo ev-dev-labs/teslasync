@@ -117,7 +117,6 @@ func TestHealthMonitor_OverallStatus(t *testing.T) {
 		t.Errorf("expected overall Healthy, got '%s'", hm.OverallStatus())
 	}
 
-	// Degrade one component
 	hm.RecordFailure("api", errors.New("err"))
 	hm.RecordFailure("api", errors.New("err"))
 	hm.RecordFailure("api", errors.New("err"))

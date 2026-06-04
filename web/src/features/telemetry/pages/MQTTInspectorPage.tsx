@@ -241,7 +241,7 @@ export default function MQTTInspectorPage() {
         </GlassPanel>
       </FadeIn>
 
-      {/* AI explainer (opt-in, Phase-50 / S6 slice 0047). */}
+      {/* Opt-in AI explainer. */}
       <FadeIn delay={0.18}>
         <AIMqttSseInspectorExplanations
           fromUnix={aiWindow.fromUnix}

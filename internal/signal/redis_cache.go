@@ -1,7 +1,7 @@
 // Package signal — see package doc in store.go for the layered live-state
 // contract. This file holds the L2 (Redis HSET) cache.
 //
-// # Phase-42 typed envelope
+// # Typed Redis envelope
 //
 // Each HSET field value is a JSON envelope of the form:
 //
@@ -9,12 +9,12 @@
 //
 // where `kind` is a protomodel.ValueKind discriminator so the reader can
 // switch on it and unmarshal `v` into the right concrete Go type without
-// reflection or string-parsing fallbacks. The pre-Phase-42 envelope
-// fields (`encoding`, `value`, `timestamp`, `source`, `legacy_value`)
+// reflection or string-parsing fallbacks. Legacy envelope fields
+// (`encoding`, `value`, `timestamp`, `source`, `legacy_value`)
 // are still populated by the writer so binaries running the old reader
 // mid-rollout can keep decoding without flushing production Redis. New
 // readers prefer the typed `kind`+`v`+`ts` triplet and ignore the
-// legacy fields. Pre-Phase-42 envelopes ({"encoding","value",
+// legacy fields. Legacy envelopes ({"encoding","value",
 // "timestamp",...}) and legacy scalar fields ("72.5", "true",
 // "asleep") remain decodable forever for the same reason.
 //
@@ -65,8 +65,7 @@ import (
 )
 
 // redisCacheTracerName is the OpenTelemetry tracer name for Redis L2
-// cache spans. The Phase-10 trace-coverage audit greps for this exact
-// constant.
+// cache spans. The trace-coverage audit greps for this exact constant.
 const redisCacheTracerName = "signal"
 
 // redisAsyncCtxKey is the unexported key the L2 mirror goroutine in
@@ -148,20 +147,18 @@ type redisSignalClient interface {
 }
 
 // redisSignalValueEnvelope is the wire format for a single HSET field
-// value. Phase-42 writes populate BOTH the typed envelope fields
-// (Kind, V, TS) and the pre-Phase-42 envelope fields (Encoding, Value,
-// LegacyValue, Timestamp, Source) so an old binary running the
-// pre-Phase-42 decoder mid-rollout still finds its expected fields.
-// New readers prefer the typed Kind+V+TS triplet and ignore the legacy
-// fields. Pre-Phase-42 entries already in production Redis remain
-// decodable via the legacy fields alone.
+// value. Writers populate BOTH the typed envelope fields (Kind, V, TS)
+// and the legacy envelope fields (Encoding, Value, LegacyValue, Timestamp,
+// Source) so old readers keep decoding during rolling deploys. New readers
+// prefer the typed Kind+V+TS triplet and ignore the legacy fields. Existing
+// production Redis entries remain decodable via the legacy fields alone.
 type redisSignalValueEnvelope struct {
-	// Phase-42 typed envelope (canonical going forward).
+	// Typed envelope (canonical going forward).
 	Kind protomodel.ValueKind `json:"kind,omitempty"`
 	V    json.RawMessage      `json:"v,omitempty"`
 	TS   int64                `json:"ts,omitempty"`
 
-	// Pre-Phase-42 envelope (dual-written for old-binary read compat).
+	// Legacy envelope (dual-written for old-binary read compatibility).
 	Encoding    string          `json:"encoding,omitempty"`
 	Value       json.RawMessage `json:"value,omitempty"`
 	LegacyValue *string         `json:"legacy_value,omitempty"`
@@ -172,7 +169,7 @@ type redisSignalValueEnvelope struct {
 // RedisSignalCache writes signal values to Redis HSET as a write-through
 // cache alongside the in-memory Store. Key: "vehicle:{vehicleID}:signals",
 // field: signal name, value: typed JSON envelope. Legacy scalar values
-// and pre-phase-42 envelopes are still decoded indefinitely for
+// and legacy envelopes are still decoded indefinitely for
 // backwards compatibility.
 type RedisSignalCache struct {
 	rdb        redisSignalClient
@@ -590,8 +587,8 @@ func decodeSignalValue(s string) interface{} {
 }
 
 // decodeSignalValueWithTimestamp returns the signal value plus its
-// freshness timestamp. Typed envelopes (Phase-42) and legacy envelopes
-// (pre-Phase-42) both carry an authoritative timestamp; legacy scalar
+// freshness timestamp. Typed and legacy envelopes both carry an authoritative
+// timestamp; legacy scalar
 // fields decode with a zero Timestamp to indicate unknown freshness.
 func decodeSignalValueWithTimestamp(s string) (*Value, error) {
 	envelope, ok, err := parseRedisSignalValueEnvelope(s, true)
@@ -609,8 +606,8 @@ func decodeSignalValueWithTimestamp(s string) (*Value, error) {
 }
 
 // decodeEnvelopeValue extracts the typed Go value from an envelope.
-// Phase-42 typed envelopes (Kind+V) take precedence; pre-Phase-42
-// envelopes fall back to LegacyValue or untyped Value.
+// Typed envelopes (Kind+V) take precedence; legacy envelopes fall back to
+// LegacyValue or untyped Value.
 func decodeEnvelopeValue(envelope redisSignalValueEnvelope) (interface{}, bool) {
 	if len(envelope.V) > 0 {
 		value, err := decodeTypedValue(envelope.Kind, envelope.V)
@@ -633,7 +630,7 @@ func decodeEnvelopeValue(envelope redisSignalValueEnvelope) (interface{}, bool) 
 }
 
 // envelopeTimestamp returns the freshness timestamp from an envelope,
-// preferring the Phase-42 unix-nanos field when present and falling
+// preferring the unix-nanos field when present and falling
 // back to the legacy time.Time field otherwise.
 func envelopeTimestamp(envelope redisSignalValueEnvelope) time.Time {
 	if envelope.TS != 0 {
@@ -721,8 +718,8 @@ func decodeLegacySignalValue(s string) interface{} {
 	return s
 }
 
-// parseRedisSignalValueEnvelope tries to decode s as either the Phase-42
-// typed envelope ({"kind","v","ts"}) or the pre-Phase-42 envelope
+// parseRedisSignalValueEnvelope tries to decode s as either the typed
+// envelope ({"kind","v","ts"}) or the legacy envelope
 // ({"encoding","value","timestamp"}). Returns (envelope, true, nil) for
 // either canonical shape. Returns (zero, false, nil) for legacy scalar
 // fields so the caller falls through to decodeLegacySignalValue. In
@@ -795,11 +792,11 @@ func parseRedisSignalValueEnvelope(s string, strict bool) (redisSignalValueEnvel
 	return envelope, true, nil
 }
 
-// encodeTimestampedSignalValueForField is the canonical Phase-42 encoder.
+// encodeTimestampedSignalValueForField is the canonical Redis envelope encoder.
 // It infers the protomodel.ValueKind for `name` (runtime-type-first;
 // metadata fallback for enum disambiguation and unknown types) and
-// writes the typed envelope {"kind","v","ts"}. The pre-Phase-42
-// envelope fields (encoding/value/timestamp/source/legacy_value) are
+// writes the typed envelope {"kind","v","ts"}. Legacy envelope
+// fields (encoding/value/timestamp/source/legacy_value) are
 // also populated so older binaries mid-rollout — and the immutable
 // wire-format assertions in live_store_test.go — keep working. New
 // readers pick up `kind`+`v`+`ts`; old readers ignore them and fall

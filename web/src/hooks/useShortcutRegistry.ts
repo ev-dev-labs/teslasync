@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import { useLocation } from 'react-router-dom'
 
 /**
- * Phase 40 / Prompt 64 — keyboard shortcut registry.
+ * Keyboard shortcut registry.
  *
  * A tiny external store of {@link ShortcutDefinition}s so any component can
  * declare its own keyboard hotkeys *and* have them automatically appear in

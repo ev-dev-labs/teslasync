@@ -1,13 +1,7 @@
-// Phase-50 / 0034 — A1 Alert tuning suggestions.
-//
-// Unit tests for the alert-tuning-suggestions Strategy. Mirrors the
-// shape of nl-alert-builder/strategy_test.go (the closest
-// precedent: PROPOSE-only strategy with the SAME PolicyAlertBuilder
-// redaction policy and a draft+validate two-tool sequence). The
-// Strategy is a pure value (no internal state, no IO) so the tests
-// are tight: pin the feature ID + system prompt + tool whitelist +
-// redaction policy shape so a future edit that breaks the contract
-// surfaces here before the dispatcher silently changes behaviour.
+// These tests pin the alert-tuning-suggestions strategy contract:
+// feature ID, system prompt directives, tool whitelist, and redaction
+// policy. The strategy is a pure value, so regressions should surface
+// here before dispatcher behavior changes.
 
 package alerttuningsuggestions
 
@@ -150,7 +144,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs cross-rule de-dup snippets ships.
+// future work needs cross-rule de-dup snippets.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -163,15 +157,11 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 	}
 }
 
-// TestStrategy_RedactionPolicyAlertBuilder proves the strategy
-// hands the dispatcher PolicyAlertBuilder wrapped through the
-// F4↔F8 adapter. PolicyAlertBuilder denies ALL PII classes — the
-// LLM never needs cleartext rule identifiers because the typed
-// envelope carries them through the F4 tool layer.
+// TestStrategy_RedactionPolicyAlertBuilder proves the strategy uses
+// PolicyAlertBuilder. The policy denies ALL PII classes, so the LLM
+// never needs cleartext rule identifiers.
 //
-// The slice prompt mandates: "Allowed classes: none; rule IDs
-// and metrics flow through tools. Round-trip required: no". The
-// policy's Allow list is nil and the Mode is ModeRedactedTags;
+// The policy's Allow list is nil and the Mode is ModeRedactedTags;
 // both are pinned so a future edit that silently broadens the
 // allow-list or downgrades the mode surfaces as a test failure.
 func TestStrategy_RedactionPolicyAlertBuilder(t *testing.T) {
@@ -187,11 +177,9 @@ func TestStrategy_RedactionPolicyAlertBuilder(t *testing.T) {
 	if want.Mode != redact.ModeRedactedTags {
 		t.Errorf("redact.PolicyAlertBuilder Mode = %v, want ModeRedactedTags", want.Mode)
 	}
-	// Allow list MUST be empty — this is the load-bearing
-	// "deny-all" invariant the slice prompt mandates. A future
-	// edit that adds even ClassVehicleName to the allow-list
-	// would change the threat model and break alignment with
-	// the N1 alert-builder slice that shares this policy.
+	// Allow list MUST be empty. Adding even ClassVehicleName would
+	// change the threat model and break alignment with this shared
+	// policy.
 	if len(want.Allow) != 0 {
 		t.Errorf("redact.PolicyAlertBuilder.Allow has %d entries; want 0 (deny-all): got=%v", len(want.Allow), want.Allow)
 	}
@@ -209,8 +197,6 @@ func TestStrategy_EvalGoldensReturnsNil(t *testing.T) {
 		t.Fatalf("EvalGoldens() = %v, want nil (goldens live in YAML)", g)
 	}
 }
-
-// --- helpers ---------------------------------------------------------
 
 func contains(s, sub string) bool {
 	return len(s) >= len(sub) && (s == sub || indexOf(s, sub) >= 0)

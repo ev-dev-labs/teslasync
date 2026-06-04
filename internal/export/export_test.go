@@ -103,7 +103,6 @@ func TestMapToSlice(t *testing.T) {
 	if len(result) != 3 {
 		t.Fatalf("len = %d, want 3", len(result))
 	}
-	// Should be sorted by count descending
 	if result[0]["count"].(int) != 10 {
 		t.Errorf("first entry count = %d, want 10", result[0]["count"])
 	}
@@ -124,7 +123,6 @@ func TestPublish_NilClient(t *testing.T) {
 }
 
 func TestNewWorker_NilDB(t *testing.T) {
-	// Should not panic with nil db
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf("NewWorker panicked with nil db: %v", r)
@@ -134,8 +132,6 @@ func TestNewWorker_NilDB(t *testing.T) {
 }
 
 func TestWorker_Start_NilClient(t *testing.T) {
-	// Start with nil MQTT client should return immediately
 	w := &Worker{}
 	w.Start(context.TODO(), nil)
-	// No panic = success
 }

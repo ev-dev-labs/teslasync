@@ -1,11 +1,10 @@
 /**
- * Phase-46 / Prompt 14 — WAI-ARIA combobox / autocomplete primitive.
+ * WAI-ARIA combobox / autocomplete primitive.
  *
- * Implements the canonical "type to filter then pick" pattern that we
- * have been hand-rolling across signal pickers, geocoded address
- * inputs, vehicle pickers, etc. Centralising it gives us a single
- * place to get the (notoriously hard) keyboard + screen-reader
- * contract right.
+ * Implements the shared "type to filter then pick" pattern for signal
+ * pickers, geocoded address inputs, vehicle pickers, and similar UI.
+ * Centralizing it gives us one place to get the keyboard and
+ * screen-reader contract right.
  *
  * a11y contract
  * -------------
@@ -34,8 +33,8 @@
  *   - Tab commits highlighted option (if any) then continues tab order
  *   - Click outside closes without committing
  *
- * For async option fetching the previous in-flight request is
- * cancelled on every new keystroke (cross-cuts with phase-46/02).
+ * For async option fetching, every new keystroke cancels the previous
+ * in-flight request.
  */
 
 import {

@@ -1,27 +1,8 @@
-// Phase-50 / 0064 — ML3 Charging-curve fingerprint clustering statistical model.
+// Charging-curve fingerprint clustering parity tests.
 //
-// fallback parity test: pins
-// internal/ml/chargingcurves.ClassifyChargingPowerTier <-> the C3
-// sibling tools.classifyChargingPowerTier in
-// internal/ai/tools/charge_curve_clustering.go. The two
-// classifiers MUST agree at every representative power point for
-// the lifetime of the slice; if a future change updates one but
-// not the other, the ML3 learned envelope would silently disagree
-// with the C3 narrator (which uses the same per-tier semantics)
-// and the two surfaces' narrations would contradict each other.
-//
-// The duplication is intentional and documented in
-// internal/ml/chargingcurves/clustering.go (mlchargingcurves
-// references the SPA helpers.ts + the C3 tool in its docstring);
-// this test is the load-bearing guard that keeps the duplication
-// safe.
-//
-// Why we don't share a single function across ml/chargingcurves
-// and ai/tools/charge_curve_clustering: the two packages have
-// independent dependency directions (ai/tools imports
-// ml/chargingcurves but not vice-versa), and the C3 sibling
-// classifier predates ML3. Cross-importing would couple their
-// release cadences.
+// This parity test pins ml/chargingcurves.ClassifyChargingPowerTier to the
+// tool sibling classifier so their narrations cannot drift. The duplication
+// is intentional because the packages have different dependency directions.
 
 package api
 
@@ -31,50 +12,14 @@ import (
 	mlchargingcurves "github.com/ev-dev-labs/teslasync/internal/ml/chargingcurves"
 )
 
-// TestChargingCurveClusterParity_MLvsTools proves the two
-// classifiers agree at every representative power point.
-//
-// Why these specific points: each one straddles a boundary
-// (PowerL1MaxW=1920, PowerL2MaxW=19200) or sits inside a tier so
-// boundary-condition drift surfaces immediately:
-//
-//   - nil / 0 / negative → "unknown"
-//   - 1500 (well below L1 boundary) → "l1_overnight"
-//   - 1920 (exactly at L1 boundary) → "l1_overnight"
-//   - 1921 (just above L1 boundary) → "l2_workplace"
-//   - 7000 (mid L2) → "l2_workplace"
-//   - 19200 (exactly at L2 boundary) → "l2_workplace"
-//   - 19201 (just above L2 boundary) → "dc_fast"
-//   - 50000 / 250000 (typical Supercharger) → "dc_fast"
-//
-// A failure here means either:
-//
-//   - mlchargingcurves.ClassifyChargingPowerTier was updated
-//     without mirroring the change to
-//     internal/ai/tools/charge_curve_clustering.go's
-//     classifyChargingPowerTier, OR
-//
-//   - the constants PowerL1MaxW / PowerL2MaxW drifted apart from
-//     chargeCurvePowerL1MaxW / chargeCurvePowerL2MaxW.
-//
-// Either way: update BOTH classifiers in the same commit and re-run.
-//
-// Note we cannot directly call tools.classifyChargingPowerTier
-// from this api-package test because the function is unexported.
-// We pin against the public ML constants + the canonical labels
-// the C3 tool's docstring nails down (see
-// internal/ai/tools/charge_curve_clustering.go L419-L443). A
-// future edit that flips a label in either implementation surfaces
-// here; a future edit that flips ONLY the constants without
-// touching the labels surfaces here too.
+// TestChargingCurveClusterParity_MLvsTools covers nil/invalid inputs plus
+// values around the L1/L2/DC tier boundaries. A failure means the ML classifier,
+// the tool sibling classifier, or their boundary constants drifted; update both
+// classifiers in the same commit.
 func TestChargingCurveClusterParity_MLvsTools(t *testing.T) {
 	t.Parallel()
 
-	// Pin the constants. If chargeCurvePowerL1MaxW or
-	// chargeCurvePowerL2MaxW in
-	// internal/ai/tools/charge_curve_clustering.go ever change,
-	// these constants must change together — and this test will
-	// fail until they're updated to match.
+	// Pin constants to the tool's unexported chargeCurvePower* boundaries.
 	const (
 		expectedPowerL1MaxW = 1920.0
 		expectedPowerL2MaxW = 19200.0
@@ -90,9 +35,9 @@ func TestChargingCurveClusterParity_MLvsTools(t *testing.T) {
 
 	// Pin the labels at every representative power point.
 	cases := []struct {
-		name    string
-		peakW   *float64
-		want    string
+		name  string
+		peakW *float64
+		want  string
 	}{
 		{"nil", nil, "unknown"},
 		{"zero", floatPtrParity(0), "unknown"},
@@ -115,6 +60,5 @@ func TestChargingCurveClusterParity_MLvsTools(t *testing.T) {
 	}
 }
 
-// floatPtrParity returns a pointer to v. Local helper to avoid
-// colliding with helpers in other test files in this package.
+// floatPtrParity avoids colliding with helpers in other api tests.
 func floatPtrParity(v float64) *float64 { return &v }

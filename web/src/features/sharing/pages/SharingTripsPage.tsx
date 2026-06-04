@@ -1,20 +1,11 @@
-// Phase-50 / 0060 — GEN1 trip postcard and share-card image generation.
+// Trip postcard and share-card image generation page.
 //
-// SharingTripsPage is the canonical baseline page at /sharing/trips.
-// It surfaces the user's recent trips (the candidates for sharing)
-// in a list, hosts the existing share-card management hints, AND —
-// only when ai_mode is on AND the
-// trip-postcard-share-card-image-generation toggle is enabled —
-// renders the opt-in AITripPostcardShareCardImageGeneration card
-// beneath the list so the user can ask Helix to draft an image
-// prompt + preview spec for the selected trip.
+// SharingTripsPage surfaces recent trips eligible for sharing, keeps the
+// existing share-card management hints, and conditionally renders the opt-in
+// AI image prompt drafter when AI mode and its feature toggle are enabled.
 //
-// The page itself MUST keep working in off mode: the registry's
-// frontend route `/sharing/trips` is reachable irrespective of the
-// AI mode (ADR-015 §I3 baseline-intact). The AI card is rendered
-// behind withAiFeature, so in off mode it is entirely absent from
-// the DOM (proven by the off-mode SPA test
-// TestTripPostcardAIOffStaticShareCardOnly).
+// The /sharing/trips route must keep working in AI-off mode (ADR-015 §I3).
+// withAiFeature removes the AI card from the DOM when the feature is off.
 //
 // Selection model:
 //   - The user picks one trip from the recent-trips list. The

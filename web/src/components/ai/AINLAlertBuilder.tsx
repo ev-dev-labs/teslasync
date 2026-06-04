@@ -1,6 +1,5 @@
-// Phase-50 / 0015 — N1 NL alert builder.
-// Phase-50 / W1 (slice 0065) — wired the Draft button to
-// POST /api/v1/ai/alerts/rules/draft.
+// Natural-language alert builder.
+// The Draft button posts to POST /api/v1/ai/alerts/rules/draft.
 
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'

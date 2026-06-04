@@ -13,10 +13,9 @@ import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 
-// Phase-43/0025 + 0026: Wh/km -> Wh/(display unit) conversion uses an
-// inline factor because @/lib/unitConversion does not yet expose a
-// convertEfficiencyFromSI helper. Same precedent as
-// FleetComparePage.whPerKmToDisplay.
+// Wh/km -> Wh/(display unit) conversion uses an inline factor because
+// @/lib/unitConversion does not yet expose a convertEfficiencyFromSI
+// helper. Same precedent as FleetComparePage.whPerKmToDisplay.
 const KM_PER_MILE = 1.609344;
 
 export default function TripDetailPage() {
@@ -25,9 +24,8 @@ export default function TripDetailPage() {
   const { data: trip, isLoading, error } = useTrip(id!);
   const { unitPrefs } = useUnits();
   const { formatCurrency } = useFormatting();
-  // useSettings retained for the legacy efficiencyUnit label string only;
-  // the numeric conversion runs through KM_PER_MILE per the locked-policy
-  // continuation from Phase-43/0025.
+  // Numeric efficiency conversion runs through KM_PER_MILE until
+  // @/lib/unitConversion exposes a convertEfficiencyFromSI helper.
 
   const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
 

@@ -15,9 +15,9 @@ import (
 func newTestLimiter(t *testing.T, clock *FakeClock, override map[string]Quota) *Limiter {
 	t.Helper()
 	tiers := MapTierResolver{
-		"feat-conv":  string(TierUpgrade),
-		"feat-gen":   string(TierGenerative),
-		"feat-bg":    string(TierMaintenance),
+		"feat-conv": string(TierUpgrade),
+		"feat-gen":  string(TierGenerative),
+		"feat-bg":   string(TierMaintenance),
 	}
 	opts := []Option{WithClock(clock)}
 	if override != nil {

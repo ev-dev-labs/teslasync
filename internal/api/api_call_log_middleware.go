@@ -1,25 +1,9 @@
-// Package api: APICallLog inbound middleware.
+// Package api wires the inbound api_call_logs middleware.
 //
-// This middleware persists every inbound HTTP request that flows through it
-// to the api_call_logs hypertable with service="teslasync-api". The recorder
-// is invoked from a defer registered before next.ServeHTTP, so panic→500
-// responses (converted by RecoveryMiddleware upstream) are still recorded
-// with status_code=500.
-//
-// The middleware is non-blocking: enqueues are bounded by a buffered channel
-// and a worker goroutine batch-inserts via pgx.CopyFrom. Phase-47/05
-// extracted the async writer engine + outbound SinkAdapter into
-// internal/apilog so workers can use the same primitives without depending
-// on the entire HTTP-handler package. The HTTP middleware itself stays here
-// because it depends on chi + in-process redaction helpers.
-//
-// Bodies are captured up to 10 KB each (request and response) only when the
-// captureBodies flag is true; default is false (operator opt-in).
-//
-// Redaction: query params and header names matching (?i)token|key|secret|
-// password|cookie are replaced with "REDACTED". JSON bodies have matching
-// keys replaced recursively. Authorization and Cookie headers are always
-// redacted.
+// Requests are enqueued non-blockingly and batch-inserted by internal/apilog;
+// the HTTP wrapper stays here because it depends on chi and local redaction
+// helpers. Optional body capture is capped at 10 KB and recursively redacts
+// secret-like headers, query parameters, and JSON keys.
 package api
 
 import (
@@ -33,8 +17,9 @@ import (
 	"sync"
 	"time"
 
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+
 	"github.com/ev-dev-labs/teslasync/internal/apilog"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog/log"
@@ -152,17 +137,9 @@ func DefaultAPILogSkip(path string) bool {
 	return false
 }
 
-// APICallLogMiddleware wraps an http.Handler and enqueues an APICallLog entry
-// for every request that does not match the skip predicate. The recorder is
-// scheduled in a defer registered before next.ServeHTTP, so even handlers
-// that panic and are converted to a 500 by an upstream RecoveryMiddleware
-// are still recorded.
-//
-// captureBodies controls whether the request and response payloads are
-// stored on the entry (truncated to MaxAPILogBodyBytes and JSON-key
-// redacted). Operator default is false; enable only for diagnostic windows.
-//
-// skip is the per-path predicate; pass nil to use DefaultAPILogSkip.
+// APICallLogMiddleware enqueues one sanitized log entry per non-skipped request.
+// It records in a defer so recovered panics are captured as 500s. Body capture
+// is operator opt-in, capped, and intended only for diagnostic windows.
 func APICallLogMiddleware(logger APICallLogger, captureBodies bool, skip func(path string) bool) func(http.Handler) http.Handler {
 	if logger == nil {
 		logger = apilog.NewNoop()
@@ -216,7 +193,7 @@ func APICallLogMiddleware(logger APICallLogger, captureBodies bool, skip func(pa
 				duration := time.Since(start)
 				sanitizedURL, _ := redactURLAndHeaders(r)
 
-				entry := &models.APICallLog{
+				entry := &teslamodel.APICallLog{
 					Ts:         start.UTC(),
 					Service:    APILogServiceTag,
 					HTTPMethod: r.Method,

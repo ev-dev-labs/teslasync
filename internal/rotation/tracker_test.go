@@ -93,4 +93,3 @@ func TestDefaultThresholds_PerKind(t *testing.T) {
 		t.Error("DB password warn should be 180d")
 	}
 }
-

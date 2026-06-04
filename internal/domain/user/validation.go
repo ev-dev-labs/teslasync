@@ -8,7 +8,6 @@ import (
 
 var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
-// Validate checks domain invariants for a User.
 func (u *User) Validate() error {
 	var errs domain.ValidationErrors
 

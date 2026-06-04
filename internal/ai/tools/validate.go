@@ -10,8 +10,8 @@ import (
 
 // ValidateStruct decodes raw into a fresh instance of T and runs the
 // same `validate:"..."` tag rules the [Generate] schema encodes. It
-// is the runtime half of the R2 mitigation: by sharing parseValidateTag
-// + the rule-application code with the schema generator, we guarantee
+// is the runtime half of schema validation: by sharing parseValidateTag
+// and the rule-application code with the schema generator, we guarantee
 // that every payload accepted by the JSON-Schema is also accepted here
 // (and vice versa).
 //
@@ -121,7 +121,7 @@ func validateValue(v reflect.Value, t reflect.Type, path string) error {
 // convention LLM-facing tools rely on for optional fields whose
 // presence-OR-absence is acceptable but whose value MUST be drawn
 // from a constrained set when present (e.g. trigger_mode in the
-// nl-alert-builder slice).
+// nl-alert-builder feature).
 func applyRulesRuntime(v reflect.Value, t reflect.Type, tag, path string) error {
 	pre, post := parseValidateTag(tag)
 	// omitempty: skip every other pre-dive rule when the value is

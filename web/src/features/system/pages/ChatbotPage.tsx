@@ -36,11 +36,11 @@ import {
 } from '../components/chatbot/ChatMessageItem';
 import { SessionList } from '../components/chatbot/SessionList';
 import { SuggestedPrompts } from '../components/chatbot/SuggestedPrompts';
-// Phase-50 / 0011 — U1 Chatbot LLM upgrade. Visible AI surface
+// Chatbot LLM surface
 // rendered conditionally via withAiFeature('chatbot-llm', …); absent
 // in off mode (ADR-015 §I5 + §I6).
 import { AIChatbotIndicator } from '@/components/ai/AIChatbotIndicator';
-// Phase-50 / 0055 — V1 voice mode. Optional browser STT/TTS panel
+// Optional browser STT/TTS panel
 // mounted above the conversation; absent in off mode via withAiFeature.
 import { AIVoiceMode } from '@/components/ai/AIVoiceMode';
 
@@ -70,10 +70,8 @@ function persistHistoryVisible(value: boolean): void {
 }
 
 /**
- * Chatbot page (Phase 40 / Prompt 56; Phase-50 / W1 wired-AI branch).
- *
+ * Chatbot page.
  * Two code paths driven by `useAiEnabled('chatbot-llm')`:
- *
  *   • AI off (baseline) — `useSendChatMessage` POSTs the legacy
  *     heuristic `/chatbot` route and runs a client-side typewriter on
  *     the full reply. This is the canonical baseline for users with
@@ -82,10 +80,8 @@ function persistHistoryVisible(value: boolean): void {
  *     `POST /api/v1/ai/chatbot` and accumulates `delta` events directly
  *     into the streaming assistant message. The typewriter is skipped
  *     (real streaming replaces the simulated reveal).
- *
  * Both hooks are called unconditionally at the top of the component
  * (React Hooks rule). The branch lives inside the submit handlers.
- *
  * Keyboard contract:
  *   Enter         submit
  *   Shift+Enter   newline
@@ -145,10 +141,8 @@ export default function ChatbotPage() {
   // Hydrate local messages whenever the loaded history changes (switching
   // sessions or first load). Keeps the typewriter-managed local state as
   // the source of truth for the in-flight session.
-  //
   // Race guards (matter especially when the History sidebar is open and
   // the user starts a brand-new chat then submits):
-  //
   //   1. While the SSE is in flight for the *current* session, the local
   //      optimistic messages (user + streaming assistant placeholder) are
   //      authoritative. A history GET that races with the stream can
@@ -158,7 +152,6 @@ export default function ChatbotPage() {
   //      placeholder the SSE deltas are targeting by id and the
   //      conversation would silently fail to display in the chat panel
   //      while still appearing as "N msgs" in the sidebar after `done`.
-  //
   //   2. Even outside an active stream, an empty server response paired
   //      with non-empty local optimistic messages for the *same* sid is
   //      almost certainly a stale read of a brand-new session — keep
@@ -224,7 +217,7 @@ export default function ChatbotPage() {
     },
   });
 
-  /* ─── AI-on path (Phase-50 / W1) ───────────────────────────────────── */
+  /* ─── AI-on path ─────────────────────────────────────────────────────── */
 
   // Gate: when true, submitMessage and friends call the SSE LLM
   // endpoint at POST /api/v1/ai/chatbot instead of the heuristic
@@ -910,12 +903,10 @@ interface TypewriterOptions {
  * useTypewriterStream — client-side typewriter reveal for assistant
  * replies. Encapsulates the timer/cleanup so the page component stays
  * declarative.
- *
  * When `prefers-reduced-motion: reduce` is set, the reveal is skipped
  * entirely and the full text appears immediately — both `onTick` and
  * `onComplete` still fire so consumers don't have to special-case the
  * reduced-motion path.
- *
  * Reveal rate: ~40 chars per 16ms tick (≈2,500 chars/sec). Tuned to feel
  * snappy without flooding React's re-render queue. The reveal is fully
  * cancellable via `stop()` (also fired by Esc and the on-screen Stop

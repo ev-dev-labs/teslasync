@@ -14,11 +14,11 @@ const (
 
 // Export job FSM events.
 const (
-	EventValidate      fsm.Event = "validate"
-	EventProcess       fsm.Event = "process"
-	EventUpload        fsm.Event = "upload"
-	EventComplete      fsm.Event = "complete"
-	EventFail          fsm.Event = "fail"
+	EventValidate fsm.Event = "validate"
+	EventProcess  fsm.Event = "process"
+	EventUpload   fsm.Event = "upload"
+	EventComplete fsm.Event = "complete"
+	EventFail     fsm.Event = "fail"
 )
 
 // NewExportFSM creates the export job state machine definition.

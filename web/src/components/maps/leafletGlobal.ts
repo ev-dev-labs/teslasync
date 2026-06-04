@@ -11,8 +11,8 @@
  * Importing this module via a SIDE-EFFECT import BEFORE the plugin import
  * is the canonical fix:
  *
- *   import './leafletGlobal';        // hoisted, but evaluated first
- *   import 'leaflet.markercluster';  // can now resolve window.L
+ *   import './leafletGlobal'; // hoisted, but evaluated first
+ *   import 'leaflet.markercluster'; // can now resolve window.L
  *
  * ES module imports are evaluated in source order, so listing this above
  * the plugin guarantees `window.L` exists by the time the plugin runs.

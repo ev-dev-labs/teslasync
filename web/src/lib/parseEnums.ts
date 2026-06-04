@@ -3,8 +3,8 @@
  * Tesla sends enums as strings like "SentryModeStateArmed",
  * "DetailedChargeStateComplete", "HvacPowerStateOff", etc.
  *
- * Post per-field MQTT cutover (Phase-42a) the backend serializes raw
- * `signal.SignalValue` (`interface{}`) directly, so a "string-enum" signal
+ * The backend serializes raw `signal.SignalValue` (`interface{}`) directly,
+ * so a "string-enum" signal
  * may also arrive as bool/number for some signals. Every parser here
  * accepts `unknown` and narrows defensively. We do NOT coerce non-strings
  * to strings — `String(false)` would erroneously match enum substrings

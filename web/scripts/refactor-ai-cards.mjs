@@ -5,8 +5,8 @@
 // by hand.
 //
 // Usage:
-//   node scripts/refactor-ai-cards.mjs --check           # report
-//   node scripts/refactor-ai-cards.mjs --write           # write
+// node scripts/refactor-ai-cards.mjs --check # report
+// node scripts/refactor-ai-cards.mjs --write # write
 
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
@@ -200,7 +200,7 @@ function refactorOne(path) {
   // self-close and the `</span>` of the outer span. Find it.
   const badgeOuterStart = badgeAnchorMatch.index
   const badgeCloseIdx = jsx.indexOf('</span>', badgeOuterStart)
-  // Look for the last t( before the </span>
+  // Look for the last t(before the </span>
   const badgeArea = jsx.slice(badgeOuterStart, badgeCloseIdx)
   const badgeCall = findTCall(badgeArea, /aria-hidden[\s\S]*?\/>/)
   if (!badgeCall) {
@@ -216,7 +216,7 @@ function refactorOne(path) {
   }
 
   // Button label is the t() call inside the ternary on the streaming
-  // line: `state === 'streaming' ? t(generating) : t(generateBtn)`.
+  // line: `state === 'streaming' ? t(generating): t(generateBtn)`.
   // Find the second arg of the ternary.
   const ternaryMatch = /\{stream\.state === 'streaming'\s*\?\s*t\([^)]*\)(?:[^)]*\))?\s*\n?\s*:\s*/.exec(jsx)
   if (!ternaryMatch) {

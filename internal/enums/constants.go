@@ -30,27 +30,27 @@ const (
 
 // SentryMode states from Tesla proto (SentryModeState).
 const (
-	SentryOff     = "Off"
-	SentryIdle    = "Idle"
-	SentryArmed   = "Armed"
-	SentryAware   = "Aware"
-	SentryPanic   = "Panic"
-	SentryQuiet   = "Quiet"
+	SentryOff   = "Off"
+	SentryIdle  = "Idle"
+	SentryArmed = "Armed"
+	SentryAware = "Aware"
+	SentryPanic = "Panic"
+	SentryQuiet = "Quiet"
 )
 
 // HvacPower states from Tesla proto (HvacPowerState).
 const (
-	HvacOff              = "Off"
-	HvacOn               = "On"
-	HvacPrecondition     = "Precondition"
-	HvacOverheatProtect  = "OverheatProtect"
+	HvacOff             = "Off"
+	HvacOn              = "On"
+	HvacPrecondition    = "Precondition"
+	HvacOverheatProtect = "OverheatProtect"
 )
 
 // DefrostMode states from Tesla proto (DefrostModeState).
 const (
-	DefrostOff      = "Off"
-	DefrostNormal   = "Normal"
-	DefrostMax      = "Max"
+	DefrostOff       = "Off"
+	DefrostNormal    = "Normal"
+	DefrostMax       = "Max"
 	DefrostAutoDefog = "AutoDefog"
 )
 
@@ -71,15 +71,15 @@ const (
 
 // DisplayState values from Tesla proto (DisplayState).
 const (
-	DisplayOff        = "Off"
-	DisplayDim        = "Dim"
-	DisplayAccessory  = "Accessory"
-	DisplayOn         = "On"
-	DisplayDriving    = "Driving"
-	DisplayCharging   = "Charging"
-	DisplayLock       = "Lock"
-	DisplaySentry     = "Sentry"
-	DisplayDog        = "Dog"
+	DisplayOff           = "Off"
+	DisplayDim           = "Dim"
+	DisplayAccessory     = "Accessory"
+	DisplayOn            = "On"
+	DisplayDriving       = "Driving"
+	DisplayCharging      = "Charging"
+	DisplayLock          = "Lock"
+	DisplaySentry        = "Sentry"
+	DisplayDog           = "Dog"
 	DisplayEntertainment = "Entertainment"
 )
 
@@ -92,11 +92,11 @@ const (
 
 // BMS states from Tesla proto (BMSStateValue).
 const (
-	BMSStandby    = "Standby"
-	BMSDrive      = "Drive"
-	BMSSupport    = "Support"
-	BMSCharge     = "Charge"
-	BMSFault      = "Fault"
+	BMSStandby = "Standby"
+	BMSDrive   = "Drive"
+	BMSSupport = "Support"
+	BMSCharge  = "Charge"
+	BMSFault   = "Fault"
 )
 
 // Tesla raw enum prefixes — used by parsers to strip prefix from raw strings.

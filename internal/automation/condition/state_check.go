@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 )
 
 // fieldKind classifies state fields by their comparison type.
@@ -20,21 +20,21 @@ const (
 // fieldDef describes a supported state field: its type and how to extract it.
 type fieldDef struct {
 	kind    fieldKind
-	extract func(*models.VehicleState) any
+	extract func(*vehiclemodel.VehicleState) any
 }
 
 // fieldRegistry is the single source of truth for supported state_check fields.
 // It maps field names to their type classification and value extractor.
 var fieldRegistry = map[string]fieldDef{
-	"is_locked":     {fieldBool, func(s *models.VehicleState) any { return s.IsLocked }},
-	"is_charging":   {fieldBool, func(s *models.VehicleState) any { return s.IsCharging }},
-	"is_climate_on": {fieldBool, func(s *models.VehicleState) any { return s.IsClimateOn }},
-	"sentry_mode":   {fieldBool, func(s *models.VehicleState) any { return s.SentryMode }},
-	"battery_level": {fieldNumeric, func(s *models.VehicleState) any { return float64(s.BatteryLevel) }},
-	"inside_temp":   {fieldNumeric, func(s *models.VehicleState) any { return s.InsideTemp }},
-	"outside_temp":  {fieldNumeric, func(s *models.VehicleState) any { return s.OutsideTemp }},
-	"speed":         {fieldNumeric, func(s *models.VehicleState) any { return s.Speed }},
-	"state":         {fieldString, func(s *models.VehicleState) any { return s.State }},
+	"is_locked":     {fieldBool, func(s *vehiclemodel.VehicleState) any { return s.IsLocked }},
+	"is_charging":   {fieldBool, func(s *vehiclemodel.VehicleState) any { return s.IsCharging }},
+	"is_climate_on": {fieldBool, func(s *vehiclemodel.VehicleState) any { return s.IsClimateOn }},
+	"sentry_mode":   {fieldBool, func(s *vehiclemodel.VehicleState) any { return s.SentryMode }},
+	"battery_level": {fieldNumeric, func(s *vehiclemodel.VehicleState) any { return float64(s.BatteryLevel) }},
+	"inside_temp":   {fieldNumeric, func(s *vehiclemodel.VehicleState) any { return s.InsideTemp }},
+	"outside_temp":  {fieldNumeric, func(s *vehiclemodel.VehicleState) any { return s.OutsideTemp }},
+	"speed":         {fieldNumeric, func(s *vehiclemodel.VehicleState) any { return s.Speed }},
+	"state":         {fieldString, func(s *vehiclemodel.VehicleState) any { return s.State }},
 }
 
 // operatorSymbols maps operator names to display symbols for reason strings.
@@ -147,7 +147,7 @@ var ParseStateCheckConfig = DecodeStateCheckSpec
 
 // EvaluateStateCheck checks whether the given vehicle state satisfies the
 // configured field/operator/value condition.
-func EvaluateStateCheck(cfg *StateCheckConfig, state *models.VehicleState) (Result, json.RawMessage, error) {
+func EvaluateStateCheck(cfg *StateCheckConfig, state *vehiclemodel.VehicleState) (Result, json.RawMessage, error) {
 	if state == nil {
 		return Result{}, nil, fmt.Errorf("vehicle state is nil")
 	}

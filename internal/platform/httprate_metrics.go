@@ -1,5 +1,3 @@
-// Package platform — Phase-46 / Prompt 40
-//
 // httprate_metrics.go exposes a thread-safe sliding-window request
 // counter that the rate-limit status panel reads from. It is a deliberate
 // alternative to scraping the third-party `httprate` middleware's

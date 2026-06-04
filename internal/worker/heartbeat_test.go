@@ -7,37 +7,37 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	workerdb "github.com/ev-dev-labs/teslasync/internal/database/worker"
 )
 
 // recordingStore captures every RecordHeartbeat call for assertion.
 type recordingStore struct {
 	mu      sync.Mutex
-	calls   []database.WorkerHeartbeat
+	calls   []workerdb.WorkerHeartbeat
 	failErr error
 }
 
-func (s *recordingStore) RecordHeartbeat(_ context.Context, hb database.WorkerHeartbeat) error {
+func (s *recordingStore) RecordHeartbeat(_ context.Context, hb workerdb.WorkerHeartbeat) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.calls = append(s.calls, hb)
 	return s.failErr
 }
 
-func (s *recordingStore) GetMany(_ context.Context, _ []string) (map[string]*database.WorkerHeartbeat, error) {
+func (s *recordingStore) GetMany(_ context.Context, _ []string) (map[string]*workerdb.WorkerHeartbeat, error) {
 	return nil, nil
 }
 
-func (s *recordingStore) snapshot() []database.WorkerHeartbeat {
+func (s *recordingStore) snapshot() []workerdb.WorkerHeartbeat {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	out := make([]database.WorkerHeartbeat, len(s.calls))
+	out := make([]workerdb.WorkerHeartbeat, len(s.calls))
 	copy(out, s.calls)
 	return out
 }
 
 func TestNewHeartbeater_NilStore(t *testing.T) {
-	if hb := NewHeartbeater(nil, HeartbeaterOptions{Worker: database.WorkerNameNotification}); hb != nil {
+	if hb := NewHeartbeater(nil, HeartbeaterOptions{Worker: workerdb.WorkerNameNotification}); hb != nil {
 		t.Fatalf("expected nil heartbeater when store is nil, got %#v", hb)
 	}
 }
@@ -51,7 +51,7 @@ func TestNewHeartbeater_EmptyWorker(t *testing.T) {
 
 func TestNewHeartbeater_DefaultsApplied(t *testing.T) {
 	store := &recordingStore{}
-	hb := NewHeartbeater(store, HeartbeaterOptions{Worker: database.WorkerNameExport})
+	hb := NewHeartbeater(store, HeartbeaterOptions{Worker: workerdb.WorkerNameExport})
 	if hb == nil {
 		t.Fatal("expected non-nil heartbeater")
 	}
@@ -70,7 +70,7 @@ func TestHeartbeater_WriteRecordsHeartbeat(t *testing.T) {
 	store := &recordingStore{}
 	frozen := time.Date(2026, 5, 5, 12, 0, 0, 0, time.UTC)
 	hb := NewHeartbeater(store, HeartbeaterOptions{
-		Worker:   database.WorkerNameAutomation,
+		Worker:   workerdb.WorkerNameAutomation,
 		Version:  "test-1.2.3",
 		Hostname: "fake-host",
 		Now:      func() time.Time { return frozen },
@@ -83,8 +83,8 @@ func TestHeartbeater_WriteRecordsHeartbeat(t *testing.T) {
 		t.Fatalf("expected 1 RecordHeartbeat call, got %d", len(calls))
 	}
 	got := calls[0]
-	if got.Worker != database.WorkerNameAutomation {
-		t.Errorf("worker = %q, want %q", got.Worker, database.WorkerNameAutomation)
+	if got.Worker != workerdb.WorkerNameAutomation {
+		t.Errorf("worker = %q, want %q", got.Worker, workerdb.WorkerNameAutomation)
 	}
 	if got.Version != "test-1.2.3" {
 		t.Errorf("version = %q, want test-1.2.3", got.Version)
@@ -102,7 +102,7 @@ func TestHeartbeater_WriteRecordsHeartbeat(t *testing.T) {
 
 func TestHeartbeater_WriteSwallowsError(t *testing.T) {
 	store := &recordingStore{failErr: errors.New("redis down")}
-	hb := NewHeartbeater(store, HeartbeaterOptions{Worker: database.WorkerNameNotification})
+	hb := NewHeartbeater(store, HeartbeaterOptions{Worker: workerdb.WorkerNameNotification})
 
 	// Must not panic / return an error — heartbeat path is best-effort.
 	hb.write(context.Background(), time.Now())
@@ -115,7 +115,7 @@ func TestHeartbeater_WriteSwallowsError(t *testing.T) {
 func TestHeartbeater_StartTicks(t *testing.T) {
 	store := &recordingStore{}
 	hb := NewHeartbeater(store, HeartbeaterOptions{
-		Worker:   database.WorkerNameNotification,
+		Worker:   workerdb.WorkerNameNotification,
 		Interval: 10 * time.Millisecond,
 	})
 	if hb == nil {

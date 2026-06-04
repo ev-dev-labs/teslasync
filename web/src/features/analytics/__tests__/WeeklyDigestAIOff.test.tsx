@@ -1,8 +1,8 @@
-// Phase-50 / 0012 — U2 Weekly digest narration.
+// Weekly digest narration.
 //
 // `TestWeeklyDigestAIOffUsesTemplateNarrator` (the Vitest sibling to
-// the Go test of the same name) is the slice's load-bearing AI-OFF
-// contract proof on the React side. It mounts the AIDigestNarration
+// the Go test of the same name) is the React-side AI-OFF contract
+// proof. It mounts the AIDigestNarration
 // component with ai_mode='off' (plus the per-feature toggle on, to
 // defeat the obvious "off because nothing's enabled" path) and
 // asserts:

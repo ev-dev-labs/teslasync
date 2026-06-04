@@ -4,7 +4,7 @@
  * Composes the seven shared telemetry components so this page is a thin
  * orchestrator instead of duplicating five pages' worth of UI:
  *
- *   - SignalCategoryTree    — tree picker inside "Add signals" Accordion (Phase-51)
+ *   - SignalCategoryTree    — tree picker inside "Add signals" Accordion
  *   - SignalChartPanel      — multi-line chart (live + historical)
  *   - SignalStatsPanel      — per-signal min/max/avg/count
  *   - SignalHistoryTable    — paginated history with row expansion
@@ -424,7 +424,7 @@ export default function SignalsWorkspacePage() {
 
       {/* ── Master / detail layout ─────────────────────────────── */}
       <div className="space-y-5">
-        {/* Catalog — collapsible "Add signals" disclosure (Phase-51) */}
+        {/* Catalog — collapsible "Add signals" disclosure */}
         <Accordion
           title={t('signalsWorkspace.addSignals', 'Add signals')}
           icon={<ListTree className="h-4 w-4" />}

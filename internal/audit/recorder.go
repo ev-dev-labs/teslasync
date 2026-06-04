@@ -5,7 +5,7 @@
 //
 // Layer: platform
 //
-// Design (Phase-45 / Prompt 1):
+// Design:
 //
 //   - Recorder wraps a *pgxpool.Pool and a Redactor. Mutations are
 //     accepted as Event values; the recorder fills in ts, redacts

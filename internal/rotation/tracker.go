@@ -4,7 +4,7 @@
 //
 // Layer: platform
 //
-// Tracked secret kinds (Phase-45 / Prompt 7):
+// Tracked secret kinds:
 //
 //   - tesla_refresh_token  — per-vehicle, derived from
 //     tesla_credentials.updated_at; warn at 60d, critical at 90d.

@@ -24,10 +24,10 @@ func newDoneToken(err error) *fakeToken {
 	return &fakeToken{err: err, done: ch}
 }
 
-func (t *fakeToken) Wait() bool                      { <-t.done; return true }
-func (t *fakeToken) WaitTimeout(time.Duration) bool  { <-t.done; return true }
-func (t *fakeToken) Done() <-chan struct{}           { return t.done }
-func (t *fakeToken) Error() error                    { return t.err }
+func (t *fakeToken) Wait() bool                     { <-t.done; return true }
+func (t *fakeToken) WaitTimeout(time.Duration) bool { <-t.done; return true }
+func (t *fakeToken) Done() <-chan struct{}          { return t.done }
+func (t *fakeToken) Error() error                   { return t.err }
 
 type fakeClient struct {
 	mu       sync.Mutex

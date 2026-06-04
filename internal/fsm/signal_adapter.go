@@ -150,9 +150,8 @@ func (a *SignalAdapter) Locked(vehicleID int64) (bool, bool) {
 }
 
 // SoC returns BatteryLevel as a percentage in [0, 100]. BatteryLevel
-// has UnitKindCharge which the normalize layer passes through unchanged
-// (per the phase-42 toSI contract), so the store always holds a raw
-// percentage.
+// has UnitKindCharge, which the normalize layer passes through unchanged,
+// so the store always holds a raw percentage.
 func (a *SignalAdapter) SoC(vehicleID int64) (float64, bool) {
 	return a.store.GetFloat(vehicleID, fieldBatteryLevel)
 }

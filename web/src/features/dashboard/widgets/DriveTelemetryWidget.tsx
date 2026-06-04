@@ -64,7 +64,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
 
-  // Phase-40 / Prompt 60 — chart series colors derive from the active theme.
+  // Chart series colors derive from the active theme.
   const palette = useThemeChartPalette();
 
   const chartData = useMemo((): ChartDatum[] => {

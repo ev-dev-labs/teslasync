@@ -88,8 +88,8 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
             />
           )
         }
-        // Per-type toned-down syntax-highlight colors (phase-40/02 forbids
-        // neon for tabular body text). Mirrors common dev-console conventions:
+        // Per-type toned-down syntax-highlight colors avoid neon tabular body text.
+        // Mirrors common dev-console conventions:
         //   number  → cyan-300, string → amber-300, boolean → purple-300.
         const colorClass =
           typeof row.value === 'number'
@@ -284,7 +284,7 @@ export default function RedisSignalViewerPage() {
 
   const meta = signalData?.meta
 
-  // Phase-46 / Prompt 59 — when the upstream query failed, the diagnostic
+  // When the upstream query failed, the diagnostic
   // banner takes over so the operator sees the real failure mode (cache
   // not wired, redis unreachable, generic 5xx, network) instead of the
   // legacy "no signals cached" black box. Stat cards also display a

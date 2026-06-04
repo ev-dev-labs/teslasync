@@ -10,16 +10,16 @@ import { ROUTE_REGISTRY } from '@/lib/routeRegistry'
 import { closestRoutes } from '@/lib/closestRoute'
 
 /**
- * Phase 40 / Prompt 38 — Catch-all 404 page.
+ * Catch-all 404 page.
  *
  * Wired to two `<Route path="*">` entries in App.tsx (one inside the Layout
  * Outlet, one outside) so that any unmatched URL renders this component
  * instead of an empty Outlet.
  *
  * Behavior:
- *   - Logs the unmatched path via console.warn (helps spot 404 storms in dev)
- *   - Suggests the closest matching routes via Levenshtein distance
- *   - Offers escape hatches: back, dashboard, command palette
+ * - Logs the unmatched path via console.warn (helps spot 404 storms in dev)
+ * - Suggests the closest matching routes via Levenshtein distance
+ * - Offers escape hatches: back, dashboard, command palette
  */
 export default function NotFoundPage() {
   const { t } = useTranslation()

@@ -1,28 +1,16 @@
-// Phase-42a/0080 — end-to-end pipeline test helpers.
+// Shared fakes used by e2e_test.go to exercise the full normalize.Pipeline +
+// router.Router + SideEffectsObserver chain without touching a real PostgreSQL
+// pool, Redis, MQTT broker, or HTTP server.
 //
-// This file hosts the shared fakes used by e2e_test.go to exercise
-// the full normalize.Pipeline + router.Router + SideEffectsObserver
-// chain WITHOUT touching a real PostgreSQL pool, Redis, MQTT broker,
-// or HTTP server.
+// The tests use in-memory recording fakes because pgxmock and testcontainers
+// are not dependencies. This drops actual DB INSERT verification but still
+// exercises routing and observer side effects.
 //
-// Per the prompt's Decision #2 escape hatch: "If neither
-// [pgxmock nor testcontainers] is available, fall back to in-memory
-// recording fakes for writers and ASSERT the writer was called with
-// the expected (vehicle_id, ts, field, value) tuple — this drops the
-// actual DB INSERT verification but keeps the routing + observer
-// chain exercised." pgxmock + testcontainers are NOT in go.mod
-// (verified via `Select-String go.mod -Pattern 'pgxmock|testcontainers'`
-// returning only the matching grep itself), so this file ships the
-// in-memory recording-fake variant.
+// Type names use the `e2e` prefix to avoid collisions with fakes in
+// side_effects_observer_test.go.
 //
-// Type names use the `e2e` prefix throughout to avoid collision with
-// the existing fakeLiveStore / fakeFSMHandler /
-// fakeSessionTracker / fakeAlertEvaluator / fakeVINResolver /
-// fakeBroadcaster set in side_effects_observer_test.go (same package).
-//
-// All fakes are concurrency-safe: every test in e2e_test.go calls
-// t.Parallel() and the fakes share no global state, so a future test
-// that fans out atomics across goroutines will not race.
+// All fakes are concurrency-safe: every test in e2e_test.go calls t.Parallel()
+// and the fakes share no global state.
 package teslapipeline
 
 import (
@@ -37,8 +25,8 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/router"
-	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 	unithistory "github.com/ev-dev-labs/teslasync/internal/tesla/unit_history"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 )
 
 // e2eVehicleID is the canonical numeric vehicle id used by every e2e
@@ -62,11 +50,9 @@ var e2eEmittedAt = time.Date(2026, time.May, 6, 12, 0, 0, 0, time.UTC)
 // e2eRecordingWriter — single fake satisfying router.Writer
 // ---------------------------------------------------------------------------
 
-// e2eWriteCall captures the per-write tuple Decision #2's escape
-// hatch requires the test to assert: vehicle id (carried as VIN on
-// the atomic), timestamp, field, value, and the routing entry that
-// dispatched it (so the destination + column survive the recording
-// for downstream assertions).
+// e2eWriteCall captures the per-write tuple the test asserts: vehicle id
+// (carried as VIN on the atomic), timestamp, field, value, and the routing entry
+// that dispatched it.
 type e2eWriteCall struct {
 	Field     string
 	Value     any
@@ -75,10 +61,9 @@ type e2eWriteCall struct {
 	Entry     router.Entry
 }
 
-// e2eRecordingWriter implements router.Writer by recording every
-// Write call. Returns nil from every Write — failure-injection is
-// exercised by the unit tests in router_test.go and
-// side_effects_observer_test.go, not by this end-to-end smoke.
+// e2eRecordingWriter implements router.Writer by recording every Write call.
+// Failure injection is covered by router_test.go and
+// side_effects_observer_test.go, not this end-to-end test.
 type e2eRecordingWriter struct {
 	mu    sync.Mutex
 	calls []e2eWriteCall
@@ -134,11 +119,10 @@ func (w *e2eRecordingWriter) callForField(field string) *e2eWriteCall {
 //
 // At returns ErrNotFound when no row with effective_from <= t exists
 // (matching the production pgRepo contract); Record appends and is
-// also recorded so the unit-history side of Decision #4's
-// per-destination assertion can verify the SettingDistanceUnit
-// atomic landed in the unit-history layer (the unit_history router
-// writer is a NO-OP per phase-42a/0022 — the actual side-effect for
-// Setting*Unit happens here).
+// also recorded so the per-destination assertion can verify the
+// SettingDistanceUnit atomic landed in the unit-history layer. The
+// unit_history router writer is a no-op; the actual Setting*Unit side effect
+// happens here.
 type e2eHistRepo struct {
 	mu      sync.Mutex
 	entries []unithistory.Entry
@@ -194,11 +178,10 @@ func (r *e2eHistRepo) Latest(_ context.Context, vehicleID int64, kind unithistor
 	return *best, nil
 }
 
-// recordsCopy returns a snapshot of every Record call. Decision #4's
-// per-destination assertion for DestUnitHistory checks for a
-// SettingDistanceUnit Record here (the unit_history router writer is
-// a no-op — the routed Setting*Unit atomic short-circuits before
-// reaching router.Route in normalize.Pipeline.processOne).
+// recordsCopy returns a snapshot of every Record call. The DestUnitHistory
+// assertion checks for a SettingDistanceUnit Record here because the routed
+// Setting*Unit atomic short-circuits before reaching router.Route in
+// normalize.Pipeline.processOne.
 func (r *e2eHistRepo) recordsCopy() []unithistory.Entry {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -450,10 +433,11 @@ func (s *e2eSSE) callCount() int {
 // fleet-telemetry Payload carrying one routed sentinel field per
 // destination in the closed router.Destination set, EXCEPT
 // DestLocationSnapshot which is exempt because routing.yaml has zero
-// `dest: location_snapshot` entries today (per phase-42a/0017's
-// LocationWriter authorship — geocoder writes via a separate path,
-// the writer was authored only to satisfy the router.New
-// "writer-required" invariant). The exemption is documented in
+//
+//	`dest: location_snapshot` entries today. Geocoder writes via a separate
+//	path; LocationWriter exists to satisfy router.New's "writer-required"
+//	invariant. The exemption is documented in
+//
 // e2e_test.go's === TEST_DESIGN === block.
 //
 // The 11 sentinel fields cover:
@@ -475,7 +459,7 @@ func (s *e2eSSE) callCount() int {
 //     dual-write surprise; see plan.md for the picking rationale)
 //   - DestUnitHistory           SettingDistanceUnit=km (handled inside
 //     normalize.Pipeline.observeSettingUnit, never reaches the
-//     unit_history writer which is a no-op per phase-42a/0022)
+//     unit_history writer, which is a no-op)
 //
 // All values are fixed sentinels in this file so the assertions in
 // e2e_test.go can compare ==. UnitKindTemperature/Distance fields use

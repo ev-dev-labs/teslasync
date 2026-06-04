@@ -8,8 +8,8 @@ import {
 /**
  * Mirrors the DriveDetailPage layout while telemetry loads:
  * page header → hero gauges → 8 stat cards → overview chart →
- * 2 side-by-side charts (SoC + elevation). Phase-45 / Prompt 18 migrated
- * the inline boxes to the shared *Skeleton building blocks.
+ * 2 side-by-side charts (SoC + elevation), using the shared *Skeleton
+ * building blocks.
  */
 export function DriveDetailSkeleton() {
   return (

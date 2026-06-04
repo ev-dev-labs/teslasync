@@ -1,19 +1,13 @@
-// Phase-50 / 0043 — S2 Data repair suggestions.
-// Phase-50 / W1 inline wiring (per slice prompt 0043) — wired the
-// "Draft repair plan" button to POST
-// /api/v1/ai/system/data-repair/draft via the canonical
-// useAiStream hook. The slice methodology forbids shipping the
-// visual affordance without end-to-end SSE wiring; this component
-// lands both in one commit so the on-mode wiring test
-// (TestDataRepairSuggestionsAIOnWiredCallsRoute) can prove the
-// button actually opens an SSE stream against the registered
-// backend route.
+// The "Draft repair plan" button posts to
+// /api/v1/ai/system/data-repair/draft through useAiStream. Keep the
+// visible affordance and the SSE wiring together so the button always
+// opens a stream against the registered backend route.
 //
 // AIDataRepairSuggestions is the visible AI surface for the
 // /system/data-repair page. It is rendered conditionally via
 // withAiFeature('data-repair-suggestions', …) so:
 //
-//   - When ai_mode='off' it does not render at all (ADR-015 §I5 + §I6).
+//   - When ai_mode='off' it does not render at all.
 //   - When ai_mode is 'local'/'cloud' AND the data-repair-suggestions
 //     toggle is on, it renders an opt-in section with a "Draft
 //     repair plan" button that POSTs to
@@ -26,7 +20,7 @@
 // view visible to every user; this AI section is opt-in propose-
 // only suggestion layered alongside.
 //
-// Render contract (P11/P12 — Wired-or-absent, No-placeholder-buttons):
+// Render contract:
 //   - useAiStream is called unconditionally at the top of the body
 //     (Hooks-rules safe).
 //   - The Draft button's disabled prop is a COMPUTED expression
@@ -38,7 +32,7 @@
 //   - The streamed text accumulates into AiOutputPanel which
 //     renders the SSE delta stream as-it-arrives.
 //
-// ADR-015 alignment:
+// AI safety alignment:
 //   - I3 baseline intact: this component never replaces the
 //     deterministic stale-session list or repair buttons; it adds
 //     an opt-in proposal section alongside.

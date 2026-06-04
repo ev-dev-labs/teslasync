@@ -1,11 +1,11 @@
-// Phase-50 / 0051 — M3 software update changelog summarizer.
-// Phase-50 / W1 inline wiring (per slice prompt 0051) — on-mode
-// wiring test proving the "Summarize updates" button opens an SSE
+// Software update changelog summarizer.
+//
+// On-mode wiring test proving the "Summarize updates" button opens an SSE
 // stream against the registered backend route POST
 // /api/v1/ai/software-updates/summarize.
 //
 // `TestSoftwareUpdateChangelogSummarizerAIOnWiredCallsRoute` is
-// the load-bearing positive wiring proof for slice 0051's W1
+// the load-bearing positive wiring proof for the
 // inline addendum. It mounts the
 // AISoftwareUpdateChangelogSummarizer component with
 // ai_mode='cloud' + the per-feature toggle on, stubs global fetch
@@ -25,7 +25,7 @@
 //   3. A second click while `state === 'streaming'` is a no-op —
 //      the second fetch call is NOT enqueued (the double-submit
 //      guard inside useAiStream + the visual `disabled` mirror it
-//      from canStart). This proves W1 Rule A — the disabled prop
+//      from canStart). This proves the disabled prop
 //      is a computed expression that reacts to state.
 //   4. The off-mode invariant test
 //      (`TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly`)
@@ -186,8 +186,7 @@ describe('TestSoftwareUpdateChangelogSummarizerAIOnWiredCallsRoute (software-upd
     // route. fireEvent.click bypasses pointer-events behaviour;
     // @testing-library/user-event is intentionally NOT a
     // dependency of this codebase (see web/package.json), so
-    // we use fireEvent.click consistently across the slice
-    // tests.
+    // we use fireEvent.click consistently across these tests.
     await act(async () => {
       fireEvent.click(button);
     });
@@ -280,8 +279,8 @@ describe('TestSoftwareUpdateChangelogSummarizerAIOnWiredCallsRoute (software-upd
   });
 
   it('TestSoftwareUpdateChangelogSummarizerAIOnWiredCallsRoute: action button is disabled when no vehicleId is available (computed, not literal)', () => {
-    // This test guards W1 Rule A from the slice prompt: the
-    // primary action button's `disabled` prop MUST be a
+    // This test guards the primary action button's disabled
+    // prop: it MUST be a
     // computed expression (here: `!canStart || stream.state
     // === 'streaming'`), not a literal `disabled` /
     // `disabled={true}`. We prove the dynamic behaviour by

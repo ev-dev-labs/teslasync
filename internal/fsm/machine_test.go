@@ -499,7 +499,7 @@ func TestIsGearCapable_SpeedFallbackDisabledOnceTrue(t *testing.T) {
 	m.SetGearCapable(true)
 	// Speed=0 should NOT produce TriggerSpeedZero for gear-capable vehicle
 	sctx := &SignalContext{
-		CurrentState: Driving,
+		CurrentState:  Driving,
 		IsGearCapable: true,
 		Speed:         0,
 		WasMoving:     true,

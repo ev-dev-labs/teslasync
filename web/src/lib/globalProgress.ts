@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 07 — globalProgress controller.
+ * GlobalProgress controller.
  *
  * Singleton "is the app busy?" channel that drives the top-of-viewport
  * <TopProgress> bar. Two callers:
@@ -7,10 +7,10 @@
  *   1. <SuspenseProgressBoundary> — wraps every code-split route and
  *      starts/stops on Suspense fallback mount/unmount, so chunk
  *      downloads always show the bar.
- *   2. useGlobalProgress() — opt-in hook for heavy mutations (file
+ *   2. useGlobalProgress — opt-in hook for heavy mutations (file
  *      uploads, exports, bulk operations expected to exceed 800 ms).
  *
- * Concurrency contract: every call to `start()` MUST be paired with
+ * Concurrency contract: every call to `start` MUST be paired with
  * the returned stop function (`try/finally` or useEffect cleanup).
  * Multiple concurrent starts stack — the bar stays active until the
  * last stop fires. The returned stop is idempotent so React's
@@ -26,9 +26,9 @@
 
 export type GlobalProgressListener = (active: boolean, progress: number) => void
 
-/** Asymptotic ceiling the trickle approaches but never reaches without an explicit `stop()`. */
+/** Asymptotic ceiling the trickle approaches but never reaches without an explicit `stop`. */
 export const TRICKLE_TARGET = 80
-/** Initial jump on the first `start()` so the bar is immediately visible. */
+/** Initial jump on the first `start` so the bar is immediately visible. */
 export const TRICKLE_INITIAL = 8
 /** Tick interval driving the asymptotic trickle. */
 export const TRICKLE_INTERVAL_MS = 120
@@ -107,7 +107,7 @@ function subscribe(fn: GlobalProgressListener): () => void {
   try {
     fn(activeCount > 0, progress)
   } catch {
-    /* see publish() */
+    /* see publish */
   }
   return () => {
     listeners.delete(fn)
@@ -120,7 +120,7 @@ export const globalProgress = {
 } as const
 
 // ── Test-only helpers ──────────────────────────────────────────────
-//
+
 // Exposed so each test can run against a clean controller without
 // leaking activeCount or trickle timers between cases. The production
 // app must NEVER import these — guarded by the leading double-underscore

@@ -1,18 +1,14 @@
-// Phase-50 / 0031 — T1 Preheat and precool recommender.
-// Phase-50 / W1 inline wiring (per slice prompt 0031) — wired the
-// Draft button to POST /api/v1/ai/climate/schedule/draft via the
-// canonical useAiStream hook. The slice methodology forbids
-// shipping the visual affordance without end-to-end SSE wiring; this
-// component lands both in one commit so the on-mode wiring test
-// (TestPreheatPrecoolRecommenderAIOnWiredCallsRoute) can prove the
-// button actually opens an SSE stream against the registered
-// backend route.
+// Preheat and precool recommender.
+//
+// The Draft button posts to /api/v1/ai/climate/schedule/draft via
+// useAiStream; the on-mode wiring test proves the button opens an
+// SSE stream against the registered backend route.
 //
 // AIPreheatPrecoolRecommender is the visible AI surface for the
 // ClimateControlPage. It is rendered conditionally via
 // withAiFeature('preheat-precool-recommender', …) so:
 //
-//   - When ai_mode='off' it does not render at all (ADR-015 §I5 + §I6).
+//   - When ai_mode='off' it does not render at all.
 //   - When ai_mode is 'local'/'cloud' AND the
 //     preheat-precool-recommender toggle is on, it renders an opt-in
 //     section with a Draft button that POSTs to
@@ -29,7 +25,7 @@
 // remains the canonical view visible to every user; this AI
 // section is opt-in propose-only narration layered alongside.
 //
-// Render contract (P11/P12 — Wired-or-absent, No-placeholder-buttons):
+// Render contract:
 //   - useAiStream is called unconditionally at the top of the body
 //     (Hooks-rules safe).
 //   - The Draft button's disabled prop is a COMPUTED expression
@@ -41,18 +37,18 @@
 //   - The streamed text accumulates into AiOutputPanel which
 //     renders the SSE delta stream as-it-arrives.
 //
-// ADR-015 alignment:
-//   - I3 baseline intact: this component never replaces the
+// AI-mode alignment:
+//   - Baseline intact: this component never replaces the
 //     deterministic climate-control panels; it adds an opt-in
 //     propose-only section alongside.
-//   - I5 hidden UI:       the withAiFeature HOC returns null when
+//   - Hidden UI:          the withAiFeature HOC returns null when
 //     the feature is not enabled, so the section is entirely
 //     absent from the DOM in off mode.
-//   - I6 404 routes:      the backend route is guard-wrapped and
+//   - Off-mode routes:    the backend route is guard-wrapped and
 //     returns 404 in off mode; useAiStream surfaces that as
 //     state='error' for the user, but the component is never
 //     rendered in off mode at all because of I5.
-//   - I8 propose-only:    Helix never persists a schedule; the
+//   - Propose-only:       Helix never persists a schedule; the
 //     narration explicitly directs the user to click the
 //     canonical Apply button on the climate controls below.
 

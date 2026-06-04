@@ -7,6 +7,10 @@ import (
 	"testing"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
+	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
+
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
@@ -51,7 +55,7 @@ func TestAutomationRuntimeDispatchesTypedTriggerConditionAndAction(t *testing.T)
 		&runtimeAutomationStore{automation: automation},
 		history,
 		chain,
-		WithStateProvider(runtimeStateProvider{state: &models.VehicleState{VehicleID: vehicleID, BatteryLevel: 75}}),
+		WithStateProvider(runtimeStateProvider{state: &vehiclemodel.VehicleState{VehicleID: vehicleID, BatteryLevel: 75}}),
 	)
 
 	if err := engine.Evaluate(context.Background(), automation.ID, json.RawMessage(`{"kind":"trigger_schedule"}`)); err != nil {
@@ -108,10 +112,10 @@ func (s *runtimeAutomationStore) IncrementExecution(context.Context, int64, bool
 }
 
 type runtimeHistoryStore struct {
-	created *models.AutomationHistory
+	created *automationmodel.AutomationHistory
 }
 
-func (s *runtimeHistoryStore) Create(_ context.Context, h *models.AutomationHistory) error {
+func (s *runtimeHistoryStore) Create(_ context.Context, h *automationmodel.AutomationHistory) error {
 	copy := *h
 	copy.ID = 99
 	s.created = &copy
@@ -128,10 +132,10 @@ func (s *runtimeHistoryStore) CountSinceByAutomation(context.Context, int64, tim
 }
 
 type runtimeStateProvider struct {
-	state *models.VehicleState
+	state *vehiclemodel.VehicleState
 }
 
-func (p runtimeStateProvider) GetVehicleState(context.Context, int64) (*models.VehicleState, error) {
+func (p runtimeStateProvider) GetVehicleState(context.Context, int64) (*vehiclemodel.VehicleState, error) {
 	return p.state, nil
 }
 

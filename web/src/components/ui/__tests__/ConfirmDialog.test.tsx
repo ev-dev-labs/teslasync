@@ -1,5 +1,5 @@
 /**
- * Phase-45 / Prompt 29 — `<ConfirmDialog>` silenceKey behavior.
+ * `<ConfirmDialog>` silenceKey behavior.
  *
  * Validates the "Don't ask again" checkbox and the safety gates that
  * suppress it for destructive variants. Pairs with the broader keyboard /

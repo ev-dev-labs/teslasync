@@ -1,70 +1,12 @@
-// Phase-50 / 0059 — PU3 Natural-language dashboard composer.
-// Phase-50 / W1 inline wiring (per slice prompt 0059) — wires the
-// "Draft dashboard" button to POST /api/v1/ai/power/dashboard/draft
-// via the canonical useAiStream hook. The slice methodology
-// forbids shipping the visual affordance without end-to-end SSE
-// wiring; this component lands both in one commit so the on-mode
-// wiring test (TestNlDashboardComposerAIOnWiredCallsRoute) can
-// prove the button actually opens an SSE stream against the
-// registered backend route.
-//
-// AINLDashboardComposer is the visible AI surface for the
-// /power/dashboards page. It is rendered conditionally via
-// withAiFeature('nl-dashboard-composer', …) so:
-//
-//   - When ai_mode='off' it does not render at all (ADR-015 §I5 + §I6).
-//   - When ai_mode is 'local'/'cloud' AND the
-//     nl-dashboard-composer toggle is on, it renders an opt-in
-//     section with a free-text prompt input and a "Draft
-//     dashboard" button that POSTs to
-//     /api/v1/ai/power/dashboard/draft. The SSE response
-//     stream accumulates into the shared AiOutputPanel; when
-//     the LLM emits a `tool_result` for `draft_dashboard_layout`,
-//     the typed draft is captured locally and an "Apply to
-//     editor" button appears, which copies the draft (formatted
-//     as pretty-printed JSON) into the page state via the
-//     `onApply` prop. The LLM never edits editor state directly
-//     (ADR-015 §I8 propose-only).
-//
-// The component does NOT replace the deterministic manual JSON
-// dashboard composer or curated panel catalog viewer on
-// DashboardsPage. That baseline content remains the canonical
-// view visible to every user; this AI section is an opt-in
-// propose-only suggestion layered alongside.
-//
-// Render contract (P11/P12 — Wired-or-absent, No-placeholder-buttons):
-//   - useAiStream is called unconditionally at the top of the body
-//     (Hooks-rules safe).
-//   - The Draft button's disabled prop is a COMPUTED expression
-//     (`!canDraft`), never a literal `disabled` or
-//     `disabled={true}`.
-//   - Double-submit protection: stream.start() is a no-op while
-//     state === 'streaming' (the hook coalesces; the button is
-//     also visually disabled to mirror the state machine).
-//   - The streamed text accumulates into AiOutputPanel which
-//     renders the SSE delta stream as-it-arrives.
-//   - The captured draft is applied via the `onApply` prop's
-//     callback, which the DashboardsPage wires into its
-//     existing setDashboardJson state setter. The component
-//     itself does no global state writes.
-//
-// ADR-015 alignment:
-//   - I3 baseline intact: this component never replaces the
-//     deterministic manual JSON dashboard composer or curated
-//     catalog viewer; it adds an opt-in proposal section
-//     alongside.
-//   - I5 hidden UI:       the withAiFeature HOC returns null
-//     when the feature is not enabled, so the section is
-//     entirely absent from the DOM in off mode.
-//   - I6 404 routes:      the backend route is guard-wrapped
-//     and returns 404 in off mode; useAiStream surfaces that as
-//     state='error' for the user, but the component is never
-//     rendered in off mode at all because of I5.
-//   - I8 propose-only:    the LLM never writes; the typed
-//     DashboardLayoutDraft it proposes is rendered here, and
-//     the user must click the "Apply to editor" button to copy
-//     it into the baseline composer's state, then explicitly
-//     click the baseline Copy to clipboard button to export.
+// Natural-language dashboard composer for /power/dashboards.
+// The Draft dashboard button POSTs to /api/v1/ai/power/dashboard/draft
+// through useAiStream and streams output into AiOutputPanel.
+// tool_result frames for `draft_dashboard_layout` are captured locally;
+// the user must click "Apply to editor" before the draft touches the
+// manual JSON composer. The manual composer and panel catalog remain the
+// canonical surfaces, and withAiFeature removes this section when the
+// feature is off. The button disabled state is computed from live state,
+// so it guards double-submit without relying on a hardcoded disabled prop.
 
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'

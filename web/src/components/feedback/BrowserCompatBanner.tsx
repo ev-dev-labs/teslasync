@@ -9,7 +9,7 @@ import {
 } from '@/lib/browserCompat'
 
 /**
- * Phase-46 / Prompt 63 — Browser compatibility warning banner.
+ * Browser compatibility warning banner.
  *
  * Renders a one-time, sticky top-of-page warning when the host browser
  * is missing one or more web-platform features TeslaSync depends on
@@ -26,10 +26,9 @@ import {
  * `teslasync:compat-warning-dismissed:v1` so a user who has
  * acknowledged the warning is not nagged on every navigation.
  *
- * Mounted in <Layout> ABOVE ServiceStatusBanner so the banner is the
- * first thing inside `<main>`. It is intentionally NOT placed before
- * the SkipToContent link (Phase-46 / Prompt 60) — keyboard users must
- * still hit the skip-link first.
+ * Mounted in <Layout> above ServiceStatusBanner so the banner is the first
+ * thing inside `<main>`. It is intentionally not placed before the
+ * SkipToContent link; keyboard users must still hit the skip-link first.
  */
 
 const RECOMMENDED_BROWSERS_FALLBACK =

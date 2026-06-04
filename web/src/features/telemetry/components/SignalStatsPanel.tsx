@@ -5,7 +5,7 @@
  * Workspace page and Explorer page render the same stat grid without
  * duplicating the column definitions.
  *
- * When `selectedSignals` is provided (Phase-51), the panel renders one
+ * When `selectedSignals` is provided, the panel renders one
  * row per selected signal — including signals with no numeric samples
  * in the queried range, which surface a `—` placeholder + "no data"
  * subtitle. This keeps the panel honest: it stops silently dropping
@@ -28,7 +28,7 @@ import type { SignalStat } from '../hooks/useLiveSignalStream';
 export interface SignalStatsPanelProps {
   stats: SignalStat[];
   /**
-   * If provided, the panel renders one row per selected signal —
+   * If provided, the panel renders one row per selected signal
    * signals with no data show `—` placeholders and a "no data" hint.
    * When omitted (back-compat), only signals present in `stats` render.
    */

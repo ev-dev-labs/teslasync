@@ -18,7 +18,7 @@ export const vehicleKeys = {
 };
 
 /**
- * Phase-46 / Prompt 64 — append `?as_of=` to a path when the time-machine
+ * Append `?as_of=` to a path when the time-machine
  * URL parameter is set. Returns the path unchanged when the parameter is
  * absent so live-mode callers stay on the existing live read path.
  */
@@ -37,7 +37,7 @@ export function useVehicles() {
   });
 }
 
-// useVehicleLiveState removed — vehicle_live_state table dropped (phase-14/13).
+// useVehicleLiveState was removed after vehicle_live_state was dropped.
 // The /vehicles/{id}/live-state endpoint no longer exists.
 // Use useVehicleState (reads from SignalStore) or useVehicleLive (SSE) instead.
 
@@ -179,11 +179,10 @@ export function useMotorHistory(vehicleId: number, limit = 200) {
  * /drive-dynamics/latest, which projects 5 signals
  * (LateralAcceleration, LongitudinalAcceleration, PedalPosition,
  * BrakePedalPos, BrakePedal) from signal.LiveStateReader.LiveState.
- *
  * Replaces the deprecated useSignalObservations hook the
  * GForcePanel + PedalUsage components used to call — the underlying
  * /signals/observations route was removed alongside the
- * signal_observations table per the Phase-42 cleanup, so the panels
+ * signal_observations table after telemetry cleanup, so the panels
  * rendered "No telemetry received yet" forever.
  */
 export function useDriveDynamicsLatest(vehicleId: number, refetchInterval?: number) {

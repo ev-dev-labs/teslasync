@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 61 — Tour launcher helper tests.
+ * Tour launcher helper tests.
  *
  * Verifies that `startTour(id)`:
  *   1. Clears the per-tour completion flag (delegates to `resetTour`).

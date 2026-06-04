@@ -14,8 +14,7 @@ import {
 } from './cursorSync'
 
 /**
- * Phase 40 / Prompt 26 — shared chart-sync context.
- * Phase 40 / Prompt 62 — extended with persistent cursor sync.
+ * Shared chart-sync context with persistent cursor sync.
  *
  * Recharts already has a powerful built-in mechanism for synchronizing tooltip
  * cursors and brush selections across charts: every chart that shares the same
@@ -28,7 +27,7 @@ import {
  * stacked-time-series sections in `<ChartTimeRangeProvider>` once, and each
  * chart spreads `{...syncProps}` onto its `<LineChart>` / `<AreaChart>`.
  *
- * Phase-62 layers a *persistent* vertical reference line on top: the last
+ * A persistent vertical reference line records the last
  * hovered x value survives mouseleave so users can compare the same moment
  * across every synced chart even after their cursor moves away. Charts opt in
  * by also calling {@link useSyncedReferenceLineX} and rendering a
@@ -73,7 +72,7 @@ export function ChartTimeRangeProvider({
     () => ({ syncId, syncMethod }),
     [syncId, syncMethod],
   )
-  // Phase-40 / Prompt 62: drop persistent reference-line state for this
+  // Drop persistent reference-line state for this
   // syncId on unmount so navigating between pages doesn't leak a stale cursor
   // into the next page that happens to reuse the same syncId.
   useEffect(() => {
@@ -97,8 +96,8 @@ export function useChartSync(): ChartSyncContextValue | null {
  * component. Outside a provider, returns an empty object so chart components
  * can opt-in unconditionally without crashing on standalone use.
  *
- * Phase-40 / Prompt 62 added the `onMouseMove` handler which feeds the active
- * x-axis label into the persistent cursor-sync store. Pair with
+ * The `onMouseMove` handler feeds the active x-axis label into the
+ * persistent cursor-sync store. Pair with
  * {@link useSyncedReferenceLineX} on the same chart to draw a vertical
  * `<ReferenceLine>` that survives mouseleave.
  *
@@ -152,7 +151,7 @@ export function useSyncedCursor(): SyncedCursorProps {
 }
 
 /**
- * Phase-40 / Prompt 62 — companion to {@link useSyncedCursor}. Returns the
+ * Companion to {@link useSyncedCursor}. Returns the
  * persistent x value that every synced chart should render as a vertical
  * `<ReferenceLine>`. Returns `null` outside a `<ChartTimeRangeProvider>` or
  * before any chart in the group has been hovered.

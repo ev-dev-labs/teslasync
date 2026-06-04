@@ -9,8 +9,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// ─── Mock History Counter ───────────────────────────────
-
 type mockHistoryCounter struct {
 	counts    map[int64]int // automationID → count
 	returnErr error
@@ -29,8 +27,6 @@ func (m *mockHistoryCounter) CountSinceByAutomation(_ context.Context, automatio
 	return m.counts[automationID], nil
 }
 
-// ─── Helpers ────────────────────────────────────────────
-
 func fixedNow() time.Time {
 	return time.Date(2026, 4, 18, 12, 0, 0, 0, time.UTC)
 }
@@ -40,8 +36,6 @@ func newTestRateLimiter(counter HistoryCounter) *RateLimiter {
 	rl.nowFunc = fixedNow
 	return rl
 }
-
-// ─── Check Tests ────────────────────────────────────────
 
 func TestCheck_Unlimited(t *testing.T) {
 	counter := newMockCounter(map[int64]int{1: 999})
@@ -225,8 +219,6 @@ func TestCheck_DifferentAutomationIDs(t *testing.T) {
 	}
 }
 
-// ─── DefaultLimit Tests ─────────────────────────────────
-
 func TestDefaultLimit_AllTriggerTypes(t *testing.T) {
 	tests := []struct {
 		triggerType string
@@ -282,8 +274,6 @@ func TestDefaultLimit_EmptyString(t *testing.T) {
 		t.Errorf("DefaultLimit(\"\") = %d, want 0 (unlimited)", got)
 	}
 }
-
-// ─── Result Reason Strings ──────────────────────────────
 
 func TestCheck_ReasonStrings(t *testing.T) {
 	counter := newMockCounter(map[int64]int{1: 5})

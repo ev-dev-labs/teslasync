@@ -77,7 +77,7 @@ describe('useTelemetry.useSignals', () => {
         { category: 'orphan' },  // missing name -> drop
         { name: '' },            // empty -> drop
         null,                    // null -> drop
-        'BareString',            // pre-Phase-42 string element survives
+        'BareString',            // legacy string element survives
         'AnotherGood',
       ],
     })

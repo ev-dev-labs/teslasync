@@ -1,7 +1,6 @@
-// Command aistream-contract enforces the Phase-50 / F5 SSE event-
-// schema contract between the Go backend writer
-// (internal/ai/stream/writer.go) and the TypeScript hook
-// (web/src/hooks/useAiStream.ts).
+// Command aistream-contract enforces the SSE event-schema contract
+// between the Go backend writer (internal/ai/stream/writer.go) and the
+// TypeScript hook (web/src/hooks/useAiStream.ts).
 //
 // Why this exists
 // ---------------
@@ -9,9 +8,9 @@
 // with JSON `data:` payloads; the frontend dumb-parses both. A typo
 // on either side ("toolcall" instead of "tool_call", "continuationId"
 // instead of "continuation_id") corrupts the entire stream silently —
-// the SPA simply drops events it does not recognise. Pattern P3
-// mandates a single streaming primitive; this tool is the static
-// guard that keeps both sides honest.
+// the SPA simply drops events it does not recognise. This static
+// guard keeps the shared streaming primitive consistent across both
+// sides.
 //
 // What it checks
 // --------------
@@ -28,15 +27,15 @@
 // What it deliberately does NOT do
 // --------------------------------
 //
-//  - Parse the Go AST or TS AST. The point is to be a fast,
-//    self-evident text-level guard. A future refactor could swap in
-//    a real AST walker, but that adds maintenance cost without
-//    catching anything the literal scan misses (the Go side is
-//    typed; the TS side is typed; this tool catches divergence
-//    BETWEEN them).
+//   - Parse the Go AST or TS AST. The point is to be a fast,
+//     self-evident text-level guard. A full AST walker would add
+//     maintenance cost without catching anything the literal scan
+//     misses (the Go side is
+//     typed; the TS side is typed; this tool catches divergence
+//     BETWEEN them).
 //
-//  - Validate runtime payloads. That's the job of the per-package
-//    unit tests (writer_test.go + useAiStream.test.ts).
+//   - Validate runtime payloads. That's the job of the per-package
+//     unit tests (writer_test.go + useAiStream.test.ts).
 //
 // Usage
 // -----

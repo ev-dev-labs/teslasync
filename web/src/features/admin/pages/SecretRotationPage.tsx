@@ -1,5 +1,5 @@
 /**
- * Secret Rotation Page — Phase-45 admin observability surface.
+ * Secret Rotation Page admin observability surface.
  *
  * Per-(kind, target) rotation tracker. Surfaces the age of every
  * tracked secret (Tesla refresh token, MQTT mTLS cert, DB password,
@@ -71,7 +71,7 @@ export default function SecretRotationPage() {
         header: t('admin.secretRotation.colKind', 'Kind'),
         render: (r) => (
           <div className="flex flex-col">
-            <span className="font-medium text-white/90">{formatKind(r.kind)}</span>
+            <span className="font-medium text-[var(--text-primary)]">{formatKind(r.kind)}</span>
             {r.target_id && <Caption>{r.target_id}</Caption>}
           </div>
         ),
@@ -81,7 +81,7 @@ export default function SecretRotationPage() {
         header: t('admin.secretRotation.colRotated', 'Last rotated'),
         render: (r) => (
           <div>
-            <div className="text-white/80">{formatDateTime(r.last_rotated)}</div>
+            <div className="text-[var(--text-primary)]">{formatDateTime(r.last_rotated)}</div>
             <Caption>{formatRelative(r.last_rotated)}</Caption>
           </div>
         ),
@@ -96,10 +96,10 @@ export default function SecretRotationPage() {
         key: 'expiry',
         header: t('admin.secretRotation.colExpiry', 'Expires'),
         render: (r) => {
-          if (!r.expires_at) return <span className="text-white/60">—</span>;
+          if (!r.expires_at) return <span className="text-[var(--text-secondary)]">—</span>;
           return (
             <div>
-              <div className="text-white/80">{formatDateTime(r.expires_at)}</div>
+              <div className="text-[var(--text-primary)]">{formatDateTime(r.expires_at)}</div>
               <Caption>
                 {r.days_to_expiry !== null && r.days_to_expiry !== undefined
                   ? t('admin.secretRotation.daysToExpiry', '{{days}}d remaining', { days: r.days_to_expiry })
@@ -190,6 +190,7 @@ export default function SecretRotationPage() {
             <PanelTitle className="mb-4">{t('admin.secretRotation.tableTitle', 'Rotation status')}</PanelTitle>
             <SectionErrorBoundary name="secret-rotation-table">
               {items.length === 0 && !query.isLoading && !subsystemMissing ? (
+                // no-action: rotation events are recorded automatically by the rotation tracker; no user action seeds them
                 <EmptyState
                   icon={<ShieldCheck className="h-8 w-8" />}
                   title={t('admin.secretRotation.emptyTitle', 'No tracked secrets')}
@@ -200,6 +201,7 @@ export default function SecretRotationPage() {
                 />
               ) : (
                 <DataTable
+                  tableId="admin:secret-rotation"
                   columns={columns}
                   data={items}
                   keyExtractor={(r) => `${r.kind}:${r.target_id ?? ''}`}

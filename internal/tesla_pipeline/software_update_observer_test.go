@@ -16,11 +16,11 @@ import (
 // It captures every InsertIfChanged call and lets the test pin the return
 // value (inserted, error).
 type fakeSoftwareUpdateRecorder struct {
-	calls         atomic.Int32
-	lastVehicleID int64
-	lastVersion   string
-	lastStatus    string
-	returnErr     error
+	calls          atomic.Int32
+	lastVehicleID  int64
+	lastVersion    string
+	lastStatus     string
+	returnErr      error
 	returnInserted bool
 }
 

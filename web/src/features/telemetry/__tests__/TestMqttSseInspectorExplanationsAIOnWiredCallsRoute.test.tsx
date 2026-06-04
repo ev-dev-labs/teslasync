@@ -1,12 +1,10 @@
-// Phase-50 / 0047 — S6 MQTT and SSE inspector explanations.
-// Phase-50 / W1 inline wiring (per slice prompt 0047) — on-mode
-// wiring test proving the "Explain streams" button opens an SSE
-// stream against the registered backend route
+// MQTT and SSE inspector explanations on-mode wiring test.
+//
+// Proves the "Explain streams" button opens an SSE stream against
 // POST /api/v1/ai/system/streams/explain.
 //
-// `TestMqttSseInspectorExplanationsAIOnWiredCallsRoute` is the
-// load-bearing positive wiring proof for slice 0047's W1 inline
-// addendum. It mounts the AIMqttSseInspectorExplanations
+// `TestMqttSseInspectorExplanationsAIOnWiredCallsRoute` mounts the
+// AIMqttSseInspectorExplanations
 // component with ai_mode='cloud' + the per-feature toggle on,
 // stubs global fetch with a deterministic SSE byte stream,
 // clicks the "Explain streams" button, and asserts:
@@ -24,13 +22,11 @@
 //   3. A second click while `state === 'streaming'` is a no-op
 //      — the second fetch call is NOT enqueued (the double-
 //      submit guard inside useAiStream + the visual `disabled`
-//      mirror it from canStart). This proves W1 Rule A — the
-//      disabled prop is a computed expression that reacts to
-//      state.
+//      mirror it from canStart). This proves the disabled prop reacts
+//      to streaming state.
 //   4. The "Explain streams" button is `disabled` when the
 //      window is missing OR invalid (zero, negative, reversed,
-//      non-finite) — proving W1 Rule A's computed-expression
-//      guarantee across multiple input states.
+//      non-finite) across multiple input states.
 //   5. The off-mode invariant test
 //      (`TestMqttSseInspectorAIOffShowsRawInspectorOnly`)
 //      continues to pass unchanged — wiring MUST NOT regress
@@ -38,9 +34,7 @@
 //      the sibling file and is exercised independently by the
 //      npm test runner.
 //
-// The test name MUST stay
-// `TestMqttSseInspectorExplanationsAIOnWiredCallsRoute` per the
-// W1 inline addendum naming contract.
+// Keep the test name aligned with the scenario it covers.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
@@ -244,8 +238,8 @@ describe('TestMqttSseInspectorExplanationsAIOnWiredCallsRoute (mqtt-sse-inspecto
   });
 
   it('TestMqttSseInspectorExplanationsAIOnWiredCallsRoute: Explain streams button is disabled when the window is missing (computed, not literal)', () => {
-    // This test guards W1 Rule A from the slice prompt: the
-    // primary action button's `disabled` prop MUST be a computed
+    // This test guards the primary action button's disabled contract:
+    // the `disabled` prop MUST be a computed
     // expression (here: `!canStart`), not a literal `disabled` /
     // `disabled={true}`. We prove the dynamic behaviour by
     // rendering the component without a window and confirming

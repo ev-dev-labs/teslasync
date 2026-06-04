@@ -31,6 +31,33 @@ repos:
       - id: go-build-mod
       - id: go-mod-tidy
 
+  # gofmt / goimports run as LOCAL hooks (not via dnephin) so they
+  # remain available after the dnephin/pre-commit-golang repo
+  # archival (Mar 2025). Bodies live in scripts/pre-commit/ so the
+  # YAML stays parsable (entry: ... cannot easily contain nested
+  # quotes + colons inline).
+  #
+  # Note for Windows contributors: run these via WSL or the Docker
+  # one-liner (docs/CONTRIBUTING.md § "Running make without
+  # installing it"). On a native Windows working tree CRLF can
+  # cause false positives; .gitattributes (A2.3) forces text eol=lf
+  # for .go files on next checkout.
+  - repo: local
+    hooks:
+      - id: gofmt
+        name: gofmt -s (Go formatting)
+        entry: scripts/pre-commit/gofmt-check.sh
+        language: script
+        types: [go]
+        pass_filenames: true
+
+      - id: goimports
+        name: goimports (Go imports grouping)
+        entry: scripts/pre-commit/goimports-check.sh
+        language: script
+        types: [go]
+        pass_filenames: true
+
   # ── Frontend ────────────────────────────────────────────
   - repo: local
     hooks:
@@ -40,6 +67,14 @@ repos:
         language: system
         files: '^web/src/.*\.(ts|tsx)$'
         pass_filenames: false
+
+      - id: tsc-frontend
+        name: TypeScript type-check (frontend)
+        entry: bash -c 'cd web && npx tsc --noEmit'
+        language: system
+        files: '^web/(src/.*\.(ts|tsx)|tsconfig.*\.json|package\.json)$'
+        pass_filenames: false
+        stages: [pre-push]
 
       - id: vitest
         name: Vitest

@@ -9,5 +9,4 @@
 // [VehicleDataResponse], [ChargeState], and [DriveState] mirror the
 // Tesla Fleet API schema.
 // Layer: platform
-//
 package tesla

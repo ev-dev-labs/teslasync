@@ -1,6 +1,5 @@
-// Phase-50 / 0026 — C1 Smart-charge schedule suggestion.
-// Phase-50 / W1 (slice 0065) — wired the Draft button to
-// POST /api/v1/ai/charging/schedule/draft.
+// Smart-charge schedule suggestion.
+// Draft button posts to /api/v1/ai/charging/schedule/draft.
 
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'

@@ -1,6 +1,5 @@
-// Package mlchargingcurveclustering is the Phase-50 / 0064 (ML3)
-// strategy for the LLM-narrated learned per-vehicle charging-curve
-// fingerprint clustering surface.
+// Package mlchargingcurveclustering implements the LLM-narrated
+// learned per-vehicle charging-curve fingerprint clustering surface.
 //
 // The strategy declares:
 //
@@ -27,8 +26,8 @@
 //     THEN narrate the diff;
 //
 //   - the redaction policy (`PolicyChatbot`, the deny-all tagged
-//     redactor) — the slice prompt mandates "Allowed classes: none;
-//     training is local and does not require provider egress".
+//     redactor). Training is local and does not require provider
+//     egress.
 //     Every PII class is round-trip tagged so the LLM never sees
 //     cleartext beyond the vehicle_id payload.
 //
@@ -42,23 +41,13 @@
 // The deterministic Charging Curve page remains the canonical
 // baseline visible to every off-mode user (ADR-015 §I3).
 //
-// Distinction from the C3 sibling slice 0028:
+// Distinction from charging-curve-fingerprint-clustering:
 //
-//   - C3 (charging-curve-fingerprint-clustering, slice 0028) is a
-//     LLM narrator that explains an aggregator's output produced by
-//     the C3 tool retrieve_charge_curve_clusters in
-//     internal/ai/tools/charge_curve_clustering.go. The aggregator
-//     groups sessions by power tier and reports per-cluster
-//     averages — but it does NOT compute stddev / p5 / p95 and does
-//     NOT distinguish a learned envelope from a rule-label
-//     fallback. C3 is essentially a labeller.
-//
-//   - ML3 (this slice, ml-charging-curve-clustering, slice 0064)
-//     adds a STATISTICAL clustering trainer that computes per-cluster
-//     mean / stddev / p5 / p95 and explicitly labels Source=learned
-//     vs Source=rule_label_fallback per cluster. The narrator
-//     surfaces the diff between the proposed learned envelope and
-//     the rule-label baseline.
+//   - The existing narrator explains an aggregator that groups
+//     sessions by power tier and reports per-cluster averages.
+//   - This strategy explains a statistical trainer that also computes
+//     stddev / p5 / p95 and labels each cluster as learned or
+//     rule_label_fallback.
 //
 // Both slices coexist on /charging/curves; users can opt into one
 // or both independently. The two AI surfaces have independent
@@ -107,11 +96,10 @@ const FeatureID = "ml-charging-curve-clustering"
 //     train_charge_curve_clusters FIRST then
 //     query_charge_curve_clusters so the narration grounds the
 //     PROPOSED learned envelope against the CURRENTLY-effective
-//     rule-label baseline before diffing. The slice prompt's Action
-//     Steps list the tools in this exact order
-//     (`train_charge_curve_clusters;query_charge_curve_clusters`);
-//     reversing them silently produces a confused narration that
-//     quotes the fallback as if it were the learned proposal.
+//     rule-label baseline before diffing. The tools must run in the
+//     order `train_charge_curve_clusters;query_charge_curve_clusters`;
+//     reversing them makes the narration quote the fallback as if it
+//     were the learned proposal.
 //   - Forbids changing the deterministic classification: this is a
 //     NARRATOR over the trainer's output, not a re-classification.
 //     The LLM may quote cluster_id (l1_overnight, l2_workplace,
@@ -128,9 +116,8 @@ const FeatureID = "ml-charging-curve-clustering"
 //     four paragraphs total) so the surface fits inside the
 //     existing Charging Curve page layout.
 //   - Bans claiming the learned envelope has been APPLIED to the
-//     deterministic classification (today it has not — the slice
-//     does not persist). The narrator must say "proposed" or
-//     "would refine" rather than "now using".
+//     deterministic classification. The narrator must say "proposed"
+//     or "would refine" rather than "now using".
 //   - Honestly reports per-cluster fallback: when the tool returns
 //     source="rule_label_fallback" for a cluster, the narrator MUST
 //     say so plainly (e.g. "L2 has only 2 sessions this window —
@@ -158,13 +145,12 @@ const SystemPrompt = `You are the TeslaSync learned per-vehicle charging-cluster
 // RegisterChargeCurveClustersTools at boot. The dispatcher refuses
 // to mount a strategy that references an unknown tool.
 //
-// ORDER MATTERS: the slice prompt's Action Steps list the tools in
-// exactly this order ("train_charge_curve_clusters;query_charge_curve_clusters").
-// Reversing them silently produces a confused narration that quotes
-// the fallback as if it were the learned proposal — the goldens
-// pin the order via the assistant's tool_calls sequence.
+// ORDER MATTERS: train_charge_curve_clusters must run before
+// query_charge_curve_clusters. Reversing them makes the narration
+// quote the fallback as if it were the learned proposal; goldens pin
+// the assistant's tool_calls sequence.
 //
-// This slice ships zero mutating tools: cluster narration only
+// This feature ships zero mutating tools: cluster narration only
 // READS the user's existing `charging_sessions` rows. A future
 // "create a charging alert when the learned envelope diverges from
 // the rule-label baseline" surface would add its own strategy with
@@ -216,17 +202,10 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 	return nil, nil
 }
 
-// RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyChatbot wrapped through the F4↔F8 adapter so the
-// dispatcher's per-request ctx-installation step (dispatch.Run
-// installs the policy via redact.WithPolicy) sees the concrete
-// policy.
-//
-// Per the slice prompt: "Allowed classes: none; training is local
-// and does not require provider egress". PolicyChatbot is the
-// project-wide deny-all-tagged policy (Allow: nil, Mode:
-// ModeRedactedTags) — every PII class is converted into a
-// round-trip tag before the LLM call; the LLM never sees cleartext.
+// RedactionPolicy implements [strategy.Strategy]. PolicyChatbot is
+// the project-wide deny-all tagged policy; every PII class becomes a
+// round-trip tag before the LLM call, so the model never sees
+// cleartext.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {
 	return redactadapter.Wrap(redact.PolicyChatbot())
 }

@@ -1,18 +1,17 @@
-// Phase-46 / Prompt 65 — Scheduled / recurring export driver.
+// Package export contains the scheduled recurring export driver.
 //
 // The Scheduler is a side-car to the existing MQTT-backed export
 // Worker. Every tick (default 60 s) it asks the repo for rows where
 // `enabled AND next_run_at <= now()`, then for each row:
 //
-//   1. Builds a one-shot JobRequest from the schedule's parameters
-//      and a relative date window (range_window).
-//   2. Hands it straight to *Processor.Process — the same code path
-//      that one-shot HTTP submissions use.
-//   3. Dispatches the produced bytes via Delivery.kind (download is
-//      stored on the row; email/webhook log + reserve a hook for
-//      future Phase-46 prompts).
-//   4. Records last_run_at / last_status / last_error and recomputes
-//      next_run_at via cron.
+//  1. Builds a one-shot JobRequest from the schedule's parameters
+//     and a relative date window (range_window).
+//  2. Hands it straight to *Processor.Process — the same code path
+//     that one-shot HTTP submissions use.
+//  3. Dispatches the produced bytes via Delivery.kind (download is
+//     stored on the row; email/webhook delivery can be wired here).
+//  4. Records last_run_at / last_status / last_error and recomputes
+//     next_run_at via cron.
 //
 // Per-row try / catch
 // -------------------
@@ -37,6 +36,7 @@
 //   - MarkRunResult advances next_run_at past the cutoff, so the
 //     second pod's update finds last_run_at already past now() and
 //     becomes a no-op.
+//
 // A future "FOR UPDATE SKIP LOCKED" upgrade can land cleanly here
 // without changing the public scheduler surface.
 package export
@@ -48,21 +48,22 @@ import (
 	"sync"
 	"time"
 
+	exportmodel "github.com/ev-dev-labs/teslasync/internal/models/export"
+
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
 )
 
 // DefaultSchedulerInterval is the production tick cadence. Tests
 // pass shorter intervals through SchedulerOptions.
 const DefaultSchedulerInterval = 60 * time.Second
 
-// SchedulerStore is the slice of *database.ScheduledExportRepo the
+// SchedulerStore is the slice of *exportdb.ScheduledExportRepo the
 // scheduler needs. Production wires the concrete repo; tests stub.
 type SchedulerStore interface {
-	DueBefore(ctx context.Context, cutoff time.Time, limit int) ([]database.ScheduledExportRow, error)
-	MarkRunResult(ctx context.Context, id int64, outcome database.ScheduledExportRunOutcome) error
+	DueBefore(ctx context.Context, cutoff time.Time, limit int) ([]exportdb.ScheduledExportRow, error)
+	MarkRunResult(ctx context.Context, id int64, outcome exportdb.ScheduledExportRunOutcome) error
 }
 
 // SchedulerProcessor is the slice of *Processor the scheduler uses.
@@ -78,7 +79,7 @@ type SchedulerProcessor interface {
 // they should NOT block the scheduler tick. Use the ctx for
 // cancellation.
 type SchedulerDelivery interface {
-	Deliver(ctx context.Context, row database.ScheduledExportRow, result *ProcessResult) error
+	Deliver(ctx context.Context, row exportdb.ScheduledExportRow, result *ProcessResult) error
 }
 
 // SchedulerOptions tunes the scheduler. Zero-valued fields fall
@@ -196,7 +197,7 @@ func (s *Scheduler) Tick(ctx context.Context) int {
 // last_status='failed' + last_error; a panic is recovered and
 // converted to a failure so a poison-pill row can never crash the
 // scheduler.
-func (s *Scheduler) processOne(ctx context.Context, row database.ScheduledExportRow) {
+func (s *Scheduler) processOne(ctx context.Context, row exportdb.ScheduledExportRow) {
 	defer func() {
 		if rec := recover(); rec != nil {
 			log.Error().
@@ -243,10 +244,10 @@ const (
 	scheduledStatusFailed = "failed"
 )
 
-func (s *Scheduler) recordOutcome(ctx context.Context, row database.ScheduledExportRow, status, errMsg string) {
+func (s *Scheduler) recordOutcome(ctx context.Context, row exportdb.ScheduledExportRow, status, errMsg string) {
 	now := s.opts.Now()
 	var nextPtr *time.Time
-	if next, nextErr := database.ComputeNextRun(row.ScheduleCron, now); nextErr == nil {
+	if next, nextErr := exportdb.ComputeNextRun(row.ScheduleCron, now); nextErr == nil {
 		n := next
 		nextPtr = &n
 	} else {
@@ -255,7 +256,7 @@ func (s *Scheduler) recordOutcome(ctx context.Context, row database.ScheduledExp
 		// next_run_at will simply stay unchanged.
 		log.Warn().Err(nextErr).Int64("schedule_id", row.ID).Msg("export scheduler: ComputeNextRun failed")
 	}
-	outcome := database.ScheduledExportRunOutcome{
+	outcome := exportdb.ScheduledExportRunOutcome{
 		RanAt:     now,
 		Status:    status,
 		Err:       errMsg,
@@ -269,15 +270,15 @@ func (s *Scheduler) recordOutcome(ctx context.Context, row database.ScheduledExp
 // buildJobRequest assembles a one-shot export job description from
 // a schedule row. The relative range_window is anchored at now so
 // every run produces a fresh window (e.g. "last 7d").
-func buildJobRequest(row database.ScheduledExportRow, now time.Time) (*JobRequest, error) {
-	window, err := database.ParseRangeWindow(row.RangeWindow)
+func buildJobRequest(row exportdb.ScheduledExportRow, now time.Time) (*JobRequest, error) {
+	window, err := exportdb.ParseRangeWindow(row.RangeWindow)
 	if err != nil {
 		return nil, fmt.Errorf("range_window: %w", err)
 	}
 	end := now
 	start := now.Add(-window)
 	req := &JobRequest{
-		ExportJobRequest: models.ExportJobRequest{
+		ExportJobRequest: exportmodel.ExportJobRequest{
 			// Synthesise a stable job-id so log lines can correlate
 			// per-tick output with the parent schedule.
 			JobID:     fmt.Sprintf("scheduled-%d-%d", row.ID, now.Unix()),
@@ -296,18 +297,18 @@ func buildJobRequest(row database.ScheduledExportRow, now time.Time) (*JobReques
 // wired (download-only mode).
 type noopDelivery struct{}
 
-func (noopDelivery) Deliver(_ context.Context, _ database.ScheduledExportRow, _ *ProcessResult) error {
+func (noopDelivery) Deliver(_ context.Context, _ exportdb.ScheduledExportRow, _ *ProcessResult) error {
 	return nil
 }
 
 // LogDelivery is a development-friendly delivery that emits a log
 // line per dispatched payload. Intended as the default wiring while
-// real email + webhook drivers are scaffolded by future prompts.
+// real email and webhook drivers are wired.
 type LogDelivery struct{}
 
 // Deliver records the schedule + size and returns nil. Production
 // integrations should replace this with real transports.
-func (LogDelivery) Deliver(_ context.Context, row database.ScheduledExportRow, result *ProcessResult) error {
+func (LogDelivery) Deliver(_ context.Context, row exportdb.ScheduledExportRow, result *ProcessResult) error {
 	size := 0
 	records := 0
 	if result != nil {

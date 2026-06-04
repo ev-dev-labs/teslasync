@@ -1,6 +1,4 @@
-// Package metrics — exemplar helper.
-//
-// Phase-44 / observability-batch / Prompt F3 — exemplar generalisation.
+// Package metrics provides exemplar helpers.
 //
 // internal/api/middleware.go already attaches a Prometheus exemplar (trace_id +
 // span_id) to the RED HTTP latency histogram so operators can jump from a
@@ -27,9 +25,8 @@
 // The helper is intentionally narrow:
 //
 //   - It NEVER fabricates a span. If ctx carries no sampled span context the
-//     call falls back to a plain Observe(). This matches the policy laid down
-//     by the rubber-duck critique (observability-batch / R7): no faking
-//     context.Background(); every exemplar must be traceable.
+//     call falls back to a plain Observe(). Every exemplar must point to
+//     a trace that can actually be retrieved.
 //
 //   - It performs ONE type-assertion to prometheus.ExemplarObserver. The
 //     client_golang histograms implement this interface today; the assertion
@@ -42,7 +39,7 @@
 // exemplars to round-trip through the TSDB. The dev docker-compose wires this
 // flag on the prometheus service; the K8s helm chart wires it via the
 // prometheus-operator's `additionalArgs`. The link breaks silently if the
-// flag is missing — see docs/runbooks/phase-44-metrics-conventions.md for the
+// flag is missing; see the metrics conventions runbook for the
 // verification recipe.
 package metrics
 

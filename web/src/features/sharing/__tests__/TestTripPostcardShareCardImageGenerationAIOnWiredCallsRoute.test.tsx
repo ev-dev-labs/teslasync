@@ -1,12 +1,9 @@
-// Phase-50 / 0060 — GEN1 trip postcard and share-card image generation.
-// Phase-50 / W1 inline wiring (per slice prompt 0060) — on-mode
-// wiring test proving the "Generate share card" button opens an SSE
-// stream against the registered backend route POST
-// /api/v1/ai/share-cards/trip-image/draft.
+// Trip postcard share-card image generation AI wiring test.
+// Proves the "Generate share card" button opens an SSE stream against
+// POST /api/v1/ai/share-cards/trip-image/draft.
 //
 // `TestTripPostcardShareCardImageGenerationAIOnWiredCallsRoute` is
-// the load-bearing positive wiring proof for slice 0060's W1
-// inline addendum. It mounts the
+// the load-bearing positive wiring proof. It mounts the
 // AITripPostcardShareCardImageGeneration component with
 // ai_mode='cloud' + the per-feature toggle on, stubs global fetch
 // with a deterministic SSE byte stream, clicks the action button,
@@ -25,8 +22,7 @@
 //   3. A second click while `state === 'streaming'` is a no-op —
 //      the second fetch call is NOT enqueued (the double-submit
 //      guard inside useAiStream + the visual `disabled` mirror it
-//      from canStart). This proves W1 Rule A — the disabled prop
-//      is a computed expression that reacts to state.
+//      from canStart).
 //   4. The off-mode invariant test
 //      (`TestTripPostcardAIOffStaticShareCardOnly`) continues to
 //      pass unchanged — wiring MUST NOT regress the off-mode
@@ -34,7 +30,7 @@
 //      file and is exercised independently by the npm test
 //      runner.
 //
-// HX (Helix UX) addendum compliance:
+// Accessible-name gotcha:
 //   - The CTA is located via `getByRole('button', { name:
 //     /Generate share card/i })` — UNANCHORED regex because
 //     AIFeatureCard composes the accessible name as
@@ -280,14 +276,11 @@ describe('TestTripPostcardShareCardImageGenerationAIOnWiredCallsRoute (trip-post
   });
 
   it('TestTripPostcardShareCardImageGenerationAIOnWiredCallsRoute: action button is disabled when no tripId is available (computed, not literal)', () => {
-    // This test guards W1 Rule A from the slice prompt: the
-    // primary action button's `disabled` prop MUST be a
-    // computed expression (here: `!canStart || stream.state
-    // === 'streaming'`), not a literal `disabled` /
-    // `disabled={true}`. We prove the dynamic behaviour by
-    // rendering the component without a tripId and confirming
-    // the button is disabled while the gate is open — same
-    // code path, different prop input.
+    // The primary action button's `disabled` prop must be computed
+    // (here: `!canStart || stream.state === 'streaming'`), not a
+    // literal `disabled` / `disabled={true}`. Rendering without a
+    // tripId proves the dynamic behavior while the gate is open —
+    // same code path, different prop input.
     mockUseSettings.mockReturnValue(
       settingsPayload({
         ai_mode: 'cloud',

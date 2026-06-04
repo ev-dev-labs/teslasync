@@ -9,12 +9,10 @@ import (
 )
 
 // mediaColumnByField is the static field→column map for destination
-// media_snapshot. Built at file-edit time from routing.yaml entries
-// with `dest: media_snapshot` (11 routes — see the AUDIT_EVIDENCE
-// section of phase-42a/0015's log for the verbatim extraction).
+// media_snapshot. Built from routing.yaml entries with
+// `dest: media_snapshot` (11 routes).
 //
-// Per phase-42a prompt 0012 Decision #3 (inherited by 0015) this map
-// is a static var, NOT a runtime read of routing.yaml: the routing
+// This map is a static var, NOT a runtime read of routing.yaml: the routing
 // layer's loader already validated every entry at process start, the
 // per-payload hot path must not re-parse a 1000-line YAML file, and
 // a compile-time declaration here lets the reflective coverage test
@@ -52,9 +50,8 @@ var mediaColumnByField = map[string]string{
 	"MediaPlaybackStatus":       "play_status",
 }
 
-// mediaColumnFor is the columnFor callback supplied to snapshotWriter
-// per phase-42a prompt 0012 Decision #2 (inherited by 0015). Closes
-// over mediaColumnByField so the snapshot helper has a single
+// mediaColumnFor is the columnFor callback supplied to snapshotWriter.
+// It closes over mediaColumnByField so the snapshot helper has a single
 // source-of-truth lookup; ok=false is returned for any field NOT
 // routed here (the snapshot helper then errors out loudly per its
 // drop-loud contract — see snapshot_base.go's columnFor godoc).
@@ -64,8 +61,7 @@ func mediaColumnFor(field string) (string, bool) {
 }
 
 // NewMediaWriter constructs the production media snapshot writer.
-// Returns the router.Writer for destination media_snapshot
-// (constructor signature is locked by phase-42a prompt 0015 Decision #1).
+// Returns the router.Writer for destination media_snapshot.
 //
 // Composes the unexported snapshotWriter from snapshot_base.go: the
 // table is "media_snapshots" (matches migration 000183 lines 273-288)

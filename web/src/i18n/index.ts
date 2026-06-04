@@ -16,8 +16,8 @@ i18n.use(initReactI18next).init({
   interpolation: { escapeValue: false },
 })
 
-// Phase-46 / Prompt 48 — keep <html dir> + <html lang> in sync with the
-// active language. Apply once on boot so the very first paint after i18n
+// Keep <html dir> + <html lang> in sync with the active language.
+// Apply once on boot so the very first paint after i18n
 // init matches the resolved language, then again on every subsequent
 // `i18n.changeLanguage(...)` call.
 applyDocumentDirection(i18n.language)

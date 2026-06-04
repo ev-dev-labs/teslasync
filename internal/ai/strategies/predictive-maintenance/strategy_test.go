@@ -1,14 +1,7 @@
-// Phase-50 / 0049 — M1 Predictive maintenance.
-//
-// Unit tests for the predictive-maintenance Strategy. Mirrors
-// the shape of state-machine-debugger-narrator's
-// strategy_test.go (the closest precedent: a tools+RAG-style
-// narrator strategy with a scope-bound query tool). The
-// Strategy is a pure value (no internal state, no IO) so the
-// tests are tight: pin the feature ID + system prompt + tool
-// whitelist + redaction policy shape so a future edit that
-// breaks the contract surfaces here before the dispatcher
-// silently changes behaviour.
+// These tests pin the predictive-maintenance strategy contract:
+// feature ID, system prompt directives, tool whitelist, and redaction
+// policy. The strategy is a pure value, so regressions should surface
+// here before dispatcher behavior changes.
 
 package predictivemaintenance
 
@@ -132,7 +125,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context
 // contract. The dispatcher seeds the user message via
 // StrategyInput.History; the strategy must not contribute extra
-// prefix messages until a future slice that needs preferred-
+// prefix messages until future work that needs preferred-
 // greeting or preferred-unit-display preferences ships.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
@@ -146,14 +139,10 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 	}
 }
 
-// TestStrategy_RedactionPolicyDigest proves the strategy hands
-// the dispatcher PolicyDigest wrapped through the F4↔F8
-// adapter. PolicyDigest allows ONLY ClassVehicleName so the
-// advisory can say "your Roadie's cabin air filter is overdue"
-// without leaking the VIN or any coordinates. The slice prompt
-// explicitly mandates "Allowed classes: ClassVehicleName only;
-// service history is user-visible and sensitive text is
-// tagged."
+// TestStrategy_RedactionPolicyDigest proves the strategy uses
+// PolicyDigest. The policy allows ONLY ClassVehicleName so the
+// advisory can mention a vehicle nickname without leaking the VIN,
+// coordinates, service history, or other sensitive text.
 func TestStrategy_RedactionPolicyDigest(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -184,8 +173,6 @@ func TestStrategy_EvalGoldensReturnsNil(t *testing.T) {
 		t.Fatalf("EvalGoldens() = %v, want nil (goldens live in YAML)", g)
 	}
 }
-
-// --- helpers ---------------------------------------------------------
 
 func contains(s, sub string) bool {
 	return len(s) >= len(sub) && (s == sub || indexOf(s, sub) >= 0)

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, act, fireEvent, waitFor } from '@testing-library/react'
 
 /**
- * Phase-46 / Prompt 31 — ReauthDialog contract.
+ * ReauthDialog contract coverage.
  *
  * Coverage:
  *   • Credential mode: password tab submission resolves the queued
@@ -55,8 +55,8 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-// Phase-46 / Prompt 35 — ReauthDialogRoot now consults the TOTP
-// status query to decide whether to show the TOTP tab and where to
+// ReauthDialogRoot consults the TOTP status query to decide whether
+// to show the TOTP tab and where to
 // route TOTP submissions. The existing tests run without a
 // QueryClientProvider, so we stub the hook with a sensible default
 // that mirrors the open-mode 501 (TOTP unavailable). Individual

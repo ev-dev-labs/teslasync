@@ -1,5 +1,5 @@
 /**
- * RbacMatrixPage — Phase-46 / Prompt 44.
+ * RbacMatrixPage.
  *
  * Provider-agnostic "who can do what" admin page. Columns = roles
  * (resolved from the upstream proxy's groups header), rows =

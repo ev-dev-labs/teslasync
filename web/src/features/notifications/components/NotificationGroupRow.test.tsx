@@ -1,11 +1,6 @@
 /**
- * NotificationGroupRow tests — Phase-46 / Prompt 27.
- *
- * Covers the 4 contracts from the prompt:
- *   1. 3 alerts with same group_key → 1 row, +N similar chip shows N=count-1
- *   2. Expanding the row fetches members and renders them inline
- *   3. Mark-group-read POSTs { group_key } and toasts success
- *   4. Singleton notifications render without grouping chrome (no chip)
+ * NotificationGroupRow tests: grouping, member expansion, mark-group-read,
+ * and singleton rendering without grouping chrome.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';

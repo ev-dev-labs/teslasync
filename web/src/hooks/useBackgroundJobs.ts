@@ -3,18 +3,18 @@ import { useIsMutating } from '@tanstack/react-query';
 import { useExportJobs, type ExportJobSummary } from '@/api/hooks/useExports';
 
 /**
- * useBackgroundJobs — Phase-40 / Prompt 59.
+ * useBackgroundJobs — .
  *
  * Single source of truth for "is there work happening in the background?"
  * surfaced by the footer status bar's BackgroundWorkSegment. Aggregates
  * three independent signals:
  *
- *   1. **Export jobs** — queued/processing entries from `/export/jobs`.
- *   2. **TanStack mutations** — anything calling `useMutation()` anywhere
- *      in the app (CSV downloads, settings saves, alert rule edits, etc).
- *   3. **Ad-hoc registrations** — long-running operations that don't fit
- *      either of the above can register themselves via {@link registerJob}
- *      and call the returned function to clear themselves.
+ * 1. **Export jobs** — queued/processing entries from `/export/jobs`.
+ * 2. **TanStack mutations** — anything calling `useMutation()` anywhere
+ * in the app (CSV downloads, settings saves, alert rule edits, etc).
+ * 3. **Ad-hoc registrations** — long-running operations that don't fit
+ * either of the above can register themselves via {@link registerJob}
+ * and call the returned function to clear themselves.
  *
  * The store is intentionally module-scoped + observable rather than a
  * React context so that any code path (handler, hook, callback) can call

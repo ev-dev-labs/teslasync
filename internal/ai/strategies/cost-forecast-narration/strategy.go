@@ -1,5 +1,4 @@
-// Package costforecastnarration is the Phase-50 / 0029 C4 strategy
-// for the LLM-narrated charging cost forecast.
+// Package costforecastnarration implements the LLM-narrated charging cost forecast strategy.
 //
 // The strategy declares:
 //
@@ -40,11 +39,8 @@
 // canonical baseline; off-mode users never see the AI surface at
 // all (ADR-015 §I3, §I5, §I6).
 //
-// Service-worker chunks: this slice's frontend code is loaded
-// under the page-bundle for /cost-analysis (and the aliased
-// /charging/costs); the off-mode walker validates code chunks via
-// the `withAiFeature` HOC + the AI_FEATURES map. See the slice log
-// for the documented mapping.
+// The frontend code loads under /cost-analysis and the /charging/costs alias;
+// the off-mode walker validates chunks through withAiFeature and AI_FEATURES.
 //
 // ADR-015 alignment:
 //
@@ -179,22 +175,22 @@ func (s *Strategy) Tools() []string {
 //
 // Future work: this is where a per-vehicle "preferred forecast
 // horizon" preference snippet would be injected once
-// cost-forecast-narration grows that surface. Today's slice keeps
-// Context empty so the dispatcher's behaviour is fully determined
+// cost-forecast-narration grows that surface. Today Context stays
+// empty so the dispatcher's behaviour is fully determined
 // by [System] + History.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyCostForecastNarration wrapped through the F4↔F8 adapter
+// PolicyCostForecastNarration through the redaction-policy adapter
 // so the dispatcher's per-request ctx-installation step
 // (dispatch.Run installs the policy via redact.WithPolicy) sees
 // the concrete policy.
 //
-// Per the slice prompt: "Allowed classes: ClassVehicleName only;
-// cost data is aggregate and user-visible. Round-trip required:
-// yes". PolicyCostForecastNarration is the per-feature constructor
+// PolicyCostForecastNarration allows ClassVehicleName only; cost
+// data is aggregate and user-visible, and round-trip tags remain
+// required. It is the per-feature constructor
 // with the same allow-list as PolicyDigest /
 // PolicyBatteryHealthForecastNarrative — kept as a distinct
 // identifier so a future per-feature change to

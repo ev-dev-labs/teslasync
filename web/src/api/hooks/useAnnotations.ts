@@ -13,8 +13,8 @@ import type {
 import { toDataAnnotation } from '@/types/annotations';
 
 /**
- * Phase 40 / Prompt 43 — TanStack Query hooks for the durable chart-annotation
- * store. Replaces the localStorage-only `useAnnotations` hook in
+ * TanStack Query hooks for the durable chart-annotation store. Replaces
+ * the localStorage-only `useAnnotations` hook in
  * `web/src/hooks/useAnnotations.ts` (which is now a thin compat wrapper that
  * delegates to these hooks).
  *

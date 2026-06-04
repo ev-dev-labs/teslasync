@@ -1,5 +1,3 @@
-// Phase-50 / 0020 — N6 RAG-backed app help.
-//
 // Unit tests for the rag-help Strategy. Mirrors the shape of
 // nl-search / chatbot-llm / nl-alert-builder's strategy_test.go.
 // The Strategy is a pure value (no internal state, no IO) so the
@@ -85,9 +83,8 @@ func TestStrategy_Tools(t *testing.T) {
 	}
 }
 
-// TestStrategy_ToolsIsDefensiveCopy proves Tools() returns a copy —
-// a caller that mutates the slice does NOT leak the mutation back
-// into the strategy. Dispatcher safety relies on this.
+// TestStrategy_ToolsIsDefensiveCopy proves Tools() returns a copy.
+// Mutating the returned slice must not affect the strategy.
 func TestStrategy_ToolsIsDefensiveCopy(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -132,7 +129,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs pre-fetched RAG context ships.
+// future feature that needs pre-fetched RAG context ships.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -146,14 +143,13 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 }
 
 // TestStrategy_RedactionPolicyChatbot proves the strategy hands the
-// dispatcher PolicyChatbot wrapped through the F4↔F8 adapter.
+// dispatcher PolicyChatbot through the redaction adapter.
 // PolicyChatbot allows NOTHING in cleartext — VINs, place names,
 // addresses, lat/long flow as round-trip tags through the LLM and
 // are restored only in the final response delivered to the
-// requesting user. The slice prompt explicitly mandates PolicyChatbot
-// reuse for rag-help (the docs corpus carries no PII today, but the
+// requesting user. The docs corpus carries no PII today, but the
 // deny-all stance is defence-in-depth in case a future runbook
-// revision accidentally adds an identifier).
+// revision accidentally adds an identifier.
 func TestStrategy_RedactionPolicyChatbot(t *testing.T) {
 	t.Parallel()
 	s := New()

@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { subscribe } from '@/lib/broadcast'
 
 /**
- * Phase-40 / Prompt 69 — listens for `queryInvalidate` messages from other
+ * listens for `queryInvalidate` messages from other
  * tabs and re-runs the corresponding `invalidateQueries(...)` against this
  * tab's QueryClient.
  *

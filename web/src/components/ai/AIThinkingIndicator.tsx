@@ -1,9 +1,7 @@
-// Phase-50 / refactor — animated AI thinking indicator.
+// Animated AI thinking indicator.
 //
-// Replaces the lazy "Generating…" plain-text placeholder that the
-// streaming-empty state of [AiOutputPanel] used to show. The
-// duplicated "Generating…" string surfaced everywhere the SPA
-// waited for the first SSE delta to arrive, and looked unfinished.
+// Replaces the plain-text "Generating…" placeholder shown while
+// AiOutputPanel waits for the first SSE delta.
 //
 // AIThinkingIndicator renders three shimmering skeleton lines
 // (decreasing widths to mimic prose) underneath an animated

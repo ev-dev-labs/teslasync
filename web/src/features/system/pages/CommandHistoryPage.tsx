@@ -127,8 +127,8 @@ export default function CommandHistoryPage() {
   // change.
   const setUrl = useUrlBatch();
 
-  // Phase-46 / Prompt 18 — defer the search query so the input stays
-  // responsive while the timeline + stats + pagination chain re-renders
+  // Defer the search query so the input stays responsive while the
+  // timeline + stats + pagination chain re-renders
   // at non-urgent priority.
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const isSearchPending = !Object.is(searchQuery, deferredSearchQuery);

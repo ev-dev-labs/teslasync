@@ -1,8 +1,5 @@
-// Phase-50 / 0019 — N5 Per-charging-session diagnosis.
-// Phase-50 / W1 (slice 0065) — wired the Generate button to
-// POST /api/v1/ai/charging/{sessionID}/diagnose (empty body).
-// Phase-50 / refactor — switched to AIFeatureCard scaffold for
-// visual + behavioural consistency across all AI features.
+// Per-session charging diagnosis wired to POST /ai/charging/{sessionID}/diagnose.
+// Uses AIFeatureCard for consistent AI feature behavior and styling.
 
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -12,13 +9,7 @@ import { withAiFeature } from '@/components/ai/withAiFeature'
 import { useAiStream } from '@/hooks/useAiStream'
 
 interface InnerSectionProps {
-  /**
-   * sessionId surfaced by the parent ChargingDetailPage. Optional
-   * because the charging detail route's `useParams<{id}>()` returns
-   * `string | undefined`; when absent we still render the section
-   * (the gate has already passed) but the Generate button stays
-   * disabled.
-   */
+  /** Optional until the charging detail route resolves; disables Generate when absent. */
   sessionId?: string
 }
 

@@ -1,11 +1,9 @@
-// Phase-50 / 0061 — GEN2 vehicle paint preview.
-// Phase-50 / W1 inline wiring (per slice prompt 0061) — on-mode
-// wiring test proving the "Preview paint color" button opens an
+// Vehicle paint preview on-mode wiring test. Proves the "Preview paint color" button opens an
 // SSE stream against the registered backend route POST
 // /api/v1/ai/vehicles/{vehicleID}/paint-preview/draft.
 //
 // `TestVehiclePaintPreviewAIOnWiredCallsRoute` is the load-bearing
-// positive wiring proof for slice 0061's W1 inline addendum. It
+// positive wiring proof. It
 // mounts the AIVehiclePaintPreview component with ai_mode='cloud'
 // + the per-feature toggle on, stubs global fetch with a
 // deterministic SSE byte stream, clicks the action button, and

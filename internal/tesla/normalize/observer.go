@@ -8,14 +8,14 @@ import (
 
 // AtomicsObserver receives the full slice of atomics for a payload
 // AFTER the dispatch loop in Pipeline.processAtomics has completed.
-// It is the architectural seam locked by ADR-004 #11 (added in
-// Phase-42a/0000) for cross-cutting per-payload side effects that do
+// It is the ADR-004 #11 architectural seam for cross-cutting per-payload
+// side effects that do
 // not fit inside a per-destination router.Writer:
 //
 //   - L1 live-state updates  (signal.LiveSignalStore.UpdateAll)
 //   - FSM dispatch           (FSMHandler.ProcessSignals)
 //   - sessions + alerts      (TelemetrySessionTracker.ProcessSignals
-//                             + TelemetryAlertEvaluator.Evaluate)
+//   - TelemetryAlertEvaluator.Evaluate)
 //   - SSE fanout             (TelemetryHandler.broadcastSSE)
 //
 // (Durable signal_log writes are owned by the router signal_log
@@ -52,8 +52,8 @@ import (
 //
 //   - Observers are invoked SEQUENTIALLY in registration order. A
 //     panic in any observer is recovered + logged at WARN inside
-//     notifyObserver — observer failures MUST NOT fail the payload
-//     (per Phase-42a/0000 Decision #2). Subsequent observers still
+//     notifyObserver — observer failures MUST NOT fail the payload.
+//     Subsequent observers still
 //     run even if a prior one panicked.
 //
 //   - The interface intentionally returns no error. The two

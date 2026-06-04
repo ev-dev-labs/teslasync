@@ -217,14 +217,14 @@ func TestRedisSignalCacheTimestampedValuesRoundTrip(t *testing.T) {
 	after := time.Now().UTC()
 
 	stored := redisClient.hashes[redisSignalKey(vehicleID)]["BatteryLevel"]
-	// Phase-42 typed envelope fields MUST be present.
+	// Typed envelope fields must be present.
 	for _, want := range []string{`"kind":`, `"v":`, `"ts":`} {
 		if !strings.Contains(stored, want) {
 			t.Fatalf("stored timestamped value %q does not contain Phase-42 typed envelope field %q", stored, want)
 		}
 	}
-	// Pre-Phase-42 envelope fields MUST also be present (dual-write for
-	// mid-rollout decode by old binaries).
+	// Legacy envelope fields must also be present for mid-rollout decode by
+	// old binaries.
 	for _, want := range []string{
 		`"encoding":"teslasync.signal.v1"`,
 		`"timestamp"`,
@@ -243,8 +243,8 @@ func TestRedisSignalCacheTimestampedValuesRoundTrip(t *testing.T) {
 	if len(values) != 4 {
 		t.Fatalf("GetAllValues() returned %d values, want 4", len(values))
 	}
-	// Untyped Go int input round-trips as int64 because the Phase-42
-	// typed envelope preserves the producer's runtime type. Callers that
+	// Untyped Go int input round-trips as int64 because the typed envelope
+	// preserves the producer's runtime type. Callers that
 	// want float64 must pass float64 (e.g. real codec output for a
 	// ValueKindFloat field).
 	assertInt64(t, values["BatteryLevel"].Raw, 72)
@@ -376,7 +376,7 @@ func TestRedisSignalCacheGetAllRemainsRawCompatibleWithTimestampedValues(t *test
 	if len(rawValues) != 3 {
 		t.Fatalf("GetAll() returned %d values, want 3", len(rawValues))
 	}
-	// Phase-42 typed envelope preserves int64 round-trip.
+	// Typed envelope preserves int64 round-trip.
 	assertInt64(t, rawValues["Numeric"], 7)
 	assertBool(t, rawValues["Bool"], false)
 	assertString(t, rawValues["Text"], "parked")
@@ -429,130 +429,129 @@ func assertString(t *testing.T, got interface{}, want string) {
 	}
 }
 
-
 func TestParseVehicleSignalsKey(t *testing.T) {
-tests := []struct {
-name    string
-key     string
-wantID  int64
-wantOK  bool
-}{
-{name: "valid id 1", key: "vehicle:1:signals", wantID: 1, wantOK: true},
-{name: "valid id 42", key: "vehicle:42:signals", wantID: 42, wantOK: true},
-{name: "valid large id", key: "vehicle:9223372036854775807:signals", wantID: 9223372036854775807, wantOK: true},
-{name: "missing prefix", key: "veh:1:signals", wantOK: false},
-{name: "missing suffix", key: "vehicle:1:signal", wantOK: false},
-{name: "non-numeric id", key: "vehicle:abc:signals", wantOK: false},
-{name: "empty id", key: "vehicle::signals", wantOK: false},
-{name: "negative id", key: "vehicle:-3:signals", wantOK: false},
-{name: "zero id", key: "vehicle:0:signals", wantOK: false},
-{name: "empty string", key: "", wantOK: false},
-{name: "wrong prefix entirely", key: "other:1:signals", wantOK: false},
-}
-for _, tc := range tests {
-t.Run(tc.name, func(t *testing.T) {
-id, ok := parseVehicleSignalsKey(tc.key)
-if ok != tc.wantOK {
-t.Fatalf("parseVehicleSignalsKey(%q) ok = %v, want %v", tc.key, ok, tc.wantOK)
-}
-if ok && id != tc.wantID {
-t.Fatalf("parseVehicleSignalsKey(%q) id = %d, want %d", tc.key, id, tc.wantID)
-}
-})
-}
+	tests := []struct {
+		name   string
+		key    string
+		wantID int64
+		wantOK bool
+	}{
+		{name: "valid id 1", key: "vehicle:1:signals", wantID: 1, wantOK: true},
+		{name: "valid id 42", key: "vehicle:42:signals", wantID: 42, wantOK: true},
+		{name: "valid large id", key: "vehicle:9223372036854775807:signals", wantID: 9223372036854775807, wantOK: true},
+		{name: "missing prefix", key: "veh:1:signals", wantOK: false},
+		{name: "missing suffix", key: "vehicle:1:signal", wantOK: false},
+		{name: "non-numeric id", key: "vehicle:abc:signals", wantOK: false},
+		{name: "empty id", key: "vehicle::signals", wantOK: false},
+		{name: "negative id", key: "vehicle:-3:signals", wantOK: false},
+		{name: "zero id", key: "vehicle:0:signals", wantOK: false},
+		{name: "empty string", key: "", wantOK: false},
+		{name: "wrong prefix entirely", key: "other:1:signals", wantOK: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			id, ok := parseVehicleSignalsKey(tc.key)
+			if ok != tc.wantOK {
+				t.Fatalf("parseVehicleSignalsKey(%q) ok = %v, want %v", tc.key, ok, tc.wantOK)
+			}
+			if ok && id != tc.wantID {
+				t.Fatalf("parseVehicleSignalsKey(%q) id = %d, want %d", tc.key, id, tc.wantID)
+			}
+		})
+	}
 }
 
 func TestRawFieldCount_EmptyKey(t *testing.T) {
-ctx := context.Background()
-redisClient := newFakeRedisSignalClient()
-cache := &RedisSignalCache{rdb: redisClient}
+	ctx := context.Background()
+	redisClient := newFakeRedisSignalClient()
+	cache := &RedisSignalCache{rdb: redisClient}
 
-n, err := cache.RawFieldCount(ctx, 99)
-if err != nil {
-t.Fatalf("RawFieldCount() error = %v, want nil", err)
-}
-if n != 0 {
-t.Fatalf("RawFieldCount() = %d, want 0 for missing key", n)
-}
+	n, err := cache.RawFieldCount(ctx, 99)
+	if err != nil {
+		t.Fatalf("RawFieldCount() error = %v, want nil", err)
+	}
+	if n != 0 {
+		t.Fatalf("RawFieldCount() = %d, want 0 for missing key", n)
+	}
 }
 
 func TestRawFieldCount_PopulatedKey(t *testing.T) {
-ctx := context.Background()
-redisClient := newFakeRedisSignalClient()
-cache := &RedisSignalCache{rdb: redisClient}
+	ctx := context.Background()
+	redisClient := newFakeRedisSignalClient()
+	cache := &RedisSignalCache{rdb: redisClient}
 
-if err := cache.Update(ctx, 7, map[string]interface{}{
-"BatteryLevel": 72.0,
-"VehicleSpeed": 0.0,
-"Locked":       true,
-}); err != nil {
-t.Fatalf("Update() error = %v", err)
-}
-n, err := cache.RawFieldCount(ctx, 7)
-if err != nil {
-t.Fatalf("RawFieldCount() error = %v, want nil", err)
-}
-if n != 3 {
-t.Fatalf("RawFieldCount() = %d, want 3", n)
-}
+	if err := cache.Update(ctx, 7, map[string]interface{}{
+		"BatteryLevel": 72.0,
+		"VehicleSpeed": 0.0,
+		"Locked":       true,
+	}); err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+	n, err := cache.RawFieldCount(ctx, 7)
+	if err != nil {
+		t.Fatalf("RawFieldCount() error = %v, want nil", err)
+	}
+	if n != 3 {
+		t.Fatalf("RawFieldCount() = %d, want 3", n)
+	}
 }
 
 func TestScanVehicleKeys_FiltersMalformedKeys(t *testing.T) {
-ctx := context.Background()
-redisClient := newFakeRedisSignalClient()
-cache := &RedisSignalCache{rdb: redisClient}
+	ctx := context.Background()
+	redisClient := newFakeRedisSignalClient()
+	cache := &RedisSignalCache{rdb: redisClient}
 
-// Seed Redis with a deliberate mix of well-formed and malformed keys.
-redisClient.hashes["vehicle:1:signals"] = map[string]string{"a": "1"}
-redisClient.hashes["vehicle:7:signals"] = map[string]string{"b": "2"}
-redisClient.hashes["vehicle:abc:signals"] = map[string]string{"c": "3"}
-redisClient.hashes["vehicle::signals"] = map[string]string{"d": "4"}
-redisClient.hashes["other:1:signals"] = map[string]string{"e": "5"}
+	// Seed Redis with a deliberate mix of well-formed and malformed keys.
+	redisClient.hashes["vehicle:1:signals"] = map[string]string{"a": "1"}
+	redisClient.hashes["vehicle:7:signals"] = map[string]string{"b": "2"}
+	redisClient.hashes["vehicle:abc:signals"] = map[string]string{"c": "3"}
+	redisClient.hashes["vehicle::signals"] = map[string]string{"d": "4"}
+	redisClient.hashes["other:1:signals"] = map[string]string{"e": "5"}
 
-got, err := cache.ScanVehicleKeys(ctx, 50)
-if err != nil {
-t.Fatalf("ScanVehicleKeys() error = %v", err)
-}
+	got, err := cache.ScanVehicleKeys(ctx, 50)
+	if err != nil {
+		t.Fatalf("ScanVehicleKeys() error = %v", err)
+	}
 
-// Sort by id since map iteration is non-deterministic in the fake client.
-wantSet := map[int64]bool{1: true, 7: true}
-if len(got) != len(wantSet) {
-t.Fatalf("ScanVehicleKeys() returned %d ids, want %d (got=%v)", len(got), len(wantSet), got)
-}
-for _, id := range got {
-if !wantSet[id] {
-t.Fatalf("ScanVehicleKeys() returned unexpected id %d (got=%v)", id, got)
-}
-delete(wantSet, id)
-}
-if len(wantSet) != 0 {
-t.Fatalf("ScanVehicleKeys() missing expected ids %v", wantSet)
-}
-// "other:*" must NOT be matched by the SCAN MATCH "vehicle:*:signals".
-for _, id := range got {
-if id <= 0 {
-t.Fatalf("ScanVehicleKeys() returned non-positive id %d", id)
-}
-}
+	// Sort by id since map iteration is non-deterministic in the fake client.
+	wantSet := map[int64]bool{1: true, 7: true}
+	if len(got) != len(wantSet) {
+		t.Fatalf("ScanVehicleKeys() returned %d ids, want %d (got=%v)", len(got), len(wantSet), got)
+	}
+	for _, id := range got {
+		if !wantSet[id] {
+			t.Fatalf("ScanVehicleKeys() returned unexpected id %d (got=%v)", id, got)
+		}
+		delete(wantSet, id)
+	}
+	if len(wantSet) != 0 {
+		t.Fatalf("ScanVehicleKeys() missing expected ids %v", wantSet)
+	}
+	// "other:*" must NOT be matched by the SCAN MATCH "vehicle:*:signals".
+	for _, id := range got {
+		if id <= 0 {
+			t.Fatalf("ScanVehicleKeys() returned non-positive id %d", id)
+		}
+	}
 }
 
 func TestScanVehicleKeys_RespectsLimit(t *testing.T) {
-ctx := context.Background()
-redisClient := newFakeRedisSignalClient()
-cache := &RedisSignalCache{rdb: redisClient}
+	ctx := context.Background()
+	redisClient := newFakeRedisSignalClient()
+	cache := &RedisSignalCache{rdb: redisClient}
 
-for i := int64(1); i <= 50; i++ {
-key := fmt.Sprintf("vehicle:%d:signals", i)
-redisClient.hashes[key] = map[string]string{"x": "1"}
-}
+	for i := int64(1); i <= 50; i++ {
+		key := fmt.Sprintf("vehicle:%d:signals", i)
+		redisClient.hashes[key] = map[string]string{"x": "1"}
+	}
 
-got, err := cache.ScanVehicleKeys(ctx, 10)
-if err != nil {
-t.Fatalf("ScanVehicleKeys() error = %v", err)
-}
-if len(got) != 10 {
-t.Fatalf("ScanVehicleKeys(limit=10) returned %d ids, want 10", len(got))
-}
+	got, err := cache.ScanVehicleKeys(ctx, 10)
+	if err != nil {
+		t.Fatalf("ScanVehicleKeys() error = %v", err)
+	}
+	if len(got) != 10 {
+		t.Fatalf("ScanVehicleKeys(limit=10) returned %d ids, want 10", len(got))
+	}
 }
 
 func TestPurge_RemovesExistingKey(t *testing.T) {
@@ -675,9 +674,8 @@ func TestPurgeAll_ReportsScannedAtLimit(t *testing.T) {
 	redisClient := newFakeRedisSignalClient()
 	cache := &RedisSignalCache{rdb: redisClient}
 
-	// Seed 5 vehicles, then ask for limit=2 — caller should be able to
-	// detect that there are more keys outside this batch by comparing
-	// scanned == limit.
+	// Seed 5 vehicles, then ask for limit=2; scanned == limit tells the
+	// caller more keys may remain.
 	for vid := int64(1); vid <= 5; vid++ {
 		if err := cache.Update(ctx, vid, map[string]interface{}{"BatteryLevel": 50.0}); err != nil {
 			t.Fatalf("Update(%d) error = %v", vid, err)
@@ -694,7 +692,7 @@ func TestPurgeAll_ReportsScannedAtLimit(t *testing.T) {
 	if purged != 2 {
 		t.Fatalf("PurgeAll() purged = %d, want 2", purged)
 	}
-	// And confirm 3 vehicles still survive in redis after this batch.
+	// Confirm 3 vehicles still survive in Redis after this limited purge.
 	survivors := 0
 	for _, vid := range []int64{1, 2, 3, 4, 5} {
 		if _, ok := redisClient.hashes[fmt.Sprintf("vehicle:%d:signals", vid)]; ok {
@@ -706,7 +704,7 @@ func TestPurgeAll_ReportsScannedAtLimit(t *testing.T) {
 	}
 }
 
-// ── Phase-42 typed-envelope and stale-cache contract tests ──────────────
+// ── Typed-envelope and stale-cache contract tests ──────────────
 
 func assertInt32(t *testing.T, got interface{}, want int32) {
 	t.Helper()
@@ -777,9 +775,9 @@ type prometheus_Counter interface {
 
 // TestRedisSignalCacheTypedEnvelopeRoundTripPerKind exercises every
 // protomodel.ValueKind through encode → store → decode and verifies
-// the runtime Go type is preserved end-to-end. This is the core
-// guarantee of the Phase-42 typed envelope: no silent float64 widening,
-// no string-parse fallback, no untyped JSON-number ambiguity.
+// the runtime Go type is preserved end-to-end. This is the core typed-envelope
+// guarantee: no silent float64 widening, no string-parse fallback, and no
+// untyped JSON-number ambiguity.
 func TestRedisSignalCacheTypedEnvelopeRoundTripPerKind(t *testing.T) {
 	ctx := context.Background()
 	vehicleID := int64(101)
@@ -845,9 +843,9 @@ func TestRedisSignalCacheTypedEnvelopeRoundTripPerKind(t *testing.T) {
 			assert: func(t *testing.T, got interface{}) { assertTime(t, got, driveStart) },
 		},
 		{
-			name:   "compound (map)",
-			field:  "ScheduledChargingStartTime",
-			input:  composite,
+			name:  "compound (map)",
+			field: "ScheduledChargingStartTime",
+			input: composite,
 			assert: func(t *testing.T, got interface{}) {
 				m, ok := got.(map[string]interface{})
 				if !ok {
@@ -955,7 +953,7 @@ func TestGetSignalValueFreshReturnsErrStaleAndAdvisoryValue(t *testing.T) {
 }
 
 // TestGetSignalValueFreshTreatsLegacyZeroTimestampAsStale asserts that a
-// pre-Phase-42 legacy scalar (no timestamp) is treated as stale by the
+// legacy scalar without a timestamp is treated as stale by the
 // freshness-aware reader, since we cannot prove it is fresh. The
 // advisory value still flows back so the caller can compare against an
 // authoritative re-resolution.

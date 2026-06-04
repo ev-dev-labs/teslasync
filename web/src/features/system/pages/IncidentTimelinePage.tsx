@@ -1,5 +1,5 @@
 /**
- * IncidentTimelinePage — Phase-2 post-mortem page at
+ * IncidentTimelinePage — post-mortem page at
  * /system-status/incidents/:id.
  *
  * Operator UX:
@@ -201,7 +201,7 @@ export default function IncidentTimelinePage() {
         </GlassPanel>
 
         {/*
-          Phase-50 / 0042 — AI incident timeline summarizer.
+          AI incident timeline summarizer.
           Renders only when ai_mode is local|cloud AND the
           incident-timeline-summarizer toggle is on (gated by
           withAiFeature). When off, the wrapper returns null and

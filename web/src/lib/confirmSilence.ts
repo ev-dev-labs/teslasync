@@ -1,19 +1,19 @@
-// Phase-45 / Prompt 29 — "Don't ask me again" storage for confirm dialogs.
-//
-// `<ConfirmDialog>` and `useConfirm()` accept an optional `silenceKey`.
+// "Don't ask me again" storage for confirm dialogs.
+
+// `<ConfirmDialog>` and `useConfirm` accept an optional `silenceKey`.
 // When the user opts in via the dialog's "Don't ask again" checkbox,
 // we persist that choice here and short-circuit future calls so the
 // dialog never re-prompts for that action.
-//
+
 // One key, one set, one schema version:
-//   - Single allowlist key `STORAGE_KEY` keeps the surface area tiny.
-//   - Stored as a JSON array of action ids (deduped via Set on read).
-//   - The `:v1` suffix lets us migrate the shape later without colliding.
-//
+//   Single allowlist key `STORAGE_KEY` keeps the surface area tiny.
+//   Stored as a JSON array of action ids (deduped via Set on read).
+//   The `:v1` suffix lets us migrate the shape later without colliding.
+
 // Caller contract:
-//   - Treat keys as stable, namespaced action ids: `discard-draft`,
+//   Treat keys as stable, namespaced action ids: `discard-draft`,
 //     `remove-widget`, etc. Never reuse a key for a different action.
-//   - Do NOT silence danger-variant or typed-confirmation prompts —
+//   Do NOT silence danger-variant or typed-confirmation prompts
 //     `<ConfirmDialog>` ignores `silenceKey` for those by design.
 
 const STORAGE_KEY = 'teslasync:confirm-silence:v1';

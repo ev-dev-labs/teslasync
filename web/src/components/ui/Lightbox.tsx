@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 39 — `<Lightbox>` immersive image viewer.
+ * `<Lightbox>` immersive image viewer.
  *
  * A reusable full-viewport image viewer for galleries (vehicle photos,
  * charger photos, screenshot exports, manual upload). Goals:
@@ -17,9 +17,8 @@
  *   • aria-modal=true, role=dialog, focus trap (Tab/Shift+Tab cycle
  *     inside the dialog), focus returns to the trigger element on close.
  *
- * Pinch-to-zoom (touch two-finger gesture) is deferred per phase-46/39
- * Blocked Path — the gesture utility planned in prompt 10 was scoped
- * down to swipe + pull-to-refresh and never delivered a pinch primitive.
+ * Pinch-to-zoom (touch two-finger gesture) is not implemented because
+ * the shared gesture utility only supports swipe and pull-to-refresh.
  * Touch users can still tap +/- to zoom and drag with one finger to pan
  * once zoomed.
  */
@@ -370,8 +369,8 @@ export function Lightbox({
           jsx-a11y/no-noninteractive-element-interactions on role="dialog"
           and forces the same restructuring Modal.tsx already settled on.
 
-          Phase-45 / Prompt 04: NOT migrated to <Modal> — the immersive
-          full-viewport image viewer can't compose into <Modal>'s
+          Not migrated to <Modal>: the immersive full-viewport image
+          viewer can't compose into <Modal>'s
           card-with-padding shell; we hand-roll the overlay here for
           parity with native photo-viewer UX. The cn() form below splits
           'fixed inset-0' across arguments so the no-restricted-syntax
@@ -400,7 +399,7 @@ export function Lightbox({
         // through to the backdrop layer (so "click outside image closes"
         // works without onClick on the dialog itself). Each interactive
         // child re-enables pointer-events with pointer-events-auto.
-        // Phase-45 / Prompt 04: NOT migrated to <Modal> — see backdrop above.
+        // Not migrated to <Modal>; see backdrop rationale above.
         // eslint-disable-next-line no-restricted-syntax
         className="pointer-events-none fixed inset-0 z-[71] flex flex-col outline-none"
       >

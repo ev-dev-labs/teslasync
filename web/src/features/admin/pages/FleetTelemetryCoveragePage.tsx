@@ -1,13 +1,13 @@
 /**
- * FleetTelemetryCoveragePage — Phase-43a / Prompt 0002.
+ * FleetTelemetryCoveragePage — .
  *
  * Operator-facing view of the package-derived Fleet Telemetry routing
  * snapshot. Renders one section per protomodel Category with:
  *
- *   • category name + total routed fields
- *   • per-destination counts within the category
- *   • a per-field DataTable: field name, destination, column,
- *     also_signal_log dual-write flag, subscribed flag
+ * • category name + total routed fields
+ * • per-destination counts within the category
+ * • a per-field DataTable: field name, destination, column,
+ * also_signal_log dual-write flag, subscribed flag
  *
  * The page also surfaces global summary stats (total categories /
  * fields / subscribed / unsubscribed-routed / orphans) and a warning

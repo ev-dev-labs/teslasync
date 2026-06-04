@@ -1268,6 +1268,10 @@ it will be reverted on next review.
 | 2026-05    | phase-46/41                   | `queue_status_handler.go` + `_test.go`                                                                                                                                                                            | Admin job-queue inspector for the React Diagnostics panel; reads `WorkerStatusStore` (Redis) + `WorkerQueueRepo` (pg). The store + repo already live under their canonical packages; handler is the THIN orchestrator the freeze is meant to permit when no app/svc is justified.                                                                                                          |
 | 2026-05    | phase-44 (observability batch) | `dlq_handler.go` + `_test.go`<br>`flags_handler.go` + `_test.go`<br>`ingest_xray_handler.go` + `_test.go`<br>`drive_diagnostic_handler.go` + `_test.go`                                                              | Admin observability surface for the React Diagnostics panel. Each handler accepts a narrow interface (`ingestXRayRepo`, `driveLookup`, `driveDiagnosticReader`, `*flags.Store`, `*mqtt.DLQInspector`) constructed in `router.go` from canonical packages (`internal/database`, `internal/flags`, `internal/mqtt`). Follows the same precedent as phase-43a/phase-46 admin handlers above. |
 | 2026-05    | phase-46 SOTA batch           | `slo_handler.go`<br>`dataquality_handler.go`<br>`synthetic_handler.go`                                                                                                                                              | Live SLO board (`/admin/observability/slo`), data-quality scoring + lineage (`/admin/observability/data-quality`, `/admin/observability/lineage`), and synthetic monitoring (`/admin/observability/synthetic`). Each handler is a 30-50 LOC orchestrator over `internal/slo`, `internal/dataquality`, and `internal/synthetic` — the substantive logic + tests live in those packages. handler/v1 would require 3 mirror packages (`port/slo`, `app/slosvc`, etc.) per subsystem for zero behaviour; the freeze is meant to permit exactly this case.            |
+| 2026-05-28 | phase R2.0e (apperror carve)  | `apperror_bridge_test.go`                                                                                                                                                                                         | Regression-test pin that asserts every parent `Err*` var still points at the canonical `apperror.Err*` after the catalog carve into `internal/api/apperror/`. MUST live in `package api` because it is the only context that can name both `internal/api.Err*` and `internal/api/apperror.Err*` together. README/static `arch_test.TestFrozenPackagesNoNewFiles` exempts `_test.go` files; the runtime `-compare` tool counts them, hence this explicit row.        |
+| 2026-05-28 | phase R2.0f (apibulk carve)   | `bulk_helpers_bridge_test.go`                                                                                                                                                                                     | Regression-test pin that asserts the parent `MaxBulkIDs` const + `bulk*` type aliases + `errBulk*` var bridges + helper wrappers in `bulk_helpers.go` still delegate to the canonical `apibulk` symbols after the catalog carve into `internal/api/apibulk/`. Same rationale as the apperror bridge test above — MUST live in `package api` to name parent + subpkg symbols together.        |
+| 2026-05-28 | phase R2d.109 (aichatbot carve) | `ai_test_helpers_test.go`                                                                                                                                                                                       | Shared `stubGuardSettings` test helper used by the remaining `package api` AI handler tests (`ai_admin_handler`, `ai_internal_handler`, `ai_settings_validate_handler`, `ai_usage_handler`) that have NOT yet been carved. Extracted out of `aichatbot/handler_test.go` to avoid duplication across the still-in-api tests. Will be removed when the last in-api AI handler is carved.  |
+| 2026-05-28 | phase R2d.127 (aicostfcst carve) | `ai_cost_forecast_forecaster_test.go`                                                                                                                                                                          | Tests the `NewAICostForecaster` production adapter constructor in `ai_cost_forecast_forecaster.go` (still in `package api` because it implements `forecast.CostForecaster` and is wired in `router.go`). Test asserts nil-DB panic + compile-time interface satisfaction; MUST live in `package api` to name the unexported adapter. Will move with the adapter when forecaster is carved. |
 
 Future admin/observability handlers SHOULD follow the same pattern:
 narrow interface in the handler file, concrete `*Repo` from
@@ -1458,4 +1462,319 @@ RATIONALE:
 ROLLBACK:
   - If a deprecation creates an unsolvable circular dep, propose a
     superseding ADR with rationale. Do not silently restore.
+```
+
+
+## ADR-010: Repo Reorganization Mandate (Clean Architecture finishing pass)
+
+```
+STATUS: APPROVED (user mandate, 2026-05-27)
+DATE: 2026-05-27
+BRANCH: chore/repo-reorganization (off main @ e1550655)
+RELATED: ADR-006 (Models vs Domain), ADR-007 (platform/ charter),
+         ADR-009 (handler/v1 canonical, internal/api FROZEN)
+PLAN: docs/architecture/repo-reorganization-plan.md
+
+USER MANDATE (verbatim):
+  > "we need to properly organize our repo code both frontend and
+  >  backend. industry leading guidelines"
+  > "must use proper state of art design patterns"
+  > "Proper Work. Proper linting. proper state of art design patterns.
+  >  No shortcuts no anti-patterns. If you see something broken fix it
+  >  dont leave it. we must not have any tech debt remaining."
+  > "its ok even it takes weeks or months. we need proper work"
+
+DECISION:
+  This branch executes the finishing pass on the Clean Architecture
+  shape established by Phase-47 (ADR-006/007/009) and the SI canonical
+  units shape established by Phase-48. It is NOT a re-architecture: the
+  hexagonal scaffolding (domain/port/adapter/app/handler) already exists
+  on main, the arch_test foundation already gates layering, and the
+  Phase-48 SI rename has already landed. The remaining work is to:
+
+    1. CLEAN UP repo hygiene (root binaries, coverage artifacts,
+       orphan markdown, scattered seeds/scripts).
+    2. SPLIT the .github/ARCHITECTURE.md mega-file into per-ADR files
+       under docs/architecture/adr/. Mirror .github/instructions/ into
+       docs/architecture/instructions/. .github/ stays canonical for
+       Copilot tooling; docs/ is the human-readable canonical source.
+    3. INSTALL frontend FSD layer enforcement via eslint-plugin-boundaries
+       with the current dir → FSD layer mapping (no folder rename).
+       Eliminate cross-feature imports.
+    4. FINISH the frontend SI cutover (classify the ~346 remaining
+       legacy unit-suffixed identifiers as CONFIG / DISPLAY / FIX;
+       execute the FIX set).
+    5. EXTEND tools/archmetrics + add depguard rules to enforce the
+       full Clean Arch DAG with per-legacy-package ratchet (allowlist
+       current count; net-new violations fail CI).
+    6. MIGRATE the remaining ~422 handlers from frozen internal/api/
+       (currently 434 files; 12 migrated to handler/v1/) to
+       handler/v1 + app/<x>svc + dto/, slice-by-slice per the recipe
+       in docs/architecture/repo-reorganization-plan.md §6.
+    7. RESHAPE notification/notifier/webpush into Clean Arch
+       (domain + svc + port + channel adapters) as a single C6 slice.
+    8. AUDIT remaining ADR-009 admin/observability exceptions per file;
+       result is the final justified list, NOT zero.
+
+  Clean Architecture mapping for this codebase:
+    Entities          → internal/domain/<X>/
+    Use Cases         → internal/app/<X>svc/
+    Interface Adapters→ internal/handler/v1/
+                      + internal/handler/dto/
+                      + internal/adapter/<X>/
+                      + internal/database/  (kept as repo layer per ADR-006)
+                      + internal/models/    (persistence/transport DTOs per ADR-006)
+    Frameworks/Drivers→ cmd/* + third-party libs
+
+  Ports live AT THE CONSUMER BOUNDARY (i.e. where the svc consumes the
+  capability), not 1:1 per adapter. Shared interfaces go in
+  internal/port/<domain>/; svc-local interfaces live inline in the svc
+  file. This avoids interface explosion.
+
+RULES:
+  + Every NEW handler MUST land in internal/handler/v1 (already an
+     ADR-009 rule; restated here as the destination).
+  + Every NEW use case MUST land in internal/app/<X>svc.
+  + Every NEW external dependency MUST be expressed as a port; the
+     consuming svc MUST depend on the port, not the concrete adapter.
+  + No new business handler may land in internal/api. Admin/observability
+     thin handlers may be added ONLY with an explicit row in the
+     ADR-009 Exceptions table.
+  + Frontend: no new cross-feature import. Shared logic goes in
+     components/, hooks/, lib/, api/, or entities/.
+  + Behavioural parity is a hard merge gate per migrated route:
+     pre/post JSON snapshot diff reviewed, OpenAPI diff reviewed,
+     frontend hook smoke-tested.
+  + Architecture enforcement runs in RATCHET mode: legacy packages
+     have an allowlist of current violation counts; net-new violations
+     in ANY package fail CI.
+
+  - Do NOT delete internal/api as a goal in itself (admin exceptions
+     stay documented per ADR-009 carve-outs).
+  - Do NOT rename internal/database/ to internal/adapter/postgres/ in
+     this branch (143 files, 208 importers, ADR-002 names accessors
+     explicitly — out of scope).
+  - Do NOT restructure internal/ai/ in this branch (394 files, ADR-015
+     AI-Off Contract owned — separate project).
+  - Do NOT restructure internal/tesla/, internal/signal/,
+     internal/tesla_pipeline/, or any telemetry pipeline package
+     (Phase-42 owned per ADR-004).
+  - Do NOT flip golangci errcheck / SA1019, no-explicit-any, or
+     exhaustive-deps to error in this branch (strict-lint cascade is a
+     separate quality project).
+  - Do NOT rename web/src/features/ to canonical FSD names. FSD =
+     layer RULES, not folder names. The boundaries plugin maps current
+     dirs to FSD layers; existing names are preserved.
+
+RATIONALE:
+  - Phase-47 established the architecture; Phase-48 cleaned the units;
+    this branch finishes the migration that those phases scaffolded.
+  - User mandate explicitly accepts a months-long effort, so we use
+    a slice-atomic, behavioural-parity-gated migration recipe instead
+    of a big-bang rewrite that would create unmergeable conflict
+    surfaces.
+  - Out-of-scope items are excluded not because they don't matter but
+    because they are independent of "repo organization" — each is its
+    own substantive project deserving its own ADR.
+
+ROLLBACK:
+  - Each migrated slice is independent. If a slice introduces a
+    regression caught after merge, revert that slice's commit; the
+    handler under internal/api/ can be restored via git revert and
+    re-mounted on the router. archmetrics baseline ticks back up by N.
+  - If the whole branch is judged a regression, it can be abandoned
+    without affecting Phase-47 (which is already on main) or Phase-48
+    (already on main).
+  - ADR-010 itself is not load-bearing for production; it is a project
+    charter.
+
+DEFINITION OF DONE:
+  See docs/architecture/repo-reorganization-plan.md §8 for the full
+  checklist. Headline:
+    - Root contains no stale binaries / coverage artifacts / orphan md
+    - depguard + archmetrics + eslint-plugin-boundaries enforce DAG
+    - Zero unjustified cross-feature imports in web/src/features/
+    - web/src/entities/ holds genuinely shared types
+    - internal/api/ contains only documented admin exceptions + router
+    - ADR-011 (Clean Arch destination) authored
+    - Behavioural parity: per-route snapshot diffs, OpenAPI diff,
+      Docker smoke + signal-log replay parity, bundle size delta ≤ ±5%
+    - docs/architecture/{clean-architecture,fsd}.md + CONTRIBUTING.md
+    - One consolidated CHANGELOG.md entry
+
+OUT OF SCOPE (explicit, see plan §9):
+  AI subsystem, internal/database rename, strict-lint cascade,
+  telemetry pipeline restructure, Tesla vendored proto, internal/signal
+  layering, FSM design, database schema changes, new frameworks,
+  features/ folder rename.
+```
+
+
+## ADR-011: Bounded-Context Subpackages for Flat-Folder Hot-Spots
+
+```
+STATUS: PROPOSED (commit pending; R0 deliverable)
+DATE: 2026-05-28
+DECIDERS: User mandate (maximalist scope, 2026-05-28) + Copilot CLI
+RELATED: ADR-006 (Models vs Domain), ADR-007 (platform/ charter),
+         ADR-009 (handler/v1 canonical; LIFTED for Phase R, then
+         RE-APPLIED to NEW subpkgs after R2e), ADR-015 (amendment
+         in 015-amendment-ai-scope.md narrows scope for Phase R).
+FULL TEXT (canonical): docs/architecture/adr/011-bounded-context-subpackages.md
+PLAN: docs/architecture/repo-reorganization-plan.md §16 (Phase R)
+
+CONTEXT:
+  6 backend folders + 7 frontend folders exceed 30 source files in a
+  single flat package/namespace. Largest: internal/api/ (434 files,
+  one package), web/src/features/dashboard/widgets/ (121 files, one
+  dir). Flat namespaces make navigation, code review, archmetrics
+  per-subpkg rules, and parallel work all harder.
+
+DECISION:
+  Every backend folder ≥30 .go files is split into bounded-context
+  SUBPACKAGES with short idiomatic Go names (Option A — `package
+  charging`, not Option B `package chargingapi`).
+  Every frontend folder ≥30 .ts/.tsx files is split into bounded-
+  context SUBDIRS with category names. Patterns rooted at `src/...`
+  in ESLint configs (ESLint cwd is `web/`, not the repo root).
+
+  Subpackage names match across layers:
+    internal/api/charging/, internal/handler/v1/charging/,
+    internal/database/charging/, internal/app/chargingsvc/,
+    internal/domain/charging/, internal/models/charging/.
+
+ALIAS CONVENTION (MANDATORY at multi-layer-import callsites):
+  | Layer                       | Alias suffix       | Example                              |
+  |-----------------------------|--------------------|--------------------------------------|
+  | internal/api/<x>            | <x>api             | chargingapi "internal/api/charging"  |
+  | internal/handler/v1/<x>     | <x>handler         | charginghandler "..."                |
+  | internal/database/<x>       | <x>db              | chargingdb "..."                     |
+  | internal/models/<x>         | <x>model           | chargingmodel "..."                  |
+  | internal/domain/<x>         | <x>domain          | chargingdomain "..."                 |
+  | internal/app/<x>svc         | <x>svc (existing)  | chargingsvc "..." (grandfathered)    |
+  | internal/jobs/<x>           | <x>jobs            | chargingjobs "..."                   |
+  | internal/ai/tools/<x>       | <x>aitools         | chargingaitools "..."                |
+  At single-import callsites, no alias is required.
+
+PARENT-DIR MECHANICAL RULE:
+  Parent dirs (internal/api/, internal/database/, etc.) contain
+  ONLY: doc.go + composition file (router.go, registry.go) +
+  middleware/shared-helper subpackages (e.g. internal/api/httpx,
+  internal/api/apiparams, internal/api/apitest) + the resource
+  subpackages. NO handler/repo/model files at the parent level.
+  Enforced by archmetrics: parent glob (*.go excluding subdirs)
+  MUST match only doc.go|router.go|<composition>.go.
+
+RESOURCE-PACKAGE PUBLIC API:
+  Each resource pkg exposes a narrow constructor + Mount(r
+  chi.Router, deps Deps) (or RegisterRoutes). Parent router.go
+  imports resource pkgs and calls Mount — it does NOT reach into
+  handler internals. Same Registry pattern for database.
+
+OPTION B GRANDFATHERED:
+  Existing suffixed packages (chargingsvc, tripsvc, etc.) are NOT
+  renamed. Greenfield → Option A.
+
+REPORT-MODE (TODAY):
+  tools/archmetrics/main.go has a `plannedSubpackages` table; the
+  generated baseline.md ends with a "Phase R progress" section
+  showing flat-parent file counts + existing vs missing planned
+  subpkgs. Never fails the gate — Phase R13 flips to enforced.
+  web/eslint.config.js has matching report-mode boundaries
+  descriptors with capture groups (domain, purpose, feature,
+  kind). Rules permissive (default: 'allow') until R13.
+
+BARREL-ONLY SCOPE (per rubber-duck #14):
+  Strict barrel rule (no-private at error) applies to
+  components/* categories ONLY. lib/ and hooks/ permit direct
+  subpath imports like `@/lib/format/date` to preserve
+  tree-shaking.
+
+CONSEQUENCES:
+  (+) Smaller packages → better godoc, faster IDE indexing,
+      clearer ownership; archmetrics expresses per-subpkg rules.
+  (+) ESLint boundaries enforces no-cross-subpkg-without-barrel
+      for components/*.
+  (-) Mass `git mv` commits make `git blame` noisy → mitigated
+      via `.git-blame-ignore-revs` (every R-phase move commit
+      added).
+  (-) Some subpkg names collide with stdlib (api, admin) →
+      alias at import site per table above.
+  (-) Phase R adds 4-8 weeks (user accepted).
+  Trade-off accepted: short names across api/database/models/
+  domain layers are more collision-prone than the Kubernetes-
+  style precedent. Idiomatic at DEFINITION site + deterministic
+  aliases at BOUNDARY/composition sites.
+
+ROLLBACK:
+  Pure file-moves + import-path updates. Single `git revert
+  <SHA-range>` per cluster commit. No schema, route, or contract
+  change. Phase R0 publishes coordination note
+  (docs/architecture/migration/phase-r-coordination-note.md)
+  with rebase guidance for any concurrent main work.
+```
+
+## ADR-015 AMENDMENT: AI Subsystem In-Scope for Repo Reorganization (Phase R)
+
+```
+STATUS: AMENDMENT to ADR-015 (AI-Off Contract)
+DATE: 2026-05-28
+DECIDERS: User mandate ("we need to cover whole app", maximalist
+          scope selection 2026-05-28) + Copilot CLI
+FULL TEXT (canonical): docs/architecture/adr/015-amendment-ai-scope.md
+PLAN: docs/architecture/repo-reorganization-plan.md §16 (Phase R)
+RELATED: ADR-011 (Bounded-Context Subpackages), ADR-009.
+
+DECISION:
+  The ADR-015 carve-out that excluded the AI subsystem from
+  reorg-scope work is LIFTED FOR PHASE R ONLY.
+    - internal/ai/tools/ (109 files) restructures into bounded-
+      context subpkgs per ADR-011 (R6).
+    - web/src/components/ai/ (61 files) restructures into per-
+      AI-feature subdirs per ADR-011 (R12).
+  Scope is FILE-MOVE-ONLY: no AI logic, no prompts, no
+  contracts, no providers, no runtime behavior changes.
+
+IN SCOPE OF THIS AMENDMENT:
+  - Move existing .go files under internal/ai/tools/ into
+    bounded-context subpkgs (nl/, alert/, charge/, drive/,
+    auto/, voice/, route/, safety/, ...).
+  - Move existing .tsx files under web/src/components/ai/
+    into per-AI-feature subdirs.
+  - Update package declarations + import paths only.
+  - Add doc.go to each new subpkg with `// Layer:` line.
+
+NOT IN SCOPE (still ADR-015 owned, UNCHANGED):
+  - AI feature-flag enforcement (`withAiFeature` HOC + ESLint
+    rule `teslasync/ai-component-must-be-wrapped`).
+  - AI-off-by-default contract.
+  - ANY change to AI runtime behavior, prompts, providers, or
+    contracts.
+  - The `internal/ai/` PROVIDER subsystem (only internal/ai/
+    tools/ is in scope).
+  - The AI eval workflow (.github/workflows/ai-eval.yml).
+
+MANDATORY PHASE R GATES FOR AI FILES (R2d + R12):
+  1. AI guard preservation: grep verify EVERY /api/v1/ai/*
+     route still wraps through sanctioned AI guard; mount
+     chain unchanged.
+  2. `make ai-vet` PASS at every commit touching internal/ai/
+     tools/ OR web/src/components/ai/.
+  3. ai-eval workflow PASS on the cluster commit and on the
+     subsequent verify-full gate.
+  4. The `teslasync/ai-component-must-be-wrapped` ESLint rule
+     remains at ERROR for every AI surface file regardless of
+     subdir.
+
+ROLLBACK:
+  Pure file-moves + import-path updates. Single `git revert
+  <SHA-range>` per cluster commit. If ANY of the four gates
+  fail, REVERT the offending commit immediately — never patch
+  forward.
+
+SUNSET:
+  This amendment expires when Phase R completes (R14 baseline
+  committed). After Phase R, the ADR-015 contract resumes its
+  original wording: AI subsystem changes require explicit
+  ADR-015 amendment.
 ```

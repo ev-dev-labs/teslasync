@@ -80,7 +80,7 @@ export function MapInvalidator() {
 }
 
 /**
- * Phase-46 / Prompt 56 — fullscreen overlay for leaflet maps.
+ * Fullscreen overlay for leaflet maps.
  *
  * Must be rendered as a child of `<MapContainer>`. Uses `useMap()`
  * to grab the active leaflet map instance, then portals a small

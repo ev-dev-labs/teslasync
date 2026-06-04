@@ -28,8 +28,8 @@ func newSafetyTestWriter(t *testing.T, rec *recorder) *snapshotWriter {
 }
 
 // TestSafetyWriter_ColumnMapMatchesRoutingYAML is the reflective
-// coverage gate from phase-42a prompt 0016 Decision #4. It walks
-// router.LoadMap() (which parses the embedded routing.yaml), filters
+// coverage gate for safety_snapshot routing. It walks router.LoadMap()
+// (which parses the embedded routing.yaml), filters
 // to entries with Destination == DestSafetySnapshot, and asserts the
 // safetyColumnByField map in safety_writer.go matches the routing
 // layer entry-for-entry — same field set, same column for each field.
@@ -92,9 +92,8 @@ func TestSafetyWriter_ColumnMapMatchesRoutingYAML(t *testing.T) {
 	}
 }
 
-// TestSafetyWriter_TypeMatrix exercises the single routed field
-// today per phase-42a prompt 0016 Decision #5: ServiceMode →
-// service_mode (BOOLEAN column per migration 000183 line 312). The
+// TestSafetyWriter_TypeMatrix exercises the single routed field today:
+// ServiceMode → service_mode (BOOLEAN column per migration 000183 line 312). The
 // codec emits BoolValue payloads as bool, so the snapshotWriter's
 // bindSnapshotValue path through the bool case is the production
 // hot path.
@@ -150,9 +149,9 @@ func TestSafetyWriter_TypeMatrix(t *testing.T) {
 	}
 }
 
-// TestSafetyWriter_UnknownFieldReturnsError covers phase-42a prompt
-// 0016 Decision #5: a Field that is NOT routed to safety_snapshot
-// must produce a "no column mapping" error and MUST NOT touch the DB.
+// TestSafetyWriter_UnknownFieldReturnsError covers the unrouted-field
+// contract: a Field that is NOT routed to safety_snapshot must produce
+// a "no column mapping" error and MUST NOT touch the DB.
 //
 // VehicleSpeed is a deliberate choice — it IS a routed field
 // (dest: drive_telemetry per routing.yaml) so the test also implicitly
@@ -187,10 +186,9 @@ func TestSafetyWriter_UnknownFieldReturnsError(t *testing.T) {
 	}
 }
 
-// TestNewSafetyWriter_NilPoolPanics locks the constructor's
-// fail-fast contract from phase-42a prompt 0016 Decision #1. A nil
-// pool is a wiring bug and panics so the failure surfaces at process
-// start, not at the first payload.
+// TestNewSafetyWriter_NilPoolPanics locks the constructor's fail-fast
+// contract. A nil pool is a wiring bug and panics so the failure
+// surfaces at process start, not at the first payload.
 func TestNewSafetyWriter_NilPoolPanics(t *testing.T) {
 	defer func() {
 		r := recover()

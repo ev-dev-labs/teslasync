@@ -1,13 +1,7 @@
-// Phase-50 / 0042 — S1 Incident timeline summarizer.
-// Phase-50 / W1 inline wiring (per slice prompt 0042) — wired the
-// Summarize button to POST
-// /api/v1/ai/system/incidents/{incidentID}/summarize via the
-// canonical useAiStream hook. The slice methodology forbids
-// shipping the visual affordance without end-to-end SSE wiring;
-// this component lands both in one commit so the on-mode wiring
-// test (TestIncidentTimelineSummarizerAIOnWiredCallsRoute) can
-// prove the button actually opens an SSE stream against the
-// registered backend route.
+// Incident timeline summarizer.
+// The Summarize button POSTs to
+// /api/v1/ai/system/incidents/{incidentID}/summarize through useAiStream so the
+// visible affordance and SSE wiring stay coupled.
 //
 // AIIncidentTimelineSummarizer is the visible AI surface for the
 // per-incident IncidentTimelinePage. It is rendered conditionally
@@ -26,7 +20,7 @@
 // the canonical view visible to every user; this AI section is
 // opt-in read-only summarization layered alongside.
 //
-// Render contract (P11/P12 — Wired-or-absent, No-placeholder-buttons):
+// Render contract: wired-or-absent, no placeholder buttons.
 //   - useAiStream is called unconditionally at the top of the body
 //     (Hooks-rules safe).
 //   - The Summarize button's disabled prop is a COMPUTED expression

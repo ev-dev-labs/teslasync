@@ -26,7 +26,7 @@ export interface SignalLogEntry {
 /* ── BE → FE adapter ── */
 //
 // The `/api/v1/signals/{vid}/{name}/history` endpoint returns the
-// Phase-42 typed shape `{ts, kind, value}` — a single `value` whose
+// Typed shape `{ts, kind, value}` — a single `value` whose
 // type is dictated by the row's `value_kind` discriminator. The rest
 // of the telemetry UI (chart, stats, table) was built for the older
 // `{created_at, value_num/str/bool}` rows. Without this adapter the

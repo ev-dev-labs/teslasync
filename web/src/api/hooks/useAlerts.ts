@@ -1,14 +1,12 @@
 /**
- * Phase-45 / Prompt 15 — Domain re-export shim.
+ * Domain re-export shim for alert-related hooks.
  *
- * Alert-related hooks live in `useNotifications.ts` (alerts and
- * notification channels share the same backend `notifications` package
- * and TanStack Query namespace). This file re-exports the alert-specific
- * hooks under a domain-named module so call sites that only care about
- * alerts can import from `@/api/hooks/useAlerts` without pulling in the
- * notification-channel types and helpers.
+ * Alert hooks live in `useNotifications.ts` because alerts and notification
+ * channels share the backend package and TanStack Query namespace. This module
+ * gives alert-only call sites a focused import path without pulling in
+ * channel types and helpers.
  *
- * No new logic lives here — every export is a straight passthrough.
+ * No logic lives here; every export is a passthrough.
  */
 export {
   notificationKeys as alertKeys,
@@ -24,7 +22,7 @@ export {
   useBulkDisableRules,
   useTestAlertRule,
   useSnoozeAlertRule,
-  // Phase-46 / Prompt 20 — alert ack + audit timeline.
+  // Alert acknowledgment and audit timeline.
   useAlertDetail,
   useAcknowledgeAlert,
   useCommentAlert,
@@ -45,12 +43,12 @@ export type {
   AlertTestTarget,
   ComputedMetricPreview,
   ComputedMetricSummary,
-  // Phase-46 / Prompt 20 — alert ack + audit timeline.
+  // Alert acknowledgment and audit timeline.
   AcknowledgeAlertInput,
   CommentAlertInput,
 } from './useNotifications';
 
-// Phase-50 / ADR-014 — message-template editor hooks.
+// Message-template editor hooks.
 export {
   alertMessageKeys,
   useAlertMessagePresets,

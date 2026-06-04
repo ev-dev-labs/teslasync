@@ -7,21 +7,31 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 )
 
 // fake repos --------------------------------------------------------------
 
 type fakeVehicles struct {
-	all []*models.Vehicle
-	one map[int64]*models.Vehicle
+	all []*vehiclemodel.Vehicle
+	one map[int64]*vehiclemodel.Vehicle
 	err error
 }
 
-func (f *fakeVehicles) GetAll(ctx context.Context) ([]*models.Vehicle, error) {
+func (f *fakeVehicles) GetAll(ctx context.Context) ([]*vehiclemodel.Vehicle, error) {
 	return f.all, f.err
 }
-func (f *fakeVehicles) GetByID(ctx context.Context, id int64) (*models.Vehicle, error) {
+func (f *fakeVehicles) GetByID(ctx context.Context, id int64) (*vehiclemodel.Vehicle, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
@@ -37,54 +47,56 @@ func (f *fakeState) SignalAt(ctx context.Context, vid int64, sig string, at time
 }
 
 type fakeDrives struct {
-	rows []*models.Drive
-	one  map[int64]*models.Drive
+	rows []*drivemodel.Drive
+	one  map[int64]*drivemodel.Drive
 }
 
-func (f *fakeDrives) GetByVehicle(ctx context.Context, vid int64, limit, off int, st, et time.Time) ([]*models.Drive, error) {
+func (f *fakeDrives) GetByVehicle(ctx context.Context, vid int64, limit, off int, st, et time.Time) ([]*drivemodel.Drive, error) {
 	if limit > 0 && limit < len(f.rows) {
 		return f.rows[:limit], nil
 	}
 	return f.rows, nil
 }
-func (f *fakeDrives) GetByID(ctx context.Context, id int64) (*models.Drive, error) {
+func (f *fakeDrives) GetByID(ctx context.Context, id int64) (*drivemodel.Drive, error) {
 	return f.one[id], nil
 }
 
 type fakeCharges struct {
-	rows []*models.ChargingSession
-	one  map[int64]*models.ChargingSession
+	rows []*chargingmodel.ChargingSession
+	one  map[int64]*chargingmodel.ChargingSession
 }
 
-func (f *fakeCharges) GetByVehicle(ctx context.Context, vid int64, limit, off int, st, et time.Time) ([]*models.ChargingSession, error) {
+func (f *fakeCharges) GetByVehicle(ctx context.Context, vid int64, limit, off int, st, et time.Time) ([]*chargingmodel.ChargingSession, error) {
 	if limit > 0 && limit < len(f.rows) {
 		return f.rows[:limit], nil
 	}
 	return f.rows, nil
 }
-func (f *fakeCharges) GetByID(ctx context.Context, id int64) (*models.ChargingSession, error) {
+func (f *fakeCharges) GetByID(ctx context.Context, id int64) (*chargingmodel.ChargingSession, error) {
 	return f.one[id], nil
 }
 
 type fakeRules struct {
-	rules []*models.AlertRule
+	rules []*alertmodel.AlertRule
 }
 
-func (f *fakeRules) GetAll(ctx context.Context) ([]*models.AlertRule, error) { return f.rules, nil }
+func (f *fakeRules) GetAll(ctx context.Context) ([]*alertmodel.AlertRule, error) { return f.rules, nil }
 
 type fakeNotif struct {
-	logs []*models.NotificationLog
+	logs []*notificationmodel.NotificationLog
 }
 
-func (f *fakeNotif) GetLogs(ctx context.Context, limit, off int) ([]*models.NotificationLog, error) {
+func (f *fakeNotif) GetLogs(ctx context.Context, limit, off int) ([]*notificationmodel.NotificationLog, error) {
 	return f.logs, nil
 }
 
 type fakeFences struct {
-	fences []*models.Geofence
+	fences []*systemmodel.Geofence
 }
 
-func (f *fakeFences) GetAll(ctx context.Context) ([]*models.Geofence, error) { return f.fences, nil }
+func (f *fakeFences) GetAll(ctx context.Context) ([]*systemmodel.Geofence, error) {
+	return f.fences, nil
+}
 
 // Register12Builtins basic shape ------------------------------------------
 
@@ -116,7 +128,7 @@ func TestRegister12Builtins_RegistersAllByName(t *testing.T) {
 func TestQueryVehicleCount(t *testing.T) {
 	t.Parallel()
 	r := NewRegistry()
-	src := &fakeVehicles{all: []*models.Vehicle{{ID: 1}, {ID: 2}, {ID: 3}}}
+	src := &fakeVehicles{all: []*vehiclemodel.Vehicle{{ID: 1}, {ID: 2}, {ID: 3}}}
 	Register12Builtins(r, Sources{
 		Vehicles:      src,
 		VehicleState:  &fakeState{},
@@ -164,9 +176,9 @@ func TestQueryVehicleState_RejectsMissingID(t *testing.T) {
 func TestQueryVehicleState_ReturnsKnownVehicle(t *testing.T) {
 	t.Parallel()
 	r := NewRegistry()
-	v := &models.Vehicle{ID: 7, DisplayName: "Modelina", VIN: "5YJSA1E10HF000007", Timezone: "UTC"}
+	v := &vehiclemodel.Vehicle{ID: 7, DisplayName: "Modelina", VIN: "5YJSA1E10HF000007", Timezone: "UTC"}
 	Register12Builtins(r, Sources{
-		Vehicles:      &fakeVehicles{one: map[int64]*models.Vehicle{7: v}},
+		Vehicles:      &fakeVehicles{one: map[int64]*vehiclemodel.Vehicle{7: v}},
 		VehicleState:  &fakeState{values: map[string]any{"VehicleState": "park"}},
 		Drives:        &fakeDrives{},
 		Charges:       &fakeCharges{},
@@ -228,7 +240,7 @@ func TestQueryDrivesRecent_RespectsLimit(t *testing.T) {
 	Register12Builtins(r, Sources{
 		Vehicles:      &fakeVehicles{},
 		VehicleState:  &fakeState{},
-		Drives:        &fakeDrives{rows: []*models.Drive{{ID: 1}, {ID: 2}, {ID: 3}}},
+		Drives:        &fakeDrives{rows: []*drivemodel.Drive{{ID: 1}, {ID: 2}, {ID: 3}}},
 		Charges:       &fakeCharges{},
 		AlertRules:    &fakeRules{},
 		Notifications: &fakeNotif{},
@@ -256,7 +268,7 @@ func TestQueryDriveDetail_NotFound(t *testing.T) {
 	Register12Builtins(r, Sources{
 		Vehicles:      &fakeVehicles{},
 		VehicleState:  &fakeState{},
-		Drives:        &fakeDrives{one: map[int64]*models.Drive{}},
+		Drives:        &fakeDrives{one: map[int64]*drivemodel.Drive{}},
 		Charges:       &fakeCharges{},
 		AlertRules:    &fakeRules{},
 		Notifications: &fakeNotif{},
@@ -278,7 +290,7 @@ func TestQueryAlertsActive_FiltersDisabled(t *testing.T) {
 		VehicleState: &fakeState{},
 		Drives:       &fakeDrives{},
 		Charges:      &fakeCharges{},
-		AlertRules: &fakeRules{rules: []*models.AlertRule{
+		AlertRules: &fakeRules{rules: []*alertmodel.AlertRule{
 			{ID: 1, Enabled: true},
 			{ID: 2, Enabled: false},
 			{ID: 3, Enabled: true},
@@ -331,7 +343,7 @@ func TestQueryEfficiencyPeriod_ComputesWhPerKm(t *testing.T) {
 		AlertRules:    &fakeRules{},
 		Notifications: &fakeNotif{},
 		Geofences:     &fakeFences{},
-		Efficiency: &fakeDrives{rows: []*models.Drive{
+		Efficiency: &fakeDrives{rows: []*drivemodel.Drive{
 			{ID: 1, DistanceM: 50_000, EnergyUsedWh: &used1},  // 50 km
 			{ID: 2, DistanceM: 100_000, EnergyUsedWh: &used2}, // 100 km
 		}},

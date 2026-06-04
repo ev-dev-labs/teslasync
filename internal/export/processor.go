@@ -12,24 +12,28 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
+	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 )
 
 // Processor generates export files from database data.
 type Processor struct {
-	vehicleRepo  *database.VehicleRepo
-	driveRepo    *database.DriveRepo
-	chargingRepo *database.ChargingRepo
-	tripRepo     *database.TripRepo
+	vehicleRepo  *vehicledb.VehicleRepo
+	driveRepo    *drivedb.DriveRepo
+	chargingRepo *chargingdb.ChargingRepo
+	tripRepo     *tripdb.TripRepo
 	db           *database.DB
 }
 
 // NewProcessor creates an export processor with required repositories.
 func NewProcessor(db *database.DB) *Processor {
 	return &Processor{
-		vehicleRepo:  database.NewVehicleRepo(db),
-		driveRepo:    database.NewDriveRepo(db),
-		chargingRepo: database.NewChargingRepo(db),
-		tripRepo:     database.NewTripRepo(db),
+		vehicleRepo:  vehicledb.NewVehicleRepo(db),
+		driveRepo:    drivedb.NewDriveRepo(db),
+		chargingRepo: chargingdb.NewChargingRepo(db),
+		tripRepo:     tripdb.NewTripRepo(db),
 		db:           db,
 	}
 }
@@ -208,10 +212,8 @@ func (p *Processor) processDrives(ctx context.Context, req *JobRequest) (*Proces
 	}, nil
 }
 
-// csvCellForDrive renders a single drive cell as the CSV string the
-// pre-Phase-46/62 writer would have produced. Keep the formatting in
-// lockstep with the legacy column-by-column cw.Write call so default
-// (no-Columns) output is byte-for-byte identical.
+// csvCellForDrive keeps default CSV output byte-for-byte compatible with
+// the historical column-by-column writer.
 func csvCellForDrive(d driveRow, col string) string {
 	switch col {
 	case "id":
@@ -271,7 +273,7 @@ func (p *Processor) processTrips(ctx context.Context, req *JobRequest) (*Process
 		endTime = *req.EndDate
 	}
 
-	var summaries []*database.TripSummary
+	var summaries []*tripdb.TripSummary
 	if req.VehicleID != nil {
 		summaries, err = p.tripRepo.GetByVehicle(ctx, *req.VehicleID, 10000, 0, startTime, endTime)
 	} else {
@@ -612,4 +614,3 @@ func ptrFloat(p *float64) float64 {
 	}
 	return 0
 }
-

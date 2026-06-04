@@ -14,7 +14,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Event types
 const (
 	VehicleUpdated   = "vehicle.updated"
 	VehicleAsleep    = "vehicle.asleep"
@@ -56,7 +55,6 @@ func NewBus(client pahomqtt.Client) *Bus {
 	return &Bus{client: client}
 }
 
-// Publish sends a domain event to the MQTT topic.
 func (b *Bus) Publish(evt Event) {
 	if evt.Timestamp.IsZero() {
 		evt.Timestamp = time.Now().UTC()

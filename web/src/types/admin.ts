@@ -87,7 +87,7 @@ export interface SystemHealth {
   databaseSize: string;
   tableCount: number;
   /**
-   * Operator-controlled service-mode banner (Phase-46 / Prompt 04).
+   * Operator-controlled service-mode banner.
    * Emitted by /api/v1/system/health alongside the existing component
    * map. `mode === 'ok'` means hide the banner; `'degraded'` or
    * `'maintenance'` mean show with the supplied message + countdown.
@@ -156,12 +156,8 @@ export interface WebErrorsSummary {
 }
 
 /**
- * Per-user activity entry returned by `GET /users/me/activity`
- * (Phase-40 / Prompt 49 — Recent Activity Discoverability).
- *
- * Mirrors `userActivityEntry` in `internal/api/audit.go` after camelCaseKeys
- * — both `entity_type` / `entityType` etc. are present at runtime, but the
- * canonical shape uses the snake_case names that match the Go JSON tags.
+ * Per-user activity entry returned by `GET /users/me/activity`.
+ * Mirrors `userActivityEntry` after camelCaseKeys; snake_case remains canonical.
  */
 export interface UserActivityEntry {
   id: number;
@@ -174,15 +170,10 @@ export interface UserActivityEntry {
   user_agent: string | null;
 }
 
-// SecurityEvent mirrors `/security/latest` and `/security` rows. After
-// the per-field MQTT cutover (Phase-42a) the backend serializes raw
-// `signal.SignalValue` (`interface{}`) directly, so several fields whose
-// signal *names* sound string-shaped actually arrive as native JSON
-// booleans (e.g. `speed_limit_mode`, `service_mode`). Fields below that
-// can arrive as either a string enum *or* a boolean are declared as a
-// union so consumers MUST type-narrow before calling string methods.
-// See `web/src/lib/typeGuards.ts::asNonEmptyString` for the canonical
-// narrowing helper.
+// SecurityEvent mirrors `/security/latest` and `/security` rows. The backend
+// serializes raw `signal.SignalValue` values, so string-like signal names may
+// arrive as booleans. Consumers must narrow unions before using string methods.
+// See `web/src/lib/typeGuards.ts::asNonEmptyString` for the canonical helper.
 export interface SecurityEvent {
   id: string;
   locked: boolean | null;
@@ -298,9 +289,9 @@ export interface AlertRule {
   value_max?: number | null;
   severity: AlertRuleSeverity;
   cooldown_min: number;
-  /** Phase-50 / ADR-014 — per-rule notification body template. */
+  /** Per-rule notification body template. */
   msg_template?: string | null;
-  /** Phase-50 / ADR-014 — transport title toggle (default TRUE). */
+  /** Transport title toggle; defaults to true. */
   include_title?: boolean;
   created_at: string;
   updated_at: string;
@@ -340,9 +331,8 @@ export interface ChatMessage {
 
 // ChangelogEntry is generated from CHANGELOG.md by web/scripts/buildChangelog.mjs.
 // The shape lives in @/generated/changelog so the parser, modal, and pages
-// share a single source of truth (Phase-40 / Prompt 67). The legacy
-// `changes: string[]` shape was replaced with a typed `ChangelogChange[]`;
-// any consumer that needs flat strings can `entry.changes.map(c => c.text)`.
+// share a single source of truth. Consumers that need flat strings can map
+// `entry.changes` to each change's `text`.
 export type {
   ChangelogChange,
   ChangelogChangeType,

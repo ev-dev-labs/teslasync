@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Phase-45 / Prompt 31 — EmptyState CTA wiring audit.
+// EmptyState CTA wiring audit.
 //
-// Walks src/features/ and fails if any <EmptyState ...> JSX use is found
+// Walks src/features/ and fails if any <EmptyState...> JSX use is found
 // without either:
-//   - an `action=` or `actionTo=` prop (anywhere in the same JSX element), or
-//   - an inline `// no-action: <reason>` comment within the surrounding context
-//     (within 200 chars before, or 200 chars after the opening tag).
+// - an `action=` or `actionTo=` prop (anywhere in the same JSX element), or
+// - an inline `// no-action: <reason>` comment within the surrounding context
+// (within 200 chars before, or 200 chars after the opening tag).
 //
 // Goal: every empty surface in a page either has an actionable CTA or a
 // documented reason for being a dead end.

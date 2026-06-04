@@ -51,7 +51,7 @@ func WithHTTPClient(c *http.Client) Option {
 // New constructs an [Adapter] from a typed [provider.ProviderConfig].
 // Returned adapter has Streaming + Embeddings + Tools advertised on
 // [provider.Capabilities]; tool-call routing is per-model so this is
-// best-effort (the dispatcher in slice F4 falls back gracefully).
+// best-effort; the dispatcher falls back gracefully.
 func New(cfg provider.ProviderConfig, opts ...Option) (*Adapter, error) {
 	if strings.TrimSpace(cfg.BaseURL) == "" {
 		return nil, fmt.Errorf("ollama: empty base_url")
@@ -74,7 +74,7 @@ func (a *Adapter) Name() string { return provider.NameOllama }
 
 // Capabilities implements [provider.Provider]. Ollama servers ≥ 0.3 with
 // llama3.x-class models support tool calling; we advertise it as true
-// and let the dispatcher (F4) handle "model returned no tool_calls"
+// and let the dispatcher handle "model returned no tool_calls"
 // gracefully.
 func (a *Adapter) Capabilities() provider.Capabilities {
 	return provider.Capabilities{
@@ -210,8 +210,8 @@ func (a *Adapter) relayStream(ctx context.Context, body io.ReadCloser, out chan<
 		}
 		// Ollama emits a fully-formed tool_call on its terminal frame
 		// (not piecewise like OpenAI). Forward each as a ToolDelta so
-		// dispatchers in F5 streaming mode can route them; the
-		// non-streaming Chat path mirrors this via toChatResponse.
+		// streaming dispatchers can route them; the non-streaming Chat path
+		// mirrors this via toChatResponse.
 		for _, tc := range frame.Message.ToolCalls {
 			tcCopy := provider.ToolCall{
 				ID:        tc.ID,
@@ -318,8 +318,8 @@ func encodeChatRequest(cfg provider.ProviderConfig, req provider.ChatRequest, st
 		}
 		// Legacy singular tool field — kept for backward
 		// compatibility with callers / tests that built Message
-		// values by hand before Phase 50 introduced the plural
-		// form. Ollama itself is lenient about a missing
+		// values by hand before the plural form existed. Ollama itself is
+		// lenient about a missing
 		// tool_calls array on the wire (unlike OpenAI / Azure)
 		// but the round-trip is structurally the same as those
 		// providers — see provider.Message.ToolCalls and

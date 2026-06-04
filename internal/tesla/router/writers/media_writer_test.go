@@ -27,8 +27,7 @@ func newMediaTestWriter(t *testing.T, rec *recorder) *snapshotWriter {
 }
 
 // TestMediaWriter_ColumnMapMatchesRoutingYAML is the reflective
-// coverage gate from phase-42a prompt 0015 Decision #4. It walks
-// router.LoadMap() (which parses the embedded routing.yaml), filters
+// coverage gate. It walks router.LoadMap() (which parses the embedded routing.yaml), filters
 // to entries with Destination == DestMediaSnapshot, and asserts the
 // mediaColumnByField map in media_writer.go matches the routing
 // layer entry-for-entry — same field set, same column for each field.
@@ -91,16 +90,13 @@ func TestMediaWriter_ColumnMapMatchesRoutingYAML(t *testing.T) {
 	}
 }
 
-// TestMediaWriter_TypeMatrix exercises one positive write per kind
-// from phase-42a prompt 0015 Decision #5 ("2 positive text +
-// unknown-field"). The prompt's "2 positive text" floor reflects the
-// fact that media_snapshots is mostly TEXT (6 of 11 columns); the
+// TestMediaWriter_TypeMatrix exercises one positive write per routed
+// scalar kind. media_snapshots is mostly TEXT (6 of 11 columns); the
 // other 5 are INTEGER (volume_pct/volume_max/volume_increment/
 // duration_s/elapsed_s) which the codec emits as int64. We add an
 // int64 case beyond the floor because covering both column kinds
 // keeps the snapshotWriter SQL-composition coverage symmetric with
-// climate_writer_test.go's matrix — the prompt floor is a minimum,
-// not a ceiling.
+// climate_writer_test.go's matrix.
 //
 // Each case asserts that the SQL contains the media_snapshots table
 // identifier and the expected column identifier (both pgx.Identifier-
@@ -111,7 +107,7 @@ func TestMediaWriter_TypeMatrix(t *testing.T) {
 	ts := time.Date(2026, 5, 6, 12, 34, 56, 0, time.UTC)
 
 	cases := []struct {
-		name  string
+		name    string
 		field   string
 		col     string
 		val     any
@@ -151,8 +147,8 @@ func TestMediaWriter_TypeMatrix(t *testing.T) {
 	}
 }
 
-// TestMediaWriter_UnknownFieldReturnsError covers phase-42a prompt
-// 0015 Decision #5: a Field that is NOT routed to media_snapshot
+// TestMediaWriter_UnknownFieldReturnsError covers the unrouted-field
+// contract: a Field that is NOT routed to media_snapshot
 // must produce a "no column mapping" error and MUST NOT touch the DB.
 //
 // VehicleSpeed is a deliberate choice — it IS a routed field
@@ -189,7 +185,7 @@ func TestMediaWriter_UnknownFieldReturnsError(t *testing.T) {
 }
 
 // TestNewMediaWriter_NilPoolPanics locks the constructor's
-// fail-fast contract from phase-42a prompt 0015 Decision #1. A nil
+// fail-fast contract. A nil
 // pool is a wiring bug and panics so the failure surfaces at process
 // start, not at the first payload.
 func TestNewMediaWriter_NilPoolPanics(t *testing.T) {

@@ -1,4 +1,4 @@
-// Phase-50 / 0005 — F4 AiConfirmDialog tests.
+// AiConfirmDialog tests.
 //
 // Pins the user-facing contract:
 //   - open=false renders nothing

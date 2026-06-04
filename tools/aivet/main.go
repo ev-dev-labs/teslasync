@@ -1,38 +1,38 @@
-// Command aivet enforces the Phase-50 / ADR-015 AI-Off Contract at
-// the type-system level (methodology principle P6). It performs four
-// static checks on the repository and exits non-zero on any failure:
+// Command aivet enforces the AI-off contract at the type-system
+// level. It performs six static checks on the repository and exits
+// non-zero on any failure:
 //
-//   1. CoverageOK  — every entry in internal/ai/features.Registry has
-//      populated surface metadata (Routes, Name, Tier, …) and no
-//      DefaultOn=true entry.
+//  1. CoverageOK  — every entry in internal/ai/features.Registry has
+//     populated surface metadata (Routes, Name, Tier, …) and no
+//     DefaultOn=true entry.
 //
-//   2. Wrap-only — every /api/v1/ai/* route mounted in
-//      internal/api/router.go (or any sibling file in internal/api) is
-//      registered via `g.Wrap(...)` (or the equivalent `aiGuard.Wrap`).
-//      A bare HandlerFunc on an /ai/* path is rejected.
+//  2. Wrap-only — every /api/v1/ai/* route mounted in
+//     internal/api/router.go (or any sibling file in internal/api) is
+//     registered via `g.Wrap(...)` (or the equivalent `aiGuard.Wrap`).
+//     A bare HandlerFunc on an /ai/* path is rejected.
 //
-//   3. Registry coverage — every backend pattern in
-//      features.Registry[id].Routes.Backend is present in the router,
-//      and every router pattern under /api/v1/ai/ is owned by exactly
-//      one registry entry's Backend list.
+//  3. Registry coverage — every backend pattern in
+//     features.Registry[id].Routes.Backend is present in the router,
+//     and every router pattern under /api/v1/ai/ is owned by exactly
+//     one registry entry's Backend list.
 //
-//   4. TS mirror in sync — the generator (tools/aigen) reports the
-//      web/src/ai/features.ts file as up-to-date.
+//  4. TS mirror in sync — the generator (tools/aigen) reports the
+//     web/src/ai/features.ts file as up-to-date.
 //
-//   5. W1-A (slice 0065) — no shipped AI component contains a
-//      placeholder ("future slice", "coming soon", "wiring lands",
-//      "would call POST") OR a literal `disabled` / `disabled={true}`
-//      attribute on a JSX Button. Computed disabled expressions
-//      (`disabled={!ready || streaming}`) are allowed.
+//  5. Placeholder guard — no shipped AI component contains a
+//     deferred-wiring placeholder ("future slice", "coming soon", "wiring lands",
+//     "would call POST") OR a literal `disabled` / `disabled={true}`
+//     attribute on a JSX Button. Computed disabled expressions
+//     (`disabled={!ready || streaming}`) are allowed.
 //
-//   6. W1-B (slice 0065) — every entry in features.SPAWiringTable
-//      points at a SPA component that (a) imports `useAiStream` from
-//      `@/hooks/useAiStream` and (b) references either the canonical
-//      endpoint's path-prefix (everything before the first `{`
-//      placeholder, e.g. `/ai/drives/` for a parameterised route) or
-//      the generated SPA_WIRING_BY_ID map from `web/src/ai/spaWiring`.
-//      Files allowlisted via features.SPAWiringIndicatorOnly are
-//      exempt from (a) and (b) but still subject to W1-A.
+//  6. SPA wiring coverage — every entry in features.SPAWiringTable
+//     points at a SPA component that (a) imports `useAiStream` from
+//     `@/hooks/useAiStream` and (b) references either the canonical
+//     endpoint's path-prefix (everything before the first `{`
+//     placeholder, e.g. `/ai/drives/` for a parameterised route) or
+//     the generated SPA_WIRING_BY_ID map from `web/src/ai/spaWiring`.
+//     Files allowlisted via features.SPAWiringIndicatorOnly are
+//     exempt from (a) and (b) but still subject to W1-A.
 //
 // Usage:
 //
@@ -148,7 +148,7 @@ func main() {
 		failures = append(failures, fmt.Sprintf("tools/aigen --check failed:\n%s", string(out)))
 	}
 
-	// 5 + 6. SPA wiring contract (Phase-50 / 0065 W1).
+	// 5 + 6. SPA wiring contract.
 	if err := features.SPAWiringSelfCheck(); err != nil {
 		failures = append(failures, fmt.Sprintf("features.SPAWiringSelfCheck: %v", err))
 	}
@@ -473,12 +473,11 @@ var _ = aiRoutesFile
 var _ = aiSubprefix
 
 // =====================================================================
-// W1-A and W1-B (Phase-50 / 0065)
+// SPA placeholder and wiring checks
 // =====================================================================
 
-// w1APlaceholderRE matches the case-insensitive substrings W1-A
-// forbids in shipped AI components. Each substring marks a deferred-
-// wiring placeholder pattern.
+// w1APlaceholderRE matches deferred-wiring placeholders that are
+// forbidden in shipped AI components.
 var w1APlaceholderRE = regexp.MustCompile(
 	`(?i)(future slice|coming soon|wiring lands|would call POST)`,
 )
@@ -494,21 +493,20 @@ var w1ALiteralDisabledRE = regexp.MustCompile(
 	`<Button\b[^>]*?\sdisabled(?:\s|=\{true\}|\s*/?>)`,
 )
 
-// w1AScanRoots are the directories scanned by W1-A. Component files
-// under web/src/components/ai/AI*.tsx are the primary surface;
-// page-level wiring files referenced by SPAWiringTable are added
-// dynamically inside runW1Checks.
+// w1AScanRoots are the directories scanned for placeholder and literal
+// disabled violations. Component files under web/src/components/ai/AI*.tsx
+// are the primary surface; page-level wiring files referenced by
+// SPAWiringTable are added dynamically inside runW1Checks.
 var w1AScanRoots = []string{
 	"web/src/components/ai",
 }
 
-// runW1Checks executes W1-A (placeholder + literal disabled) and
-// W1-B (useAiStream import + endpoint reference). Returns two slices
-// of failure strings; an empty slice means the rule passed.
+// runW1Checks executes the placeholder/literal-disabled checks and
+// the useAiStream endpoint-reference check. It returns two failure
+// slices; an empty slice means that check passed.
 func runW1Checks() (w1a []string, w1b []string) {
-	// Build the W1-A scan set: every AI*.tsx in components/ai/ plus
-	// every page-level Component path listed in SPAWiringTable
-	// (these are the page-level wiring files like ChatbotPage.tsx).
+	// Build the scan set: every AI*.tsx in components/ai/ plus every
+	// page-level Component path listed in SPAWiringTable.
 	scanFiles := map[string]struct{}{}
 	for _, root := range w1AScanRoots {
 		entries, err := os.ReadDir(root)
@@ -543,18 +541,8 @@ func runW1Checks() (w1a []string, w1b []string) {
 			continue
 		}
 		text := string(src)
-		// Strip the well-known "this slice ships only the visible AI
-		// marker ... consumed by a future slice's frontend SSE hook"
-		// comment line in AIChatbotIndicator.tsx — that file is the
-		// indicator badge, and the future-slice reference there is
-		// historical context, not a deferred-wiring confession. We
-		// keep the strip narrow: any other occurrence of the W1-A
-		// placeholder substrings (including in AIChatbotIndicator
-		// in the future) still fails.
-		//
-		// In practice no shipped file should contain the placeholder
-		// substrings at all; rules below treat the matched line as
-		// the failure location for actionable output.
+		// No shipped file should contain these placeholder substrings;
+		// report the matched line so the failure points at the text to fix.
 		for _, loc := range w1APlaceholderRE.FindAllStringIndex(text, -1) {
 			lineNum := 1 + strings.Count(text[:loc[0]], "\n")
 			snippet := strings.TrimSpace(extractLine(text, loc[0]))
@@ -572,10 +560,10 @@ func runW1Checks() (w1a []string, w1b []string) {
 		}
 	}
 
-	// W1-B: every SPAWiringTable entry's Component file must import
-	// useAiStream from @/hooks/useAiStream AND reference the
-	// endpoint (via the static path-prefix or the generated
-	// SPA_WIRING_BY_ID map). Indicator-only files are exempt.
+	// SPA wiring coverage: every SPAWiringTable Component file must
+	// import useAiStream from @/hooks/useAiStream and reference the
+	// endpoint via the static path-prefix or generated SPA_WIRING_BY_ID
+	// map. Indicator-only files are exempt.
 	for _, w := range features.SPAWiringTable {
 		if features.IsIndicatorOnly(w.Component) {
 			continue

@@ -6,9 +6,9 @@ import {
 } from './helpers';
 
 // ---------------------------------------------------------------------------
-// security-access/helpers — Phase-42a hardening
+// security-access/helpers hardening
 //
-// After the per-field MQTT cutover the backend serializes raw
+// The backend serializes raw
 // `signal.SignalValue` directly. Fields like `doorState`, `sentryMode`,
 // `*Window` may arrive as native booleans (e.g. `false`) or string enums
 // like `"SentryModeStateOff"`, "ClosedAll" depending on the protomodel

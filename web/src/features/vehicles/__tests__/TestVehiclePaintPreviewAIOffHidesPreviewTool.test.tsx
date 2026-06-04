@@ -1,9 +1,7 @@
-// Phase-50 / 0061 — GEN2 vehicle paint preview.
+// Vehicle paint preview tests.
 //
-// `TestVehiclePaintPreviewAIOffHidesPreviewTool` (the Vitest
-// sibling to the Go test of the same name) is the slice's
-// load-bearing AI-OFF contract proof on the React side. It
-// mounts the AIVehiclePaintPreview component with ai_mode='off'
+// `TestVehiclePaintPreviewAIOffHidesPreviewTool` mounts the
+// AIVehiclePaintPreview component with ai_mode='off'
 // (plus the per-feature toggle on, to defeat the obvious "off
 // because nothing is enabled" path) and asserts:
 //
@@ -28,11 +26,8 @@
 // manual theme/appearance settings) regardless of this AI
 // section's visibility.
 //
-// File name MUST stay
-// `TestVehiclePaintPreviewAIOffHidesPreviewTool.test.tsx` — the
-// slice prompt's verification command runs
-// `vitest --run TestVehiclePaintPreviewAIOffHidesPreviewTool`,
-// where the positional pattern is matched against the file PATH.
+// File name MUST stay `TestVehiclePaintPreviewAIOffHidesPreviewTool.test.tsx`
+// because Vitest's positional pattern is matched against the file path.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -86,8 +81,7 @@ describe('TestVehiclePaintPreviewAIOffHidesPreviewTool (vehicle-paint-preview AI
   it('TestVehiclePaintPreviewAIOffHidesPreviewTool: renders nothing when ai_mode=off even with the vehicle-paint-preview toggle on', () => {
     // The toggle is intentionally set to true to defeat the
     // shortcut path "the section hides because the feature flag is
-    // off". The mode='off' check MUST trump the per-feature toggle
-    // (ADR-015 §I7).
+    // off". The mode='off' check MUST trump the per-feature toggle.
     //
     // The vehicleId prop is also intentionally set so the
     // absent-in-DOM assertion proves that the gate (not a missing
@@ -112,8 +106,7 @@ describe('TestVehiclePaintPreviewAIOffHidesPreviewTool (vehicle-paint-preview AI
 
   it('TestVehiclePaintPreviewAIOffHidesPreviewTool: renders nothing when ai_mode is non-off but the vehicle-paint-preview toggle is false', () => {
     // The other half of the gate: even with mode='cloud', a
-    // toggle=false MUST hide the surface (per-feature opt-in,
-    // ADR-015 §I7).
+    // toggle=false MUST hide the surface.
     mockUseSettings.mockReturnValue(
       settingsPayload({
         ai_mode: 'cloud',

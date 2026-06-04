@@ -1,8 +1,6 @@
-// Phase-50 / 0051 — M3 software update changelog summarizer.
+// Software update changelog summarizer AI-off contract test.
 //
-// `TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly` (the
-// Vitest sibling to the Go test of the same name) is the slice's
-// load-bearing AI-OFF contract proof on the React side. It mounts
+// `TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly` mounts
 // the AISoftwareUpdateChangelogSummarizer component with
 // ai_mode='off' (plus the per-feature toggle on, to defeat the
 // obvious "off because nothing is enabled" path) and asserts:
@@ -26,13 +24,11 @@
 // deterministic current-version metric card, install-count
 // metric card, total-update count, the per-version timeline with
 // status chips, and the public release-notes external links
-// regardless of this AI section's visibility (ADR-015 §I3).
+// regardless of this AI section's visibility.
 //
-// File name MUST stay
-// `TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly.test.tsx`
-// — the slice prompt's verification command runs
-// `vitest --run TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly`,
-// where the positional pattern is matched against the file PATH.
+// File name MUST stay `TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly.test.tsx`
+// because external test selection matches the positional pattern against the
+// file path.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -87,7 +83,7 @@ describe('TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly (software-update-c
     // The toggle is intentionally set to true to defeat the
     // shortcut path "the section hides because the feature flag
     // is off". The mode='off' check MUST trump the per-feature
-    // toggle (ADR-015 §I7).
+    // toggle.
     //
     // The vehicleId prop is also intentionally set so the
     // absent-in-DOM assertion proves that the gate (not a
@@ -115,8 +111,7 @@ describe('TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly (software-update-c
 
   it('TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly: renders nothing when ai_mode is non-off but the software-update-changelog-summarizer toggle is false', () => {
     // The other half of the gate: even with mode='cloud', a
-    // toggle=false MUST hide the surface (per-feature opt-in,
-    // ADR-015 §I7).
+    // toggle=false MUST hide the surface because each feature is opt-in.
     mockUseSettings.mockReturnValue(
       settingsPayload({
         ai_mode: 'cloud',

@@ -38,7 +38,6 @@ func TestHealthMonitor_OverallStatus_WorstWins(t *testing.T) {
 
 func TestHealthMonitor_UnregisteredComponent(t *testing.T) {
 	hm := NewHealthMonitor()
-	// Record to unregistered component should not panic
 	hm.RecordSuccess("nonexistent")
 	hm.RecordFailure("nonexistent", nil)
 }

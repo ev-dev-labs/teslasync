@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 32 — `<MaskedValue>` component tests.
+ * `<MaskedValue>` component tests.
  *
  * Verifies the privacy contract: initial render is masked, the toggle
  * reveals/hides, the auto-hide timer fires, the audit POST is wired
