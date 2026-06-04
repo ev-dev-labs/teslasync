@@ -1,0 +1,51 @@
+P0/0004 — CI matrix + path filters
+===================================
+
+PREFLIGHT
+- 0001 (apps skeleton) DONE; 0003 (version-lock manifests) DONE at HEAD 3709dd3c5.
+- Working tree: clean except prompt-runner harness artifacts under logs/ (same
+  carve-out as 0001/0003). No source files dirty.
+- ADR refs read: ADR-007 (program order + branch strategy), ADR-010 (gate triad),
+  ADR-012 (runner OS per platform).
+
+DESIGN
+- Four path-filtered workflows authored, one per platform, per the spec table:
+    apps-shared.yml   paths: apps/shared/**, api/openapi/**            runs-on: ubuntu-latest
+    apps-windows.yml  paths: apps/windows/**, apps/shared/**, api/openapi/**  runs-on: windows-latest
+    apps-android.yml  paths: apps/android/**, apps/shared/**, api/openapi/**  runs-on: ubuntu-latest
+    apps-apple.yml    paths: apps/apple/**, apps/shared/**, api/openapi/**    runs-on: macos-latest
+  Each workflow also self-triggers on changes to its own file.
+- Triggers: pull_request (paths only) + push to the ADR-007 program branch
+  (feat/apps-shared|windows|android|apple, paths-filtered) + workflow_dispatch.
+- Concurrency: group per ref (apps-<platform>-${{ github.ref }}); cancel-in-progress
+  only on pull_request so push/main runs complete.
+- Caches: setup-java cache:gradle (shared+android); actions/cache NuGet (windows);
+  actions/cache SPM/.build + DerivedData SourcePackages (apple).
+- ADR-010 triad per platform, each step surfaces non-zero exit, NO continue-on-error:
+    shared : gradlew :shared:build | ktlintCheck+detekt | gradlew :shared:test
+    windows: dotnet build -c Release | dotnet format --verify-no-changes | dotnet test
+    android: gradlew assembleDebug | ktlintCheck+detekt+lint | gradlew test
+    apple  : xcodebuild build | swiftlint --strict + swiftformat --lint | xcodebuild test
+- NO-OP-BUT-VALID guard (not a bare exit 0): a "Detect buildable project (guard)"
+  step inspects the program dir for a real build target
+  (gradlew/build.gradle.kts/settings.gradle.kts; .sln/.csproj; Package.swift/.xcodeproj).
+    * none present  -> sets buildable=false, prints documented GUARD lines, passes.
+    * present       -> sets buildable=true; build/lint/test steps run via
+                       `if: steps.detect.outputs.buildable == 'true'` and FAIL if the
+                       project exists but does not build/lint/test.
+- Final "CI honesty marker" step echoes EXIT=0 only on `if: success()`.
+
+GATE — YAML validation (@action-validator/cli, one file per invocation)
+  apps-shared  -> EXIT=0
+  apps-windows -> EXIT=0
+  apps-android -> EXIT=0
+  apps-apple   -> EXIT=0
+  (only informational "Glob validation is not yet supported" warnings on paths:)
+YAML_EXIT=0
+
+OUT OF SCOPE (respected)
+- No real Gradle/dotnet/xcode project files added — programs add those.
+- Existing Go/web CI (ci.yml etc.) left untouched.
+
+EXIT=0
+STATUS=DONE

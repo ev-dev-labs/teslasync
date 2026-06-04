@@ -1,0 +1,88 @@
+name: apps-apple
+
+# P0/0004 — path-filtered CI for the Apple (SwiftUI macOS + iOS) program
+# (ADR-001/007/010/012). macOS runner per ADR-012. No-op-but-valid until the
+# P4 Apple program adds a buildable Package.swift / .xcodeproj; the guard step
+# documents that state instead of a bare `exit 0`.
+
+on:
+  pull_request:
+    paths:
+      - 'apps/apple/**'
+      - 'apps/shared/**'
+      - 'api/openapi/**'
+      - '.github/workflows/apps-apple.yml'
+  push:
+    branches: [feat/apps-apple]
+    paths:
+      - 'apps/apple/**'
+      - 'apps/shared/**'
+      - 'api/openapi/**'
+      - '.github/workflows/apps-apple.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: apps-apple-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  apple:
+    name: Apple SwiftUI (build + lint + test)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Cache Swift Package Manager
+        uses: actions/cache@v4
+        with:
+          path: |
+            .build
+            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
+          key: spm-${{ runner.os }}-${{ hashFiles('apps/apple/**/Package.resolved', 'apps/apple/**/Package.swift') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
+      - name: Detect buildable project (guard)
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ls apps/apple/**/Package.swift apps/apple/Package.swift >/dev/null 2>&1 \
+             || ls -d apps/apple/**/*.xcodeproj apps/apple/*.xcodeproj >/dev/null 2>&1; then
+            echo "buildable=true" >> "$GITHUB_OUTPUT"
+            echo "Buildable Swift package / Xcode project detected under apps/apple — running full triad."
+          else
+            echo "buildable=false" >> "$GITHUB_OUTPUT"
+            echo "GUARD: no buildable Package.swift/.xcodeproj under apps/apple yet (P4 not landed)."
+            echo "GUARD: passing as a documented no-op; will fail once a project exists but does not build."
+          fi
+
+      - name: Build (xcodebuild build)
+        if: steps.detect.outputs.buildable == 'true'
+        working-directory: apps/apple
+        run: xcodebuild build -scheme TeslaSync -destination 'platform=macOS'
+
+      - name: Strict lint/format (SwiftLint --strict + SwiftFormat --lint)
+        if: steps.detect.outputs.buildable == 'true'
+        working-directory: apps/apple
+        run: |
+          swiftlint --strict
+          swiftformat --lint .
+
+      - name: Unit tests (xcodebuild test)
+        if: steps.detect.outputs.buildable == 'true'
+        working-directory: apps/apple
+        run: xcodebuild test -scheme TeslaSync -destination 'platform=macOS'
+
+      - name: CI honesty marker
+        if: success()
+        run: echo "EXIT=0"

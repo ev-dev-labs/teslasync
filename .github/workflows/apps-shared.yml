@@ -1,0 +1,75 @@
+name: apps-shared
+
+# P0/0004 — path-filtered CI for the shared KMP core (ADR-001/007/010/012).
+# Linux runner per ADR-012 (KMP builds on ubuntu). The job is no-op-but-valid
+# until the P1 shared program adds a buildable Gradle project; the guard step
+# documents that state instead of a bare `exit 0`.
+
+on:
+  pull_request:
+    paths:
+      - 'apps/shared/**'
+      - 'api/openapi/**'
+      - '.github/workflows/apps-shared.yml'
+  push:
+    branches: [feat/apps-shared]
+    paths:
+      - 'apps/shared/**'
+      - 'api/openapi/**'
+      - '.github/workflows/apps-shared.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: apps-shared-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  shared:
+    name: Shared KMP (build + lint + test)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Detect buildable project (guard)
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f apps/shared/gradlew ] || [ -f apps/shared/build.gradle.kts ] || [ -f apps/shared/settings.gradle.kts ]; then
+            echo "buildable=true" >> "$GITHUB_OUTPUT"
+            echo "Buildable Gradle project detected under apps/shared — running full triad."
+          else
+            echo "buildable=false" >> "$GITHUB_OUTPUT"
+            echo "GUARD: no buildable Gradle project under apps/shared yet (P1 not landed)."
+            echo "GUARD: passing as a documented no-op; will fail once a project exists but does not build."
+          fi
+
+      - name: Build (gradlew :shared:build)
+        if: steps.detect.outputs.buildable == 'true'
+        working-directory: apps/shared
+        run: ./gradlew :shared:build --no-daemon
+
+      - name: Strict lint/format (ktlint + detekt)
+        if: steps.detect.outputs.buildable == 'true'
+        working-directory: apps/shared
+        run: ./gradlew ktlintCheck detekt --no-daemon
+
+      - name: Unit tests (gradlew :shared:test)
+        if: steps.detect.outputs.buildable == 'true'
+        working-directory: apps/shared
+        run: ./gradlew :shared:test --no-daemon
+
+      - name: CI honesty marker
+        if: success()
+        run: echo "EXIT=0"

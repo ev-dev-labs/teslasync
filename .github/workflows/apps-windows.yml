@@ -1,0 +1,88 @@
+name: apps-windows
+
+# P0/0004 — path-filtered CI for the Windows (WinUI 3 / .NET 10) program
+# (ADR-001/007/010/012). Windows runner per ADR-012. No-op-but-valid until
+# the P2 Windows program adds a buildable .sln/.csproj; the guard step
+# documents that state instead of a bare `exit 0`.
+
+on:
+  pull_request:
+    paths:
+      - 'apps/windows/**'
+      - 'apps/shared/**'
+      - 'api/openapi/**'
+      - '.github/workflows/apps-windows.yml'
+  push:
+    branches: [feat/apps-windows]
+    paths:
+      - 'apps/windows/**'
+      - 'apps/shared/**'
+      - 'api/openapi/**'
+      - '.github/workflows/apps-windows.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: apps-windows-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows WinUI (build + lint + test)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('apps/windows/**/Directory.Packages.props', 'apps/windows/**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Detect buildable project (guard)
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ls apps/windows/**/*.sln apps/windows/*.sln apps/windows/**/*.csproj apps/windows/*.csproj >/dev/null 2>&1; then
+            echo "buildable=true" >> "$GITHUB_OUTPUT"
+            echo "Buildable .NET project/solution detected under apps/windows — running full triad."
+          else
+            echo "buildable=false" >> "$GITHUB_OUTPUT"
+            echo "GUARD: no buildable .sln/.csproj under apps/windows yet (P2 not landed)."
+            echo "GUARD: passing as a documented no-op; will fail once a project exists but does not build."
+          fi
+
+      - name: Restore
+        if: steps.detect.outputs.buildable == 'true'
+        working-directory: apps/windows
+        run: dotnet restore
+
+      - name: Build (dotnet build -c Release)
+        if: steps.detect.outputs.buildable == 'true'
+        working-directory: apps/windows
+        run: dotnet build -c Release --no-restore
+
+      - name: Strict lint/format (dotnet format --verify-no-changes)
+        if: steps.detect.outputs.buildable == 'true'
+        working-directory: apps/windows
+        run: dotnet format --verify-no-changes
+
+      - name: Unit tests (dotnet test)
+        if: steps.detect.outputs.buildable == 'true'
+        working-directory: apps/windows
+        run: dotnet test -c Release --no-build
+
+      - name: CI honesty marker
+        if: success()
+        run: echo "EXIT=0"
