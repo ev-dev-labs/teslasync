@@ -1,0 +1,26 @@
+=== P0/0007 design-token skeleton gate ===
+DATE=2026-06-04T16:28:36.8688153-07:00
+JSON_PARSE=ok
+REQUIRED=color,chart,typography,spacing,radius,elevation,motion
+MISSING_CATEGORIES=(none)
+CATEGORY_COUNT=7
+README_CATEGORIES=ok
+README_TARGETS=ok
+GEN_DIRS=ok
+EXIT=0
+--- README content re-verification (substring) ---
+README_CAT_color=True
+README_CAT_chart=True
+README_CAT_typography=True
+README_CAT_spacing=True
+README_CAT_radius=True
+README_CAT_elevation=True
+README_CAT_motion=True
+README_TARGET_Tokens.xaml=True
+README_TARGET_Theme.kt=True
+README_TARGET_Tokens.swift=True
+README_VERIFY_EXIT=0
+
+P0/0007 complete. Schema (7 required categories) + README (ADR-005 mapping table + 3 generation targets) + generated/{windows,android,apple}/.gitkeep.
+EXIT=0
+STATUS=DONE

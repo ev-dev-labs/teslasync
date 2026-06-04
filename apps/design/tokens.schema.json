@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TeslaSync design tokens (neutral)",
+  "description": "Platform-agnostic design-token contract per ADR-005. Defines the SHAPE of the neutral token layer that P1 (S9) fills with VALUES extracted from web/src, and that the per-platform generators map to Fluent / Material 3 / HIG. No literal values live here.",
+  "type": "object",
+  "properties": {
+    "color": {
+      "type": "object",
+      "description": "Semantic color roles (not raw hex scattered). Light/dark/high-contrast variants are filled in P1. Status roles cover success/warning/danger/info.",
+      "properties": {
+        "bg": { "description": "Page/window background base." },
+        "surface": { "description": "Opaque surface/card background above bg." },
+        "surfaceGlass": { "description": "Translucent glass/material surface (maps to Mica/Acrylic, M3 tonal surface, .regularMaterial)." },
+        "textPrimary": { "description": "Primary text role (web --text-primary)." },
+        "textSecondary": { "description": "Secondary/supporting text role (web --text-secondary)." },
+        "textMuted": { "description": "Muted/disabled text role (web --text-muted)." },
+        "accent": { "description": "Brand accent / primary action color." },
+        "border": { "description": "Hairline border/divider role." },
+        "status": {
+          "type": "object",
+          "description": "Semantic status colors.",
+          "properties": {
+            "success": { "description": "Success/positive state." },
+            "warning": { "description": "Warning/caution state." },
+            "danger": { "description": "Error/destructive state." },
+            "info": { "description": "Informational state." }
+          },
+          "required": ["success", "warning", "danger", "info"]
+        }
+      },
+      "required": ["bg", "surface", "surfaceGlass", "textPrimary", "textSecondary", "textMuted", "accent", "border", "status"]
+    },
+    "chart": {
+      "type": "object",
+      "description": "Brand data-viz palette. Ordered categorical palette (matches web CHART_COLORS) plus per-series semantic colors used across charts.",
+      "properties": {
+        "categorical": { "description": "Ordered categorical palette array, index-stable across platforms (matches web CHART_COLORS)." },
+        "series": { "description": "Per-series semantic color roles (e.g. battery, energy, speed, regen, temperature)." }
+      },
+      "required": ["categorical", "series"]
+    },
+    "typography": {
+      "type": "object",
+      "description": "Type ramp + weights. Role names map to Fluent type ramp, M3 Typography, and HIG text styles.",
+      "properties": {
+        "display": { "description": "Largest display role." },
+        "title": { "description": "Page/screen title role." },
+        "section": { "description": "Section heading role." },
+        "panel": { "description": "Panel/card title role." },
+        "body": { "description": "Default body text role." },
+        "bodySm": { "description": "Small body text role." },
+        "caption": { "description": "Caption/helper text role." },
+        "label": { "description": "Label/overline role." },
+        "weights": { "description": "Named font weights (e.g. regular/medium/semibold/bold)." }
+      },
+      "required": ["display", "title", "section", "panel", "body", "bodySm", "caption", "label", "weights"]
+    },
+    "spacing": {
+      "type": "object",
+      "description": "Spacing scale on a 4pt base. Named steps map to each platform's layout units (DIP / dp / pt).",
+      "properties": {
+        "base": { "description": "Base unit in points (4)." },
+        "scale": { "description": "Named spacing steps derived from the 4pt base." }
+      },
+      "required": ["base", "scale"]
+    },
+    "radius": {
+      "type": "object",
+      "description": "Corner radii roles.",
+      "properties": {
+        "sm": { "description": "Small radius." },
+        "md": { "description": "Medium radius." },
+        "lg": { "description": "Large radius." },
+        "pill": { "description": "Fully rounded / pill radius." }
+      },
+      "required": ["sm", "md", "lg", "pill"]
+    },
+    "elevation": {
+      "type": "object",
+      "description": "Elevation/material levels including glass/material mapping (Mica/Acrylic, M3 tonal surfaces, SwiftUI materials).",
+      "properties": {
+        "levels": { "description": "Ordered elevation levels (e.g. base/raised/overlay/modal)." },
+        "material": { "description": "Glass/material mapping per level: Fluent Mica/Acrylic, M3 tonal elevation, HIG .regularMaterial/.thinMaterial." }
+      },
+      "required": ["levels", "material"]
+    },
+    "motion": {
+      "type": "object",
+      "description": "Animation durations + easing curves, mapped to Fluent motion, M3 motion, and SwiftUI animations.",
+      "properties": {
+        "durations": { "description": "Named durations (e.g. fast/normal/slow) in milliseconds." },
+        "easing": { "description": "Named easing curves (e.g. standard/decelerate/accelerate)." }
+      },
+      "required": ["durations", "easing"]
+    }
+  },
+  "required": ["color", "chart", "typography", "spacing", "radius", "elevation", "motion"]
+}
