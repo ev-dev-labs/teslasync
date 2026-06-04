@@ -193,7 +193,11 @@ function Test-LogSaysRed {
         $reasons += "final STATUS=$($statusMatches[$statusMatches.Count - 1].Groups[1].Value)"
     }
 
-    if ($content -match '\[FAIL\]')                            { $reasons += '[FAIL] marker' }
+    # Anchor [FAIL] to line-start so it doesn't false-positive on self-test
+    # echo lines like "[PASS] fail-marker -> reason='[FAIL] marker'" or on
+    # the runner's own progress messages that quote the literal token.
+    # Real failure markers are conventionally written at column 0.
+    if ($content -match '(?m)^\s*\[FAIL\]')                    { $reasons += '[FAIL] marker' }
     if ($content -match '(?m)^UNEXPECTED_COUNT=(?!0\s*$)\d+')  { $reasons += 'UNEXPECTED_COUNT' }
 
     # Final-marker-wins for COMMIT_EXIT=. A non-zero last commit exit is RED.
