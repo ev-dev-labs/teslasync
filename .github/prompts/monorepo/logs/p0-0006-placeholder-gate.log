@@ -1,0 +1,42 @@
+P0/0006 placeholder-gate — artifact log
+
+PREFLIGHT
+  0001 apps skeleton: DONE (apps/ tree present: android apple design docs parity shared tools windows)
+  Working tree: only pre-existing untracked runner logs present; no tracked-file drift.
+
+ARTIFACTS
+  apps/tools/placeholder-patterns.json   (common + kotlin + csharp + swift forbidden patterns)
+  apps/tools/check-placeholders.ps1      (-Path, -Language kotlin|csharp|swift|all, -SelfTest)
+
+BEHAVIOR
+  - Recursively scans .kt/.kts (kotlin), .cs/.xaml (csharp), .swift (swift).
+  - Excludes: generated/ build/ bin/ obj/ DerivedData/ node_modules/ .git/ and test fixtures.
+  - Common patterns apply to all files; language patterns apply to that language's files.
+  - Prints FILE:LINE: <pattern> per violation; emits PLACEHOLDER_ALLOWED=<n> then PLACEHOLDER_COUNT=<n>.
+  - Exits non-zero when PLACEHOLDER_COUNT > 0.
+  - Inline opt-out '// parity:allow <reason>' requires a reason; counted as PLACEHOLDER_ALLOWED,
+    excluded from PLACEHOLDER_COUNT. Opt-out with no reason is treated as a violation.
+
+=== self-test ===
+  [PASS] dirty tree -> PLACEHOLDER_COUNT=4 (non-zero)
+  [PASS] reported NotImplementedException
+  [PASS] reported Kotlin TODO(
+  [PASS] clean tree -> PLACEHOLDER_COUNT=0
+  [PASS] opt-out with reason counted as PLACEHOLDER_ALLOWED=1
+  [PASS] opt-out without reason still a violation (PLACEHOLDER_COUNT=1)
+SELFTEST_EXIT=0
+PWSH_SELFTEST_EXITCODE=0
+
+=== live scan ===
+  ./check-placeholders.ps1 -Path apps/ -Language all
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0  (apps/ skeleton is clean)
+
+=== acceptance ===
+  Scanner detects common + per-language patterns; honors excludes — PASS
+  Self-test: dirty -> non-zero, clean -> zero — PASS (SELFTEST_EXIT=0)
+  Opt-out requires a reason; counted separately as PLACEHOLDER_ALLOWED — PASS
+
+EXIT=0
+STATUS=DONE
