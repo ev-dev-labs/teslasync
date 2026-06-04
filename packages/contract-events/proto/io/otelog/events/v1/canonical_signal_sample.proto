@@ -1,0 +1,50 @@
+// canonical_signal_sample.proto — Contract B canonical signal-sample event.
+//
+// One generic, additive event for EVERY canonical signal reading, parallel to
+// how VehicleVendorSignalEvent is the single generic event for the vendor tail
+// (ADR-0815 rejected "one proto event per field" for the long tail). The
+// taxonomy-driven normalizer (phase-1-adrs/03) emits this single event for all
+// canonical signals rather than a new event per signal.
+//
+// Invariants:
+//   H13 — values are SI-canonical. The unit is implied by the canonical_kind
+//         suffix (e.g. _pct, _w, _mps) and is NEVER converted in the pipeline;
+//         display-time conversion happens only at the render boundary.
+//   H14 — canonical_kind is a PERMANENT taxonomy name. Field numbers start at 1
+//         and are never reused; a gap is reserved for likely related fields.
+//   H6/H7 — additive, backward-compatible evolution only.
+//
+// privacy_class is stamped from the SignalDescriptor (ADR-0331).
+//
+// Natural topic: vehicle.canonical_signals.v1 (topic creation is out of scope
+// of this proto; see the canonical taxonomy + ADR-telemetry-storage-shape and
+// ADR-telemetry-normalizer-scaling).
+
+syntax = "proto3";
+
+package io.otelog.events.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// One canonical signal reading. The canonical_kind is a permanent taxonomy
+// name (H14); the value is SI-canonical (H13) — the unit is implied by the
+// kind suffix and is never converted in the pipeline. privacy_class is stamped
+// from the SignalDescriptor (ADR-0331).
+message CanonicalSignalSampleEvent {
+  string vehicle_id = 1;
+  google.protobuf.Timestamp ts = 2;
+  string canonical_kind = 3;            // e.g. "vehicle.battery.state_of_charge_pct"
+  oneof value {
+    double number_value = 4;
+    string string_value = 5;
+    bool   bool_value   = 6;
+  }
+  string brand = 7;
+  // privacy_class: consumed from the descriptor; see prompt 02. Use an enum
+  // mirroring ADR-0331's classes once that field exists, else a reserved slot.
+  uint32 privacy_class = 8;
+
+  // Reserved gap for likely related fields (e.g. source/provenance, quality
+  // flags, descriptor metadata). Numbers are never reused (H14).
+  reserved 9 to 15;
+}
