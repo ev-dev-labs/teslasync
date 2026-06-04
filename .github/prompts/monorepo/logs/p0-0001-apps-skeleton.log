@@ -1,0 +1,31 @@
+=== PREFLIGHT ===
+Pre-existing untracked harness files present (run-prompts.ps1, logs/*); these are the prompt-runner's own artifacts, not work drift. Proceeding with commit scoped to Allowed files (apps/** + this log).
+ M .github/prompts/monorepo/logs/p0-0001-apps-skeleton.log
+?? .github/prompts/monorepo/logs/done.txt
+?? .github/prompts/monorepo/logs/run-2026-06-04_16-01-40.log
+?? .github/prompts/monorepo/logs/run-2026-06-04_16-01-53.log
+?? .github/prompts/monorepo/run-prompts.ps1
+=== SURVEY ===
+apps/ absent before this prompt: confirmed (Test-Path apps = False)
+=== CHANGES ===
+D:\repos\teslasync\apps\android
+D:\repos\teslasync\apps\apple
+D:\repos\teslasync\apps\design
+D:\repos\teslasync\apps\docs
+D:\repos\teslasync\apps\parity
+D:\repos\teslasync\apps\shared
+D:\repos\teslasync\apps\tools
+D:\repos\teslasync\apps\windows
+D:\repos\teslasync\apps\README.md
+D:\repos\teslasync\apps\android\.gitkeep
+D:\repos\teslasync\apps\apple\.gitkeep
+D:\repos\teslasync\apps\design\.gitkeep
+D:\repos\teslasync\apps\docs\.gitkeep
+D:\repos\teslasync\apps\parity\.gitkeep
+D:\repos\teslasync\apps\shared\.gitkeep
+D:\repos\teslasync\apps\tools\.gitkeep
+D:\repos\teslasync\apps\windows\.gitkeep
+=== GATE ===
+MISSING_DIRS=
+README_PRESENT=True
+EXIT=0

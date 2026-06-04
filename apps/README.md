@@ -1,0 +1,1 @@
+# TeslaSync Native Apps — see .github/prompts/monorepo/README.md
