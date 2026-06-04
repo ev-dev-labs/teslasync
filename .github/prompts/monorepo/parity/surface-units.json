@@ -1,0 +1,6374 @@
+[
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/AlertFeedWidget.tsx",
+    "slug": "alertfeed",
+    "hooks_count": 3,
+    "components_count": 0,
+    "titles_count": 2,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/AnalyticsSummaryWidget.tsx",
+    "slug": "analyticssummary",
+    "hooks_count": 5,
+    "components_count": 3,
+    "titles_count": 6,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/AnomalyDetectorWidget.tsx",
+    "slug": "anomalydetector",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/APIUsageWidget.tsx",
+    "slug": "apiusage",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 9,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/AuditLogWidget.tsx",
+    "slug": "auditlog",
+    "hooks_count": 5,
+    "components_count": 1,
+    "titles_count": 7,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/AutomationHistoryWidget.tsx",
+    "slug": "automationhistory",
+    "hooks_count": 3,
+    "components_count": 3,
+    "titles_count": 4,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/AutomationStatusWidget.tsx",
+    "slug": "automationstatus",
+    "hooks_count": 3,
+    "components_count": 3,
+    "titles_count": 11,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/BackupHistoryWidget.tsx",
+    "slug": "backuphistory",
+    "hooks_count": 5,
+    "components_count": 3,
+    "titles_count": 6,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/BackupMonitorWidget.tsx",
+    "slug": "backupmonitor",
+    "hooks_count": 4,
+    "components_count": 3,
+    "titles_count": 11,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/BatteryCellsWidget.tsx",
+    "slug": "batterycells",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 11,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/BatteryDegradationForecastWidget.tsx",
+    "slug": "batterydegradationforecast",
+    "hooks_count": 5,
+    "components_count": 3,
+    "titles_count": 9,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/BatteryDegradationTrendWidget.tsx",
+    "slug": "batterydegradationtrend",
+    "hooks_count": 5,
+    "components_count": 1,
+    "titles_count": 8,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/BatteryGaugeWidget.tsx",
+    "slug": "batterygauge",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 3,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/BatteryHealthAnalyticsWidget.tsx",
+    "slug": "batteryhealthanalytics",
+    "hooks_count": 5,
+    "components_count": 1,
+    "titles_count": 9,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/BatteryRadialGaugeWidget.tsx",
+    "slug": "batteryradialgauge",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 5,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/ChargeCostTrackerWidget.tsx",
+    "slug": "chargecosttracker",
+    "hooks_count": 5,
+    "components_count": 2,
+    "titles_count": 12,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/ChargeHistoryWidget.tsx",
+    "slug": "chargehistory",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 4,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/ChargePlansWidget.tsx",
+    "slug": "chargeplans",
+    "hooks_count": 7,
+    "components_count": 3,
+    "titles_count": 15,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/ChargeSessionChartWidget.tsx",
+    "slug": "chargesessionchart",
+    "hooks_count": 4,
+    "components_count": 1,
+    "titles_count": 5,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/ChargeStatusLiveWidget.tsx",
+    "slug": "chargestatuslive",
+    "hooks_count": 6,
+    "components_count": 3,
+    "titles_count": 11,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/ChargeStatusWidget.tsx",
+    "slug": "chargestatus",
+    "hooks_count": 4,
+    "components_count": 1,
+    "titles_count": 7,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/ChargingOptimizerWidget.tsx",
+    "slug": "chargingoptimizer",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 15,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/ChargingScheduleWidget.tsx",
+    "slug": "chargingschedule",
+    "hooks_count": 5,
+    "components_count": 3,
+    "titles_count": 16,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/ChargingSessionDetailWidget.tsx",
+    "slug": "chargingsessiondetail",
+    "hooks_count": 6,
+    "components_count": 3,
+    "titles_count": 9,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/ChargingTelemetryWidget.tsx",
+    "slug": "chargingtelemetry",
+    "hooks_count": 3,
+    "components_count": 3,
+    "titles_count": 8,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/ClimateControlPanelWidget.tsx",
+    "slug": "climatecontrolpanel",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 17,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/ClimateHistoryWidget.tsx",
+    "slug": "climatehistory",
+    "hooks_count": 6,
+    "components_count": 1,
+    "titles_count": 4,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/ClimateStatusWidget.tsx",
+    "slug": "climatestatus",
+    "hooks_count": 4,
+    "components_count": 1,
+    "titles_count": 7,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/CommandHistoryWidget.tsx",
+    "slug": "commandhistory",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 5,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/CommandQuickActionsWidget.tsx",
+    "slug": "commandquickactions",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 2,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/CostBreakdownWidget.tsx",
+    "slug": "costbreakdown",
+    "hooks_count": 7,
+    "components_count": 3,
+    "titles_count": 9,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/CostForecastWidget.tsx",
+    "slug": "costforecast",
+    "hooks_count": 5,
+    "components_count": 1,
+    "titles_count": 6,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/DashboardStatsWidget.tsx",
+    "slug": "dashboardstats",
+    "hooks_count": 6,
+    "components_count": 3,
+    "titles_count": 9,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/DestinationETAWidget.tsx",
+    "slug": "destinationeta",
+    "hooks_count": 4,
+    "components_count": 3,
+    "titles_count": 10,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/DigitalTwinMiniWidget.tsx",
+    "slug": "digitaltwinmini",
+    "hooks_count": 5,
+    "components_count": 3,
+    "titles_count": 7,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/DigitalTwinWidget.tsx",
+    "slug": "digitaltwin",
+    "hooks_count": 5,
+    "components_count": 3,
+    "titles_count": 16,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/DoorWindowStatusWidget.tsx",
+    "slug": "doorwindowstatus",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 15,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/DriveEfficiencyChartWidget.tsx",
+    "slug": "driveefficiencychart",
+    "hooks_count": 6,
+    "components_count": 1,
+    "titles_count": 7,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/DriveScoreGaugeWidget.tsx",
+    "slug": "drivescoregauge",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 6,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/DriveScoreWidget.tsx",
+    "slug": "drivescore",
+    "hooks_count": 4,
+    "components_count": 1,
+    "titles_count": 3,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/DriveTelemetryWidget.tsx",
+    "slug": "drivetelemetry",
+    "hooks_count": 7,
+    "components_count": 3,
+    "titles_count": 11,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/DrivetrainHealthWidget.tsx",
+    "slug": "drivetrainhealth",
+    "hooks_count": 6,
+    "components_count": 1,
+    "titles_count": 7,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/DrivingCoachWidget.tsx",
+    "slug": "drivingcoach",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 4,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/DrivingDynamicsWidget.tsx",
+    "slug": "drivingdynamics",
+    "hooks_count": 6,
+    "components_count": 3,
+    "titles_count": 9,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/EnergyFlowAnimatedWidget.tsx",
+    "slug": "energyflowanimated",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 7,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/EnergyFlowWidget.tsx",
+    "slug": "energyflow",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 7,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/EnergySiteInfoWidget.tsx",
+    "slug": "energysiteinfo",
+    "hooks_count": 4,
+    "components_count": 0,
+    "titles_count": 7,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/EnergyStatsWidget.tsx",
+    "slug": "energystats",
+    "hooks_count": 5,
+    "components_count": 3,
+    "titles_count": 10,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/ExportStatusWidget.tsx",
+    "slug": "exportstatus",
+    "hooks_count": 4,
+    "components_count": 3,
+    "titles_count": 6,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/FleetStatsBarWidget.tsx",
+    "slug": "fleetstatsbar",
+    "hooks_count": 5,
+    "components_count": 1,
+    "titles_count": 7,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/FleetStatsWidget.tsx",
+    "slug": "fleetstats",
+    "hooks_count": 5,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/FSMDistributionWidget.tsx",
+    "slug": "fsmdistribution",
+    "hooks_count": 5,
+    "components_count": 4,
+    "titles_count": 6,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/GeofenceWidget.tsx",
+    "slug": "geofence",
+    "hooks_count": 6,
+    "components_count": 3,
+    "titles_count": 7,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/GuardModeWidget.tsx",
+    "slug": "guardmode",
+    "hooks_count": 5,
+    "components_count": 2,
+    "titles_count": 12,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/LifetimeStatsWidget.tsx",
+    "slug": "lifetimestats",
+    "hooks_count": 6,
+    "components_count": 2,
+    "titles_count": 10,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/LivePowerFlowWidget.tsx",
+    "slug": "livepowerflow",
+    "hooks_count": 4,
+    "components_count": 1,
+    "titles_count": 7,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/LiveSignalSparklinesWidget.tsx",
+    "slug": "livesignalsparklines",
+    "hooks_count": 6,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/LiveSignalsWidget.tsx",
+    "slug": "livesignals",
+    "hooks_count": 7,
+    "components_count": 2,
+    "titles_count": 18,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/LocationFavoritesWidget.tsx",
+    "slug": "locationfavorites",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 6,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/LocationMapWidget.tsx",
+    "slug": "locationmap",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 4,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/MaintenanceTrackerWidget.tsx",
+    "slug": "maintenancetracker",
+    "hooks_count": 7,
+    "components_count": 3,
+    "titles_count": 11,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/MediaHistoryWidget.tsx",
+    "slug": "mediahistory",
+    "hooks_count": 4,
+    "components_count": 1,
+    "titles_count": 2,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/MediaNowPlayingWidget.tsx",
+    "slug": "medianowplaying",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 3,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/MileageStatsWidget.tsx",
+    "slug": "mileagestats",
+    "hooks_count": 5,
+    "components_count": 2,
+    "titles_count": 8,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/MonthlyMileageWidget.tsx",
+    "slug": "monthlymileage",
+    "hooks_count": 5,
+    "components_count": 1,
+    "titles_count": 5,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/MotorHistoryWidget.tsx",
+    "slug": "motorhistory",
+    "hooks_count": 5,
+    "components_count": 1,
+    "titles_count": 6,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/MotorPerformanceWidget.tsx",
+    "slug": "motorperformance",
+    "hooks_count": 4,
+    "components_count": 3,
+    "titles_count": 9,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/MQTTStatusWidget.tsx",
+    "slug": "mqttstatus",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 8,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/NotificationStatsWidget.tsx",
+    "slug": "notificationstats",
+    "hooks_count": 5,
+    "components_count": 2,
+    "titles_count": 13,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/OdometerCounterWidget.tsx",
+    "slug": "odometercounter",
+    "hooks_count": 6,
+    "components_count": 2,
+    "titles_count": 5,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/OnboardingChecklistWidget.tsx",
+    "slug": "onboardingchecklist",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 7,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/PositionHeatmapWidget.tsx",
+    "slug": "positionheatmap",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/PowerFlowHistoryWidget.tsx",
+    "slug": "powerflowhistory",
+    "hooks_count": 4,
+    "components_count": 1,
+    "titles_count": 10,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/ProjectedRangeWidget.tsx",
+    "slug": "projectedrange",
+    "hooks_count": 5,
+    "components_count": 3,
+    "titles_count": 14,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/QuickNavWidget.tsx",
+    "slug": "quicknav",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/RangeBarWidget.tsx",
+    "slug": "rangebar",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 6,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/RangeEstimateWidget.tsx",
+    "slug": "rangeestimate",
+    "hooks_count": 4,
+    "components_count": 1,
+    "titles_count": 3,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/RecentDrivesListWidget.tsx",
+    "slug": "recentdriveslist",
+    "hooks_count": 5,
+    "components_count": 1,
+    "titles_count": 3,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/RecentDrivesWidget.tsx",
+    "slug": "recentdrives",
+    "hooks_count": 5,
+    "components_count": 1,
+    "titles_count": 3,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/RecentlyUnlockedAchievements.tsx",
+    "slug": "recentlyunlockedachievements",
+    "hooks_count": 6,
+    "components_count": 1,
+    "titles_count": 3,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/RegenEfficiencyWidget.tsx",
+    "slug": "regenefficiency",
+    "hooks_count": 5,
+    "components_count": 1,
+    "titles_count": 6,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/RouteEfficiencyWidget.tsx",
+    "slug": "routeefficiency",
+    "hooks_count": 5,
+    "components_count": 1,
+    "titles_count": 8,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/SafetyFeaturesWidget.tsx",
+    "slug": "safetyfeatures",
+    "hooks_count": 4,
+    "components_count": 1,
+    "titles_count": 13,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/SafetyHistoryWidget.tsx",
+    "slug": "safetyhistory",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 10,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/SecurityStatusWidget.tsx",
+    "slug": "securitystatus",
+    "hooks_count": 3,
+    "components_count": 0,
+    "titles_count": 12,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/SentryEventLogWidget.tsx",
+    "slug": "sentryeventlog",
+    "hooks_count": 3,
+    "components_count": 0,
+    "titles_count": 2,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/SignalCatalogWidget.tsx",
+    "slug": "signalcatalog",
+    "hooks_count": 5,
+    "components_count": 2,
+    "titles_count": 6,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/SignalHealthWidget.tsx",
+    "slug": "signalhealth",
+    "hooks_count": 6,
+    "components_count": 3,
+    "titles_count": 16,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/SignalLogWidget.tsx",
+    "slug": "signallog",
+    "hooks_count": 5,
+    "components_count": 1,
+    "titles_count": 5,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/SleepEfficiencyWidget.tsx",
+    "slug": "sleepefficiency",
+    "hooks_count": 4,
+    "components_count": 1,
+    "titles_count": 7,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/SoftwareUpdateHistoryWidget.tsx",
+    "slug": "softwareupdatehistory",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/SoftwareUpdateStatusWidget.tsx",
+    "slug": "softwareupdatestatus",
+    "hooks_count": 4,
+    "components_count": 4,
+    "titles_count": 14,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/SolarProductionWidget.tsx",
+    "slug": "solarproduction",
+    "hooks_count": 4,
+    "components_count": 1,
+    "titles_count": 7,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/SpeedHeatmapWidget.tsx",
+    "slug": "speedheatmap",
+    "hooks_count": 4,
+    "components_count": 1,
+    "titles_count": 9,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/SpeedProfileWidget.tsx",
+    "slug": "speedprofile",
+    "hooks_count": 5,
+    "components_count": 1,
+    "titles_count": 7,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/StateTimelineWidget.tsx",
+    "slug": "statetimeline",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 5,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/SubscriptionsWidget.tsx",
+    "slug": "subscriptions",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 6,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/SuperchargerHistoryWidget.tsx",
+    "slug": "superchargerhistory",
+    "hooks_count": 5,
+    "components_count": 1,
+    "titles_count": 5,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/SystemHealthWidget.tsx",
+    "slug": "systemhealth",
+    "hooks_count": 5,
+    "components_count": 2,
+    "titles_count": 10,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/TelemetryErrorsWidget.tsx",
+    "slug": "telemetryerrors",
+    "hooks_count": 4,
+    "components_count": 3,
+    "titles_count": 9,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/TirePressureHistoryWidget.tsx",
+    "slug": "tirepressurehistory",
+    "hooks_count": 6,
+    "components_count": 1,
+    "titles_count": 8,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/TirePressureVisualWidget.tsx",
+    "slug": "tirepressurevisual",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 11,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/TripSummaryWidget.tsx",
+    "slug": "tripsummary",
+    "hooks_count": 4,
+    "components_count": 3,
+    "titles_count": 10,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/UptimeMonitorWidget.tsx",
+    "slug": "uptimemonitor",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 6,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/VampireDrainWidget.tsx",
+    "slug": "vampiredrain",
+    "hooks_count": 5,
+    "components_count": 3,
+    "titles_count": 10,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/VehicleAccessWidget.tsx",
+    "slug": "vehicleaccess",
+    "hooks_count": 6,
+    "components_count": 2,
+    "titles_count": 19,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/VehicleHeroCardWidget.tsx",
+    "slug": "vehicleherocard",
+    "hooks_count": 4,
+    "components_count": 4,
+    "titles_count": 8,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/VehicleHeroWidget.tsx",
+    "slug": "vehiclehero",
+    "hooks_count": 5,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/VehicleSpecsWidget.tsx",
+    "slug": "vehiclespecs",
+    "hooks_count": 5,
+    "components_count": 2,
+    "titles_count": 10,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/VehicleUpgradesWidget.tsx",
+    "slug": "vehicleupgrades",
+    "hooks_count": 8,
+    "components_count": 2,
+    "titles_count": 11,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/VersionInfoWidget.tsx",
+    "slug": "versioninfo",
+    "hooks_count": 4,
+    "components_count": 3,
+    "titles_count": 13,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/WallConnectorWidget.tsx",
+    "slug": "wallconnector",
+    "hooks_count": 4,
+    "components_count": 1,
+    "titles_count": 7,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/WarrantyStatusWidget.tsx",
+    "slug": "warrantystatus",
+    "hooks_count": 5,
+    "components_count": 3,
+    "titles_count": 14,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/WatchSummaryWidget.tsx",
+    "slug": "watchsummary",
+    "hooks_count": 5,
+    "components_count": 4,
+    "titles_count": 10,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/WeatherAtCarWidget.tsx",
+    "slug": "weatheratcar",
+    "hooks_count": 4,
+    "components_count": 1,
+    "titles_count": 3,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/WeeklyDigestWidget.tsx",
+    "slug": "weeklydigest",
+    "hooks_count": 5,
+    "components_count": 1,
+    "titles_count": 6,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/WeeklySummaryCardWidget.tsx",
+    "slug": "weeklysummarycard",
+    "hooks_count": 6,
+    "components_count": 2,
+    "titles_count": 7,
+    "has_registry": true
+  },
+  {
+    "tier": "dashboard-widgets",
+    "web": "features/dashboard/widgets/YearReviewWidget.tsx",
+    "slug": "yearreview",
+    "hooks_count": 5,
+    "components_count": 2,
+    "titles_count": 11,
+    "has_registry": true
+  },
+  {
+    "tier": "widget-primitives",
+    "web": "features/dashboard/widgets/shared/WidgetBigNumber.tsx",
+    "slug": "WidgetBigNumber",
+    "hooks_count": 0,
+    "components_count": 2,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "widget-primitives",
+    "web": "features/dashboard/widgets/shared/WidgetChartSummary.tsx",
+    "slug": "WidgetChartSummary",
+    "hooks_count": 0,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "widget-primitives",
+    "web": "features/dashboard/widgets/shared/WidgetComparisonCard.tsx",
+    "slug": "WidgetComparisonCard",
+    "hooks_count": 0,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "widget-primitives",
+    "web": "features/dashboard/widgets/shared/WidgetDetailCard.tsx",
+    "slug": "WidgetDetailCard",
+    "hooks_count": 0,
+    "components_count": 2,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "widget-primitives",
+    "web": "features/dashboard/widgets/shared/WidgetEventFeed.tsx",
+    "slug": "WidgetEventFeed",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "widget-primitives",
+    "web": "features/dashboard/widgets/shared/WidgetFlowDiagram.tsx",
+    "slug": "WidgetFlowDiagram",
+    "hooks_count": 0,
+    "components_count": 2,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "widget-primitives",
+    "web": "features/dashboard/widgets/shared/WidgetGaugeHero.tsx",
+    "slug": "WidgetGaugeHero",
+    "hooks_count": 0,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "widget-primitives",
+    "web": "features/dashboard/widgets/shared/WidgetMapView.tsx",
+    "slug": "WidgetMapView",
+    "hooks_count": 0,
+    "components_count": 2,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "widget-primitives",
+    "web": "features/dashboard/widgets/shared/WidgetRankedList.tsx",
+    "slug": "WidgetRankedList",
+    "hooks_count": 0,
+    "components_count": 2,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "widget-primitives",
+    "web": "features/dashboard/widgets/shared/WidgetStatGrid.tsx",
+    "slug": "WidgetStatGrid",
+    "hooks_count": 0,
+    "components_count": 2,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "widget-primitives",
+    "web": "features/dashboard/widgets/shared/WidgetStatusGrid.tsx",
+    "slug": "WidgetStatusGrid",
+    "hooks_count": 0,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "widget-primitives",
+    "web": "features/dashboard/widgets/shared/WidgetTipCards.tsx",
+    "slug": "WidgetTipCards",
+    "hooks_count": 0,
+    "components_count": 2,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "widget-primitives",
+    "web": "features/dashboard/widgets/WidgetShell.tsx",
+    "slug": "WidgetShell",
+    "hooks_count": 0,
+    "components_count": 3,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "components/ai/ConfirmDialog.tsx",
+    "slug": "ConfirmDialog",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "components/charts/AddAnnotationPopover.tsx",
+    "slug": "AddAnnotationPopover",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "components/feedback/ChangelogModal.tsx",
+    "slug": "ChangelogModal",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "components/feedback/FeedbackModal.tsx",
+    "slug": "FeedbackModal",
+    "hooks_count": 4,
+    "components_count": 1,
+    "titles_count": 19,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "components/feedback/JobProgressDrawer.tsx",
+    "slug": "JobProgressDrawer",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 28,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "components/feedback/KeyboardShortcutsModal.tsx",
+    "slug": "KeyboardShortcutsModal",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "components/feedback/ReauthDialog.tsx",
+    "slug": "ReauthDialog",
+    "hooks_count": 5,
+    "components_count": 1,
+    "titles_count": 17,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "components/feedback/SessionExpiredModal.tsx",
+    "slug": "SessionExpiredModal",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "components/feedback/SessionExpiringModal.tsx",
+    "slug": "SessionExpiringModal",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "components/layout/NotificationBellPopover.tsx",
+    "slug": "NotificationBellPopover",
+    "hooks_count": 10,
+    "components_count": 0,
+    "titles_count": 12,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "components/maps/GeofenceDrawer.tsx",
+    "slug": "GeofenceDrawer",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "components/ui/ConfirmDialog.tsx",
+    "slug": "ConfirmDialog",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "components/ui/Drawer.tsx",
+    "slug": "Drawer",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "components/ui/Modal.tsx",
+    "slug": "Modal",
+    "hooks_count": 2,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "components/ui/Popover.tsx",
+    "slug": "Popover",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "components/ui/SignalConfigModal.tsx",
+    "slug": "SignalConfigModal",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "features/admin/components/AcknowledgeAlertDialog.tsx",
+    "slug": "AcknowledgeAlertDialog",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "features/admin/components/dlq-inspector/EntryDrawer.tsx",
+    "slug": "EntryDrawer",
+    "hooks_count": 1,
+    "components_count": 3,
+    "titles_count": 14,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "features/admin/components/feature-flags/FlagEditDrawer.tsx",
+    "slug": "FlagEditDrawer",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 11,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "features/admin/components/QueueJobDrawer.tsx",
+    "slug": "QueueJobDrawer",
+    "hooks_count": 3,
+    "components_count": 3,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "features/battery/components/TOUSettingsModal.tsx",
+    "slug": "TOUSettingsModal",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 12,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "features/dashboard/components/DashboardSettingsModal.tsx",
+    "slug": "DashboardSettingsModal",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 13,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "features/dashboard/components/ExportModal.tsx",
+    "slug": "ExportModal",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "features/dashboard/components/ImportPreviewModal.tsx",
+    "slug": "ImportPreviewModal",
+    "hooks_count": 1,
+    "components_count": 3,
+    "titles_count": 21,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "features/dashboard/components/KioskSettingsModal.tsx",
+    "slug": "KioskSettingsModal",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 20,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "features/dashboard/components/WidgetCatalogueDialog.tsx",
+    "slug": "WidgetCatalogueDialog",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 9,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "features/dashboard/components/WidgetSettingsModal.tsx",
+    "slug": "WidgetSettingsModal",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 17,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "features/driving/components/ShareDriveDialog.tsx",
+    "slug": "ShareDriveDialog",
+    "hooks_count": 5,
+    "components_count": 2,
+    "titles_count": 21,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "features/system/components/CommandConfirmDialog.tsx",
+    "slug": "CommandConfirmDialog",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "features/system/components/CommandInputDialog.tsx",
+    "slug": "CommandInputDialog",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "modals-dialogs",
+    "web": "features/system/components/CommandSelectDialog.tsx",
+    "slug": "CommandSelectDialog",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/AlertDetailTimeline.tsx",
+    "slug": "AlertDetailTimeline",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/BackendTool.tsx",
+    "slug": "BackendTool",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/ClientUtilitiesSection.tsx",
+    "slug": "ClientUtilitiesSection",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/FleetApiSection.tsx",
+    "slug": "FleetApiSection",
+    "hooks_count": 5,
+    "components_count": 3,
+    "titles_count": 35,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/FleetTelemetryHealth.tsx",
+    "slug": "FleetTelemetryHealth",
+    "hooks_count": 4,
+    "components_count": 3,
+    "titles_count": 16,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/InfrastructureSection.tsx",
+    "slug": "InfrastructureSection",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/ReferenceLinksSection.tsx",
+    "slug": "ReferenceLinksSection",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/ResultPanel.tsx",
+    "slug": "ResultPanel",
+    "hooks_count": 0,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/TelemetryErrorsPanel.tsx",
+    "slug": "TelemetryErrorsPanel",
+    "hooks_count": 0,
+    "components_count": 2,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/ToolCard.tsx",
+    "slug": "ToolCard",
+    "hooks_count": 0,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/tools/Base64Tool.tsx",
+    "slug": "Base64Tool",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/tools/ByteSizeConverter.tsx",
+    "slug": "ByteSizeConverter",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/tools/ColorConverter.tsx",
+    "slug": "ColorConverter",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/tools/CronParser.tsx",
+    "slug": "CronParser",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/tools/HashCalculator.tsx",
+    "slug": "HashCalculator",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/tools/HttpStatusTool.tsx",
+    "slug": "HttpStatusTool",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/tools/JsonFormatter.tsx",
+    "slug": "JsonFormatter",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/tools/JwtDecoder.tsx",
+    "slug": "JwtDecoder",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/tools/RegexTester.tsx",
+    "slug": "RegexTester",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/tools/TeslaApiRefTool.tsx",
+    "slug": "TeslaApiRefTool",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/tools/TimestampTool.tsx",
+    "slug": "TimestampTool",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/tools/UnixPermissionTool.tsx",
+    "slug": "UnixPermissionTool",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/tools/UrlEncoder.tsx",
+    "slug": "UrlEncoder",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/tools/UuidGenerator.tsx",
+    "slug": "UuidGenerator",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/devtools/tools/VinDecoder.tsx",
+    "slug": "VinDecoder",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/dlq-inspector/AuditPanel.tsx",
+    "slug": "AuditPanel",
+    "hooks_count": 1,
+    "components_count": 3,
+    "titles_count": 9,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/dlq-inspector/EntriesTable.tsx",
+    "slug": "EntriesTable",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 13,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/dlq-inspector/StatusHeader.tsx",
+    "slug": "StatusHeader",
+    "hooks_count": 1,
+    "components_count": 3,
+    "titles_count": 9,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/EndpointSidebar.tsx",
+    "slug": "EndpointSidebar",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/feature-flags/ChangesPanel.tsx",
+    "slug": "ChangesPanel",
+    "hooks_count": 1,
+    "components_count": 3,
+    "titles_count": 10,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/feature-flags/FlagsTable.tsx",
+    "slug": "FlagsTable",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/ingest-xray/XRayBucketChart.tsx",
+    "slug": "XRayBucketChart",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/ingest-xray/XRayControls.tsx",
+    "slug": "XRayControls",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/ingest-xray/XRayFieldsTable.tsx",
+    "slug": "XRayFieldsTable",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/ingest-xray/XRayHeader.tsx",
+    "slug": "XRayHeader",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/live-signal-inspector/LiveSignalsTable.tsx",
+    "slug": "LiveSignalsTable",
+    "hooks_count": 3,
+    "components_count": 3,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/QueueStatusPanel.tsx",
+    "slug": "QueueStatusPanel",
+    "hooks_count": 3,
+    "components_count": 4,
+    "titles_count": 16,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/RateLimitStatusPanel.tsx",
+    "slug": "RateLimitStatusPanel",
+    "hooks_count": 3,
+    "components_count": 4,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/RedisDiagnosticEmptyState.tsx",
+    "slug": "RedisDiagnosticEmptyState",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 18,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/RequestBuilder.tsx",
+    "slug": "RequestBuilder",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 9,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/ResponseViewer.tsx",
+    "slug": "ResponseViewer",
+    "hooks_count": 1,
+    "components_count": 3,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/security-access/EventHistoryTable.tsx",
+    "slug": "EventHistoryTable",
+    "hooks_count": 1,
+    "components_count": 6,
+    "titles_count": 12,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/security-access/EventTimeline.tsx",
+    "slug": "EventTimeline",
+    "hooks_count": 2,
+    "components_count": 4,
+    "titles_count": 12,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/security-access/LiveVehicleState.tsx",
+    "slug": "LiveVehicleState",
+    "hooks_count": 1,
+    "components_count": 3,
+    "titles_count": 17,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/security-access/SecurityStatistics.tsx",
+    "slug": "SecurityStatistics",
+    "hooks_count": 1,
+    "components_count": 5,
+    "titles_count": 9,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/security-access/SecurityStatusCards.tsx",
+    "slug": "SecurityStatusCards",
+    "hooks_count": 1,
+    "components_count": 3,
+    "titles_count": 22,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/security-access/SentryModeChart.tsx",
+    "slug": "SentryModeChart",
+    "hooks_count": 1,
+    "components_count": 5,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/security-access/SummaryStatsRow.tsx",
+    "slug": "SummaryStatsRow",
+    "hooks_count": 1,
+    "components_count": 3,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/security-access/WindowStatusDetail.tsx",
+    "slug": "WindowStatusDetail",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/admin/components/UserImpersonateButton.tsx",
+    "slug": "UserImpersonateButton",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/AchievementBadge.tsx",
+    "slug": "AchievementBadge",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/analytics/BatteryTab.tsx",
+    "slug": "BatteryTab",
+    "hooks_count": 2,
+    "components_count": 5,
+    "titles_count": 14,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/analytics/ChargingDetailSection.tsx",
+    "slug": "ChargingDetailSection",
+    "hooks_count": 2,
+    "components_count": 4,
+    "titles_count": 16,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/analytics/ChargingTab.tsx",
+    "slug": "ChargingTab",
+    "hooks_count": 2,
+    "components_count": 5,
+    "titles_count": 15,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/analytics/DrivingPerformanceCards.tsx",
+    "slug": "DrivingPerformanceCards",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/analytics/DrivingTab.tsx",
+    "slug": "DrivingTab",
+    "hooks_count": 2,
+    "components_count": 4,
+    "titles_count": 19,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/analytics/DrivingTemperatureStats.tsx",
+    "slug": "DrivingTemperatureStats",
+    "hooks_count": 2,
+    "components_count": 4,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/analytics/HeroGauges.tsx",
+    "slug": "HeroGauges",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/analytics/OverviewTab.tsx",
+    "slug": "OverviewTab",
+    "hooks_count": 2,
+    "components_count": 4,
+    "titles_count": 12,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/analytics/OverviewVehicleComparison.tsx",
+    "slug": "OverviewVehicleComparison",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 9,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/review/ChargingBreakdownSlide.tsx",
+    "slug": "ChargingBreakdownSlide",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/review/DriveHighlightSlide.tsx",
+    "slug": "DriveHighlightSlide",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/review/EnvironmentSlide.tsx",
+    "slug": "EnvironmentSlide",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/review/PatternsSlide.tsx",
+    "slug": "PatternsSlide",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/review/SavingsSlide.tsx",
+    "slug": "SavingsSlide",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/review/SlideRenderer.tsx",
+    "slug": "SlideRenderer",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/review/StatChartSlide.tsx",
+    "slug": "StatChartSlide",
+    "hooks_count": 1,
+    "components_count": 3,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/review/StatHeroSlide.tsx",
+    "slug": "StatHeroSlide",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/review/SummarySlide.tsx",
+    "slug": "SummarySlide",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/review/TitleSlide.tsx",
+    "slug": "TitleSlide",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/weekly-digest/AlertsSection.tsx",
+    "slug": "AlertsSection",
+    "hooks_count": 1,
+    "components_count": 4,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/weekly-digest/BatteryHealthSection.tsx",
+    "slug": "BatteryHealthSection",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/weekly-digest/BatteryPill.tsx",
+    "slug": "BatteryPill",
+    "hooks_count": 0,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/weekly-digest/ChargingSection.tsx",
+    "slug": "ChargingSection",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/weekly-digest/DrivingSection.tsx",
+    "slug": "DrivingSection",
+    "hooks_count": 1,
+    "components_count": 4,
+    "titles_count": 13,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/weekly-digest/HighlightCard.tsx",
+    "slug": "HighlightCard",
+    "hooks_count": 0,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/weekly-digest/SummaryHeroCards.tsx",
+    "slug": "SummaryHeroCards",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/weekly-digest/WeekOverWeekSummary.tsx",
+    "slug": "WeekOverWeekSummary",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/analytics/components/weekly-digest/WeekSelector.tsx",
+    "slug": "WeekSelector",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/automations/pages/ActionBuilder.tsx",
+    "slug": "ActionBuilder",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 27,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/automations/pages/AutomationActivityFeed.tsx",
+    "slug": "AutomationActivityFeed",
+    "hooks_count": 1,
+    "components_count": 5,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/automations/pages/AutomationCard.tsx",
+    "slug": "AutomationCard",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 17,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/automations/pages/ConditionBuilder.tsx",
+    "slug": "ConditionBuilder",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 19,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/automations/pages/ConflictWarnings.tsx",
+    "slug": "ConflictWarnings",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/automations/pages/PresetGallery.tsx",
+    "slug": "PresetGallery",
+    "hooks_count": 4,
+    "components_count": 6,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/automations/pages/TriggerConfigurator.tsx",
+    "slug": "TriggerConfigurator",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 20,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/charging-curve/ChargerTypeChart.tsx",
+    "slug": "ChargerTypeChart",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 11,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/charging-curve/LoadingSkeleton.tsx",
+    "slug": "LoadingSkeleton",
+    "hooks_count": 0,
+    "components_count": 2,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/charging-curve/SessionComparisonChart.tsx",
+    "slug": "SessionComparisonChart",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/charging-curve/SessionCurveChart.tsx",
+    "slug": "SessionCurveChart",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/charging-curve/SessionDetailPanel.tsx",
+    "slug": "SessionDetailPanel",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 10,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/charging-curve/SpeedTrendChart.tsx",
+    "slug": "SpeedTrendChart",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 11,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/charging-curve/SummaryStatsGrid.tsx",
+    "slug": "SummaryStatsGrid",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/charging-curve/TimeToChargeSection.tsx",
+    "slug": "TimeToChargeSection",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/charging-curve/YearlyTrendChart.tsx",
+    "slug": "YearlyTrendChart",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 12,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/charging-list/AcDcStatsPanel.tsx",
+    "slug": "AcDcStatsPanel",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 14,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/charging-list/BatteryLevelChart.tsx",
+    "slug": "BatteryLevelChart",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/charging-list/ChargerSpecsPanel.tsx",
+    "slug": "ChargerSpecsPanel",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 10,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/charging-list/ChartsRow.tsx",
+    "slug": "ChartsRow",
+    "hooks_count": 1,
+    "components_count": 3,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/charging-list/CostHeatmap.tsx",
+    "slug": "CostHeatmap",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/charging-list/DetailedStatistics.tsx",
+    "slug": "DetailedStatistics",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/charging-list/EfficiencyPanel.tsx",
+    "slug": "EfficiencyPanel",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/charging-list/HeroGauges.tsx",
+    "slug": "HeroGauges",
+    "hooks_count": 1,
+    "components_count": 4,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/charging-list/OptimizerSection.tsx",
+    "slug": "OptimizerSection",
+    "hooks_count": 1,
+    "components_count": 4,
+    "titles_count": 19,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/charging-list/QuickMetrics.tsx",
+    "slug": "QuickMetrics",
+    "hooks_count": 1,
+    "components_count": 3,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/charging-list/SessionListSection.tsx",
+    "slug": "SessionListSection",
+    "hooks_count": 1,
+    "components_count": 5,
+    "titles_count": 22,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/ChargingSessionCard.tsx",
+    "slug": "ChargingSessionCard",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/cost-analysis/ChargerTypeBreakdown.tsx",
+    "slug": "ChargerTypeBreakdown",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/cost-analysis/CostForecastSection.tsx",
+    "slug": "CostForecastSection",
+    "hooks_count": 2,
+    "components_count": 4,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/cost-analysis/CostPerKwhChart.tsx",
+    "slug": "CostPerKwhChart",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/cost-analysis/CostSummaryCards.tsx",
+    "slug": "CostSummaryCards",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/cost-analysis/EnvironmentalImpact.tsx",
+    "slug": "EnvironmentalImpact",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 10,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/cost-analysis/ForecastDetails.tsx",
+    "slug": "ForecastDetails",
+    "hooks_count": 2,
+    "components_count": 5,
+    "titles_count": 12,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/cost-analysis/LifetimeSummary.tsx",
+    "slug": "LifetimeSummary",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 9,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/cost-analysis/LoadingSkeleton.tsx",
+    "slug": "LoadingSkeleton",
+    "hooks_count": 0,
+    "components_count": 3,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/cost-analysis/MonthlyCostChart.tsx",
+    "slug": "MonthlyCostChart",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/cost-analysis/MonthlyCostTable.tsx",
+    "slug": "MonthlyCostTable",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 9,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/cost-analysis/SavingsCalculator.tsx",
+    "slug": "SavingsCalculator",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 14,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/components/cost-analysis/TimeOfUseAnalysis.tsx",
+    "slug": "TimeOfUseAnalysis",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 16,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/charging/pages/TeslaChargingSessionsMap.tsx",
+    "slug": "TeslaChargingSessionsMap",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/dashboard/components/AddWidgetButton.tsx",
+    "slug": "AddWidgetButton",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/dashboard/components/DashboardGrid.tsx",
+    "slug": "DashboardGrid",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/dashboard/components/FleetStatsBar.tsx",
+    "slug": "FleetStatsBar",
+    "hooks_count": 1,
+    "components_count": 4,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/dashboard/components/KioskOverlay.tsx",
+    "slug": "KioskOverlay",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/dashboard/components/LayoutManager.tsx",
+    "slug": "LayoutManager",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 11,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/dashboard/components/LayoutSwitcher.tsx",
+    "slug": "LayoutSwitcher",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 20,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/dashboard/components/LiveTelemetry.tsx",
+    "slug": "LiveTelemetry",
+    "hooks_count": 1,
+    "components_count": 3,
+    "titles_count": 40,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/dashboard/components/MiniGridPreview.tsx",
+    "slug": "MiniGridPreview",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/dashboard/components/QuickNav.tsx",
+    "slug": "QuickNav",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/dashboard/components/RecentActivity.tsx",
+    "slug": "RecentActivity",
+    "hooks_count": 2,
+    "components_count": 4,
+    "titles_count": 13,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/dashboard/components/RecentlyViewedWidget.tsx",
+    "slug": "RecentlyViewedWidget",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/dashboard/components/TemplateGallery.tsx",
+    "slug": "TemplateGallery",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/dashboard/components/VehicleHero.tsx",
+    "slug": "VehicleHero",
+    "hooks_count": 2,
+    "components_count": 6,
+    "titles_count": 22,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/dashboard/components/WidgetPicker.tsx",
+    "slug": "WidgetPicker",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 17,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/AddressInput.tsx",
+    "slug": "AddressInput",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drive-detail/CostSavingsPanel.tsx",
+    "slug": "CostSavingsPanel",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drive-detail/DriveDetailHeader.tsx",
+    "slug": "DriveDetailHeader",
+    "hooks_count": 1,
+    "components_count": 3,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drive-detail/DriveOverviewChart.tsx",
+    "slug": "DriveOverviewChart",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 10,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drive-detail/DriveStatCards.tsx",
+    "slug": "DriveStatCards",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 9,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drive-detail/DriveTimeline.tsx",
+    "slug": "DriveTimeline",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drive-detail/ElevationChart.tsx",
+    "slug": "ElevationChart",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drive-detail/EnergySummaryPanel.tsx",
+    "slug": "EnergySummaryPanel",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drive-detail/HeroGauges.tsx",
+    "slug": "HeroGauges",
+    "hooks_count": 3,
+    "components_count": 3,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drive-detail/JourneyDetailsPanel.tsx",
+    "slug": "JourneyDetailsPanel",
+    "hooks_count": 1,
+    "components_count": 3,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drive-detail/MoreDetailsPanel.tsx",
+    "slug": "MoreDetailsPanel",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 13,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drive-detail/PowerProfileChart.tsx",
+    "slug": "PowerProfileChart",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drive-detail/RouteMapSection.tsx",
+    "slug": "RouteMapSection",
+    "hooks_count": 3,
+    "components_count": 4,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drive-detail/SocChart.tsx",
+    "slug": "SocChart",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drive-detail/SpeedHistogramChart.tsx",
+    "slug": "SpeedHistogramChart",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drive-detail/TemperatureSection.tsx",
+    "slug": "TemperatureSection",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 13,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drive-detail/TirePressureSection.tsx",
+    "slug": "TirePressureSection",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drive-detail/WhyEndedPanel.tsx",
+    "slug": "WhyEndedPanel",
+    "hooks_count": 3,
+    "components_count": 4,
+    "titles_count": 13,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drivetrain-health/DetailCards.tsx",
+    "slug": "DetailCards",
+    "hooks_count": 2,
+    "components_count": 4,
+    "titles_count": 11,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drivetrain-health/HealthGaugeGrid.tsx",
+    "slug": "HealthGaugeGrid",
+    "hooks_count": 2,
+    "components_count": 6,
+    "titles_count": 12,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drivetrain-health/HealthOverview.tsx",
+    "slug": "HealthOverview",
+    "hooks_count": 1,
+    "components_count": 4,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drivetrain-health/HealthRecommendations.tsx",
+    "slug": "HealthRecommendations",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drivetrain-health/LiveMotorStatus.tsx",
+    "slug": "LiveMotorStatus",
+    "hooks_count": 2,
+    "components_count": 5,
+    "titles_count": 15,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drivetrain-health/PowerOutputChart.tsx",
+    "slug": "PowerOutputChart",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drivetrain-health/StatorTempChart.tsx",
+    "slug": "StatorTempChart",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 11,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drivetrain-health/TemperatureGauges.tsx",
+    "slug": "TemperatureGauges",
+    "hooks_count": 2,
+    "components_count": 4,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drivetrain-health/TemperatureMetricCards.tsx",
+    "slug": "TemperatureMetricCards",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drivetrain-health/TemperatureTrendChart.tsx",
+    "slug": "TemperatureTrendChart",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drivetrain-health/ThermalLoadPanel.tsx",
+    "slug": "ThermalLoadPanel",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/drivetrain-health/TorqueHistoryChart.tsx",
+    "slug": "TorqueHistoryChart",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/driving-dynamics/AutopilotSection.tsx",
+    "slug": "AutopilotSection",
+    "hooks_count": 6,
+    "components_count": 5,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/driving-dynamics/DriveAnalyticsSection.tsx",
+    "slug": "DriveAnalyticsSection",
+    "hooks_count": 1,
+    "components_count": 4,
+    "titles_count": 20,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/driving-dynamics/DrivingCoachSection.tsx",
+    "slug": "DrivingCoachSection",
+    "hooks_count": 1,
+    "components_count": 5,
+    "titles_count": 20,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/driving-dynamics/DrivingTips.tsx",
+    "slug": "DrivingTips",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/driving-dynamics/GForcePanel.tsx",
+    "slug": "GForcePanel",
+    "hooks_count": 3,
+    "components_count": 5,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/driving-dynamics/LiveMotorStatus.tsx",
+    "slug": "LiveMotorStatus",
+    "hooks_count": 1,
+    "components_count": 5,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/driving-dynamics/MotorEfficiencyInsights.tsx",
+    "slug": "MotorEfficiencyInsights",
+    "hooks_count": 1,
+    "components_count": 5,
+    "titles_count": 17,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/driving-dynamics/MotorHistoryCharts.tsx",
+    "slug": "MotorHistoryCharts",
+    "hooks_count": 3,
+    "components_count": 3,
+    "titles_count": 16,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/driving-dynamics/PedalUsage.tsx",
+    "slug": "PedalUsage",
+    "hooks_count": 3,
+    "components_count": 5,
+    "titles_count": 9,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/driving-dynamics/SpeedGearPanel.tsx",
+    "slug": "SpeedGearPanel",
+    "hooks_count": 1,
+    "components_count": 3,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/driving-dynamics/SummaryStats.tsx",
+    "slug": "SummaryStats",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/SOCRouteChart.tsx",
+    "slug": "SOCRouteChart",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/TripLegList.tsx",
+    "slug": "TripLegList",
+    "hooks_count": 3,
+    "components_count": 3,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/driving/components/TripPlannerMap.tsx",
+    "slug": "TripPlannerMap",
+    "hooks_count": 1,
+    "components_count": 3,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/notifications/components/AlertCard.tsx",
+    "slug": "AlertCard",
+    "hooks_count": 0,
+    "components_count": 5,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/notifications/components/AlertMessageEditor.tsx",
+    "slug": "AlertMessageEditor",
+    "hooks_count": 6,
+    "components_count": 1,
+    "titles_count": 13,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/notifications/components/BrowserPushChannelCard.tsx",
+    "slug": "BrowserPushChannelCard",
+    "hooks_count": 6,
+    "components_count": 1,
+    "titles_count": 14,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/notifications/components/ComputedMetricEditor.tsx",
+    "slug": "ComputedMetricEditor",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 12,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/notifications/components/InboxBody.tsx",
+    "slug": "InboxBody",
+    "hooks_count": 16,
+    "components_count": 8,
+    "titles_count": 31,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/notifications/components/LegacyAlertRulesRedirect.tsx",
+    "slug": "LegacyAlertRulesRedirect",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/notifications/components/LegacyAlertsRedirect.tsx",
+    "slug": "LegacyAlertsRedirect",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/notifications/components/LegacyAlertStudioRedirect.tsx",
+    "slug": "LegacyAlertStudioRedirect",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/notifications/components/LegacyNotificationsRedirect.tsx",
+    "slug": "LegacyNotificationsRedirect",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/notifications/components/NotificationChannelsView.tsx",
+    "slug": "NotificationChannelsView",
+    "hooks_count": 9,
+    "components_count": 6,
+    "titles_count": 32,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/notifications/components/NotificationFilterBar.tsx",
+    "slug": "NotificationFilterBar",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 12,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/notifications/components/NotificationGroupRow.tsx",
+    "slug": "NotificationGroupRow",
+    "hooks_count": 6,
+    "components_count": 2,
+    "titles_count": 10,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/notifications/components/NotificationRow.tsx",
+    "slug": "NotificationRow",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/notifications/pages/AlertStudioPage.tsx",
+    "slug": "AlertStudioPage",
+    "hooks_count": 19,
+    "components_count": 9,
+    "titles_count": 113,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/onboarding/components/NoVehicleSelected.tsx",
+    "slug": "NoVehicleSelected",
+    "hooks_count": 3,
+    "components_count": 3,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/onboarding/components/OnboardingGate.tsx",
+    "slug": "OnboardingGate",
+    "hooks_count": 5,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/onboarding/components/Stepper.tsx",
+    "slug": "Stepper",
+    "hooks_count": 0,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/ActiveOrdersSection.tsx",
+    "slug": "ActiveOrdersSection",
+    "hooks_count": 5,
+    "components_count": 4,
+    "titles_count": 12,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/ActiveSessionsSection.tsx",
+    "slug": "ActiveSessionsSection",
+    "hooks_count": 5,
+    "components_count": 3,
+    "titles_count": 18,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/AdvancedSettings.tsx",
+    "slug": "AdvancedSettings",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/AIFeatureToggleList.tsx",
+    "slug": "AIFeatureToggleList",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/AIProviderSection.tsx",
+    "slug": "AIProviderSection",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 23,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/AIRestorePanel.tsx",
+    "slug": "AIRestorePanel",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/AISettings.tsx",
+    "slug": "AISettings",
+    "hooks_count": 6,
+    "components_count": 4,
+    "titles_count": 13,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/AIUsageCard.tsx",
+    "slug": "AIUsageCard",
+    "hooks_count": 4,
+    "components_count": 1,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/AppearanceSettings.tsx",
+    "slug": "AppearanceSettings",
+    "hooks_count": 8,
+    "components_count": 4,
+    "titles_count": 41,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/FeatureToggles.tsx",
+    "slug": "FeatureToggles",
+    "hooks_count": 4,
+    "components_count": 4,
+    "titles_count": 11,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/GasPriceSettings.tsx",
+    "slug": "GasPriceSettings",
+    "hooks_count": 8,
+    "components_count": 3,
+    "titles_count": 19,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/GeneralSettings.tsx",
+    "slug": "GeneralSettings",
+    "hooks_count": 7,
+    "components_count": 5,
+    "titles_count": 52,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/NotificationSettings.tsx",
+    "slug": "NotificationSettings",
+    "hooks_count": 6,
+    "components_count": 2,
+    "titles_count": 19,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/PrivacySection.tsx",
+    "slug": "PrivacySection",
+    "hooks_count": 4,
+    "components_count": 3,
+    "titles_count": 17,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/QuietHoursPanel.tsx",
+    "slug": "QuietHoursPanel",
+    "hooks_count": 6,
+    "components_count": 4,
+    "titles_count": 29,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/RegionSettings.tsx",
+    "slug": "RegionSettings",
+    "hooks_count": 4,
+    "components_count": 4,
+    "titles_count": 9,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/ResetSection.tsx",
+    "slug": "ResetSection",
+    "hooks_count": 7,
+    "components_count": 3,
+    "titles_count": 25,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/SettingField.tsx",
+    "slug": "SettingField",
+    "hooks_count": 0,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/SettingsExportImport.tsx",
+    "slug": "SettingsExportImport",
+    "hooks_count": 7,
+    "components_count": 4,
+    "titles_count": 29,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/SettingsSearch.tsx",
+    "slug": "SettingsSearch",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/TeslaAccountSection.tsx",
+    "slug": "TeslaAccountSection",
+    "hooks_count": 8,
+    "components_count": 3,
+    "titles_count": 21,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/TOTPEnrollmentSection.tsx",
+    "slug": "TOTPEnrollmentSection",
+    "hooks_count": 8,
+    "components_count": 3,
+    "titles_count": 27,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/settings/components/WebhookChannelsSection.tsx",
+    "slug": "WebhookChannelsSection",
+    "hooks_count": 9,
+    "components_count": 4,
+    "titles_count": 39,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/chatbot/ChatMessageItem.tsx",
+    "slug": "ChatMessageItem",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/chatbot/CodeBlock.tsx",
+    "slug": "CodeBlock",
+    "hooks_count": 0,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/chatbot/MarkdownRenderer.tsx",
+    "slug": "MarkdownRenderer",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/chatbot/SessionList.tsx",
+    "slug": "SessionList",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 13,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/chatbot/SuggestedPrompts.tsx",
+    "slug": "SuggestedPrompts",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/CollapsibleCommandGroup.tsx",
+    "slug": "CollapsibleCommandGroup",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/CommandSearch.tsx",
+    "slug": "CommandSearch",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/CommandTile.tsx",
+    "slug": "CommandTile",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/FavoritesBar.tsx",
+    "slug": "FavoritesBar",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/FSMHealthPanel.tsx",
+    "slug": "FSMHealthPanel",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/FSMStateDiagram.tsx",
+    "slug": "FSMStateDiagram",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/FSMSubFSMPanel.tsx",
+    "slug": "FSMSubFSMPanel",
+    "hooks_count": 1,
+    "components_count": 4,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/FSMTimelineChart.tsx",
+    "slug": "FSMTimelineChart",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/InputCommandTile.tsx",
+    "slug": "InputCommandTile",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/state-machine/LiveControls.tsx",
+    "slug": "LiveControls",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/state-machine/SnapshotInspector.tsx",
+    "slug": "SnapshotInspector",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 13,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/state-machine/StateTimeline.tsx",
+    "slug": "StateTimeline",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 9,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/AccordionSection.tsx",
+    "slug": "AccordionSection",
+    "hooks_count": 0,
+    "components_count": 2,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/AiUsageCard.tsx",
+    "slug": "AiUsageCard",
+    "hooks_count": 6,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/AnomalyInlineRow.tsx",
+    "slug": "AnomalyInlineRow",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/BackendStatusSection.tsx",
+    "slug": "BackendStatusSection",
+    "hooks_count": 4,
+    "components_count": 4,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/BackgroundWorkersCard.tsx",
+    "slug": "BackgroundWorkersCard",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/BackupActionsCard.tsx",
+    "slug": "BackupActionsCard",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/DataPipelineSection.tsx",
+    "slug": "DataPipelineSection",
+    "hooks_count": 2,
+    "components_count": 5,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/FrontendErrorsCard.tsx",
+    "slug": "FrontendErrorsCard",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/HealthProbesSection.tsx",
+    "slug": "HealthProbesSection",
+    "hooks_count": 2,
+    "components_count": 4,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/helpers.tsx",
+    "slug": "helpers",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/IncidentForm.tsx",
+    "slug": "IncidentForm",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/IncidentsCard.tsx",
+    "slug": "IncidentsCard",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/InfrastructureSection.tsx",
+    "slug": "InfrastructureSection",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/LiveStatusPill.tsx",
+    "slug": "LiveStatusPill",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/OperationsSection.tsx",
+    "slug": "OperationsSection",
+    "hooks_count": 2,
+    "components_count": 5,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/ScheduledMaintenanceCard.tsx",
+    "slug": "ScheduledMaintenanceCard",
+    "hooks_count": 6,
+    "components_count": 2,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/ServiceHealthSection.tsx",
+    "slug": "ServiceHealthSection",
+    "hooks_count": 2,
+    "components_count": 4,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/SLOTrackingCard.tsx",
+    "slug": "SLOTrackingCard",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/StatusPageSkeleton.tsx",
+    "slug": "StatusPageSkeleton",
+    "hooks_count": 0,
+    "components_count": 2,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/SubscribeCard.tsx",
+    "slug": "SubscribeCard",
+    "hooks_count": 0,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/TelemetryPipelineCard.tsx",
+    "slug": "TelemetryPipelineCard",
+    "hooks_count": 3,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/TeslaApiUsageCard.tsx",
+    "slug": "TeslaApiUsageCard",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/TeslaAuthCard.tsx",
+    "slug": "TeslaAuthCard",
+    "hooks_count": 0,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/status/UpdateAvailableCallout.tsx",
+    "slug": "UpdateAvailableCallout",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/ToggleCommandTile.tsx",
+    "slug": "ToggleCommandTile",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/components/VehicleCommandCenter.tsx",
+    "slug": "VehicleCommandCenter",
+    "hooks_count": 7,
+    "components_count": 4,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/system/pages/ScheduledExportsPanel.tsx",
+    "slug": "ScheduledExportsPanel",
+    "hooks_count": 7,
+    "components_count": 9,
+    "titles_count": 34,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/telemetry/components/LiveSignalTail.tsx",
+    "slug": "LiveSignalTail",
+    "hooks_count": 1,
+    "components_count": 3,
+    "titles_count": 17,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/telemetry/components/SignalCatalogPanel.tsx",
+    "slug": "SignalCatalogPanel",
+    "hooks_count": 3,
+    "components_count": 4,
+    "titles_count": 21,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/telemetry/components/SignalCategoryTree.tsx",
+    "slug": "SignalCategoryTree",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/telemetry/components/SignalChartPanel.tsx",
+    "slug": "SignalChartPanel",
+    "hooks_count": 2,
+    "components_count": 5,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/telemetry/components/SignalCompareControls.tsx",
+    "slug": "SignalCompareControls",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/telemetry/components/SignalDiffTable.tsx",
+    "slug": "SignalDiffTable",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 11,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/telemetry/components/SignalHistoryTable.tsx",
+    "slug": "SignalHistoryTable",
+    "hooks_count": 2,
+    "components_count": 4,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/telemetry/components/SignalSelector.tsx",
+    "slug": "SignalSelector",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/telemetry/components/SignalSparklinePreview.tsx",
+    "slug": "SignalSparklinePreview",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/telemetry/components/SignalStatsPanel.tsx",
+    "slug": "SignalStatsPanel",
+    "hooks_count": 1,
+    "components_count": 3,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/trips/components/TripReplayCharts.tsx",
+    "slug": "TripReplayCharts",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/trips/components/TripReplayMap.tsx",
+    "slug": "TripReplayMap",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/BatteryComparison.tsx",
+    "slug": "BatteryComparison",
+    "hooks_count": 4,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/FleetSummary.tsx",
+    "slug": "FleetSummary",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/RecentActivity.tsx",
+    "slug": "RecentActivity",
+    "hooks_count": 2,
+    "components_count": 6,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/telemetry-panels/ClimatePanel.tsx",
+    "slug": "ClimatePanel",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 12,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/telemetry-panels/EnergyChargingPanel.tsx",
+    "slug": "EnergyChargingPanel",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 10,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/telemetry-panels/InfoTile.tsx",
+    "slug": "InfoTile",
+    "hooks_count": 0,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/telemetry-panels/LiveTelemetryPanels.tsx",
+    "slug": "LiveTelemetryPanels",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/telemetry-panels/MediaNavigationPanel.tsx",
+    "slug": "MediaNavigationPanel",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 12,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/telemetry-panels/PowertrainPanel.tsx",
+    "slug": "PowertrainPanel",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 12,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/telemetry-panels/SecurityPanel.tsx",
+    "slug": "SecurityPanel",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 17,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/telemetry-panels/TelemetryGrid.tsx",
+    "slug": "TelemetryGrid",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/telemetry-panels/TirePressurePanel.tsx",
+    "slug": "TirePressurePanel",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/telemetry-panels/VehicleStatePanel.tsx",
+    "slug": "VehicleStatePanel",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/vehicle-detail/BatteryRangeCharts.tsx",
+    "slug": "BatteryRangeCharts",
+    "hooks_count": 2,
+    "components_count": 4,
+    "titles_count": 9,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/vehicle-detail/BatteryRangePanel.tsx",
+    "slug": "BatteryRangePanel",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/vehicle-detail/ChargingTelemetrySection.tsx",
+    "slug": "ChargingTelemetrySection",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 10,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/vehicle-detail/ClimateSection.tsx",
+    "slug": "ClimateSection",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 13,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/vehicle-detail/LiveStateIndicators.tsx",
+    "slug": "LiveStateIndicators",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 10,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/vehicle-detail/MotorSection.tsx",
+    "slug": "MotorSection",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 10,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/vehicle-detail/QuickLinksSection.tsx",
+    "slug": "QuickLinksSection",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/vehicle-detail/QuickStatsGrid.tsx",
+    "slug": "QuickStatsGrid",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 10,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/vehicle-detail/RecentChargesSection.tsx",
+    "slug": "RecentChargesSection",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/vehicle-detail/RecentDrivesSection.tsx",
+    "slug": "RecentDrivesSection",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/vehicle-detail/SecuritySection.tsx",
+    "slug": "SecuritySection",
+    "hooks_count": 1,
+    "components_count": 3,
+    "titles_count": 12,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/vehicle-detail/TirePressureSection.tsx",
+    "slug": "TirePressureSection",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 10,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/vehicle-detail/VehicleConfigSection.tsx",
+    "slug": "VehicleConfigSection",
+    "hooks_count": 1,
+    "components_count": 3,
+    "titles_count": 15,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/vehicle-detail/VehicleHeader.tsx",
+    "slug": "VehicleHeader",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/VehicleCard.tsx",
+    "slug": "VehicleCard",
+    "hooks_count": 4,
+    "components_count": 5,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/VehicleCharts.tsx",
+    "slug": "VehicleCharts",
+    "hooks_count": 2,
+    "components_count": 5,
+    "titles_count": 9,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/VehicleGauges.tsx",
+    "slug": "VehicleGauges",
+    "hooks_count": 2,
+    "components_count": 5,
+    "titles_count": 13,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/VehicleHeader.tsx",
+    "slug": "VehicleHeader",
+    "hooks_count": 3,
+    "components_count": 3,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/VehiclePhotoGallery.tsx",
+    "slug": "VehiclePhotoGallery",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/VehiclePhotoUpload.tsx",
+    "slug": "VehiclePhotoUpload",
+    "hooks_count": 5,
+    "components_count": 5,
+    "titles_count": 14,
+    "has_registry": false
+  },
+  {
+    "tier": "feature-views",
+    "web": "features/vehicles/components/VehicleSettingsTab.tsx",
+    "slug": "VehicleSettingsTab",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/a11y/AnnouncerRegion.tsx",
+    "slug": "AnnouncerRegion",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/a11y/RouteAnnouncer.tsx",
+    "slug": "RouteAnnouncer",
+    "hooks_count": 2,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/a11y/VisuallyHidden.tsx",
+    "slug": "VisuallyHidden",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIAlertTuningSuggestions.tsx",
+    "slug": "AIAlertTuningSuggestions",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIAnomalyExplanations.tsx",
+    "slug": "AIAnomalyExplanations",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIAutoNameUnnamedLocations.tsx",
+    "slug": "AIAutoNameUnnamedLocations",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIAutoTripNameSuggestion.tsx",
+    "slug": "AIAutoTripNameSuggestion",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIBatteryHealthForecastNarrative.tsx",
+    "slug": "AIBatteryHealthForecastNarrative",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AICabinTemperatureImpactNarrative.tsx",
+    "slug": "AICabinTemperatureImpactNarrative",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIChargingCurveFingerprintClustering.tsx",
+    "slug": "AIChargingCurveFingerprintClustering",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIChargingDiagnosis.tsx",
+    "slug": "AIChargingDiagnosis",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIChatbotIndicator.tsx",
+    "slug": "AIChatbotIndicator",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AICostForecastNarration.tsx",
+    "slug": "AICostForecastNarration",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AICrossRuleConflictDetection.tsx",
+    "slug": "AICrossRuleConflictDetection",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIDataRepairSuggestions.tsx",
+    "slug": "AIDataRepairSuggestions",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIDigestNarration.tsx",
+    "slug": "AIDigestNarration",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIDriveCoaching.tsx",
+    "slug": "AIDriveCoaching",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIFeatureCard.tsx",
+    "slug": "AIFeatureCard",
+    "hooks_count": 1,
+    "components_count": 4,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIFeedbackQueueTriage.tsx",
+    "slug": "AIFeedbackQueueTriage",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIGeofenceAwareAutomationSuggestions.tsx",
+    "slug": "AIGeofenceAwareAutomationSuggestions",
+    "hooks_count": 3,
+    "components_count": 3,
+    "titles_count": 10,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIInboxAutoCategorization.tsx",
+    "slug": "AIInboxAutoCategorization",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIIncidentTimelineSummarizer.tsx",
+    "slug": "AIIncidentTimelineSummarizer",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AILearnedAnomalyBaselines.tsx",
+    "slug": "AILearnedAnomalyBaselines",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AILifetimeStatsQA.tsx",
+    "slug": "AILifetimeStatsQA",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AiLimitBanner.tsx",
+    "slug": "AiLimitBanner",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 12,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AILogTraceSummarization.tsx",
+    "slug": "AILogTraceSummarization",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIMLChargingCurveClustering.tsx",
+    "slug": "AIMLChargingCurveClustering",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIMqttSseInspectorExplanations.tsx",
+    "slug": "AIMqttSseInspectorExplanations",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AINLAlertBuilder.tsx",
+    "slug": "AINLAlertBuilder",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AINLAutomationBuilder.tsx",
+    "slug": "AINLAutomationBuilder",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AINLDashboardComposer.tsx",
+    "slug": "AINLDashboardComposer",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AINLDriveSearch.tsx",
+    "slug": "AINLDriveSearch",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AINLGrafanaPanel.tsx",
+    "slug": "AINLGrafanaPanel",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AINLSearch.tsx",
+    "slug": "AINLSearch",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AINLSqlPlayground.tsx",
+    "slug": "AINLSqlPlayground",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AiOutputPanel.tsx",
+    "slug": "AiOutputPanel",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIPeriodCompareNarration.tsx",
+    "slug": "AIPeriodCompareNarration",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIPiiRedactionSharedExports.tsx",
+    "slug": "AIPiiRedactionSharedExports",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIPredictiveMaintenance.tsx",
+    "slug": "AIPredictiveMaintenance",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIPreheatPrecoolRecommender.tsx",
+    "slug": "AIPreheatPrecoolRecommender",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIQuietHoursSuggestion.tsx",
+    "slug": "AIQuietHoursSuggestion",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIRAGHelp.tsx",
+    "slug": "AIRAGHelp",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIRangePrediction.tsx",
+    "slug": "AIRangePrediction",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIRouteEfficiencySuggestions.tsx",
+    "slug": "AIRouteEfficiencySuggestions",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AISafetySettingExplainer.tsx",
+    "slug": "AISafetySettingExplainer",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AISignalExplorerNlFilter.tsx",
+    "slug": "AISignalExplorerNlFilter",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AISmartChargeScheduleSuggestion.tsx",
+    "slug": "AISmartChargeScheduleSuggestion",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AISoftwareUpdateChangelogSummarizer.tsx",
+    "slug": "AISoftwareUpdateChangelogSummarizer",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AISpeedProfileInsights.tsx",
+    "slug": "AISpeedProfileInsights",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIStateMachineDebuggerNarrator.tsx",
+    "slug": "AIStateMachineDebuggerNarrator",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AISuggestNewGeofences.tsx",
+    "slug": "AISuggestNewGeofences",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AITCONarration.tsx",
+    "slug": "AITCONarration",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIThinkingIndicator.tsx",
+    "slug": "AIThinkingIndicator",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AITirePressureTrendReasoning.tsx",
+    "slug": "AITirePressureTrendReasoning",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AITripPlannerLLMAgent.tsx",
+    "slug": "AITripPlannerLLMAgent",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AITripPostcardShareCardImageGeneration.tsx",
+    "slug": "AITripPostcardShareCardImageGeneration",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIVampireDrainExplanation.tsx",
+    "slug": "AIVampireDrainExplanation",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIVehiclePaintPreview.tsx",
+    "slug": "AIVehiclePaintPreview",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIVoiceMode.tsx",
+    "slug": "AIVoiceMode",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 17,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIWatchFaceNLResponse.tsx",
+    "slug": "AIWatchFaceNLResponse",
+    "hooks_count": 2,
+    "components_count": 3,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/AIYearReviewNarration.tsx",
+    "slug": "AIYearReviewNarration",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ai/withAiFeature.tsx",
+    "slug": "withAiFeature",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/charts/AnnotationList.tsx",
+    "slug": "AnnotationList",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/charts/AreaChartWrapper.tsx",
+    "slug": "AreaChartWrapper",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/charts/ChartContainer.tsx",
+    "slug": "ChartContainer",
+    "hooks_count": 9,
+    "components_count": 6,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/charts/ChartExportMenu.tsx",
+    "slug": "ChartExportMenu",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 9,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/charts/ChartHiddenSeriesContext.tsx",
+    "slug": "ChartHiddenSeriesContext",
+    "hooks_count": 3,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/charts/ChartLegend.tsx",
+    "slug": "ChartLegend",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/charts/ChartTimeRangeContext.tsx",
+    "slug": "ChartTimeRangeContext",
+    "hooks_count": 4,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/charts/ChartTooltip.tsx",
+    "slug": "ChartTooltip",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/charts/ElevationProfile.tsx",
+    "slug": "ElevationProfile",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/charts/MetricSwitcherChart.tsx",
+    "slug": "MetricSwitcherChart",
+    "hooks_count": 0,
+    "components_count": 2,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/charts/SmallMultiplesChart.tsx",
+    "slug": "SmallMultiplesChart",
+    "hooks_count": 3,
+    "components_count": 2,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/charts/TimeMarker.tsx",
+    "slug": "TimeMarker",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/AnimatedNumber.tsx",
+    "slug": "AnimatedNumber",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/Avatar.tsx",
+    "slug": "Avatar",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/BatteryDelta.tsx",
+    "slug": "BatteryDelta",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/BulkActionsToolbar.tsx",
+    "slug": "BulkActionsToolbar",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/DataFreshness.tsx",
+    "slug": "DataFreshness",
+    "hooks_count": 5,
+    "components_count": 0,
+    "titles_count": 12,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/DateGroupedList.tsx",
+    "slug": "DateGroupedList",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/Delta.tsx",
+    "slug": "Delta",
+    "hooks_count": 5,
+    "components_count": 1,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/DriveScore.tsx",
+    "slug": "DriveScore",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/format/Currency.tsx",
+    "slug": "Currency",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/format/DateTime.tsx",
+    "slug": "DateTime",
+    "hooks_count": 3,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/format/Distance.tsx",
+    "slug": "Distance",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/format/Pressure.tsx",
+    "slug": "Pressure",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/format/Range.tsx",
+    "slug": "Range",
+    "hooks_count": 4,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/format/Speed.tsx",
+    "slug": "Speed",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/format/Temperature.tsx",
+    "slug": "Temperature",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/FreshnessIndicator.tsx",
+    "slug": "FreshnessIndicator",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/HistoryListRow.tsx",
+    "slug": "HistoryListRow",
+    "hooks_count": 0,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/InsightsEngine.tsx",
+    "slug": "InsightsEngine",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/KpiOverviewCard.tsx",
+    "slug": "KpiOverviewCard",
+    "hooks_count": 0,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/LiveIndicator.tsx",
+    "slug": "LiveIndicator",
+    "hooks_count": 2,
+    "components_count": 0,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/MetricCard.tsx",
+    "slug": "MetricCard",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/PlaybackControls.tsx",
+    "slug": "PlaybackControls",
+    "hooks_count": 2,
+    "components_count": 2,
+    "titles_count": 20,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/PlaybackSpeedMenu.tsx",
+    "slug": "PlaybackSpeedMenu",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/PollingEngine.tsx",
+    "slug": "PollingEngine",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/ProgressRing.tsx",
+    "slug": "ProgressRing",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/RecentActivityFeed.tsx",
+    "slug": "RecentActivityFeed",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/RouteDisplay.tsx",
+    "slug": "RouteDisplay",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/SavedViewMenu.tsx",
+    "slug": "SavedViewMenu",
+    "hooks_count": 8,
+    "components_count": 2,
+    "titles_count": 25,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/ScoreBadge.tsx",
+    "slug": "ScoreBadge",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/ServiceStatus.tsx",
+    "slug": "ServiceStatus",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/SourceLayerBadge.tsx",
+    "slug": "SourceLayerBadge",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/TeslaCarViz.tsx",
+    "slug": "TeslaCarViz",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/TimelineScrubber.tsx",
+    "slug": "TimelineScrubber",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/TimeStamp.tsx",
+    "slug": "TimeStamp",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/UsageCard.tsx",
+    "slug": "UsageCard",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/data-display/UserCell.tsx",
+    "slug": "UserCell",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/AchievementUnlockedToast.tsx",
+    "slug": "AchievementUnlockedToast",
+    "hooks_count": 4,
+    "components_count": 0,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/AchievementUnlockListener.tsx",
+    "slug": "AchievementUnlockListener",
+    "hooks_count": 2,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/AlertBanner.tsx",
+    "slug": "AlertBanner",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/BrowserCompatBanner.tsx",
+    "slug": "BrowserCompatBanner",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/CookieConsentBanner.tsx",
+    "slug": "CookieConsentBanner",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/DraftRecoveryBanner.tsx",
+    "slug": "DraftRecoveryBanner",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/DraftRestorePrompt.tsx",
+    "slug": "DraftRestorePrompt",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 10,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/EditConflictBanner.tsx",
+    "slug": "EditConflictBanner",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/EmptyStateThreshold.tsx",
+    "slug": "EmptyStateThreshold",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/ErrorDisplay.tsx",
+    "slug": "ErrorDisplay",
+    "hooks_count": 3,
+    "components_count": 0,
+    "titles_count": 15,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/GotoIndicator.tsx",
+    "slug": "GotoIndicator",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/GuardedLink.tsx",
+    "slug": "GuardedLink",
+    "hooks_count": 2,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/ImpersonationBanner.tsx",
+    "slug": "ImpersonationBanner",
+    "hooks_count": 4,
+    "components_count": 0,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/InlineCallout.tsx",
+    "slug": "InlineCallout",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/InstallPrompt.tsx",
+    "slug": "InstallPrompt",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/LiveStaleDataBanner.tsx",
+    "slug": "LiveStaleDataBanner",
+    "hooks_count": 2,
+    "components_count": 0,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/MaintenanceBanner.tsx",
+    "slug": "MaintenanceBanner",
+    "hooks_count": 3,
+    "components_count": 0,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/NavigationGuardProvider.tsx",
+    "slug": "NavigationGuardProvider",
+    "hooks_count": 5,
+    "components_count": 1,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/NewVersionBanner.tsx",
+    "slug": "NewVersionBanner",
+    "hooks_count": 2,
+    "components_count": 0,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/OfflineBanner.tsx",
+    "slug": "OfflineBanner",
+    "hooks_count": 2,
+    "components_count": 0,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/OnboardingWizard.tsx",
+    "slug": "OnboardingWizard",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/PageSkeleton.tsx",
+    "slug": "PageSkeleton",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/QueryError.tsx",
+    "slug": "QueryError",
+    "hooks_count": 3,
+    "components_count": 0,
+    "titles_count": 16,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/RateLimitBanner.tsx",
+    "slug": "RateLimitBanner",
+    "hooks_count": 2,
+    "components_count": 0,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/ReleaseNotes.tsx",
+    "slug": "ReleaseNotes",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/ReloadPrompt.tsx",
+    "slug": "ReloadPrompt",
+    "hooks_count": 2,
+    "components_count": 0,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/RequiresAuth.tsx",
+    "slug": "RequiresAuth",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/SectionErrorBoundary.tsx",
+    "slug": "SectionErrorBoundary",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/SkipToContent.tsx",
+    "slug": "SkipToContent",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/Spinner.tsx",
+    "slug": "Spinner",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/SuspenseProgressBoundary.tsx",
+    "slug": "SuspenseProgressBoundary",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/TeslaReauthBanner.tsx",
+    "slug": "TeslaReauthBanner",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/TimeMachineBanner.tsx",
+    "slug": "TimeMachineBanner",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/Toast.tsx",
+    "slug": "Toast",
+    "hooks_count": 4,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/feedback/TourOverlay.tsx",
+    "slug": "TourOverlay",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/FormatterPrefsBridge.tsx",
+    "slug": "FormatterPrefsBridge",
+    "hooks_count": 3,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/forms/ActiveFilterChips.tsx",
+    "slug": "ActiveFilterChips",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/forms/Combobox.tsx",
+    "slug": "Combobox",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/forms/ComboboxMulti.tsx",
+    "slug": "ComboboxMulti",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 10,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/forms/CurrencyInput.tsx",
+    "slug": "CurrencyInput",
+    "hooks_count": 0,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/forms/DatePresetChips.tsx",
+    "slug": "DatePresetChips",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/forms/DateRangeFilter.tsx",
+    "slug": "DateRangeFilter",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/forms/DensityToggle.tsx",
+    "slug": "DensityToggle",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/forms/FormField.tsx",
+    "slug": "FormField",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/forms/ListExportMenu.tsx",
+    "slug": "ListExportMenu",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 9,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/forms/PillFilterBar.tsx",
+    "slug": "PillFilterBar",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/forms/RangePicker.tsx",
+    "slug": "RangePicker",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/forms/SearchInput.tsx",
+    "slug": "SearchInput",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/forms/SortControl.tsx",
+    "slug": "SortControl",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/forms/TagInput.tsx",
+    "slug": "TagInput",
+    "hooks_count": 4,
+    "components_count": 2,
+    "titles_count": 10,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/forms/TreeSelect.tsx",
+    "slug": "TreeSelect",
+    "hooks_count": 1,
+    "components_count": 2,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/forms/UnitInput.tsx",
+    "slug": "UnitInput",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/forms/VehicleMultiSelect.tsx",
+    "slug": "VehicleMultiSelect",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 9,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/forms/VehicleSelect.tsx",
+    "slug": "VehicleSelect",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/layout/BottomTabBar.tsx",
+    "slug": "BottomTabBar",
+    "hooks_count": 2,
+    "components_count": 0,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/layout/BreadcrumbOverridesContext.tsx",
+    "slug": "BreadcrumbOverridesContext",
+    "hooks_count": 3,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/layout/Breadcrumbs.tsx",
+    "slug": "Breadcrumbs",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/layout/CopyLinkButton.tsx",
+    "slug": "CopyLinkButton",
+    "hooks_count": 2,
+    "components_count": 0,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/layout/Layout.tsx",
+    "slug": "Layout",
+    "hooks_count": 19,
+    "components_count": 4,
+    "titles_count": 18,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/layout/LayoutBreadcrumbs.tsx",
+    "slug": "LayoutBreadcrumbs",
+    "hooks_count": 2,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/layout/PageContainer.tsx",
+    "slug": "PageContainer",
+    "hooks_count": 3,
+    "components_count": 3,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/layout/PageHeaderSticky.tsx",
+    "slug": "PageHeaderSticky",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/layout/ScrollRestoration.tsx",
+    "slug": "ScrollRestoration",
+    "hooks_count": 3,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/layout/sidebar/LinearSidebar.tsx",
+    "slug": "LinearSidebar",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/layout/sidebar/NotionSidebar.tsx",
+    "slug": "NotionSidebar",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/layout/status-bar/ActiveVehicleSegment.tsx",
+    "slug": "ActiveVehicleSegment",
+    "hooks_count": 5,
+    "components_count": 1,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/layout/status-bar/BackgroundWorkSegment.tsx",
+    "slug": "BackgroundWorkSegment",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 5,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/layout/status-bar/ConnectionSegment.tsx",
+    "slug": "ConnectionSegment",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/layout/status-bar/HelpSegment.tsx",
+    "slug": "HelpSegment",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/layout/status-bar/LiveTelemetrySegment.tsx",
+    "slug": "LiveTelemetrySegment",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/layout/status-bar/VersionSegment.tsx",
+    "slug": "VersionSegment",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 16,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/layout/StatusBar.tsx",
+    "slug": "StatusBar",
+    "hooks_count": 4,
+    "components_count": 0,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/layout/VehiclePicker.tsx",
+    "slug": "VehiclePicker",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/maps/AnimatedMarker.tsx",
+    "slug": "AnimatedMarker",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/maps/MapTileLayer.tsx",
+    "slug": "MapTileLayer",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/maps/MarkerCluster.tsx",
+    "slug": "MarkerCluster",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/maps/RoutePlayback.tsx",
+    "slug": "RoutePlayback",
+    "hooks_count": 3,
+    "components_count": 3,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/mobile/PullToRefresh.tsx",
+    "slug": "PullToRefresh",
+    "hooks_count": 3,
+    "components_count": 0,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/mobile/SwipeRow.tsx",
+    "slug": "SwipeRow",
+    "hooks_count": 2,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/motion/CarAnimation.tsx",
+    "slug": "CarAnimation",
+    "hooks_count": 2,
+    "components_count": 0,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/motion/FadeIn.tsx",
+    "slug": "FadeIn",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/motion/RouteTransition.tsx",
+    "slug": "RouteTransition",
+    "hooks_count": 2,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/motion/StaggerContainer.tsx",
+    "slug": "StaggerContainer",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/motion/StaggerItem.tsx",
+    "slug": "StaggerItem",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/SignalQueryControls.tsx",
+    "slug": "SignalQueryControls",
+    "hooks_count": 2,
+    "components_count": 0,
+    "titles_count": 6,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/status/ActionItem.tsx",
+    "slug": "ActionItem",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/status/HealthRow.tsx",
+    "slug": "HealthRow",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/status/ResourcesPanel.tsx",
+    "slug": "ResourcesPanel",
+    "hooks_count": 0,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/status/StatusHero.tsx",
+    "slug": "StatusHero",
+    "hooks_count": 0,
+    "components_count": 2,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/status/StickyChipBar.tsx",
+    "slug": "StickyChipBar",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/status/StickyCompactHero.tsx",
+    "slug": "StickyCompactHero",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/status/UptimeHeatmap.tsx",
+    "slug": "UptimeHeatmap",
+    "hooks_count": 0,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/Accordion.tsx",
+    "slug": "Accordion",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/Checkbox.tsx",
+    "slug": "Checkbox",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/CommandPalette.tsx",
+    "slug": "CommandPalette",
+    "hooks_count": 11,
+    "components_count": 2,
+    "titles_count": 29,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/ContextMenu.tsx",
+    "slug": "ContextMenu",
+    "hooks_count": 4,
+    "components_count": 0,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/CopyButton.tsx",
+    "slug": "CopyButton",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/DataTable.tsx",
+    "slug": "DataTable",
+    "hooks_count": 3,
+    "components_count": 0,
+    "titles_count": 10,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/DataTableBulkBar.tsx",
+    "slug": "DataTableBulkBar",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/DataTableColumnMenu.tsx",
+    "slug": "DataTableColumnMenu",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/DataTableColumnsMenu.tsx",
+    "slug": "DataTableColumnsMenu",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/DataTableResizer.tsx",
+    "slug": "DataTableResizer",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/EditableText.tsx",
+    "slug": "EditableText",
+    "hooks_count": 3,
+    "components_count": 0,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/FullscreenButton.tsx",
+    "slug": "FullscreenButton",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/HelpIcon.tsx",
+    "slug": "HelpIcon",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/HelpTooltip.tsx",
+    "slug": "HelpTooltip",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/Input.tsx",
+    "slug": "Input",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/Label.tsx",
+    "slug": "Label",
+    "hooks_count": 1,
+    "components_count": 1,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/Lightbox.tsx",
+    "slug": "Lightbox",
+    "hooks_count": 2,
+    "components_count": 0,
+    "titles_count": 8,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/MaskedValue.tsx",
+    "slug": "MaskedValue",
+    "hooks_count": 2,
+    "components_count": 0,
+    "titles_count": 3,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/Pagination.tsx",
+    "slug": "Pagination",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 9,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/PinButton.tsx",
+    "slug": "PinButton",
+    "hooks_count": 3,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/PrintButton.tsx",
+    "slug": "PrintButton",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 1,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/RangeSlider.tsx",
+    "slug": "RangeSlider",
+    "hooks_count": 2,
+    "components_count": 0,
+    "titles_count": 2,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/Select.tsx",
+    "slug": "Select",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/Slider.tsx",
+    "slug": "Slider",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/Tabs.tsx",
+    "slug": "Tabs",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/ThemePicker.tsx",
+    "slug": "ThemePicker",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/ThemeProvider.tsx",
+    "slug": "ThemeProvider",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/Toggle.tsx",
+    "slug": "Toggle",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/Tooltip.tsx",
+    "slug": "Tooltip",
+    "hooks_count": 1,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/ui/Typography.tsx",
+    "slug": "Typography",
+    "hooks_count": 0,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/vehicles/VehicleHeroCard.tsx",
+    "slug": "VehicleHeroCard",
+    "hooks_count": 2,
+    "components_count": 6,
+    "titles_count": 19,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/vehicles/VehiclePaintPicker.tsx",
+    "slug": "VehiclePaintPicker",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 4,
+    "has_registry": false
+  },
+  {
+    "tier": "shared-meaningful",
+    "web": "components/vehicles/VehicleTwin.tsx",
+    "slug": "VehicleTwin",
+    "hooks_count": 3,
+    "components_count": 1,
+    "titles_count": 0,
+    "has_registry": false
+  },
+  {
+    "tier": "misc-surfaces",
+    "web": "features/onboarding/TourLauncher.tsx",
+    "slug": "TourLauncher",
+    "hooks_count": 2,
+    "components_count": 1,
+    "titles_count": 9,
+    "has_registry": false
+  },
+  {
+    "tier": "misc-surfaces",
+    "web": "lib/globalShortcuts.tsx",
+    "slug": "globalShortcuts",
+    "hooks_count": 2,
+    "components_count": 0,
+    "titles_count": 7,
+    "has_registry": false
+  },
+  {
+    "tier": "misc-surfaces",
+    "web": "store/selectedVehicle.tsx",
+    "slug": "selectedVehicle",
+    "hooks_count": 2,
+    "components_count": 0,
+    "titles_count": 0,
+    "has_registry": false
+  }
+]

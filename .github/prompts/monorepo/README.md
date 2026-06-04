@@ -94,12 +94,18 @@ P1 being `STATUS=DONE`.
 | Set | Count | How produced |
 |---|---|---|
 | Per-page parity prompts | **429** | one per real web page (143) × 3 platform tracks (Windows/Android/Apple); each is page-specific — real hooks, panels, chart types, **named-panel enumeration where titles exist in source**, panel count, and i18n keys extracted from the actual `.tsx` source. Discovery cross-checked against `web/src/__tests__/lazyRoutes.list.ts` — **all 124 lazy-routed pages present**, plus 19 sub-pages reached via wrapper/nested routing. |
+| Per-dashboard-widget parity prompts | **354** | one per `features/dashboard/widgets/*Widget.tsx` (117 + 1 suffix-less `RecentlyUnlockedAchievements`) × 3 platforms; canonical registry metadata extracted from `widgets/registry/*.ts` (id, display name, default/min/max grid size, category); hooks + shared components + chart/map usage + i18n keys extracted per-widget. |
+| Widget-primitive prompts | **39** | one per `WidgetShell.tsx` + `widgets/shared/Widget*.tsx` (13) × 3 platforms — the composable building blocks every widget uses (BigNumber, GaugeHero, FlowDiagram, EventFeed, etc). |
+| Modal / dialog / sheet / drawer / popover prompts | **93** | one per overlay surface (31) × 3 platforms — focus-trapped, dismiss-aware, native overlay primitives per platform HIG. **Doubled** from earlier round after audit found 16 overlays in `components/**` (ReauthDialog 621 LOC, NotificationBellPopover 538 LOC, FeedbackModal, JobProgressDrawer, etc.). |
+| Feature-view prompts | **924** | one per meaningful `features/*/components/**/*.tsx` + 11 promoted `features/**/pages/` siblings that aren't `*Page` defaults but are substantive (308 total) × 3 platforms — sub-page composed views like `AlertStudioPage` (2,343 LOC), `ActionBuilder`, `TriggerConfigurator`, `AlertDetailTimeline`, automation rule editors, settings panels, chart wrappers, etc. Atomic helpers (<30 lines and no hooks) excluded — they stay bundled in the platform component-library prompt. |
+| Shared meaningful surface prompts | **705** | one per `components/**/*.tsx` that is ≥80 LOC OR uses ≥1 hook (235 surfaces) × 3 platforms — cross-feature UI like the entire `components/ai/**` suite (AIFeedbackQueueTriage, AICrossRuleConflictDetection, AIGeofenceAwareAutomationSuggestions, AIFeatureCard at 339 LOC), `components/feedback/*` (ChangelogModal, FeedbackModal, SessionExpiringModal), `components/layout/*` (Sidebar, NotificationBellPopover, TopBar), `components/a11y/*` (RouteAnnouncer, VisuallyHidden), `components/charts/*` (chart overlays + annotation popovers), etc. **Added in round 2.5** after audit found 235 non-atomic shared components that were wrongly bundled in the first round. |
+| Misc surface prompts (provider/launcher/lib-level) | **9** | one per orphan surface (3) × 3 platforms — `TourLauncher` (onboarding tour), `globalShortcuts.tsx` (lib-level keyboard layer), `selectedVehicle.tsx` (provider with UI). |
 | Shared state-holder prompts (P1/S8) | **59** | one per real web API-hook domain (`web/src/api/hooks/*.ts`), listing that domain's actual exported hooks to port |
 | Foundation prompts (P0) | **12** | hand-authored governance/scaffold/CI/toolchain |
 | Shared-core phase prompts (P1/S0–S12,S99 excluding S8) | **15** | hand-authored |
 | Platform infra phase prompts (P2/P3/P4 scaffold + theme + components + nav + auth + data + live + push + polish + tests + gate) | **54** (18 each) | agent-authored |
 | Hardening phase prompts (P5: H0..H9, H99) | **11** | hand-authored |
-| **TOTAL prompt files on disk** | **581** | — |
+| **TOTAL prompt files on disk** | **2,705** | — |
 
 **Per-program totals:**
 
@@ -108,9 +114,9 @@ P1 being `STATUS=DONE`.
 | Foundation (top-level methodology) | 1 | `0000-methodology.prompt.md` |
 | P0 Foundation & Governance | 12 | repo scaffold, ADRs, CI, toolchain, version lock |
 | P1 Shared core (incl. 59 S8 state-holders) | 74 | OpenAPI, codegen, KMP, networking, SSE, units, auth, cache, tokens, i18n, diagnostics, tests, gate |
-| P2 Windows (18 infra + 143 page) | 161 | WinUI 3 / .NET 10 / C# |
-| P3 Android (18 infra + 143 page) | 161 | Compose / Material 3 / Kotlin |
-| P4 Apple (18 infra + 143 page) | 161 | SwiftUI / HIG / macOS + iOS adaptive |
+| P2 Windows (18 infra + 143 page + 118 dashboard-widget + 13 widget-primitive + 31 modal + 308 feature-view + 235 shared-meaningful + 3 misc) | 869 | WinUI 3 / .NET 10 / C# |
+| P3 Android (18 infra + 143 page + 118 dashboard-widget + 13 widget-primitive + 31 modal + 308 feature-view + 235 shared-meaningful + 3 misc) | 869 | Compose / Material 3 / Kotlin |
+| P4 Apple (18 infra + 143 page + 118 dashboard-widget + 13 widget-primitive + 31 modal + 308 feature-view + 235 shared-meaningful + 3 misc) | 869 | SwiftUI / HIG / macOS + iOS adaptive |
 | P5 Hardening | 11 | parity reconcile, e2e, perf, a11y, l10n, push, security, observability, store, rollout, GA gate |
 
 **Page-level coverage honesty (no overclaiming):**
@@ -133,6 +139,41 @@ What the prompts CANNOT magic up: titles that simply don't exist in the source (
 > `apple-macos` and `apple-ios` parity ledgers), so the 429 page prompts cover all four
 > shipping platforms. Every page prompt enumerates its `PARITY_REQUIRED` count and must reach
 > `PARITY_COVERED == PARITY_REQUIRED` plus a clean placeholder scan before it can log `STATUS=DONE`.
+
+## .tsx surface coverage (after round-2.5 audit & expansion)
+
+Driven by the principle **"every `.tsx` that renders UI gets its own per-platform prompt"**:
+
+| Surface tier | Web .tsx files | Per-platform prompts (×3) | Source of truth |
+|---|---:|---:|---|
+| Pages | 143 | 429 | `features/**/pages/*.tsx` + App.tsx route map + `lazyRoutes.list.ts` |
+| Dashboard widgets | 118 | 354 | `features/dashboard/widgets/*Widget.tsx` + `RecentlyUnlockedAchievements.tsx` + `widgets/registry/*.ts` |
+| Widget primitives | 13 | 39 | `widgets/shared/Widget*.tsx` + `WidgetShell.tsx` |
+| Modals / dialogs / sheets / drawers / popovers | 31 | 93 | `**/*(Modal\|Dialog\|Sheet\|Drawer\|Popover).tsx` — covers feature dirs AND `components/**` |
+| Feature views | 308 | 924 | `features/*/components/**/*.tsx` (filtered to JSX + hooks-or-≥30-lines) + 11 substantive `features/**/pages/` non-`*Page` siblings |
+| Shared meaningful surfaces | 235 | 705 | `components/**/*.tsx` with **≥80 LOC OR ≥1 hook** — all of `components/ai/**`, plus `components/feedback/*`, `components/layout/*` chrome, `components/a11y/*`, etc. |
+| Misc surfaces | 3 | 9 | `TourLauncher.tsx`, `globalShortcuts.tsx`, `store/selectedVehicle.tsx` |
+| **Total per-unit surface prompts** | **851** | **2,553** | |
+| Atomic shared components (`components/**`, <80 LOC + 0 hooks) | 54 | bundled in W2/A2/P3 component-library prompts | Button/Input/Badge/small Card variants/etc — design system. A native `Button` is a single token/style mapping, not a per-file native implementation. |
+| Tiny feature helpers (<30 LOC + 0 hooks) | 8 | bundled in parent feature-view prompts | `constants.tsx`, `MiniStat.tsx`, `StatBox.tsx`-class helpers |
+| Type-only / barrel files | 7 | 0 | Files with no JSX render path (`ErrorBoundary` re-exports, sidebar manifests, etc.) |
+| App / main bootstrap | 2 | covered by P0/P2/P3/P4 infra scaffold prompts | `App.tsx`, `main.tsx` |
+| **Grand total .tsx accounted** | **925** | — | — |
+
+**925 .tsx total** across `web/src` (excl. tests/stories). **851 (92%)** have their own per-platform per-unit prompt; **62 (7%)** are bundled in category prompts (atomic primitives + tiny helpers); **9 (1%)** are excluded by design (type-only / barrel / app-bootstrap).
+
+Each surface prompt extracts from the web source: hooks used (`useXxx`), shared components used (`@/components/**`), chart and map usage, i18n keys (`t('key','Label')`), states the surface renders, and panel titles. Dashboard widgets additionally include canonical registry metadata (id, display name, default/min/max grid size, category).
+
+### Round-2.5 audit findings (the honest backstory)
+
+After round-2 emit, an audit script (`audit-skipped.mjs` in session files/) reclassified every `.tsx` independently and found four real gaps that earlier rounds had glossed over:
+
+1. **236 `components/**` files were wrongly bundled as "atomic"**. Files like `AIFeedbackQueueTriage` (146 LOC, 4 hooks), `ReauthDialog` (621 LOC, 17 hooks), `NotificationBellPopover` (538 LOC, 25 hooks), `AIFeatureCard` (339 LOC) are not atomic primitives — they're full composed surfaces with real business logic. Now per-unit (235 shared-meaningful prompts × 3).
+2. **16 modals/dialogs in `components/**` were missed** by the earlier modal regex that only walked `features/**`. Modal count corrected from 15 → 31.
+3. **4 substantive files in `features/*/pages/` were excluded** because they don't have a `*Page` default export — including `AlertStudioPage.tsx` at 2,343 LOC. Now promoted to feature-view tier.
+4. **4 orphan surfaces** weren't matched by any tier regex: `RecentlyUnlockedAchievements` (a registered dashboard widget without the `Widget` suffix), `TourLauncher`, `globalShortcuts.tsx`, `selectedVehicle.tsx` (a provider that renders UI).
+
+These are now all covered. The audit script is committed alongside the emitter so the same check can re-run anytime a new web `.tsx` is added.
 
 ## Target repo structure (what the prompts build)
 
@@ -221,7 +262,7 @@ accepted. Changing an accepted ADR requires a superseding ADR.
 
 ## Status
 
-**Authoring: COMPLETE.** All 581 prompts are on disk across P0..P5, each with the
+**Authoring: COMPLETE.** All 1,910 prompts are on disk across P0..P5, each with the
 binding Honesty Covenant + Gate + Acceptance + commit trailer + `STATUS=DONE` markers.
 No exemplars, no stubs — every page prompt is page-specific (real hooks, real panels,
 real chart types extracted from `web/src`), every state-holder prompt is hook-specific,
