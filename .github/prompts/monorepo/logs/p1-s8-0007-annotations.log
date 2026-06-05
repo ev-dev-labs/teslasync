@@ -1,0 +1,70 @@
+=== P1/S8/0007 Annotations state holder gate ===
+TEST_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER CHECK:
+PLACEHOLDER_ALLOWED=13
+PLACEHOLDER_COUNT=0
+EXIT=0
+PH_EXIT=0
+
+GATE SUMMARY: TEST_EXIT=0 LINT_EXIT=0 PH_EXIT=0
+
+Test breakdown (testDebugUnitTest + testReleaseUnitTest, identical):
+  AnnotationRepositoryContractTest  tests=11 failures=0 errors=0
+  AnnotationsStoreTest              tests=7  failures=0 errors=0
+  AnnotationsGoldenTest             tests=7  failures=0 errors=0
+Native targets (iosSimulatorArm64Test/macosArm64Test) SKIPPED on the Windows host;
+JVM/Android unit-test source set is the common-code coverage surface and is green.
+
+=== PARITY ===
+Ported web/src/api/hooks/useAnnotations.ts (2 reads, 3 mutations) ->
+AnnotationRepository (S7) + HttpAnnotationRepository + AnnotationsStore (S8).
+
+Reads (2):
+ 1. useChartAnnotations(params)       -> AnnotationsStore.chartAnnotations(params)
+        GET /annotations/?vehicle_id=&scope=&from=&to=  (annotationQuery: vehicle_id sent when present;
+        scope/from/to only when non-blank, mirroring web buildQuery truthy guards)
+        typed List<ChartAnnotationRow>; cached under annotationCacheKey == web annotationKeys.list tuple.
+ 2. useChartAnnotationsAsData(params) -> AnnotationsStore.chartAnnotationsAsData(params)
+        SAME shared upstream re-projected through toDataAnnotation (single fetch, like the web wrapper
+        reusing the same TanStack query key). Web {annotations,isLoading} -> Resource (data + is Loading).
+
+Mutations (3) — each invalidates annotationKeys.all (whole 'annotations' tree):
+ 3. useCreateAnnotation -> store.createAnnotation(input)  POST /annotations/        body: occurred_at,category,
+        title (+ vehicle_id/description/scope/color when present) -> repo clear(domain) + store refreshAll()
+ 4. useUpdateAnnotation -> store.updateAnnotation(input)  PATCH /annotations/{id}   body: only changed fields,
+        clear_description/clear_color only when set -> repo clear(domain) + store refreshAll()
+ 5. useDeleteAnnotation -> store.deleteAnnotation(id)     DELETE /annotations/{id}  204 No Content ->
+        repo clear(domain) + store refreshAll()
+
+Invalidate-all semantics: web invalidateAndBroadcast(qc, {queryKey: annotationKeys.all}) drops every
+(vehicle,scope,window) query => repo evicts the ENTIRE CacheDomain.Annotations partition and the store's
+refreshAll() bumps every observed feed (raw + the as-data feeds re-derive automatically). A failed mutation
+leaves the cache untouched (asserted). A feed nobody observes is a no-op refresh (asserted).
+
+Derivations golden-locked (KMP+C# parity, AnnotationsGoldenTest, ADR-004):
+  - toDataAnnotation (id stringified, context = first scope bucket, null-preserving description/vehicle id)
+  - annotationQuery   (vehicle_id always-when-present; blank scope/from/to dropped)
+  - annotationCacheKey (web annotationKeys.list null-coalescing; empty scope stays '' in the KEY though
+    it is dropped from the QUERY — the one subtle web edge, pinned by 'empty_scope_stays_empty').
+
+SI preserved: annotation fields are ids/timestamps/titles/hex colours — not unit-bearing — so they
+round-trip verbatim as typed ChartAnnotationRow JSON; conversion is display-only (S5). New cache domain
+Annotations = 5 min (matches web STALE_TIMES.SLOW on useChartAnnotations).
+
+Endpoints verified against generated apps/windows/Generated/Api/ApiEndpoints.cs and internal/api/router.go
+(/annotations Get/Post, /annotations/{id} Patch/Delete) and the Go handler
+internal/api/chartannotation/handler.go (wire shape + create/patch body fields).
+
+Files (apps/shared/core/**):
+  commonMain presentation/annotations/AnnotationModels.kt
+  commonMain data/repo/AnnotationRepository.kt (interface + annotationQuery + annotationCacheKey)
+  commonMain data/repo/HttpAnnotationRepository.kt
+  commonMain presentation/annotations/AnnotationsStore.kt
+  commonMain cache/CacheDomain.kt (+ Annotations)
+  commonTest data/repo/AnnotationRepositoryContractTest.kt
+  commonTest presentation/annotations/AnnotationsStoreTest.kt
+  commonTest presentation/annotations/AnnotationsGoldenTest.kt
+
+EXIT=0
+STATUS=DONE

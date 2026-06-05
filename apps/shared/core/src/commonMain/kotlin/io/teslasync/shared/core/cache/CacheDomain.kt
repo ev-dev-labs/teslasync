@@ -60,6 +60,13 @@ public enum class CacheDomain(
     // title/body) are plain strings — not display-unit-bearing — so they round-trip verbatim
     // with no SI conversion.
     AlertMessages("alert_messages", 10.minutes),
+
+    // The durable chart-annotation store (`GET /annotations`). The web `useChartAnnotations`
+    // hook reads it with `STALE_TIMES.SLOW` (5 minutes), so the window matches verbatim.
+    // Annotations are user-authored notes (title, hex colour, scope buckets, timestamps) — not
+    // display-unit-bearing — so they round-trip verbatim with no SI conversion. A create/update/
+    // delete invalidates the whole partition (the web hooks invalidate `annotationKeys.all`).
+    Annotations("annotations", 5.minutes),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
