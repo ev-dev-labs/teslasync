@@ -1,0 +1,232 @@
+=== P1/S8/0055 VehiclePhoto gate 2026-06-05T14:52:52.8502871-07:00 ===
+> Task :core:kmpPartiallyResolvedDependenciesChecker
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+
+> Task :core:compileKotlinIosSimulatorArm64
+w: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SettingsBackupRepository.kt:77:19 'val monthNumber: Int' is deprecated. Use the 'month' property instead.
+
+> Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
+> Task :core:iosSimulatorArm64MainKlibrary
+> Task :core:compileTestKotlinIosSimulatorArm64
+> Task :core:computeLocalPackageDependencyInputFiles SKIPPED
+> Task :core:generateSyntheticLinkageSwiftPMImportProjectForCinteropsAndLdDump SKIPPED
+> Task :core:generateUmbrellaPackageIdentifierBasedResolutionForDefault SKIPPED
+> Task :core:fetchUmbrellaPackageIdentifierForDefault SKIPPED
+> Task :core:syncPersistedPackageResolvedToSynthetic SKIPPED
+> Task :core:fetchSyntheticImportProjectPackages SKIPPED
+> Task :core:convertSyntheticImportProjectIntoDefFileIphonesimulator SKIPPED
+> Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
+> Task :core:iosSimulatorArm64Test SKIPPED
+
+> Task :core:compileKotlinMacosArm64
+w: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SettingsBackupRepository.kt:77:19 'val monthNumber: Int' is deprecated. Use the 'month' property instead.
+
+> Task :core:macosArm64ProcessResources NO-SOURCE
+> Task :core:macosArm64MainKlibrary
+> Task :core:compileTestKotlinMacosArm64
+> Task :core:convertSyntheticImportProjectIntoDefFileMacosx SKIPPED
+> Task :core:linkDebugTestMacosArm64 SKIPPED
+> Task :core:macosArm64Test SKIPPED
+> Task :core:preBuild UP-TO-DATE
+> Task :core:preDebugBuild UP-TO-DATE
+> Task :core:generateDebugResValues UP-TO-DATE
+> Task :core:generateDebugResources UP-TO-DATE
+> Task :core:packageDebugResources UP-TO-DATE
+> Task :core:parseDebugLocalResources UP-TO-DATE
+> Task :core:generateDebugRFile UP-TO-DATE
+> Task :core:compileDebugKotlinAndroid UP-TO-DATE
+> Task :core:javaPreCompileDebug UP-TO-DATE
+> Task :core:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:generateDebugUnitTestStubRFile UP-TO-DATE
+> Task :core:compileDebugUnitTestKotlinAndroid UP-TO-DATE
+> Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processDebugJavaRes UP-TO-DATE
+> Task :core:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :core:testDebugUnitTest
+> Task :core:preReleaseBuild UP-TO-DATE
+> Task :core:generateReleaseResValues UP-TO-DATE
+> Task :core:generateReleaseResources UP-TO-DATE
+> Task :core:packageReleaseResources UP-TO-DATE
+> Task :core:parseReleaseLocalResources UP-TO-DATE
+> Task :core:generateReleaseRFile UP-TO-DATE
+> Task :core:javaPreCompileRelease UP-TO-DATE
+> Task :core:preReleaseUnitTestBuild UP-TO-DATE
+> Task :core:generateReleaseUnitTestStubRFile UP-TO-DATE
+> Task :core:javaPreCompileReleaseUnitTest UP-TO-DATE
+
+> Task :core:compileReleaseKotlinAndroid
+w: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SettingsBackupRepository.kt:77:19 'val monthNumber: Int' is deprecated. Use the 'month' property instead.
+
+> Task :core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:processReleaseJavaRes
+> Task :core:bundleLibRuntimeToJarRelease
+> Task :core:bundleLibCompileToJarRelease
+> Task :core:compileReleaseUnitTestKotlinAndroid
+> Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processReleaseUnitTestJavaRes
+> Task :core:testReleaseUnitTest
+> Task :core:allTests NO-SOURCE
+
+[Incubating] Problems report is available at: file:///D:/repos/teslasync/apps/shared/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 1m 37s
+37 actionable tasks: 13 executed, 24 up-to-date
+TEST_EXIT=0
+> Task :core:loadKtlintReporters UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidMainSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidUnitTestSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleMainSourceSet UP-TO-DATE
+> Task :core:ktlintAppleMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
+> Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosMainSourceSet NO-SOURCE
+> Task :core:ktlintIosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosTestSourceSet NO-SOURCE
+> Task :core:ktlintIosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverKotlinScripts UP-TO-DATE
+> Task :core:ktlintKotlinScriptCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverMacosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosMainSourceSet NO-SOURCE
+> Task :core:ktlintMacosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosTestSourceSet NO-SOURCE
+> Task :core:ktlintMacosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeMainSourceSet NO-SOURCE
+> Task :core:ktlintNativeMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
+> Task :core:ktlintNativeTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverCommonMainSourceSet
+
+> Task :core:ktlintCommonMainSourceSetCheck FAILED
+D:\repos\teslasync\apps\shared\core\src\commonMain\kotlin\io\teslasync\shared\core\net\ApiHttpClient.kt:3:1 Imports must be ordered in lexicographic order without any empty lines in-between with "java", "javax", "kotlin" and aliases in the end
+
+> Task :core:runKtlintCheckOverCommonTestSourceSet
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':core:ktlintCommonMainSourceSetCheck'.
+> A failure occurred while executing org.jlleitschuh.gradle.ktlint.worker.ConsoleReportWorkAction
+   > KtLint found code style violations. Please see the following reports:
+     - D:\repos\teslasync\apps\shared\core\build\reports\ktlint\ktlintCommonMainSourceSetCheck\ktlintCommonMainSourceSetCheck.txt
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 18s
+15 actionable tasks: 3 executed, 12 up-to-date
+LINT_EXIT=1
+> Task :core:loadKtlintReporters UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidMainSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidUnitTestSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleMainSourceSet UP-TO-DATE
+> Task :core:ktlintAppleMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
+> Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonTestSourceSet UP-TO-DATE
+> Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosMainSourceSet NO-SOURCE
+> Task :core:ktlintIosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosTestSourceSet NO-SOURCE
+> Task :core:ktlintIosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverKotlinScripts UP-TO-DATE
+> Task :core:ktlintKotlinScriptCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverMacosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosMainSourceSet NO-SOURCE
+> Task :core:ktlintMacosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosTestSourceSet NO-SOURCE
+> Task :core:ktlintMacosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeMainSourceSet NO-SOURCE
+> Task :core:ktlintNativeMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
+> Task :core:ktlintNativeTestSourceSetCheck SKIPPED
+> Task :core:ktlintCommonTestSourceSetCheck
+> Task :core:runKtlintCheckOverCommonMainSourceSet
+> Task :core:ktlintCommonMainSourceSetCheck
+> Task :core:ktlintCheck
+
+BUILD SUCCESSFUL in 12s
+16 actionable tasks: 3 executed, 13 up-to-date
+LINT_EXIT=0
+PH_EXIT=0
+
+=== PARITY ===
+Web source: web/src/api/hooks/useVehiclePhoto.ts -> KMP shared core (VehiclePhotoStore + VehiclePhotoRepository)
+Reads (2 query primitives):
+  [x] useVehiclePhoto        -> store.vehiclePhoto(id)                 GET /vehicles/{id}/photo      key vehicle-photos:{id}  staleTime 60s
+  [x] useUploadVehiclePhoto  -> store.uploadVehiclePhoto(id,bytes...) POST /vehicles/{id}/photo     multipart field "photo"  setQueryData(detail)+invalidate detail+vehicleKeys.detail
+Mutations (1 action):
+  [x] useDeleteVehiclePhoto  -> store.deleteVehiclePhoto(id)          DELETE /vehicles/{id}/photo   setQueryData(detail,{has_photo:false})+invalidate detail+vehicleKeys.detail
+Client-side derivations ported + golden-locked:
+  [x] vehiclePhotoKeys.detail   -> vehiclePhotoCacheKey(id)              ['vehicle-photos', id] -> "vehicle-photos:{id}"
+  [x] validateVehiclePhotoFile  -> validateVehiclePhotoUpload(size,mime) empty/size(8MiB)/mime gates, byte-identical messages, blank-mime allowed
+  [x] vehiclePhotoUrl           -> vehiclePhotoUrl(base,id,size,meta)     null on absent; bare path on missing/unparseable stamp; ?v=<epochMillis> cache-buster
+  [x] VEHICLE_PHOTO_FORM_FIELD / VEHICLE_PHOTO_MAX_BYTES / VEHICLE_PHOTO_ALLOWED_MIME constants mirrored
+All 3 hooks ported (2 reads/queries + 1 mutation). SI preserved (no unit-bearing fields; photo meta is bool/ISO-stamp/paths).
+Cross-domain vehicleKeys.detail(id) invalidation delegated to VehiclePhotoStore.onVehicleChanged (decoupled from Vehicle domain).
+Multipart upload: ApiHttpClient now sends an OutgoingContent body with its own boundary Content-Type (no application/json clobber).
+Golden vectors inlined (KMP); the Windows C# port mirrors these exact rows (ADR-004).
+TEST_EXIT=0
+LINT_EXIT=0
+PH_EXIT=0
+EXIT=0
+STATUS=DONE

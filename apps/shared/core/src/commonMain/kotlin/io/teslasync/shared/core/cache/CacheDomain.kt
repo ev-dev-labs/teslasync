@@ -524,6 +524,18 @@ public enum class CacheDomain(
     // S8 store re-collects that one feed. Payloads are identity/role/url/status strings and ISO
     // stamps — not display-unit-bearing — so they round-trip verbatim with no SI conversion.
     VehicleAccess("vehicle_access", 1.minutes),
+
+    // The per-vehicle photo metadata read-model (`GET /vehicles/{id}/photo`), backing the hero card
+    // + upload control. The web `useVehiclePhoto` hook reads with `staleTime: 60_000`, so the
+    // 1-minute window matches it verbatim and the read needs no per-entry TTL override. Each
+    // vehicle's meta lives under its own key (the web `vehiclePhotoKeys.detail` tuple, prefixed
+    // `vehicle-photos:` so a shared partition never collides), so each caches independently while
+    // logout still clears the whole domain in one call. The two mutations (upload/delete) write the
+    // new meta through that key (the web `setQueryData`) and never evict — the S8 store's feed
+    // refresh drives the cache-then-network refetch, the `invalidateQueries` analogue. The payload
+    // is a bool + an ISO stamp + rendered-path strings — not display-unit-bearing — so it
+    // round-trips verbatim with no SI conversion.
+    VehiclePhoto("vehicle_photo", 1.minutes),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
