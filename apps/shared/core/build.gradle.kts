@@ -59,6 +59,9 @@ kotlin {
             // real dispatcher (expect/actual runBlocking) — virtual-time runners interact
             // badly with the engine's async dispatch and the request-timeout race.
             implementation(libs.ktor.client.mock)
+            // P1/S4 SSE: virtual-clock test dispatcher for deterministic reconnect +
+            // staleness transitions (no real waiting).
+            implementation(libs.kotlinx.coroutines.test)
         }
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)

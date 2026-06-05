@@ -29,6 +29,8 @@ ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "kto
 ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
 # Test-only: in-memory MockEngine (no real network in tests).
 ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
+# Test-only: virtual-time coroutine test scheduler (deterministic SSE reconnect/staleness).
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
 sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
 
 [plugins]

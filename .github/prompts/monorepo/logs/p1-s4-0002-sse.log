@@ -1,0 +1,86 @@
+P1 · S4 · 0002 — SSE live-event client (shared)
+Branch: feature/apps  HEAD: 15114011c
+Host: Windows (android/JVM commonTest runnable; apple native test EXECUTION deferred to macOS CI matrix per ADR-012; apple test source sets CROSS-COMPILE green here).
+
+SURVEY — web SSE contract reproduced (source of truth: internal/api/sse/handler.go; web/src/hooks/useRealtimeEvents.ts, web/src/hooks/useSSE.ts, web/src/hooks/useVehicleLive.ts, web/src/lib/sseManager.ts, web/src/api/sseClient.ts)
+  Endpoint: GET /api/v1/events  (text/event-stream)
+  Named server events -> sealed LiveEvent taxonomy:
+    connected            {client_id}                                  -> LiveEvent.Connected
+    heartbeat            {time}            (server ticks every 30s)    -> LiveEvent.Heartbeat
+    vehicle_update       batch signal/state JSON object               -> LiveEvent.VehicleUpdate
+    alert                JSON object                                  -> LiveEvent.Alert
+    export_status        JSON object                                  -> LiveEvent.ExportStatus
+    achievement_unlocked JSON object                                  -> LiveEvent.AchievementUnlocked
+    signal_change        typed envelope {vehicle_id,field,kind,value,ts} -> LiveEvent.Signal(SignalEnvelope)
+    (any other named/unnamed frame)                                   -> LiveEvent.Unknown(event,data)
+  Client-synthetic 'disconnected' is NOT a LiveEvent; it is modeled as Connection state.
+  Signal kind/value coercion mirrors web/src/api/sseClient.ts (long-form ValueKind names + integer
+  iota 0=unknown,1=string,2=bool,3/4/7=int,5/6=float,9=time -> compact SignalKind; value -> SignalValue).
+  Connection state machine (StateFlow<Connection>): Connecting / Open / Reconnecting / Stale / Closed.
+  Staleness: >2 min without event/heartbeat => Stale (ADR-013), state-only (stream NOT dropped).
+
+SCOPE DELIVERED (apps/shared/core/src/commonMain/.../net/sse):
+  LiveEvent.kt        Connection enum; sealed LiveEvent (Connected|Heartbeat|VehicleUpdate|Alert|
+                      ExportStatus|AchievementUnlocked|Signal|Unknown, each with override val id);
+                      SignalKind enum; sealed SignalValue (Number|String|Bool|Time|Null); SignalEnvelope
+  SseFrame.kt         SseFrame(event/data/id/retry) + SseFrameParser.feed(chunk) (cross-chunk buffer,
+                      comment lines ignored, multi-data joined with \n, \r\n tolerated, single leading
+                      space stripped)
+  SseDecode.kt        sseJson lenient; decodeEvent(frame)->LiveEvent (never null, degrades to Unknown);
+                      decodeEnvelope(JsonObject)->SignalEnvelope?; kind/value tables mirror sseClient.ts
+  SseTransport.kt     SseRequest(path,lastEventId) + SseTransport fun-interface open(req):Flow<String>
+  SseClient.kt        SseClient + SseConfig + SseClientBuilder DSL + LiveSubscription(events,connection)
+                      + factory; subscribe() = channelFlow + watchdog; runConnectionLoop (reconnect/
+                      backoff/Last-Event-ID resume); runStalenessWatchdog; backoffDelay (exp + jitter, cap)
+  KtorSseTransport.kt production transport streaming text/event-stream (prepareGet/execute/bodyAsChannel),
+                      HttpTimeout socket/request = Long.MAX_VALUE; factory KtorSseTransport(baseUrl,token,engine)
+
+Tests (commonTest/.../net/sse):  FakeSseTransport (scriptable SseStep Emit/Wait/Fail/Complete/Hang; tracks
+  opens + lastEventId + activeConnections) + virtual clock (kotlinx-coroutines-test runTest/currentTime).
+  SseFrameParserTest (9): single/multi-data join, id/retry/event fields, comment ignore, cross-chunk split,
+    \r\n tolerance, leading-space strip, blank-line dispatch.
+  SseDecodeTest (9): each named event -> typed; signal envelope kind/value coercion (string/bool/int/float/
+    time/null); long-form + integer kind tables; malformed -> Unknown/Null degrade.
+  SseClientTest (7): emitsTypedEventsAndReportsOpen; reconnectsWithLastEventIdAfterServerClose;
+    marksStaleAfterFreshnessWindowWithoutDropping; recoversFromStaleWhenANewMessageArrives;
+    cancellingTheCollectorClosesTheTransport; retriesWithCappedExponentialBackoff;
+    stopsAtClosedWhenReconnectDisabled.
+  Real network: NONE (FakeSseTransport only). Virtual clock only (no wall-clock sleeps).
+
+NOTE (scope): added libs.kotlinx.coroutines.test to apps/shared/gradle/libs.versions.toml (one level above
+  the prompt's apps/shared/core/** allow-list) — required for the virtual-clock test mandate. Build wiring
+  added to apps/shared/core/build.gradle.kts commonTest. No production-source change outside net/sse.
+
+== GATE: gradlew :core:allTests ==
+> Task :core:testDebugUnitTest
+> Task :core:testReleaseUnitTest
+> Task :core:allTests NO-SOURCE
+BUILD SUCCESSFUL
+  net.sse suites: SseFrameParserTest=9, SseDecodeTest=9, SseClientTest=7  (25 sse tests, all green;
+  full :core debug unit suite 55 tests green; apple test source sets cross-compile green, execution
+  deferred to macOS per ADR-012).
+TEST_EXIT=0
+
+== GATE: gradlew :core:ktlintCheck ==
+> Task :core:ktlintCheck
+BUILD SUCCESSFUL
+LINT_EXIT=0
+
+== GATE: check-placeholders.ps1 -Path apps/shared/core -Language kotlin ==
+PLACEHOLDER_ALLOWED=1   (SseDecode.kt:157 stdlib String.toDoubleOrNull numeric coercion — false-positive
+                         substring "toDo" inside .toDoubleOrNull(), opted out with reason per the gate's
+                         designed // parity:allow mechanism; genuine stdlib call, not a stub)
+PLACEHOLDER_COUNT=0
+PH_EXIT=0
+
+ACCEPTANCE CRITERIA
+  [x] Event taxonomy matches the web SSE contract (enumerated in SURVEY above; sealed LiveEvent).
+  [x] Reconnect resumes with Last-Event-ID; staleness marks (not drops); cancellation closes the stream.
+  [x] Tests use fake transport + virtual clock; ktlint + placeholder clean.
+  [x] EXIT=0 / STATUS=DONE.
+
+TEST_EXIT=0
+LINT_EXIT=0
+PH_EXIT=0
+EXIT=0
+STATUS=DONE
