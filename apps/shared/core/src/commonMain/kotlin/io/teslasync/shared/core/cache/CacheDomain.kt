@@ -355,6 +355,20 @@ public enum class CacheDomain(
     // they round-trip verbatim with no SI conversion; the public key is cached as the derived
     // `{key}` wrapper (the web `publicKey || null`, with 404/"not configured" ⇒ null).
     Push("push", 1.minutes),
+
+    // The RBAC admin matrix (`GET /admin/rbac/matrix`). The web `useRbacMatrix` hook reads it with
+    // a 30-second `staleTime` and never polls — the matrix only changes through an explicit admin
+    // edit — so the 30-second window matches verbatim. The single document (roles, permissions,
+    // categories, the role×permission grant map, the caller's effective grants, the caller's roles,
+    // the groups-header name) is cached under one key; an open-mode `501 AUTH_MODE_OPEN` is mapped to
+    // the open sentinel `{ "mode": "open" }` and cached as a successful no-op (the web 501 →
+    // `{ mode: 'open' }` normalisation), never an error. Payloads are plain identity/boolean data —
+    // not display-unit-bearing — so they round-trip verbatim with no SI conversion. The
+    // upsert-cells mutation has no cache interaction here; invalidation is the S8 store's targeted
+    // refresh (the web `invalidateQueries(rbacMatrixKeys.matrix())` analogue), and `cacheThenNetwork`
+    // always hits the network on refresh so no stale value is ever served as fresh while the
+    // last-known matrix stays visible during the reload.
+    Rbac("rbac", 30.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
