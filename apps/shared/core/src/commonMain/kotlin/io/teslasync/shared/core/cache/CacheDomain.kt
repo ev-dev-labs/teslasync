@@ -475,6 +475,21 @@ public enum class CacheDomain(
     // booleans, counts and ISO stamps — not display-unit-bearing — so they round-trip verbatim
     // with no SI conversion.
     Totp("totp", 30.seconds),
+
+    // The trip-log read-models (`GET /trips` list, `GET /trips/{id}` detail), backing the Trips
+    // list page, the trip detail page, and the dashboard/sharing trip widgets. The web `useTrips`/
+    // `useTrip` hooks declare no explicit `staleTime`, so they inherit the QueryClient default (60s,
+    // web/src/api/queryClient.ts); the 1-minute window matches that verbatim. The two reads live in
+    // one partition under distinct keys (the web `tripKeys` tuples: the list keyed by its params
+    // object, the detail by id), so each caches independently while logout clears the whole domain in
+    // one call. The list read applies `safeArray` (the web `select: safeArray`) once at the data
+    // layer. The web hook file declares no mutations, so the partition has no invalidation surface
+    // (the family refresh is the S8 store's targeted re-collection of the `['trips']` family, the web
+    // `invalidateQueries` analogue). Payloads carry SI columns (`total_distance_m`, `total_energy_wh`,
+    // `total_duration_s`) and round-trip verbatim — display conversion is the render boundary's job
+    // (S5), never this layer's. The web `useTrip` 404 (the backend registers only `GET /trips`) is a
+    // render-layer error-path concern and surfaces through [Resource.Error] unchanged.
+    Trips("trips", 1.minutes),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
