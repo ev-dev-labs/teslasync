@@ -1,0 +1,39 @@
+=== P1/S8/0017 — DLQ shared state holder gate ===
+
+Output:  apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/dlq/DlqStore.kt
+         apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/DlqRepository.kt
+         apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpDlqRepository.kt
+         apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/cache/CacheDomain.kt (added Dlq, 15s TTL)
+Tests:   apps/shared/core/src/commonTest/.../data/repo/DlqRepositoryContractTest.kt        (7)
+         apps/shared/core/src/commonTest/.../presentation/dlq/DlqStoreTest.kt              (7)
+         apps/shared/core/src/commonTest/.../presentation/dlq/DlqDerivationGoldenTest.kt   (2)
+Web src:  web/src/api/hooks/useDLQ.ts
+
+=== GATE ===
+:core:allTests        BUILD SUCCESSFUL    TEST_EXIT=0
+:core:ktlintCheck     BUILD SUCCESSFUL    LINT_EXIT=0
+check-placeholders    PLACEHOLDER_COUNT=0 PH_EXIT=0
+
+DLQ test results (testDebugUnitTest):
+  DlqRepositoryContractTest   tests=7 failures=0 errors=0 skipped=0
+  DlqStoreTest                tests=7 failures=0 errors=0 skipped=0
+  DlqDerivationGoldenTest     tests=2 failures=0 errors=0 skipped=0
+
+=== PARITY === (all 4 web useDLQ hooks ported, SI preserved)
+  [1] useDLQList   -> DlqStore.list()           -> GET /system/dlq
+                      staleTime MODERATE(15s)/refetch STANDARD(30s) -> Dlq domain 15s TTL (S7)
+  [2] useDLQEntry  -> DlqStore.entry(id,enabled) -> GET /system/dlq/{id}
+                      staleTime STATIC; enabled gate `enabled && numericId>0` reproduced
+                      (disabled => stable non-fetching Loading); numericId guard = dlqEntryNumericId (golden)
+  [3] useDLQAudit  -> DlqStore.audit(dlqId,limit)-> scoped GET /system/dlq/{id}/audit?limit
+                      OR global GET /system/dlq/audit?limit; scoped/path = dlqAuditScoped/dlqAuditPath (golden);
+                      default limit 50 (PAGINATION.DEFAULT_LIMIT); distinct query keys per (scope,limit)
+  [4] useDLQReplay -> DlqStore.replay(id)        -> POST /system/dlq/{id}/replay
+                      invalidateQueries(['system','dlq']) => HttpDlqRepository clears whole Dlq partition;
+                      DlqStore refreshes EVERY observed feed; 403/sudo surfaced via Result failure
+Mutations: 1 (replay). Reads emit cache->network (ADR-013). Values SI; conversion display-only (S5).
+Golden vectors (DlqDerivationGoldenTest, inlined, language-neutral) lock entry-id guard + audit scoping
+for KMP+C# parity (ADR-004).
+
+EXIT=0
+STATUS=DONE

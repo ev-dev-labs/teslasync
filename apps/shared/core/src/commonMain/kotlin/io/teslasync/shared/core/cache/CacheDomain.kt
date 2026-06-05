@@ -143,6 +143,21 @@ public enum class CacheDomain(
     // `dashboardLayoutLibraryKeys.all`). The `layout` field is an opaque SavedDashboard JSON blob
     // round-tripped verbatim — not display-unit-bearing — so there is no SI conversion here.
     DashboardLayouts("dashboard_layouts", 5.minutes),
+
+    // The dead-letter-queue inspector feeds (`GET /system/dlq`, `/system/dlq/{id}`,
+    // `/system/dlq/audit`, `/system/dlq/{id}/audit`). The web `useDLQ` hooks read the list and
+    // audit feeds with `STALE_TIMES.MODERATE` (15s) and poll them on `INTERVALS.STANDARD` (30s);
+    // the stored single entry uses `STALE_TIMES.STATIC` (never stale — a DLQ row is immutable once
+    // written). A single partition window cannot honour both, so the tighter 15-second bound is
+    // used — the conservative choice, which only ever flags a value stale *sooner* than the web
+    // would (the static entry), never later, so nothing immutable is shown fresh that the web
+    // considers stale. The per-feed refetch cadence is an S8/UI concern (the web `staleTime`/
+    // `refetchInterval` gate the freshness flag, not whether the cache-then-network refresh runs).
+    // Payloads are DLQ rows (topics, error reasons, base64 inner payloads, replay-audit rows) — not
+    // display-unit-bearing — so they round-trip verbatim with no SI conversion. The replay mutation
+    // (web `useDLQReplay`) invalidates the whole `['system','dlq']` prefix, so it clears this entire
+    // partition (the `invalidateQueries(['system','dlq'])` analogue).
+    Dlq("dlq", 15.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
