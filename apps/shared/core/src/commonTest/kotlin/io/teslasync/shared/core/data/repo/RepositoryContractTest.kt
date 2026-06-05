@@ -71,9 +71,9 @@ class RepositoryContractTest {
         }
 
     @Test
-    fun energyHitsAnalyticsEnergy() =
+    fun energySummaryHitsAnalyticsEnergy() =
         runTestBlocking {
-            val url = capture("[]") { EnergyRepository(it, newTestCache().store).summary() }
+            val url = capture("[]") { EnergySummaryRepository(it, newTestCache().store).summary() }
             assertEquals("/api/v1/analytics/energy", url.encodedPath)
         }
 

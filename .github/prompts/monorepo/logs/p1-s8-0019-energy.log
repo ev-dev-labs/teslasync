@@ -1,0 +1,78 @@
+P1/S8/0019 — Energy state holder (KMP parity with web useEnergy)
+
+== GATE ==
+Gradle root: apps/shared (module :core); wrapper at apps/shared/gradlew.
+Host: Windows — Kotlin/Native Apple targets (iosArm64, iosSimulatorArm64,
+macosArm64) cannot be compiled/linked on this host, so the `:core:allTests`
+aggregate (which links Apple test binaries) is not executable here. The
+runnable subset that exercises ALL commonMain + commonTest code on the JVM is
+`:core:testDebugUnitTest` (Android local unit test = common tests on JVM).
+ktlint + placeholder gates run host-agnostic and are unaffected.
+
+./gradlew :core:testDebugUnitTest  -> BUILD SUCCESSFUL
+TEST_EXIT=0
+  Energy test classes executed (all green):
+    - data.repo.HttpEnergyRepositoryTest .......... 24 tests (URL/method/param contract: 17 reads + 7 mutations)
+    - presentation.energy.EnergyGoldenTest ........ 13 tests (query/key/family derivations)
+    - presentation.energy.EnergyStoreTest ......... 9 tests (cache->network reads + mutation invalidation)
+
+./gradlew :core:ktlintCheck  -> BUILD SUCCESSFUL
+LINT_EXIT=0
+  (auto-formatted via :core:ktlintFormat; commonMain + commonTest clean)
+
+./apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
+  PLACEHOLDER_ALLOWED=13
+  PLACEHOLDER_COUNT=0
+PH_EXIT=0
+
+== NAMING ==
+Pre-existing concrete `EnergyRepository` (S7 stub: summary() -> /analytics/energy,
+NOT a useEnergy hook) renamed to `EnergySummaryRepository` to free the canonical
+name for the hook-domain interface (parallel to DriveRepository vs DrivingRepository).
+RepositoryContractTest reference updated.
+
+== DELIVERABLES ==
+commonMain:
+  data/repo/EnergyRepository.kt        interface + snake_case query builders + cache/feed keys + family helpers
+  data/repo/HttpEnergyRepository.kt    HTTP+cache impl (verbatim-SI JsonElement; safeArray on the 6 list reads)
+  data/repo/EnergySummaryRepository.kt renamed concrete S7 stub
+  presentation/energy/EnergyStore.kt   StateFlow<Resource<JsonElement>> reads + suspend Result mutations
+commonTest:
+  presentation/energy/EnergyStoreTest.kt
+  presentation/energy/EnergyGoldenTest.kt
+  data/repo/HttpEnergyRepositoryTest.kt
+
+== PARITY ==
+All 24 web hooks from web/src/api/hooks/useEnergy.ts ported (SI preserved; conversion display-only/S5).
+
+Reads (17) -> EnergyStore feed + HttpEnergyRepository method + endpoint (no /api/v1 prefix).
+Endpoints verified byte-for-byte against web/src/api/hooks/useEnergy.ts:
+   1. useEnergyStats                  -> energyStats()                  GET /vehicles/{vehicleId}/energy?days=
+   2. useBatteryHealth                -> batteryHealth()                GET /vehicles/{vehicleId}/battery[?as_of=]
+   3. useBatteryCells                 -> batteryCells()                 GET /vehicles/{vehicleId}/battery/cells
+   4. useBatteryHealthAnalytics       -> batteryHealthAnalytics()       GET /analytics/battery-health?vehicle_id=
+   5. useBatteryDegradation           -> batteryDegradation()           GET /analytics/battery-degradation?vehicle_id=
+   6. useEnergyFlow                   -> energyFlow()                   GET /vehicles/{vehicleId}/energy/flow
+   7. useVampireDrainStats            -> vampireDrainStats()            GET /vampire-drain/stats?vehicle_id=
+   8. useVampireDrainEvents           -> vampireDrainEvents()           GET /vampire-drain?vehicle_id=&limit=                    (safeArray)
+   9. useProjectedRange               -> projectedRange()               GET /vehicles/{vehicleId}/battery/projected-range
+  10. useSleepEfficiency              -> sleepEfficiency()              GET /analytics/sleep?vehicle_id=&days=[&start=&end=]
+  11. useTeslaEnergySites             -> teslaEnergySites()             GET /tesla/energy-sites                                  (safeArray)
+  12. useTeslaEnergySiteInfo          -> teslaEnergySiteInfo(siteId)    GET /tesla/energy-sites/{siteId}/site-info
+  13. useTeslaEnergyHistory           -> teslaEnergyHistory()           GET /tesla/energy-sites/{siteId}/energy-history?period=[&since=&until=]   (safeArray)
+  14. useTeslaBackupHistory           -> teslaBackupHistory()           GET /tesla/energy-sites/{siteId}/backup-history[?since=&until=]           (safeArray)
+  15. useTeslaWCChargingHistory       -> teslaWcChargingHistory()       GET /tesla/energy-sites/{siteId}/charging-history[?since=&until=]         (safeArray)
+  16. useTeslaEnergyLiveStatus        -> teslaEnergyLiveStatus(siteId)  GET /tesla/energy-sites/{siteId}/live-status
+  17. useTeslaEnergyLiveStatusHistory -> teslaEnergyLiveStatusHistory() GET /tesla/energy-sites/{siteId}/live-status/history[?since=&until=&limit=]   (safeArray)
+
+Mutations (7) -> EnergyStore suspend Result + endpoint (POST) + invalidated cache family/key:
+   1. useRefreshTeslaEnergySites          -> refreshTeslaEnergySites()            POST /tesla/energy-sites/refresh                              -> family tesla-energy-sites
+   2. useRefreshTeslaEnergySiteInfo       -> refreshTeslaEnergySiteInfo(siteId)   POST /tesla/energy-sites/{siteId}/site-info/refresh           -> key tesla-site-info|{siteId}
+   3. useUpdateTOUSettings                -> updateTouSettings(siteId, body)      POST /tesla/energy-sites/{siteId}/tou-settings (JSON body)    -> key tesla-site-info|{siteId}
+   4. useRefreshTeslaEnergyHistory        -> refreshTeslaEnergyHistory(...)       POST /tesla/energy-sites/{siteId}/energy-history/refresh?period=[&start_date=&end_date=&time_zone=]   -> family tesla-energy-history
+   5. useRefreshTeslaBackupHistory        -> refreshTeslaBackupHistory(...)       POST /tesla/energy-sites/{siteId}/backup-history/refresh?period=[&start_date=&end_date=&time_zone=]    -> family tesla-backup-history
+   6. useRefreshTeslaWCChargingHistory    -> refreshTeslaWcChargingHistory(...)   POST /tesla/energy-sites/{siteId}/charging-history/refresh[?start_date=&end_date=&time_zone=]            -> family tesla-wc-charging-history
+   7. useRefreshTeslaEnergyLiveStatus     -> refreshTeslaEnergyLiveStatus(siteId) POST /tesla/energy-sites/{siteId}/live-status/refresh         -> families tesla-live-status + tesla-live-status-history
+
+EXIT=0
+STATUS=DONE
