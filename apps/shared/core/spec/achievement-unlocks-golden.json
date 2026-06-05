@@ -1,0 +1,74 @@
+[
+  {
+    "name": "newest_first_ordering",
+    "max_recent": 25,
+    "ops": [
+      { "op": "enqueue", "id": "a" },
+      { "op": "enqueue", "id": "b" },
+      { "op": "enqueue", "id": "c" }
+    ],
+    "expected_ids": ["c", "b", "a"]
+  },
+  {
+    "name": "dedup_keeps_original_ignores_rebroadcast",
+    "max_recent": 25,
+    "ops": [
+      { "op": "enqueue", "id": "a" },
+      { "op": "enqueue", "id": "b" },
+      { "op": "enqueue", "id": "a" }
+    ],
+    "expected_ids": ["b", "a"]
+  },
+  {
+    "name": "bounded_drops_oldest",
+    "max_recent": 3,
+    "ops": [
+      { "op": "enqueue", "id": "a" },
+      { "op": "enqueue", "id": "b" },
+      { "op": "enqueue", "id": "c" },
+      { "op": "enqueue", "id": "d" }
+    ],
+    "expected_ids": ["d", "c", "b"]
+  },
+  {
+    "name": "dismiss_removes_entry",
+    "max_recent": 25,
+    "ops": [
+      { "op": "enqueue", "id": "a" },
+      { "op": "enqueue", "id": "b" },
+      { "op": "enqueue", "id": "c" },
+      { "op": "dismiss", "id": "b" }
+    ],
+    "expected_ids": ["c", "a"]
+  },
+  {
+    "name": "dismiss_absent_is_noop",
+    "max_recent": 25,
+    "ops": [
+      { "op": "enqueue", "id": "a" },
+      { "op": "dismiss", "id": "z" }
+    ],
+    "expected_ids": ["a"]
+  },
+  {
+    "name": "dedup_then_bound",
+    "max_recent": 2,
+    "ops": [
+      { "op": "enqueue", "id": "a" },
+      { "op": "enqueue", "id": "b" },
+      { "op": "enqueue", "id": "a" },
+      { "op": "enqueue", "id": "c" }
+    ],
+    "expected_ids": ["c", "b"]
+  },
+  {
+    "name": "dismiss_then_readd_allowed",
+    "max_recent": 25,
+    "ops": [
+      { "op": "enqueue", "id": "a" },
+      { "op": "dismiss", "id": "a" },
+      { "op": "enqueue", "id": "a" }
+    ],
+    "expected_ids": ["a"]
+  }
+]
