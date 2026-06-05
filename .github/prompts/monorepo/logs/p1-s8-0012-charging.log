@@ -1,0 +1,68 @@
+P1 · S8 · 0012 — Charging shared state holder(s)
+================================================
+
+Goal: port web hook domain web/src/api/hooks/useCharging.ts (16 hooks: 11 reads +
+5 mutations) to UI-free KMP shared-core state holders at web-hook parity — same
+endpoints, same snake_case params, same query keys/caching intent, same derivations,
+SI preserved (conversion is display-only, S5). Delegation FORBIDDEN — implemented in
+this session.
+
+Artifacts produced (apps/shared/core):
+  commonMain:
+    - presentation/charging/ChargingModels.kt               (OptimizeChargeInput,
+                                                              ApplyScheduleInput — snake_case bodies)
+    - data/repo/ChargingRepository.kt                       (old concrete S7 class -> interface;
+                                                              16 methods + query/key/family helpers)
+    - data/repo/HttpChargingRepository.kt                   (HTTP impl over CachingRepository<JsonElement>,
+                                                              .decode() per shape)
+    - presentation/charging/ChargingStore.kt                (S8 state holder; family-targeted refresh)
+  commonTest:
+    - presentation/charging/ChargingStoreTest.kt            (fake-repo behaviour, 8 tests)
+    - data/repo/ChargingRepositoryContractTest.kt           (endpoint/method/body/cache, 21 tests)
+    - presentation/charging/ChargingGoldenTest.kt           (golden vectors, 9 tests)
+    - data/repo/RepositoryContractTest.kt                   (charging line -> HttpChargingRepository)
+
+=== PARITY ===
+Reads (11) — cache→network feed, web query key → S7 cache key, params snake_case:
+  [x] useChargingSessions          -> GET /charging-sessions?vehicle_id=N         key charging-sessions|vehicle|N   decode List<ChargingSession> (safeArray)
+  [x] useChargingSession           -> GET /charging/{id}                          key charging-sessions|{id}        decode ChargingSession
+  [x] useChargingSessionDetail     -> GET /charging/{id}                          key charging-session|{id}         decode ChargingSession (refetchInterval = UI, not ported)
+  [x] useChargeTelemetry           -> GET /charging/{id}/telemetry                key charge-telemetry|{id}         decode List<ChargeTelemetryReading> (safeArray)
+  [x] useChargingSessionsPaginated -> GET /charging?limit&offset[&vehicle_id…]    key charging|limit|offset|…       decode List<ChargingSession> (safeArray)
+  [x] useCostForecast              -> GET /analytics/cost-forecast?vin&months=6   key cost-forecast|vin|months      raw JsonElement
+  [x] useChargingOptimizer         -> GET /analytics/charging-optimizer?vin       key charging-optimizer|vin        raw JsonElement
+  [x] useTeslaChargingHistory      -> GET /tesla/charging/history[?vin]           key tesla-charging-history[|vin]  raw JsonElement
+  [x] useTeslaChargingSessions     -> GET /tesla/charging/sessions[?vin]          key tesla-charging-sessions[|vin] raw JsonElement
+  [x] useChargePlans               -> GET /charge-planner/history?vehicle_id=N     key charge-plans|N                raw JsonElement (safeArray)
+  [x] useRatePlans                 -> GET /charge-planner/rate-plans              key charge-planner-rate-plans     raw JsonElement (safeArray)
+Mutations (5) — suspend Result<JsonElement> (verbatim SI), store refreshes EXACTLY the
+web invalidateQueries set (TanStack prefix semantics, '|' boundary-safe):
+  [x] useRefreshTeslaChargingHistory  -> POST /tesla/charging/history/refresh {vin?,start_time?}  invalidate -> tesla-charging-history (family)
+  [x] useRefreshTeslaChargingSessions -> POST /tesla/charging/sessions/refresh {vin?,date_from?,date_to?} invalidate -> tesla-charging-sessions (family)
+  [x] useOptimizeCharge               -> POST /charge-planner/optimize {OptimizeChargeInput}       invalidate -> none (web does not invalidate)
+  [x] useApplySchedule                -> POST /charge-planner/apply {ApplyScheduleInput}           invalidate -> charge-plans (family; sibling rate-plans untouched)
+  [x] useBulkDeleteCharging           -> DELETE /charging/bulk {ids:[…]}                            invalidate -> charging-sessions (family; byVehicle + string-id detail, NOT charging-session|id, NOT charging|…)
+
+All 16 ported. SI preserved — mutation responses returned verbatim as JsonElement;
+request bodies keep their established snake_case contract names (battery_capacity_kwh,
+charger_voltage) which are request knobs, not stored unit-suffixed DB/Go fields, so the
+Phase-48 SI-canonical rule (DB columns / Go struct fields) does not apply. Conversion is
+display-only (S5). The request() client auto-adds /api/v1; hooks carry no double prefix.
+
+=== GATE ===
+./gradlew :core:allTests
+  testDebugUnitTest + testReleaseUnitTest: BUILD SUCCESSFUL in 33s
+  Charging suites: ChargingStoreTest=8, ChargingRepositoryContractTest=21,
+                   ChargingGoldenTest=9  (38 tests, failures=0 errors=0 skipped=0)
+TEST_EXIT=0
+
+./gradlew :core:ktlintCheck
+  ktlintCommonMainSourceSetCheck + ktlintCommonTestSourceSetCheck: BUILD SUCCESSFUL
+LINT_EXIT=0
+
+apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
+  PLACEHOLDER_ALLOWED=13  PLACEHOLDER_COUNT=0
+PH_EXIT=0
+
+EXIT=0
+STATUS=DONE

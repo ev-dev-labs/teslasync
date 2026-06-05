@@ -65,7 +65,7 @@ class RepositoryContractTest {
     @Test
     fun chargingHitsChargingSessionsWithVehicleIdQuery() =
         runTestBlocking {
-            val url = capture("[]") { ChargingRepository(it, newTestCache().store).sessions(7) }
+            val url = capture("[]") { HttpChargingRepository(it, newTestCache().store).sessions(7) }
             assertEquals("/api/v1/charging-sessions", url.encodedPath)
             assertEquals("7", url.parameters["vehicle_id"])
         }
