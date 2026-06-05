@@ -490,6 +490,24 @@ public enum class CacheDomain(
     // (S5), never this layer's. The web `useTrip` 404 (the backend registers only `GET /trips`) is a
     // render-layer error-path concern and surfaces through [Resource.Error] unchanged.
     Trips("trips", 1.minutes),
+
+    // The per-user account read-models (`GET /users/me`, `GET /users/me/activity`, and the four
+    // account-level Tesla feeds `GET /tesla/user/{feature-config,region,orders,profile}`), backing
+    // the Account / Settings → Profile surfaces. The web `useUser` hooks declare a SPREAD of
+    // `staleTime`s — `useCurrentUser` default-0, `useMyRecentActivity` `STALE_TIMES.STANDARD` (60s),
+    // `useTeslaFeatureConfig` `STALE_TIMES.EXTENDED` (10m), `useTeslaUserRegion` `STALE_TIMES.STATIC`
+    // (never), `useTeslaUserOrders`/`useTeslaUserProfile` `STALE_TIMES.SLOW` (5m) — so each read
+    // overrides this 5-minute domain default with its own web-faithful per-entry TTL rather than a
+    // single lossy window. The six reads live in one partition under distinct keys (the web
+    // `userKeys` tuples; the activity feed keyed by its params object), so each caches independently
+    // while logout clears the whole domain in one call. The five mutations (`PUT /users/me` and the
+    // four `POST .../refresh` actions) call the API directly and never evict the cache — the S8
+    // store re-collects exactly the feed each web hook invalidates (`useUpdateUser` → the `me` feed
+    // via `setQueryData`; each refresh → its matching Tesla feed via `invalidateQueries`), the web
+    // keep-prior-data-during-refetch behaviour. Payloads are account identity / order / region
+    // strings and ISO stamps — not display-unit-bearing telemetry — so they round-trip verbatim with
+    // no SI conversion; display formatting is the render boundary's job (S5).
+    User("user", 5.minutes),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
