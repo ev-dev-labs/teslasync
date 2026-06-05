@@ -1,0 +1,94 @@
+P1 · S8 · 0031 — NotificationChannels shared state holder
+=========================================================
+Web source : web/src/api/hooks/useNotificationChannels.ts
+Output     : apps/shared/core/src/commonMain/.../presentation/notificationchannels/**
+             apps/shared/core/src/commonMain/.../data/repo/NotificationChannelsRepository.kt
+             apps/shared/core/src/commonMain/.../data/repo/HttpNotificationChannelsRepository.kt
+             apps/shared/core/src/commonTest/.../presentation/notificationchannels/**
+             apps/shared/core/src/commonTest/.../data/repo/NotificationChannelsRepositoryContractTest.kt
+             apps/shared/core/spec/notification-channels-golden.json   (shared C#/KMP vectors)
+
+Files created
+-------------
+commonMain/presentation/notificationchannels/NotificationChannelModels.kt
+  - NotificationChannel sealed union (@JsonClassDiscriminator("kind"); discord/slack/telegram/
+    email/webhook/ntfy/pushover) — the web NotificationChannel union, kind consumed as the
+    discriminator (no colliding `kind` property; webhook filter is `is NotificationChannel.Webhook`).
+  - WebhookTestResult / WebhookSignaturePreviewRequest / WebhookSignaturePreviewResult DTOs.
+commonMain/presentation/notificationchannels/NotificationChannelsStore.kt  (S8 holder)
+commonMain/data/repo/NotificationChannelsRepository.kt   (S7 port + channelsKey/filter/body derivations)
+commonMain/data/repo/HttpNotificationChannelsRepository.kt (Ktor + cache impl)
+commonTest/presentation/notificationchannels/NotificationChannelsStoreTest.kt
+commonTest/presentation/notificationchannels/NotificationChannelsGoldenTest.kt
+commonTest/data/repo/NotificationChannelsRepositoryContractTest.kt
+spec/notification-channels-golden.json
+
+=== PARITY ===
+Reads / queries (3/3 ported):
+  [x] useWebhookChannels
+        store    : NotificationChannelsStore.webhookChannels() : StateFlow<Resource<List<NotificationChannel.Webhook>>>
+        endpoint : GET /notifications  (web useNotificationChannels list; transport adds /api/v1)
+        cache    : CacheDomain.Notifications, key="channels"  (web notificationKeys.channels)
+        derived  : filterWebhookChannels() = list.filterIsInstance<Webhook>()  (web `kind === 'webhook'`,
+                   order-preserving) applied to every Resource emission (cached/loading/fresh).
+        emit     : cache -> network (Resource.Loading[cached] -> Resource.Success/Error), shared feed.
+        SI       : channel config fields are non-unit strings/bools — round-trip verbatim, no conversion.
+  [x] useWebhookSignaturePreview
+        store    : NotificationChannelsStore.previewWebhookSignature(secret, body) : Result<WebhookSignaturePreviewResult>
+        endpoint : POST /notifications/webhooks/preview-signature
+        body     : { secret, body } — both fields always serialize (web JSON.stringify(body)).
+        invalidates: NOTHING (web mutation has no onSuccess invalidate). Pure utility.
+  [x] useInvalidateWebhookChannels
+        store    : NotificationChannelsStore.invalidateWebhookChannels()
+        action   : bumps the channel feed trigger -> re-collects cache->network (web invalidateQueries
+                   notificationKeys.channels). No-op when the feed is unobserved.
+Mutations / actions (1/1 ported):
+  [x] useTestWebhookChannel
+        store    : NotificationChannelsStore.testWebhookChannel(id, title?, message?) : Result<WebhookTestResult>
+        endpoint : POST /notifications/{id}/webhook-test
+        body     : webhookTestBody(title, message) — a key included ONLY when value != null AND
+                   trim() != '' (web guard); VERBATIM untrimmed value sent; all-blank => NO body
+                   (server defaults). Mirrors the web mutationFn attaching a body only when present.
+        contract : endpoint answers HTTP 200 in every delivery outcome, so a non-2xx RECEIVER decodes
+                   to a success Result with `success == false` (status_code/error populated), NOT a
+                   request failure — verified by webhookTestReturnsStructuredResultOnReceiverFailure.
+        invalidates: NOTHING (web mutation renders the result inline; no onSuccess invalidate).
+
+Web-parity notes (NOT silent drift)
+  - useNotificationChannels / useSaveChannel / useDeleteChannel / useToggleChannel / useTestChannel
+    are RE-EXPORTS from the useNotifications domain (a separate hook file/domain) — out of scope for
+    this NotificationChannels slice, which ports only the 4 webhook-specific hooks the file ADDS.
+  - useMutationToast / notificationKeys / type re-exports are render-layer / cross-domain plumbing,
+    not data behavior; reproduced as the holder's invalidate semantics, not as separate APIs.
+
+Cross-platform golden vectors (ADR-004)
+  spec/notification-channels-golden.json (mirrored inline in NotificationChannelsGoldenTest):
+    - channelsKey == "channels"
+    - webhookTestBody: empty / blankTitle / titleOnly / messageOnly / both / untrimmed (6 rows)
+    - filterWebhookChannels: 6-kind mixed list -> webhook ids [2,5], order preserved
+    - WebhookSignaturePreviewRequest serializes both fields even with empty body
+
+=== GATE ===
+# JVM/Android-host test execution (commonTest runs as Android local unit test).
+# Apple/native test *execution* requires a macOS host (CI); compiled + ktlint-clean here.
+gradlew :core:ktlintCheck                                  -> BUILD SUCCESSFUL
+gradlew :core:testDebugUnitTest (full host suite)          -> BUILD SUCCESSFUL
+  NotificationChannelsGoldenTest             tests=6  failures=0 errors=0
+  NotificationChannelsStoreTest              tests=7  failures=0 errors=0
+  NotificationChannelsRepositoryContractTest tests=9  failures=0 errors=0
+TEST_EXIT=0
+LINT_EXIT=0
+check-placeholders.ps1 -Path apps/shared/core -Language kotlin
+  PLACEHOLDER_ALLOWED=13
+  PLACEHOLDER_COUNT=0
+PH_EXIT=0
+
+Acceptance
+  [x] 4/4 hooks ported with matching endpoint/params/derivation; SI preserved (no unit fields).
+  [x] Mutations invalidate the correct keys (none, per web); the invalidate action refreshes the list;
+      reads emit cache->network.
+  [x] Golden vectors extended for KMP+C# parity (spec json + inline); fake-repo tests green.
+  [x] ktlint + placeholder clean; PARITY enumerates all 4 hooks.
+
+EXIT=0
+STATUS=DONE

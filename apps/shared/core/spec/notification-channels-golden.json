@@ -1,0 +1,23 @@
+{
+  "_comment": "Shared golden vectors for the NotificationChannels domain (web useNotificationChannels). Consumed by both the KMP core (NotificationChannelsGoldenTest) and the Windows C# port so the client-side derivations cannot drift (ADR-004). Source-of-truth web hook: web/src/api/hooks/useNotificationChannels.ts.",
+  "channelsKey": "channels",
+  "webhookTestBody": [
+    { "name": "empty", "expected": {} },
+    { "name": "blankTitle", "title": "   ", "expected": {} },
+    { "name": "titleOnly", "title": "Hi", "expected": { "title": "Hi" } },
+    { "name": "messageOnly", "message": "Yo", "expected": { "message": "Yo" } },
+    { "name": "both", "title": "T", "message": "M", "expected": { "title": "T", "message": "M" } },
+    { "name": "untrimmed", "title": "  Hi  ", "expected": { "title": "  Hi  " } }
+  ],
+  "filterWebhookChannels": {
+    "input": [
+      { "kind": "discord", "id": 1, "name": "ops", "webhook_url": "https://d" },
+      { "kind": "webhook", "id": 2, "name": "primary", "url": "https://primary.example", "method": "POST" },
+      { "kind": "slack", "id": 3, "name": "team", "webhook_url": "https://s" },
+      { "kind": "email", "id": 4, "name": "alerts", "smtp_host": "mail", "smtp_port": 587 },
+      { "kind": "webhook", "id": 5, "name": "backup", "url": "https://backup.example", "method": "PUT" },
+      { "kind": "ntfy", "id": 6, "name": "phone", "server_url": "https://ntfy.sh", "topic": "t" }
+    ],
+    "expectedWebhookIds": [2, 5]
+  }
+}
