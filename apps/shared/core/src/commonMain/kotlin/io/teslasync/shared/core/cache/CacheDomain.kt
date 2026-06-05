@@ -402,6 +402,23 @@ public enum class CacheDomain(
     // stamps, a current flag) — not display-unit-bearing — so they round-trip verbatim with no SI
     // conversion.
     Sessions("sessions", 30.seconds),
+
+    // The shareable-drive-reports surface (`GET /drives/{driveID}/shares`, `GET /share/{token}`),
+    // backing the SharedDrivePage owner controls + the public read-only report. The web `useSharing`
+    // hooks read these with two different staleTimes — the owner's link list with NO staleTime
+    // (default 0 ⇒ always stale, refetch on every access) and the public report with
+    // `STALE_TIMES.SLOW` (5 minutes) — so no single domain window honours both. Each read therefore
+    // passes its own per-entity TTL through the `observe(key, ttlMillis, fetch)` overload (mapping
+    // the web staleTime verbatim via SHARE_LINKS_TTL_MILLIS / SHARED_DRIVE_TTL_MILLIS); this default
+    // is the 5-minute report bound used as the fallback. The two reads share this partition under
+    // distinct prefixed keys (mirroring the web `sharingKeys.shares` / `sharingKeys.shared` tuples)
+    // so each caches independently while logout still clears the whole domain in one call. The
+    // create/revoke mutations evict ONLY the affected drive's share-link key (the web hooks
+    // invalidate ONLY `sharingKeys.shares(driveId)`); the public report feed is never invalidated by
+    // a mutation. Share-link rows (ids, tokens, booleans, view counts, ISO stamps) are not
+    // display-unit-bearing; the public report's canonical values are SI on the wire and converted
+    // only at the render boundary (S5), while the legacy v1 variant round-trips verbatim.
+    Sharing("sharing", 5.minutes),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
