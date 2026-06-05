@@ -1,0 +1,64 @@
+P1 · S8 · 0025 — Guard state holder (web-hook parity port of useGuard.ts)
+
+Ported the web `useGuard` hook domain (web/src/api/hooks/useGuard.ts) to UI-free KMP shared-core
+state holders at full parity. UI-free; consumed identically by Android/Apple (KMP) and Windows
+(C# port via the shared golden vectors).
+
+Production code (apps/shared/core/commonMain):
+- presentation/guard/GuardModels.kt — typed wire DTOs (GuardConfig, GuardEvent, GuardEventsResponse,
+  SetConfigResponse, PanicResponse, AcknowledgeResponse, SetGuardConfigInput) + the three
+  golden-locked derivations: isGuardEventAcknowledged (acknowledged_at != null), guardEventsOf
+  (safeArray(data?.events) unwrap), guardVehicleEnabled (enabled: vehicleId > 0 gate).
+- data/repo/GuardRepository.kt — S7 port interface + guardConfigKey / guardEventsKey (the web
+  guardKeys.config / guardKeys.events tuples).
+- data/repo/HttpGuardRepository.kt — cache-then-network impl over ApiHttpClient; two read shapes
+  cached as raw JsonElement in one CacheDomain.Guard partition, decoded per-feed; mutations are
+  pure API calls (cache left intact — invalidation is the S8 store's targeted refresh).
+- presentation/guard/GuardStore.kt — shared StateFlow<Resource<…>> holders; config feed + events
+  feed (envelope unwrapped to List<GuardEvent> off the same upstream), the vehicleId>0 gate with a
+  stable disabled slot per read, and per-mutation targeted refresh.
+- cache/CacheDomain.kt — added the Guard partition (5s window = the tighter of REALTIME 5s config /
+  QUICK 10s events; conservative, never flags fresh what the web considers stale).
+
+Tests (apps/shared/core/commonTest):
+- presentation/guard/GuardStoreTest.kt — cache→network for both reads, envelope unwrap, the
+  enabled:vehicleId>0 gate (null/blank/0/-1/abc disabled + stable instance), upstream sharing,
+  and each mutation routing to the right repo call + the exact feeds the matching web hook
+  invalidates (setGuardConfig→config+events, panic→events, acknowledge→events), refresh no-op.
+- presentation/guard/GuardGoldenTest.kt — language-neutral golden vectors locking
+  isGuardEventAcknowledged, guardVehicleEnabled, guardEventsOf, and the cache-key tuples (KMP+C#
+  parity, ADR-004).
+- data/repo/GuardRepositoryContractTest.kt — endpoint/method/params/body locks for all five calls
+  (GET /vehicles/{id}/guard, GET …/guard/events, POST …/guard with all four body keys + explicit
+  null home_geofence_id, POST …/guard/panic, POST …/guard/events/{eventID}/acknowledge) and the
+  cache-intact-on-mutation contract.
+
+Note: the prompt's parity table lists useGuardPanic under "reads"; the real web file implements it
+as a POST useMutation. The web file is the contract source of truth (per the Single Goal), so it is
+ported faithfully as a mutation. All 5 hooks are covered.
+
+=== PARITY ===
+Reads (2):
+  useGuardConfig            -> GuardRepository.guardConfig            GET  /vehicles/{id}/guard
+  useGuardEvents            -> GuardRepository.guardEvents            GET  /vehicles/{id}/guard/events
+                                 (select: safeArray(data?.events) -> guardEventsOf)
+Mutations (3):
+  useSetGuardConfig         -> GuardRepository.setGuardConfig         POST /vehicles/{id}/guard
+                                 body {enabled, home_geofence_id, sensitivity, auto_panic}
+                                 invalidates config + events
+  useGuardPanic             -> GuardRepository.triggerPanic           POST /vehicles/{id}/guard/panic
+                                 invalidates events
+  useAcknowledgeGuardEvent  -> GuardRepository.acknowledgeGuardEvent  POST /vehicles/{id}/guard/events/{eventID}/acknowledge
+                                 invalidates events
+Derivations golden-locked (KMP+C#): isGuardEventAcknowledged, guardEventsOf, guardVehicleEnabled,
+  guardConfigKey, guardEventsKey.
+SI preserved: no unit-bearing fields; values round-trip verbatim, display conversion deferred to S5.
+=== END PARITY ===
+
+Gate:
+TEST_EXIT=0
+LINT_EXIT=0
+PH_EXIT=0
+
+EXIT=0
+STATUS=DONE

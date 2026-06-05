@@ -222,6 +222,23 @@ public enum class CacheDomain(
     // display-unit-bearing — so they round-trip verbatim with no SI conversion. The web hook file
     // declares no mutations, so the partition has no invalidation surface.
     Fsm("fsm", 10.seconds),
+
+    // The Sentry-Guard control plane (`GET /vehicles/{id}/guard`, `/vehicles/{id}/guard/events`).
+    // The web `useGuardConfig` hook reads the config with `STALE_TIMES.REALTIME` (5s) and polls it on
+    // `INTERVALS.REALTIME` (5s); `useGuardEvents` reads the events with `STALE_TIMES.QUICK` (10s). The
+    // two reads share this partition under distinct prefixed keys (`config:{id}` / `events:{id}`); a
+    // single window cannot honour both staleTimes exactly, so the tighter 5-second bound is used — the
+    // conservative choice, which only ever flags a value stale *sooner* than the web would (the events
+    // feed's 10s threshold), never later, so nothing is shown fresh that the web considers stale. The
+    // per-feed refetch cadence is an S8/UI concern (the web `staleTime`/`refetchInterval` gate the
+    // freshness flag, not whether the cache-then-network refresh runs). Payloads are guard config +
+    // event rows (enums, ids, timestamps, opaque detail maps) — not display-unit-bearing — so they
+    // round-trip verbatim with no SI conversion. The set-config/panic/acknowledge mutations re-fetch
+    // the web-faithful feeds via the S8 store's targeted refresh (the `invalidateQueries` analogue);
+    // the durable cache is intentionally left intact so a refresh shows the last-known value while the
+    // network reload runs, and `cacheThenNetwork` always hits the network on refresh so no stale value
+    // is ever served as fresh.
+    Guard("guard", 5.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
