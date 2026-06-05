@@ -1,0 +1,88 @@
+P1 · S8 · 0018 — Driving shared state holder(s)
+================================================
+
+Goal: port web hook domain web/src/api/hooks/useDriving.ts (17 hooks: 16 reads/
+queries + 1 mutation) to UI-free KMP shared-core state holders at web-hook parity —
+same endpoints (generated OpenAPI canonical paths, matching the S7 DriveRepository
+precedent), same snake_case params, same query keys/caching intent, same derivations,
+SI preserved (conversion is display-only, S5). Delegation FORBIDDEN — implemented in
+this session. Additive: the predecessor S7 DriveRepository (locked by
+RepositoryContractTest) is left untouched.
+
+Artifacts produced (apps/shared/core):
+  commonMain:
+    - presentation/driving/DrivingModels.kt        (TripPlanRequest + TripLocation +
+                                                     TripPlanPreferences — snake_case body)
+    - data/repo/DrivingRepository.kt               (port interface; 15 read feeds + 2
+                                                     mutations + query/key/family helpers)
+    - data/repo/HttpDrivingRepository.kt           (HTTP impl over CachingRepository<JsonElement>,
+                                                     .decode() per shape)
+    - presentation/driving/DrivingStore.kt         (S8 state holder; family-targeted refresh)
+  commonTest:
+    - presentation/driving/DrivingStoreTest.kt     (fake-repo behaviour, 5 tests)
+    - data/repo/DrivingRepositoryContractTest.kt   (endpoint/method/params/body/cache, 13 tests)
+    - presentation/driving/DrivingGoldenTest.kt    (golden vectors, 6 tests)
+
+=== PARITY ===
+17 hooks ported. Cache→network feed, web TanStack query key → S7 cache key, params
+snake_case. drives→List<Drive> (safeArray); driveTelemetry→List<DriveTelemetryReading>
+(safeArray); positions+geocode raw JsonElement (safeArray); all other reads raw SI
+JsonElement (no generated DTO).
+
+Reads (16):
+  [x] useDrives                  -> drives(vid)                 GET /drives/?vehicle_id            key drives|vid                decode List<Drive> (safeArray)
+  [x] useDrive                   -> drive(id)                   GET /drives/{id}/                  key drive|id                  raw JsonElement (refetchInterval=UI, not ported)
+  [x] useDriveScore              -> driveScore(vid)             GET /drives/score?vehicle_id       key drive-score|vid           raw JsonElement
+  [x] useDrivingStats            -> drivingStats(vid)           GET /drives/stats?vehicle_id       key driving-stats|vid         raw JsonElement
+  [x] useDrivingDynamics         -> drivingDynamics(vid)        GET /drives/dynamics?vehicle_id    key driving-dynamics|vid      raw JsonElement
+  [x] useAccelerationDistribution-> accelerationDistribution(vid) GET /drives/acceleration-distribution?vehicle_id  key acceleration-distribution|vid  raw JsonElement
+  [x] useDrivetrainHealth        -> drivetrainHealth(vid)       GET /drivetrain/health?vehicle_id  key drivetrain-health|vid     raw JsonElement
+  [x] useSpeedProfile            -> speedProfile(vid,start,end) GET /analytics/speed-profile?vehicle_id[&start][&end]  key speed-profile|vid|start|end  raw JsonElement
+  [x] useRegenEfficiency         -> regenEfficiency(vid,…)      GET /analytics/regen?vehicle_id[&start][&end]          key regen-efficiency|vid|start|end  raw JsonElement
+  [x] useRouteEfficiency         -> routeEfficiency(vid,…)      GET /analytics/route-efficiency?vehicle_id[&start][&end]  key route-efficiency|vid|start|end  raw JsonElement
+  [x] useDrivePositions          -> drivePositions(driveId)     GET /drives/{driveId}/positions    key drive-positions|driveId   raw JsonElement (safeArray)
+  [x] useDriveTelemetry          -> driveTelemetry(driveId)     GET /drives/{driveId}/telemetry    key drive-telemetry|driveId   decode List<DriveTelemetryReading> (safeArray)
+  [x] useDrivingCoach            -> drivingCoach(vid,days=30)   GET /analytics/driving-coach?vehicle_id&days  key driving-coach|vid|days  raw JsonElement
+  [x] usePlanTrip                -> planTrip(req) [MUTATION]    POST /trip-planner/plan {TripPlanRequest}  invalidate -> none (web only toasts)
+  [x] useGeocodeSearch           -> geocodeSearch(q)            GET /geocode/search?q&limit=5      key geocode-search|q          raw JsonElement (safeArray; length>=3 enabled = UI, not ported)
+  [x] useDriveWhyEnded           -> driveWhyEnded(id,win=60s)   GET /drives/{id}/why-ended?window  key drive|id|why-ended|window raw JsonElement (refetchInterval/enabled=UI, not ported)
+
+Mutations (1) — suspend Result<JsonElement> (verbatim SI), store refreshes EXACTLY the
+web invalidateQueries set (TanStack prefix semantics, '|' boundary-safe):
+  [x] useBulkDeleteDrives        -> bulkDeleteDrives(ids)       DELETE /drives/bulk {ids:[…]}   invalidate -> drives (family) + drive (family)
+
+Note: usePlanTrip is a useMutation in the web file (counted among the 16 "reads/queries"
+in the prompt enumeration); ported as a POST suspend Result mutation. Total 17 hooks
+(15 read feeds + planTrip + bulkDeleteDrives).
+
+Invalidation parity (the critical derivation): the web useBulkDeleteDrives invalidates
+BOTH ['drives'] and ['drive']. The why-ended feed is keyed ['drive', id, 'why-ended',
+window] — UNDER the ['drive'] prefix — so the bulk-delete refreshes the per-drive detail
+AND the why-ended diagnostic, while the '|' separator boundary keeps the singular 'drive'
+family from touching the plural 'drives' lists or the drive-score / drive-positions /
+drive-telemetry siblings. Locked by DrivingGoldenTest + DrivingStoreTest.
+
+SI preserved — Drive distances/speeds/energy are SI on the wire (distance_m, *_mps,
+*_wh, avg_power_w) and stay SI through the cache; trip-plan SoC values are integer
+percentages and the request body keeps its snake_case contract names (not stored
+unit-suffixed DB/Go fields, so the Phase-48 SI-canonical rule does not apply to the
+body). Conversion is display-only (S5). The request() client auto-adds /api/v1; hooks
+carry no double prefix.
+
+=== GATE ===
+./gradlew :core:allTests
+  testDebugUnitTest + testReleaseUnitTest: BUILD SUCCESSFUL
+  Driving suites: DrivingStoreTest=5, DrivingRepositoryContractTest=13,
+                  DrivingGoldenTest=6  (24 tests, failures=0 errors=0 skipped=0)
+TEST_EXIT=0
+
+./gradlew :core:ktlintCheck
+  ktlintCommonMainSourceSetCheck + ktlintCommonTestSourceSetCheck: BUILD SUCCESSFUL
+LINT_EXIT=0
+
+apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
+  PLACEHOLDER_ALLOWED=13  PLACEHOLDER_COUNT=0
+PH_EXIT=0
+
+EXIT=0
+STATUS=DONE
