@@ -158,6 +158,26 @@ public enum class CacheDomain(
     // (web `useDLQReplay`) invalidates the whole `['system','dlq']` prefix, so it clears this entire
     // partition (the `invalidateQueries(['system','dlq'])` analogue).
     Dlq("dlq", 15.seconds),
+
+    // The Exports control plane (`GET /export/jobs`, `/export/jobs/{id}`, `/exports/{id}`,
+    // `/exports/columns`, `/scheduled-exports`). The web `useExports`/`useExportJobs`/
+    // `useExportJob` hooks use the default TanStack `staleTime` (0 = always refetch on mount) and
+    // poll the job feeds every 5s while a job is queued/processing (`refetchInterval`);
+    // `useScheduledExports` polls every 60s; `useExportColumns` is a deployment-static catalog
+    // (`STALE_TIME` 5 minutes). Six distinct read shapes share this partition under distinct
+    // prefixed keys; a single window cannot honour every staleTime exactly, so the tightest
+    // meaningful bound — the 5-second job-poll cadence — is used. That is the conservative choice:
+    // it only ever flags a value stale *sooner* than the web would (the 60s scheduled / 5min
+    // columns feeds), never later, so nothing is shown fresh that the web considers stale. The
+    // per-feed refetch cadence is an S8/UI concern (the web `staleTime`/`refetchInterval` gate the
+    // freshness flag, not whether the cache-then-network refresh runs). Payloads are export-job
+    // metadata (formats, statuses, byte sizes, record counts, ms durations, cron strings) — not
+    // display-unit-bearing — so they round-trip verbatim with no SI conversion. A create/account/
+    // bulk-delete mutation re-fetches the `['export-jobs']` + `['exports']` prefixes and a
+    // scheduled create/update/delete/run re-fetches `['scheduled-exports']` via the S8 store's
+    // targeted refresh (the `invalidateQueries` analogue); the durable cache is intentionally left
+    // intact so a refresh shows the last-known rows while the network reload runs.
+    Exports("exports", 5.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */

@@ -1,0 +1,67 @@
+=== P1/S8/0020 — Exports shared state holder gate ===
+
+Output:  apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/exports/ExportModels.kt
+         apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/exports/ExportsStore.kt
+         apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/ExportsRepository.kt
+         apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpExportsRepository.kt
+         apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/cache/CacheDomain.kt (added Exports, 5s TTL)
+Tests:   apps/shared/core/src/commonTest/.../data/repo/ExportsRepositoryContractTest.kt    (16)
+         apps/shared/core/src/commonTest/.../presentation/exports/ExportsStoreTest.kt      (7)
+         apps/shared/core/src/commonTest/.../presentation/exports/ExportsGoldenTest.kt     (9)
+Web src:  web/src/api/hooks/useExports.ts + web/src/types/export.ts
+
+=== GATE ===
+:core:allTests        BUILD SUCCESSFUL    TEST_EXIT=0
+:core:ktlintCheck     BUILD SUCCESSFUL    LINT_EXIT=0
+check-placeholders    PLACEHOLDER_COUNT=0 PH_EXIT=0
+
+Exports test results (testDebugUnitTest + testReleaseUnitTest, JVM/Android targets;
+apple/native targets NO-SOURCE on this Windows host):
+  ExportsRepositoryContractTest  tests=16 failures=0 errors=0 skipped=0
+  ExportsStoreTest               tests=7  failures=0 errors=0 skipped=0
+  ExportsGoldenTest              tests=9  failures=0 errors=0 skipped=0
+
+=== PARITY === (all 13 web useExports hooks ported, SI/raw preserved)
+Reads (6) -> ExportsStore feeds, cache-then-network via HttpExportsRepository (ADR-013):
+  [1]  useExports          -> exports()              -> GET /export/jobs  (key ['exports'], safeArray)
+                              loose web type request<ExportJob[]> reproduced: ExportJob fields
+                              nullable/defaulted so a ExportJobSummary payload degrades gracefully
+  [2]  useExportJobs       -> exportJobs()           -> GET /export/jobs  (key ['export-jobs'], safeArray)
+                              staleTime default(0)/refetch 5s-while-active -> Exports domain 5s TTL (S7)
+  [3]  useExportJob(id)    -> exportJob(id)          -> GET /export/jobs/{id}  (key ['export-jobs', id])
+                              enabled:!!id gate reproduced (null/blank id => stable non-fetching Loading)
+  [4]  useExport(id)       -> export(id)             -> GET /exports/{id}  (key ['exports', id])
+                              enabled:!!id gate reproduced
+  [5]  useExportColumns(t) -> exportColumns(type)    -> GET /exports/columns?type=  (key ['export-columns', t])
+                              enabled:!!type gate; null type => '__none__' sentinel key (golden);
+                              query builder exportColumnsQuery (golden)
+  [6]  useScheduledExports -> scheduledExports()     -> GET /scheduled-exports  (key ['scheduled-exports'], safeArray)
+                              refetch 60s -> Exports domain 5s TTL (conservative, flags stale sooner not later)
+Mutations (7) -> non-throwing suspend Result, web-faithful invalidateQueries prefix refresh:
+  [7]  useCreateExport       -> createExport(payload)        -> POST /export/jobs
+                                invalidate ['export-jobs'] + ['exports'] (prefix, list + per-id feeds)
+  [8]  useCreateAccountExport-> createAccountExport(payload) -> POST /export/jobs/account
+                                default-arg {} body parity (golden); invalidate ['export-jobs'] + ['exports']
+  [9]  useBulkExportsDelete  -> bulkExportsDelete(ids)       -> POST /export/jobs/bulk {ids, op:"delete"} (golden)
+                                invalidate ['export-jobs'] + ['exports']
+  [10] useCreateScheduledExport -> createScheduledExport(in) -> POST /scheduled-exports
+                                owner_subject never emitted (golden); invalidate ['scheduled-exports']
+  [11] useUpdateScheduledExport -> updateScheduledExport(id,in) -> PUT /scheduled-exports/{id}
+                                invalidate ['scheduled-exports']
+  [12] useDeleteScheduledExport -> deleteScheduledExport(id) -> DELETE /scheduled-exports/{id}
+                                invalidate ['scheduled-exports']
+  [13] useRunScheduledExportNow -> runScheduledExportNow(id) -> POST /scheduled-exports/{id}/run
+                                invalidate ['scheduled-exports']
+Derivation (helper, golden-locked): exportDownloadUrl(jobId) -> "/api/v1/export/jobs/{jobId}/download"
+                                (raw browser link; carries explicit /api/v1 unlike versioned request paths)
+
+Reads emit cache->network (ADR-013). Values SI/raw on the wire (byte sizes, counts, ms, cron
+strings — none display-unit-bearing); conversion is display-only (S5). TanStack non-exact
+invalidateQueries reproduced as first-segment prefix refresh (refreshPrefix); the ':' delimiter
+keeps 'exports' from matching 'export-jobs'/'export-columns' (golden). HttpExportsRepository leaves
+the durable cache intact on mutation so a refresh shows last-known rows while the network reload
+runs. Golden vectors (ExportsGoldenTest, inlined, language-neutral) lock the query builder, key
+builders, download URL, bulk-delete body, and JSON.stringify body parity for KMP+C# parity (ADR-004).
+
+EXIT=0
+STATUS=DONE
