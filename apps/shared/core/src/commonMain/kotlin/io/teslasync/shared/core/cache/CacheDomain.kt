@@ -281,6 +281,23 @@ public enum class CacheDomain(
     // round-trip verbatim with no SI conversion. The web hook file declares no mutations, so the
     // partition has no invalidation surface.
     IngestXRay("ingest_xray", 5.seconds),
+
+    // The Locations store (`GET /locations?vehicle_id=`, `GET /geofences`, `POST /geofences/bulk`).
+    // The web `useLocations`/`useGeofences` hooks declare no `staleTime`, so they fall back to the
+    // QueryClient default (60s, `web/src/api/queryClient.ts`); the 1-minute window matches that
+    // verbatim while the S8/UI refetch cadence drives any live polling and the cache-then-network
+    // operator always re-fetches on refresh, so no stale value is ever served as fresh. The two read
+    // shapes (the visited-location list, the geofence list) share this partition under distinct
+    // prefixed keys (`locations:{vehicleId}` / `geofences`), mirroring the web `locationKeys.all` /
+    // `locationKeys.geofences` query keys, so the visited-location list and the geofence list cache
+    // independently while logout still clears the whole domain in one call. Payloads are SI on the
+    // wire (`total_duration_s` seconds, geofence `radius` meters, lat/long degrees) and not
+    // display-converted here — formatting is the render boundary's job (S5). The single mutation
+    // (`useBulkGeofencesDelete`) invalidates ONLY the geofences feed (the web hook invalidates
+    // `locationKeys.geofences`, never `locationKeys.all`), so the visited-location list is left
+    // untouched; the targeted refresh lives in the S8 store (the `invalidateQueries` analogue) and
+    // the durable cache is left intact so a refresh shows the last-known list while the reload runs.
+    Locations("locations", 1.minutes),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
