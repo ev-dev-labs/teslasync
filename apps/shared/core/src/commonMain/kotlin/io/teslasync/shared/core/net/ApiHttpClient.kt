@@ -80,6 +80,7 @@ public class ApiHttpClient internal constructor(
         var attempt = 0
         var authRefreshAttempted = false
         var lastError: ApiError
+        var attemptToken: String? = null
 
         while (true) {
             if (!breaker.tryAcquire()) {
@@ -90,6 +91,7 @@ public class ApiHttpClient internal constructor(
                 try {
                     withTimeout(config.requestTimeoutMillis) {
                         val token = config.tokenProvider.token()
+                        attemptToken = token
                         val response = performCall(spec, token)
                         classify(response, decode)
                     }
@@ -147,7 +149,7 @@ public class ApiHttpClient internal constructor(
                     breaker.onSuccess()
                     if (!authRefreshAttempted) {
                         authRefreshAttempted = true
-                        if (config.tokenProvider.onUnauthorized()) {
+                        if (config.tokenProvider.onUnauthorized(attemptToken)) {
                             // Replay once with the refreshed credential. This does NOT
                             // consume a backoff-retry slot.
                             continue

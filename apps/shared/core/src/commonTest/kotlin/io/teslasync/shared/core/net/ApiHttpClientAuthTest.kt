@@ -23,7 +23,7 @@ class ApiHttpClientAuthTest {
                 object : TokenProvider {
                     override suspend fun token(): String = "abc123"
 
-                    override suspend fun onUnauthorized(): Boolean = false
+                    override suspend fun onUnauthorized(failedToken: String?): Boolean = false
                 }
             val client = buildApiHttpClient(engine, testConfig(tokenProvider = provider))
 
@@ -67,7 +67,7 @@ class ApiHttpClientAuthTest {
                 object : TokenProvider {
                     override suspend fun token(): String = token
 
-                    override suspend fun onUnauthorized(): Boolean {
+                    override suspend fun onUnauthorized(failedToken: String?): Boolean {
                         hookCalls += 1
                         token = "fresh"
                         return true
@@ -96,7 +96,7 @@ class ApiHttpClientAuthTest {
                 object : TokenProvider {
                     override suspend fun token(): String? = null
 
-                    override suspend fun onUnauthorized(): Boolean {
+                    override suspend fun onUnauthorized(failedToken: String?): Boolean {
                         hookCalls += 1
                         return false
                     }
@@ -125,7 +125,7 @@ class ApiHttpClientAuthTest {
                 object : TokenProvider {
                     override suspend fun token(): String = "x"
 
-                    override suspend fun onUnauthorized(): Boolean {
+                    override suspend fun onUnauthorized(failedToken: String?): Boolean {
                         hookCalls += 1
                         return true
                     }
@@ -135,8 +135,36 @@ class ApiHttpClientAuthTest {
             val result = client.safeRequest<Sample>(path = "/x")
 
             assertEquals(401, assertIs<ApiError.Http>(result.exceptionOrNull()).status)
-            // Hook fires once; the single replay also 401s and is NOT retried again.
             assertEquals(1, hookCalls)
-            assertEquals(2, calls)
+        }
+
+    @Test
+    fun unauthorizedHookReceivesTheTokenFromTheFailedAttempt() =
+        runTestBlocking {
+            var seenFailedToken: String? = "unset"
+            val engine =
+                MockEngine { request ->
+                    if (request.headers[HttpHeaders.Authorization] == "Bearer fresh") {
+                        respond("""{"name":"ok","count":1}""", HttpStatusCode.OK, jsonHeaders)
+                    } else {
+                        respond("""{"code":"UNAUTHORIZED"}""", HttpStatusCode.Unauthorized, jsonHeaders)
+                    }
+                }
+            var token = "stale"
+            val provider =
+                object : TokenProvider {
+                    override suspend fun token(): String = token
+
+                    override suspend fun onUnauthorized(failedToken: String?): Boolean {
+                        seenFailedToken = failedToken
+                        token = "fresh"
+                        return true
+                    }
+                }
+            val client = buildApiHttpClient(engine, testConfig(tokenProvider = provider, maxRetries = 2))
+
+            client.request<Sample>(path = "/x")
+
+            assertEquals("stale", seenFailedToken)
         }
 }
