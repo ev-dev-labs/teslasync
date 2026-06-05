@@ -239,6 +239,22 @@ public enum class CacheDomain(
     // network reload runs, and `cacheThenNetwork` always hits the network on refresh so no stale value
     // is ever served as fresh.
     Guard("guard", 5.seconds),
+
+    // The admin impersonation feeds (`GET /admin/impersonate`, `/admin/impersonate/candidates`).
+    // The web `useImpersonationStatus` hook reads the state with a 15-second `staleTime` and polls
+    // it every 30s (`refetchInterval`); `useImpersonationCandidates` reads with a 30-second
+    // `staleTime`. The two reads share this partition under distinct keys (`status` / `candidates`);
+    // a single window cannot honour both staleTimes exactly, so the tighter 15-second bound is used —
+    // the conservative choice, which only ever flags a value stale *sooner* than the web would (the
+    // candidates feed's 30s threshold), never later, so nothing is shown fresh that the web considers
+    // stale. The per-feed refetch cadence is an S8/UI concern (the web `staleTime`/`refetchInterval`
+    // gate the freshness flag, not whether the cache-then-network refresh runs). Payloads are auth
+    // metadata (mode discriminator, subject strings, RFC3339 expiry) — not display-unit-bearing — so
+    // they round-trip verbatim with no SI conversion. A start/end mutation changes WHICH principal
+    // every endpoint answers as, so it invalidates the WHOLE cache via `clearAll` (the data-layer
+    // analogue of the web hooks' argument-less `invalidateQueries()`) and then primes this partition's
+    // `status` key with the new state (the web `setQueryData` analogue).
+    Impersonation("impersonation", 15.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
