@@ -1,0 +1,86 @@
+================================================================================
+P1 · S8 · 0039 — Search state holder (web-hook parity for useSearch)
+================================================================================
+Branch  : refactor/signals-rewrite (monorepo P1/S8)
+Date    : 2026-06-05T10:35:43-07:00
+Output  : apps/shared/core/src/commonMain/.../presentation/search/**
+          apps/shared/core/src/commonMain/.../data/repo/Search*.kt
+Web src : web/src/api/hooks/useSearch.ts
+Depends : P1/S4 (net) · S5 (units) · S6 (auth) · S7 (cache/repos)
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+--------------------------------------------------------------------------------
+Reads / queries (1/1 ported):
+  [x] useGlobalSearch
+        endpoint : GET /search        (versioned client adds /api/v1)
+        params   : q=<trimmed>                                  (always)
+                   types=<wire,joined>  only when types non-empty
+                   limit=<n>            only when limit > 0
+        cache key: searchCacheKey(query, types, limit) ≡ web searchKeys.global
+                   ['search','global', query, types?.join(',') ?? '', limit ?? null]
+        staleTime: STALE_TIMES.FAST (30s) → CacheDomain.Search 30s TTL
+        gating   : planSearch — !disabled && trim.length >= SEARCH_MIN_QUERY_LENGTH(2)
+                   (web `enabled` guard) → Skip emits empty hits, NO request
+        derivation: trim + min-length gate, query/types/limit param builder,
+                    flattened cache key — all locked by golden vectors
+Mutations / actions (0/0):
+  (none — web hook is read-only; no invalidation surface)
+
+Client-side derivations golden-pinned (KMP+C# parity, ADR-004):
+  planSearch        — 7 vectors (empty/1-char/trim-to-1/min-length/trim/disabled/full)
+  searchQuery       — 6 vectors (q-only/types/limit/limit=0/limit<0/all)
+  searchCacheKey    — 4 vectors (bare/types/limit/both) + distinctness edges
+
+Notes / honest scope:
+  - placeholderData `(prev) => prev` keep-previous is a render-layer smoothing
+    concern, NOT reproduced in the holder — identical decision to the sibling
+    FeedbackStore (whose web hook uses keepPreviousData). The cache-then-network
+    layer carries the same query's cached value as Resource.cached.
+  - Skip settles to Resource.Success(empty) (not Loading) so a 1-char query shows
+    no spinner, mirroring web `enabled:false` (isLoading stays false) + the hook's
+    documented "empty hits array without a request".
+
+--------------------------------------------------------------------------------
+Files added/changed (apps/shared/core/**):
+--------------------------------------------------------------------------------
+  A presentation/search/SearchModels.kt
+      SearchHitType (9 wire tokens), SearchHit, SearchResponse, SearchOptions,
+      SearchInput, SearchRequestPlan, planSearch, SEARCH_MIN_QUERY_LENGTH
+  A presentation/search/SearchStore.kt        (S8 holder: single dynamic input)
+  A data/repo/SearchRepository.kt             (S7 port + searchQuery/searchCacheKey)
+  A data/repo/HttpSearchRepository.kt         (cache-then-network over ApiHttpClient)
+  M cache/CacheDomain.kt                       (+ Search("search", 30.seconds))
+  A commonTest/.../data/repo/SearchRepositoryContractTest.kt
+  A commonTest/.../presentation/search/SearchStoreTest.kt
+  A commonTest/.../presentation/search/SearchGoldenTest.kt
+
+--------------------------------------------------------------------------------
+Gate
+--------------------------------------------------------------------------------
+$ ./gradlew :core:allTests
+BUILD SUCCESSFUL
+TEST_EXIT=0
+  (Search tests: 19 — contract + store + golden; full suite 978 tests green.
+   Apple/native test tasks SKIPPED on the Windows host, as expected.)
+
+$ ./gradlew :core:ktlintCheck
+BUILD SUCCESSFUL
+LINT_EXIT=0
+
+$ ./apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
+PLACEHOLDER_ALLOWED=13
+PLACEHOLDER_COUNT=0
+PH_EXIT=0
+
+--------------------------------------------------------------------------------
+Acceptance Criteria
+--------------------------------------------------------------------------------
+  [x] All 1 hooks ported; endpoint/params/derivation match; SI preserved.
+  [x] No mutations (read-only domain); reads emit cache→network (contract test).
+  [x] Golden vectors extended for plan/query/cache-key (KMP+C# parity); green.
+  [x] ktlint + placeholder clean; === PARITY === enumerates all 1 hooks.
+  [x] EXIT=0 / STATUS=DONE.
+
+EXIT=0
+STATUS=DONE

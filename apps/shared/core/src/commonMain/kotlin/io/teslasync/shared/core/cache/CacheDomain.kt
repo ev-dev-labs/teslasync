@@ -381,6 +381,15 @@ public enum class CacheDomain(
     // order, ISO stamps) — not display-unit-bearing — so they round-trip verbatim with no SI
     // conversion.
     SavedViews("saved_views", 1.minutes),
+
+    // The unified entity-search read-model (`GET /search?q=`), backing the command palette and the
+    // full-results search page. The web `useGlobalSearch` hook reads it with `STALE_TIMES.FAST` (30s),
+    // so the 30-second window matches verbatim. Each distinct (query, types, limit) tuple is cached
+    // under its own key (mirroring the web `searchKeys.global` tuple); the domain has no mutations (the
+    // web hook is read-only) so there is no per-key eviction — logout clears the whole partition.
+    // Payloads (titles, urls, scores, ISO stamps) are not display-unit-bearing, so they round-trip
+    // verbatim with no SI conversion.
+    Search("search", 30.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
