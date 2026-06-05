@@ -390,6 +390,18 @@ public enum class CacheDomain(
     // Payloads (titles, urls, scores, ISO stamps) are not display-unit-bearing, so they round-trip
     // verbatim with no SI conversion.
     Search("search", 30.seconds),
+
+    // The active-session / device-management list (`GET /auth/sessions`), backing the Settings
+    // sessions section. The web `useSessions` hook reads it with a 30s `staleTime`, so the
+    // 30-second window matches verbatim. There is a single list feed (the web `sessionKeys.list`
+    // tuple `['sessions','list']`), so the whole partition is the one cached entry; a
+    // revoke-one / revoke-all-others mutation evicts that key (the web hooks invalidate
+    // `sessionKeys.list`) and the S8 store refreshes the feed. The `{ mode: 'open' }` path (the
+    // backend's 501 `AUTH_MODE_OPEN` sentinel) is cached as a successful no-session value exactly
+    // as the web hook normalises it. Payloads are plain device rows (ids, user-agent, ip, ISO
+    // stamps, a current flag) — not display-unit-bearing — so they round-trip verbatim with no SI
+    // conversion.
+    Sessions("sessions", 30.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
