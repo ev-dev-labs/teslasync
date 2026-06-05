@@ -369,6 +369,18 @@ public enum class CacheDomain(
     // always hits the network on refresh so no stale value is ever served as fresh while the
     // last-known matrix stays visible during the reload.
     Rbac("rbac", 30.seconds),
+
+    // The per-list-page saved-views library (`GET /saved-views?route=`), backing the SavedViewMenu's
+    // "save this filter combo" affordance. The web `useSavedViews` hook reads it with
+    // `STALE_TIMES.STANDARD` (60s), so the 1-minute window matches verbatim. Each list-page `route`
+    // is cached under its own key (mirroring the web `savedViewsKeys.list(route)` tuple); a
+    // create/update/delete/set-default invalidates ONLY that route's key (the web hooks invalidate
+    // `savedViewsKeys.list(route)`, never the whole `all` prefix), so the data-layer eviction is the
+    // single-key `removeQueries` analogue and the S8 store refreshes just that route's feed. Payloads
+    // are plain rows (ids, a route string, an opaque querystring blob, boolean flags, an int sort
+    // order, ISO stamps) — not display-unit-bearing — so they round-trip verbatim with no SI
+    // conversion.
+    SavedViews("saved_views", 1.minutes),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
