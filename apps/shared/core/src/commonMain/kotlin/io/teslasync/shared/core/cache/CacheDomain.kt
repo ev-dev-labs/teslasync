@@ -255,6 +255,19 @@ public enum class CacheDomain(
     // analogue of the web hooks' argument-less `invalidateQueries()`) and then primes this partition's
     // `status` key with the new state (the web `setQueryData` analogue).
     Impersonation("impersonation", 15.seconds),
+
+    // The status-page incident store (`GET /status/incidents`, `/status/incidents/{id}`). The web
+    // `useIncidents` hook declares no `staleTime` (TanStack default 0 = always refetch on mount) and
+    // polls the list on `refetchInterval` 30s; `useIncident` reads a single incident on demand. The
+    // two read shapes (list envelope, single incident) share this partition under distinct prefixed
+    // keys (`list:{activeOnly}:{limit}` / `detail:{id}`); the 30-second window keeps the freshness
+    // flag honest while the S8/UI refetch cadence drives the actual live polling and the
+    // cache-then-network operator always re-fetches on refresh, so no stale value is ever served as
+    // fresh. Payloads are incident rows (enum strings, timestamps, free text, component lists) — not
+    // display-unit-bearing — so they round-trip verbatim with no SI conversion. A create/patch/
+    // append-update/delete mutation invalidates the WHOLE partition (the web hooks invalidate
+    // `['status-incidents']`), dropping every list AND detail query at once.
+    Incidents("incidents", 30.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
