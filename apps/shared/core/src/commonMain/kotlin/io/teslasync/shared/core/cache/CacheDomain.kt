@@ -431,6 +431,20 @@ public enum class CacheDomain(
     // counts, a window-seconds integer, a severity enum, ISO stamps) — not display-unit-bearing —
     // so they round-trip verbatim with no SI conversion.
     System("system", 15.seconds),
+
+    // The worker job-queue feeds (`GET /system/queues` and `GET /system/queues/{worker}/jobs`),
+    // backing the admin queue-health panel and its per-worker drawer. The web `useSystemQueues`
+    // domain reads the status feed with a 15s `staleTime` (`QUEUE_STATUS_STALE_TIME_MS`, polled
+    // every 30s) and the per-worker jobs feed with a 30s `staleTime` (`QUEUE_JOBS_STALE_TIME_MS`,
+    // polled every 60s), both with `refetchIntervalInBackground:false`. The two reads live in one
+    // partition under distinct keys (the web `queueKeys.status` / `queueKeys.jobs(worker)` tuples);
+    // because they carry different `staleTime`s, the repository overrides the jobs feed's TTL
+    // per-read rather than compromising on a single domain default — the 15s default here keeps the
+    // status feed's freshness flag web-faithful. The web hook file declares no mutations, so the
+    // partition has no invalidation surface (logout clears it). Payloads are counts, second-based
+    // ages, and millisecond durations — not display-unit-bearing — so they round-trip verbatim with
+    // no SI conversion.
+    SystemQueues("system_queues", 15.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
