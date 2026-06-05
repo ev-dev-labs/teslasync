@@ -1,0 +1,37 @@
+[
+  {
+    "name": "null_before_first_resolve",
+    "response": null,
+    "expected": { "is_forward_auth": false, "subject": null }
+  },
+  {
+    "name": "open_mode_no_subject",
+    "response": { "mode": "open", "subject": null },
+    "expected": { "is_forward_auth": false, "subject": null }
+  },
+  {
+    "name": "open_mode_ignores_stray_subject",
+    "response": { "mode": "open", "subject": "leaked@example.com" },
+    "expected": { "is_forward_auth": false, "subject": null }
+  },
+  {
+    "name": "forward_auth_with_subject",
+    "response": { "mode": "forward_auth", "subject": "alice@example.com" },
+    "expected": { "is_forward_auth": true, "subject": "alice@example.com" }
+  },
+  {
+    "name": "forward_auth_subject_stripped_by_proxy",
+    "response": { "mode": "forward_auth", "subject": null },
+    "expected": { "is_forward_auth": true, "subject": null }
+  },
+  {
+    "name": "forward_auth_subject_absent",
+    "response": { "mode": "forward_auth" },
+    "expected": { "is_forward_auth": true, "subject": null }
+  },
+  {
+    "name": "unknown_future_mode_is_not_forward_auth",
+    "response": { "mode": "mtls", "subject": "svc@example.com" },
+    "expected": { "is_forward_auth": false, "subject": null }
+  }
+]

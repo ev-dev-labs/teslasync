@@ -74,6 +74,14 @@ public enum class CacheDomain(
     // the wire and not display-unit-bearing, so it round-trips verbatim with no SI conversion.
     // The web hook declares no mutations, so the partition has no invalidation surface.
     Anomalies("anomalies", 5.minutes),
+
+    // The deployment auth-mode contract (`GET /system/auth-mode`). The web `useAuthMode` hook
+    // reads it with a 5-minute `staleTime` (`AUTH_MODE_STALE_MS`) and never polls — the mode is
+    // fixed at deployment time — so the window matches verbatim. The payload (mode, subject,
+    // capability bools) is plain auth metadata, not display-unit-bearing, so it round-trips
+    // verbatim with no SI conversion. The web hook file declares no mutations, so the partition
+    // has no invalidation surface.
+    AuthMode("auth_mode", 5.minutes),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
