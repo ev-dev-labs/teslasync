@@ -298,6 +298,17 @@ public enum class CacheDomain(
     // untouched; the targeted refresh lives in the S8 store (the `invalidateQueries` analogue) and
     // the durable cache is left intact so a refresh shows the last-known list while the reload runs.
     Locations("locations", 1.minutes),
+
+    // The Onboarding first-run gate (`GET /onboarding/status`). The web `useOnboardingStatus` hook
+    // (web/src/api/hooks/useOnboarding.ts) declares `staleTime: 15_000`, so the 15-second window
+    // matches that verbatim: long enough that mount/unmount churn does not thrash a refetch, short
+    // enough that a freshly-connected Tesla token / first vehicle / first telemetry batch is picked
+    // up promptly. The single read shape lives under one fixed key (`status`); the S8 store drives
+    // the 30s poll cadence (web `refetchInterval`) and stops polling once `is_complete` flips true,
+    // while the cache-then-network operator always re-fetches on refresh so no stale value is ever
+    // served as fresh. The three anchor fields are plain booleans/counts — not unit-bearing — so
+    // there is no SI conversion at this layer; the gate is read directly off `is_complete`.
+    Onboarding("onboarding", 15.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
