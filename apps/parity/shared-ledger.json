@@ -1,0 +1,152 @@
+{
+  "$schema": "./shared-ledger.schema.json",
+  "ledger": "P1 shared program — shipped shared modules",
+  "generatedBy": "p1-shared/S99-0001-shared-gate.prompt.md",
+  "generatedAt": "2026-06-05T16:50:00-07:00",
+  "gate": {
+    "log": ".github/prompts/monorepo/logs/p1-s99-0001-shared-gate.log",
+    "status": "DONE",
+    "exit": 0,
+    "hostTests": { "tests": 2680, "failures": 0, "errors": 0, "skipped": 0, "suiteFiles": 362 },
+    "koverVerify": "pass",
+    "notes": "Apple native test tasks (iosSimulatorArm64Test, macosArm64Test) are SKIPPED on this Windows host; all commonTest sources (golden vectors, redaction, units, stores, contracts) execute on the Android/JVM target and pass. Native packaging acceptance (Shared.xcframework) is deferred to macOS CI per S3."
+  },
+  "frozenContract": "apps/shared/CONTRACT_FROZEN.md",
+  "modules": [
+    {
+      "id": "shared-core-scaffold",
+      "phase": "S3",
+      "title": "Kotlin Multiplatform shared :core module",
+      "path": "apps/shared/core",
+      "package": "io.teslasync.shared.core",
+      "targets": ["android", "iosSimulatorArm64", "macosArm64"],
+      "status": "done",
+      "kotlinFiles": 282,
+      "evidenceLog": ".github/prompts/monorepo/logs/prompt-0017-S3-0001-kmp-scaffold.log"
+    },
+    {
+      "id": "openapi-contract",
+      "phase": "S1",
+      "title": "OpenAPI 3.1 contract emitted from Go API + conformance test",
+      "path": "api/openapi/teslasync.openapi.json",
+      "routes": 533,
+      "status": "done",
+      "evidenceLog": ".github/prompts/monorepo/logs/prompt-0003-S1-0001-openapi-emit.log"
+    },
+    {
+      "id": "typed-clients",
+      "phase": "S2",
+      "title": "Deterministic typed API clients (Kotlin + C#) from OpenAPI",
+      "path": "apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/api/generated",
+      "generatedFiles": 20,
+      "package": "io.teslasync.shared.core.api",
+      "status": "done",
+      "evidenceLog": ".github/prompts/monorepo/logs/prompt-0016-S2-0001-client-codegen.log"
+    },
+    {
+      "id": "networking",
+      "phase": "S4",
+      "title": "Resilient networking client (retry, circuit breaker)",
+      "package": "io.teslasync.shared.core.net",
+      "kotlinFiles": 13,
+      "status": "done",
+      "evidenceLog": ".github/prompts/monorepo/logs/prompt-0018-S4-0001-networking.log"
+    },
+    {
+      "id": "sse-client",
+      "phase": "S4",
+      "title": "Server-Sent Events live-stream client",
+      "package": "io.teslasync.shared.core.net",
+      "status": "done",
+      "evidenceLog": ".github/prompts/monorepo/logs/prompt-0019-S4-0002-sse-client.log"
+    },
+    {
+      "id": "si-units",
+      "phase": "S5",
+      "title": "SI unit converters + formatters with language-neutral golden vectors",
+      "package": "io.teslasync.shared.core.units",
+      "goldenSpec": "apps/shared/spec/units-golden.json",
+      "goldenVectors": 92,
+      "status": "done",
+      "evidenceLog": ".github/prompts/monorepo/logs/prompt-0020-S5-0001-si-units-golden.log"
+    },
+    {
+      "id": "auth",
+      "phase": "S6",
+      "title": "Authentik native-client auth (OIDC/PKCE) state + token store",
+      "package": "io.teslasync.shared.core.auth",
+      "kotlinFiles": 9,
+      "status": "done",
+      "evidenceLog": ".github/prompts/monorepo/logs/prompt-0021-S6-0001-auth.log"
+    },
+    {
+      "id": "offline-cache",
+      "phase": "S7",
+      "title": "Offline cache layer for shared repositories",
+      "package": "io.teslasync.shared.core.cache",
+      "kotlinFiles": 5,
+      "status": "done",
+      "evidenceLog": ".github/prompts/monorepo/logs/prompt-0022-S7-0001-offline-cache.log"
+    },
+    {
+      "id": "state-holders",
+      "phase": "S8",
+      "title": "UI-free domain state holders + repositories at web parity",
+      "package": "io.teslasync.shared.core.presentation, io.teslasync.shared.core.data.repo",
+      "domains": 59,
+      "presentationFiles": 114,
+      "repositoryFiles": 122,
+      "status": "done",
+      "evidenceLog": ".github/prompts/monorepo/logs/ (prompt-0023..0081 S8-0001..S8-0059)"
+    },
+    {
+      "id": "design-tokens",
+      "phase": "S9",
+      "title": "Platform-neutral design tokens + Fluent/Material3/HIG generators",
+      "path": "apps/design",
+      "tokens": "apps/design/tokens.json",
+      "generates": ["windows/Tokens.xaml", "android/Theme.kt", "apple/Tokens.swift"],
+      "status": "done",
+      "evidenceLog": ".github/prompts/monorepo/logs/prompt-0082-S9-0001-design-tokens.log"
+    },
+    {
+      "id": "i18n-catalog",
+      "phase": "S10",
+      "title": "Shared i18n catalog (en base, ar/he RTL) + generators",
+      "path": "apps/shared/i18n",
+      "baseLocale": "en",
+      "entries": 7772,
+      "locales": ["en", "ar", "he"],
+      "status": "done",
+      "evidenceLog": ".github/prompts/monorepo/logs/prompt-0004-S10-0001-i18n-catalog.log"
+    },
+    {
+      "id": "diagnostics",
+      "phase": "S11",
+      "title": "Consent-gated diagnostics with PII redaction + purge-on-revoke",
+      "package": "io.teslasync.shared.core.diagnostics",
+      "kotlinFiles": 7,
+      "status": "done",
+      "evidenceLog": ".github/prompts/monorepo/logs/prompt-0084-S11-0001-diagnostics.log"
+    },
+    {
+      "id": "tests-ci",
+      "phase": "S12",
+      "title": "Shared test suite + coverage floor (kover) + CI wiring",
+      "path": "apps/shared",
+      "hostTests": 2680,
+      "status": "done",
+      "evidenceLog": ".github/prompts/monorepo/logs/prompt-0085-S12-0001-tests-ci.log"
+    },
+    {
+      "id": "parity-manifest",
+      "phase": "S0",
+      "title": "Parity manifest generator + UI-prompt generator",
+      "path": "apps/parity/parity-manifest.json",
+      "units": 1754,
+      "pageUnits": 153,
+      "status": "done",
+      "evidenceLog": ".github/prompts/monorepo/logs/prompt-0001-S0-0001-parity-manifest-generator.log"
+    }
+  ]
+}
