@@ -112,6 +112,20 @@ public enum class CacheDomain(
     // analogue) and the S8 store re-fetches it (the `invalidateQueries` analogue); a delete also
     // evicts the deleted session's history key (the web `removeQueries` analogue).
     Chat("chat", 30.seconds),
+
+    // The per-vehicle command audit feeds (`GET /vehicles/{id}/commands/history?limit=200`,
+    // `GET /vehicles/{id}/commands/latest`). The web `useCommandHistory` hook reads with
+    // `STALE_TIMES.QUICK` (10s) and `useCommandLatest` with `STALE_TIMES.MODERATE` (15s). The two
+    // reads share this partition under distinct prefixed keys (`history:{id}` / `latest:{id}`); a
+    // single window cannot honour both staleTimes exactly, so the tighter 10-second bound is used —
+    // the conservative choice, which only ever flags a value stale *sooner* than the web would (the
+    // latest feed's 15s threshold), never later, so nothing is shown fresh that the web considers
+    // stale. The per-feed refetch cadence is an S8/UI concern (the web `staleTime` only gates the
+    // freshness flag, not whether the cache-then-network refresh runs). Payloads are command audit
+    // rows (command name, params, status, error, timestamps) — not display-unit-bearing — so they
+    // round-trip verbatim with no SI conversion. The web hook file declares no mutations, so the
+    // partition has no invalidation surface.
+    Commands("commands", 10.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
