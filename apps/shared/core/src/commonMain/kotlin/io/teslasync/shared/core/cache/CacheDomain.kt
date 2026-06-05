@@ -554,6 +554,20 @@ public enum class CacheDomain(
     // is a bool + an ISO stamp + rendered-path strings — not display-unit-bearing — so it
     // round-trips verbatim with no SI conversion.
     VehiclePhoto("vehicle_photo", 1.minutes),
+
+    // The per-vehicle resolved-settings read-model (`GET /vehicles/{id}/settings`), backing the
+    // VehicleSettings tab. The web `useVehicleSettings` hook reads with `staleTime: 30_000`, so the
+    // 30-second window matches it verbatim and the read needs no per-entry TTL override. Each
+    // vehicle's payload lives under its own key (the web `vehicleSettingsKeys.detail` tuple, prefixed
+    // `vehicle-settings:` so a shared partition never collides), so each caches independently while
+    // logout still clears the whole domain in one call. The two mutations (upsert/reset) call the API
+    // directly and on success evict ONLY the affected vehicle's settings key — the web
+    // `invalidateQueries(vehicleSettingsKeys.detail(id))` analogue — and the S8 store re-collects
+    // that one feed; the web's SECOND invalidation (`vehicleKeys.detail(id)`, because a nickname
+    // override feeds the display name) is a cross-domain concern the S8 store's injected
+    // vehicle-refresh hook handles. The payload is per-key { key, value, source } rows whose `value`
+    // is arbitrary JSON — not display-unit-bearing — so it round-trips verbatim with no SI conversion.
+    VehicleSettings("vehicle_settings", 30.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
