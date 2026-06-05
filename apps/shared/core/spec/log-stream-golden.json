@@ -1,0 +1,110 @@
+[
+  {
+    "name": "appends_in_order_oldest_first",
+    "max_events": 1000,
+    "ops": [
+      { "op": "log", "level": "info" },
+      { "op": "log", "level": "warn" },
+      { "op": "log", "level": "error" }
+    ],
+    "expected_levels": ["info", "warn", "error"],
+    "expected_drops": 0,
+    "expected_total_received": 3
+  },
+  {
+    "name": "drops_accumulate",
+    "max_events": 1000,
+    "ops": [
+      { "op": "drop", "count": 2 },
+      { "op": "drop", "count": 3 }
+    ],
+    "expected_levels": [],
+    "expected_drops": 5,
+    "expected_total_received": 0
+  },
+  {
+    "name": "drop_zero_is_ignored",
+    "max_events": 1000,
+    "ops": [
+      { "op": "drop", "count": 0 },
+      { "op": "log", "level": "debug" }
+    ],
+    "expected_levels": ["debug"],
+    "expected_drops": 0,
+    "expected_total_received": 1
+  },
+  {
+    "name": "bounded_evicts_oldest",
+    "max_events": 2,
+    "ops": [
+      { "op": "log", "level": "debug" },
+      { "op": "log", "level": "info" },
+      { "op": "log", "level": "warn" }
+    ],
+    "expected_levels": ["info", "warn"],
+    "expected_drops": 0,
+    "expected_total_received": 3
+  },
+  {
+    "name": "total_received_counts_evicted_events",
+    "max_events": 1,
+    "ops": [
+      { "op": "log", "level": "info" },
+      { "op": "log", "level": "warn" }
+    ],
+    "expected_levels": ["warn"],
+    "expected_drops": 0,
+    "expected_total_received": 2
+  },
+  {
+    "name": "pause_skips_logs_but_keeps_position",
+    "max_events": 1000,
+    "ops": [
+      { "op": "log", "level": "info" },
+      { "op": "pause" },
+      { "op": "log", "level": "warn" },
+      { "op": "resume" },
+      { "op": "log", "level": "error" }
+    ],
+    "expected_levels": ["info", "error"],
+    "expected_drops": 0,
+    "expected_total_received": 2
+  },
+  {
+    "name": "pause_does_not_block_drops",
+    "max_events": 1000,
+    "ops": [
+      { "op": "pause" },
+      { "op": "drop", "count": 5 },
+      { "op": "log", "level": "info" }
+    ],
+    "expected_levels": [],
+    "expected_drops": 5,
+    "expected_total_received": 0
+  },
+  {
+    "name": "clear_resets_buffer_and_counters",
+    "max_events": 1000,
+    "ops": [
+      { "op": "log", "level": "info" },
+      { "op": "drop", "count": 4 },
+      { "op": "clear" }
+    ],
+    "expected_levels": [],
+    "expected_drops": 0,
+    "expected_total_received": 0
+  },
+  {
+    "name": "clear_then_resume_appending",
+    "max_events": 1000,
+    "ops": [
+      { "op": "log", "level": "info" },
+      { "op": "clear" },
+      { "op": "log", "level": "warn" },
+      { "op": "log", "level": "error" }
+    ],
+    "expected_levels": ["warn", "error"],
+    "expected_drops": 0,
+    "expected_total_received": 2
+  }
+]

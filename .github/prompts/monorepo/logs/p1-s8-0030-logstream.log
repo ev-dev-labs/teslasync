@@ -1,0 +1,64 @@
+=== P1/S8/0030 — LogStream state holder (KMP shared core) ===
+Branch: refactor/signals-rewrite (monorepo P1/S8)
+Web source: web/src/api/hooks/useLogStream.ts
+Output: apps/shared/core/src/commonMain/.../presentation/logstream/**
+
+--- Artifacts created ---
+commonMain/kotlin/io/teslasync/shared/core/presentation/logstream/LogStreamModels.kt
+commonMain/kotlin/io/teslasync/shared/core/presentation/logstream/LogStreamReducer.kt
+commonMain/kotlin/io/teslasync/shared/core/presentation/logstream/LogStreamStore.kt
+commonTest/kotlin/io/teslasync/shared/core/presentation/logstream/LogStreamReducerTest.kt
+commonTest/kotlin/io/teslasync/shared/core/presentation/logstream/LogStreamStoreTest.kt
+commonTest/kotlin/io/teslasync/shared/core/presentation/logstream/LogStreamGoldenTest.kt
+commonTest/kotlin/io/teslasync/shared/core/presentation/logstream/LogStreamGoldenLoader.kt
+androidUnitTest/.../logstream/LogStreamGoldenLoader.android.kt
+appleTest/.../logstream/LogStreamGoldenLoader.apple.kt
+core/spec/log-stream-golden.json
+
+=== PARITY ===
+Reads / queries (1/1 ported):
+  [x] useLogStream
+        endpoint : GET /admin/logs/stream  (SSE; transport adds /api/v1 prefix)
+        params   : level (always), grep (only when non-blank, trimmed) — snake_case,
+                   form-url-encoded identically to web URLSearchParams (space -> '+')
+        events   : log -> append; drop -> accumulate count; connected/heartbeat/unnamed -> ignore
+        derived  : detectLevel (fallback "info"), buildLogEvent (parsed=null on non-JSON),
+                   rolling buffer FIFO-bounded to LOG_STREAM_MAX_EVENTS=1000,
+                   totalReceived counts every appended event (incl. later evicted),
+                   pause = skip log append, keep connection + drop counting,
+                   clear = reset buffer + counters (keep connection),
+                   no auto-reconnect (single connection, matching the web hook)
+        SI       : payloads are opaque log lines; no unit fields — nothing to convert.
+Mutations / actions: 0/0 (the web hook has none).
+
+Documented web-parity (NOT silent drift):
+  - drop count is read from data.count (web hook). The live backend
+    (internal/api/adminlogstream/handler.go) emits missed/total, so the web hook's
+    drop counter does not advance against the real server. Mandate = parity with the
+    WEB HOOK, so count is reproduced verbatim and the C# port must match. Reconciling
+    the key with the backend is a separate web-side change, out of scope here.
+
+=== GATE ===
+# JVM/Android-host test execution (commonTest runs as Android local unit test).
+# Apple/native test *execution* requires a macOS host (CI); compiled + ktlint-clean here.
+gradlew :core:testDebugUnitTest --tests io.teslasync.shared.core.presentation.logstream.*
+  LogStreamGoldenTest     tests=2  failures=0 errors=0
+  LogStreamReducerTest    tests=7  failures=0 errors=0
+  LogStreamStoreTest      tests=11 failures=0 errors=0
+gradlew :core:ktlintCheck :core:testDebugUnitTest  -> BUILD SUCCESSFUL
+TEST_EXIT=0
+LINT_EXIT=0
+check-placeholders.ps1 -Path apps/shared/core -Language kotlin
+  PLACEHOLDER_ALLOWED=13
+  PLACEHOLDER_COUNT=0
+PH_EXIT=0
+
+Acceptance:
+  [x] 1/1 hooks ported; endpoint/params/derivation matched; SI preserved (N/A unit fields).
+  [x] reads emit cache->network: N/A (live SSE stream, not a cached read) — single live
+      connection mirrors the web hook; no S7 cache key applies to a log tail.
+  [x] golden vectors (9 scenarios) extended for KMP+C# parity; fake-transport tests green.
+  [x] ktlint + placeholder clean; PARITY enumerates the 1 hook.
+
+EXIT=0
+STATUS=DONE
