@@ -1,0 +1,1755 @@
+[
+  {
+    "fn": "convertDistanceFromSI",
+    "formatter": "formatDistance",
+    "quantity": "distance",
+    "system": "metric",
+    "input_si": 0,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 0,
+    "expected_formatted": "0.0 km"
+  },
+  {
+    "fn": "convertDistanceFromSI",
+    "formatter": "formatDistance",
+    "quantity": "distance",
+    "system": "imperial",
+    "input_si": 0,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 0,
+    "expected_formatted": "0.0 mi"
+  },
+  {
+    "fn": "convertDistanceFromSI",
+    "formatter": "formatDistance",
+    "quantity": "distance",
+    "system": "metric",
+    "input_si": 1000,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 1,
+    "expected_formatted": "1.0 km"
+  },
+  {
+    "fn": "convertDistanceFromSI",
+    "formatter": "formatDistance",
+    "quantity": "distance",
+    "system": "imperial",
+    "input_si": 1000,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 0.621371192237334,
+    "expected_formatted": "0.6 mi"
+  },
+  {
+    "fn": "convertDistanceFromSI",
+    "formatter": "formatDistance",
+    "quantity": "distance",
+    "system": "metric",
+    "input_si": 1609.344,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 1.609344,
+    "expected_formatted": "1.6 km"
+  },
+  {
+    "fn": "convertDistanceFromSI",
+    "formatter": "formatDistance",
+    "quantity": "distance",
+    "system": "imperial",
+    "input_si": 1609.344,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 1,
+    "expected_formatted": "1.0 mi"
+  },
+  {
+    "fn": "convertDistanceFromSI",
+    "formatter": "formatDistance",
+    "quantity": "distance",
+    "system": "metric",
+    "input_si": 1250,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 1.25,
+    "expected_formatted": "1.3 km"
+  },
+  {
+    "fn": "convertDistanceFromSI",
+    "formatter": "formatDistance",
+    "quantity": "distance",
+    "system": "imperial",
+    "input_si": 1250,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 0.7767139902966674,
+    "expected_formatted": "0.8 mi"
+  },
+  {
+    "fn": "convertDistanceFromSI",
+    "formatter": "formatDistance",
+    "quantity": "distance",
+    "system": "metric",
+    "input_si": -2500,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": -2.5,
+    "expected_formatted": "-2.5 km"
+  },
+  {
+    "fn": "convertDistanceFromSI",
+    "formatter": "formatDistance",
+    "quantity": "distance",
+    "system": "imperial",
+    "input_si": -2500,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": -1.5534279805933349,
+    "expected_formatted": "-1.6 mi"
+  },
+  {
+    "fn": "convertDistanceFromSI",
+    "formatter": "formatDistance",
+    "quantity": "distance",
+    "system": "metric",
+    "input_si": 1000000000,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 1000000,
+    "expected_formatted": "1,000,000.0 km"
+  },
+  {
+    "fn": "convertDistanceFromSI",
+    "formatter": "formatDistance",
+    "quantity": "distance",
+    "system": "imperial",
+    "input_si": 1000000000,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 621371.192237334,
+    "expected_formatted": "621,371.2 mi"
+  },
+  {
+    "fn": "convertDistanceFromSI",
+    "formatter": "formatDistance",
+    "quantity": "distance",
+    "system": "metric",
+    "input_si": null,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": null,
+    "expected_formatted": "—"
+  },
+  {
+    "fn": "convertDistanceFromSI",
+    "formatter": "formatDistance",
+    "quantity": "distance",
+    "system": "imperial",
+    "input_si": null,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": null,
+    "expected_formatted": "—"
+  },
+  {
+    "fn": "convertSpeedFromSI",
+    "formatter": "formatSpeed",
+    "quantity": "speed",
+    "system": "metric",
+    "input_si": 0,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 0,
+    "expected_formatted": "0 km/h"
+  },
+  {
+    "fn": "convertSpeedFromSI",
+    "formatter": "formatSpeed",
+    "quantity": "speed",
+    "system": "imperial",
+    "input_si": 0,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 0,
+    "expected_formatted": "0 mph"
+  },
+  {
+    "fn": "convertSpeedFromSI",
+    "formatter": "formatSpeed",
+    "quantity": "speed",
+    "system": "metric",
+    "input_si": 27.778,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 100.00079999999998,
+    "expected_formatted": "100 km/h"
+  },
+  {
+    "fn": "convertSpeedFromSI",
+    "formatter": "formatSpeed",
+    "quantity": "speed",
+    "system": "imperial",
+    "input_si": 27.778,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 62.13761632068718,
+    "expected_formatted": "62 mph"
+  },
+  {
+    "fn": "convertSpeedFromSI",
+    "formatter": "formatSpeed",
+    "quantity": "speed",
+    "system": "metric",
+    "input_si": 33.5,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 120.6,
+    "expected_formatted": "121 km/h"
+  },
+  {
+    "fn": "convertSpeedFromSI",
+    "formatter": "formatSpeed",
+    "quantity": "speed",
+    "system": "imperial",
+    "input_si": 33.5,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 74.93736578382247,
+    "expected_formatted": "75 mph"
+  },
+  {
+    "fn": "convertSpeedFromSI",
+    "formatter": "formatSpeed",
+    "quantity": "speed",
+    "system": "metric",
+    "input_si": -5,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": -18,
+    "expected_formatted": "-18 km/h"
+  },
+  {
+    "fn": "convertSpeedFromSI",
+    "formatter": "formatSpeed",
+    "quantity": "speed",
+    "system": "imperial",
+    "input_si": -5,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": -11.184681460272012,
+    "expected_formatted": "-11 mph"
+  },
+  {
+    "fn": "convertSpeedFromSI",
+    "formatter": "formatSpeed",
+    "quantity": "speed",
+    "system": "metric",
+    "input_si": 1000,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 3600,
+    "expected_formatted": "3,600 km/h"
+  },
+  {
+    "fn": "convertSpeedFromSI",
+    "formatter": "formatSpeed",
+    "quantity": "speed",
+    "system": "imperial",
+    "input_si": 1000,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 2236.936292054402,
+    "expected_formatted": "2,237 mph"
+  },
+  {
+    "fn": "convertSpeedFromSI",
+    "formatter": "formatSpeed",
+    "quantity": "speed",
+    "system": "metric",
+    "input_si": null,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": null,
+    "expected_formatted": "—"
+  },
+  {
+    "fn": "convertSpeedFromSI",
+    "formatter": "formatSpeed",
+    "quantity": "speed",
+    "system": "imperial",
+    "input_si": null,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": null,
+    "expected_formatted": "—"
+  },
+  {
+    "fn": "convertTempFromSI",
+    "formatter": "formatTemperature",
+    "quantity": "temperature",
+    "system": "metric",
+    "input_si": 0,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 0,
+    "expected_formatted": "0.0°C"
+  },
+  {
+    "fn": "convertTempFromSI",
+    "formatter": "formatTemperature",
+    "quantity": "temperature",
+    "system": "imperial",
+    "input_si": 0,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 32,
+    "expected_formatted": "32.0°F"
+  },
+  {
+    "fn": "convertTempFromSI",
+    "formatter": "formatTemperature",
+    "quantity": "temperature",
+    "system": "metric",
+    "input_si": 22.5,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 22.5,
+    "expected_formatted": "22.5°C"
+  },
+  {
+    "fn": "convertTempFromSI",
+    "formatter": "formatTemperature",
+    "quantity": "temperature",
+    "system": "imperial",
+    "input_si": 22.5,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 72.5,
+    "expected_formatted": "72.5°F"
+  },
+  {
+    "fn": "convertTempFromSI",
+    "formatter": "formatTemperature",
+    "quantity": "temperature",
+    "system": "metric",
+    "input_si": -10.4,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": -10.4,
+    "expected_formatted": "-10.4°C"
+  },
+  {
+    "fn": "convertTempFromSI",
+    "formatter": "formatTemperature",
+    "quantity": "temperature",
+    "system": "imperial",
+    "input_si": -10.4,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 13.279999999999998,
+    "expected_formatted": "13.3°F"
+  },
+  {
+    "fn": "convertTempFromSI",
+    "formatter": "formatTemperature",
+    "quantity": "temperature",
+    "system": "metric",
+    "input_si": 37.78,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 37.78,
+    "expected_formatted": "37.8°C"
+  },
+  {
+    "fn": "convertTempFromSI",
+    "formatter": "formatTemperature",
+    "quantity": "temperature",
+    "system": "imperial",
+    "input_si": 37.78,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 100.00399999999999,
+    "expected_formatted": "100.0°F"
+  },
+  {
+    "fn": "convertTempFromSI",
+    "formatter": "formatTemperature",
+    "quantity": "temperature",
+    "system": "metric",
+    "input_si": 100,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 100,
+    "expected_formatted": "100.0°C"
+  },
+  {
+    "fn": "convertTempFromSI",
+    "formatter": "formatTemperature",
+    "quantity": "temperature",
+    "system": "imperial",
+    "input_si": 100,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 212,
+    "expected_formatted": "212.0°F"
+  },
+  {
+    "fn": "convertTempFromSI",
+    "formatter": "formatTemperature",
+    "quantity": "temperature",
+    "system": "metric",
+    "input_si": null,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": null,
+    "expected_formatted": "—"
+  },
+  {
+    "fn": "convertTempFromSI",
+    "formatter": "formatTemperature",
+    "quantity": "temperature",
+    "system": "imperial",
+    "input_si": null,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": null,
+    "expected_formatted": "—"
+  },
+  {
+    "fn": "convertPressureFromSI",
+    "formatter": "formatPressure",
+    "quantity": "pressure",
+    "system": "metric",
+    "input_si": 0,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 0,
+    "expected_formatted": "0.0 kPa"
+  },
+  {
+    "fn": "convertPressureFromSI",
+    "formatter": "formatPressure",
+    "quantity": "pressure",
+    "system": "imperial",
+    "input_si": 0,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 0,
+    "expected_formatted": "0.0 psi"
+  },
+  {
+    "fn": "convertPressureFromSI",
+    "formatter": "formatPressure",
+    "quantity": "pressure",
+    "system": "metric",
+    "input_si": 250,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 250,
+    "expected_formatted": "250.0 kPa"
+  },
+  {
+    "fn": "convertPressureFromSI",
+    "formatter": "formatPressure",
+    "quantity": "pressure",
+    "system": "imperial",
+    "input_si": 250,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 36.25943597432077,
+    "expected_formatted": "36.3 psi"
+  },
+  {
+    "fn": "convertPressureFromSI",
+    "formatter": "formatPressure",
+    "quantity": "pressure",
+    "system": "metric",
+    "input_si": 248.2,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 248.2,
+    "expected_formatted": "248.2 kPa"
+  },
+  {
+    "fn": "convertPressureFromSI",
+    "formatter": "formatPressure",
+    "quantity": "pressure",
+    "system": "imperial",
+    "input_si": 248.2,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 35.99836803530567,
+    "expected_formatted": "36.0 psi"
+  },
+  {
+    "fn": "convertPressureFromSI",
+    "formatter": "formatPressure",
+    "quantity": "pressure",
+    "system": "metric",
+    "input_si": -5,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": -5,
+    "expected_formatted": "-5.0 kPa"
+  },
+  {
+    "fn": "convertPressureFromSI",
+    "formatter": "formatPressure",
+    "quantity": "pressure",
+    "system": "imperial",
+    "input_si": -5,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": -0.7251887194864155,
+    "expected_formatted": "-0.7 psi"
+  },
+  {
+    "fn": "convertPressureFromSI",
+    "formatter": "formatPressure",
+    "quantity": "pressure",
+    "system": "metric",
+    "input_si": null,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": null,
+    "expected_formatted": "—"
+  },
+  {
+    "fn": "convertPressureFromSI",
+    "formatter": "formatPressure",
+    "quantity": "pressure",
+    "system": "imperial",
+    "input_si": null,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": null,
+    "expected_formatted": "—"
+  },
+  {
+    "fn": "convertEnergyFromSI",
+    "formatter": "formatEnergy",
+    "quantity": "energy",
+    "system": "metric",
+    "input_si": 0,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 0,
+    "expected_formatted": "0.00 Wh"
+  },
+  {
+    "fn": "convertEnergyFromSI",
+    "formatter": "formatEnergy",
+    "quantity": "energy",
+    "system": "imperial",
+    "input_si": 0,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 0,
+    "expected_formatted": "0.00 kWh"
+  },
+  {
+    "fn": "convertEnergyFromSI",
+    "formatter": "formatEnergy",
+    "quantity": "energy",
+    "system": "metric",
+    "input_si": 1234.5,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 1234.5,
+    "expected_formatted": "1,234.50 Wh"
+  },
+  {
+    "fn": "convertEnergyFromSI",
+    "formatter": "formatEnergy",
+    "quantity": "energy",
+    "system": "imperial",
+    "input_si": 1234.5,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 1.2345,
+    "expected_formatted": "1.23 kWh"
+  },
+  {
+    "fn": "convertEnergyFromSI",
+    "formatter": "formatEnergy",
+    "quantity": "energy",
+    "system": "metric",
+    "input_si": 75000,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 75000,
+    "expected_formatted": "75,000.00 Wh"
+  },
+  {
+    "fn": "convertEnergyFromSI",
+    "formatter": "formatEnergy",
+    "quantity": "energy",
+    "system": "imperial",
+    "input_si": 75000,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 75,
+    "expected_formatted": "75.00 kWh"
+  },
+  {
+    "fn": "convertEnergyFromSI",
+    "formatter": "formatEnergy",
+    "quantity": "energy",
+    "system": "metric",
+    "input_si": -500,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": -500,
+    "expected_formatted": "-500.00 Wh"
+  },
+  {
+    "fn": "convertEnergyFromSI",
+    "formatter": "formatEnergy",
+    "quantity": "energy",
+    "system": "imperial",
+    "input_si": -500,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": -0.5,
+    "expected_formatted": "-0.50 kWh"
+  },
+  {
+    "fn": "convertEnergyFromSI",
+    "formatter": "formatEnergy",
+    "quantity": "energy",
+    "system": "metric",
+    "input_si": 1000000000,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 1000000000,
+    "expected_formatted": "1,000,000,000.00 Wh"
+  },
+  {
+    "fn": "convertEnergyFromSI",
+    "formatter": "formatEnergy",
+    "quantity": "energy",
+    "system": "imperial",
+    "input_si": 1000000000,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 1000000,
+    "expected_formatted": "1,000,000.00 kWh"
+  },
+  {
+    "fn": "convertEnergyFromSI",
+    "formatter": "formatEnergy",
+    "quantity": "energy",
+    "system": "metric",
+    "input_si": null,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": null,
+    "expected_formatted": "—"
+  },
+  {
+    "fn": "convertEnergyFromSI",
+    "formatter": "formatEnergy",
+    "quantity": "energy",
+    "system": "imperial",
+    "input_si": null,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": null,
+    "expected_formatted": "—"
+  },
+  {
+    "fn": "convertDurationFromSI",
+    "formatter": "formatDuration",
+    "quantity": "duration",
+    "system": "metric",
+    "input_si": 0,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 0,
+    "expected_formatted": "0 h"
+  },
+  {
+    "fn": "convertDurationFromSI",
+    "formatter": "formatDuration",
+    "quantity": "duration",
+    "system": "imperial",
+    "input_si": 0,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 0,
+    "expected_formatted": "0 min"
+  },
+  {
+    "fn": "convertDurationFromSI",
+    "formatter": "formatDuration",
+    "quantity": "duration",
+    "system": "metric",
+    "input_si": 90,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 0.025,
+    "expected_formatted": "0 h"
+  },
+  {
+    "fn": "convertDurationFromSI",
+    "formatter": "formatDuration",
+    "quantity": "duration",
+    "system": "imperial",
+    "input_si": 90,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 1.5,
+    "expected_formatted": "2 min"
+  },
+  {
+    "fn": "convertDurationFromSI",
+    "formatter": "formatDuration",
+    "quantity": "duration",
+    "system": "metric",
+    "input_si": 3661,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 1.0169444444444444,
+    "expected_formatted": "1 h"
+  },
+  {
+    "fn": "convertDurationFromSI",
+    "formatter": "formatDuration",
+    "quantity": "duration",
+    "system": "imperial",
+    "input_si": 3661,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 61.016666666666666,
+    "expected_formatted": "61 min"
+  },
+  {
+    "fn": "convertDurationFromSI",
+    "formatter": "formatDuration",
+    "quantity": "duration",
+    "system": "metric",
+    "input_si": 86400,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 24,
+    "expected_formatted": "24 h"
+  },
+  {
+    "fn": "convertDurationFromSI",
+    "formatter": "formatDuration",
+    "quantity": "duration",
+    "system": "imperial",
+    "input_si": 86400,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 1440,
+    "expected_formatted": "1,440 min"
+  },
+  {
+    "fn": "convertDurationFromSI",
+    "formatter": "formatDuration",
+    "quantity": "duration",
+    "system": "metric",
+    "input_si": -120,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": -0.03333333333333333,
+    "expected_formatted": "-0 h"
+  },
+  {
+    "fn": "convertDurationFromSI",
+    "formatter": "formatDuration",
+    "quantity": "duration",
+    "system": "imperial",
+    "input_si": -120,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": -2,
+    "expected_formatted": "-2 min"
+  },
+  {
+    "fn": "convertDurationFromSI",
+    "formatter": "formatDuration",
+    "quantity": "duration",
+    "system": "metric",
+    "input_si": null,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": null,
+    "expected_formatted": "—"
+  },
+  {
+    "fn": "convertDurationFromSI",
+    "formatter": "formatDuration",
+    "quantity": "duration",
+    "system": "imperial",
+    "input_si": null,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": null,
+    "expected_formatted": "—"
+  },
+  {
+    "fn": "convertPowerFromSI",
+    "formatter": "formatPower",
+    "quantity": "power",
+    "system": "metric",
+    "input_si": 0,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 0,
+    "expected_formatted": "0.00 W"
+  },
+  {
+    "fn": "convertPowerFromSI",
+    "formatter": "formatPower",
+    "quantity": "power",
+    "system": "imperial",
+    "input_si": 0,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 0,
+    "expected_formatted": "0.00 kW"
+  },
+  {
+    "fn": "convertPowerFromSI",
+    "formatter": "formatPower",
+    "quantity": "power",
+    "system": "metric",
+    "input_si": 7400,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 7400,
+    "expected_formatted": "7,400.00 W"
+  },
+  {
+    "fn": "convertPowerFromSI",
+    "formatter": "formatPower",
+    "quantity": "power",
+    "system": "imperial",
+    "input_si": 7400,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 7.4,
+    "expected_formatted": "7.40 kW"
+  },
+  {
+    "fn": "convertPowerFromSI",
+    "formatter": "formatPower",
+    "quantity": "power",
+    "system": "metric",
+    "input_si": 11500.5,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 11500.5,
+    "expected_formatted": "11,500.50 W"
+  },
+  {
+    "fn": "convertPowerFromSI",
+    "formatter": "formatPower",
+    "quantity": "power",
+    "system": "imperial",
+    "input_si": 11500.5,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 11.5005,
+    "expected_formatted": "11.50 kW"
+  },
+  {
+    "fn": "convertPowerFromSI",
+    "formatter": "formatPower",
+    "quantity": "power",
+    "system": "metric",
+    "input_si": -5000,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": -5000,
+    "expected_formatted": "-5,000.00 W"
+  },
+  {
+    "fn": "convertPowerFromSI",
+    "formatter": "formatPower",
+    "quantity": "power",
+    "system": "imperial",
+    "input_si": -5000,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": -5,
+    "expected_formatted": "-5.00 kW"
+  },
+  {
+    "fn": "convertPowerFromSI",
+    "formatter": "formatPower",
+    "quantity": "power",
+    "system": "metric",
+    "input_si": 250000,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 250000,
+    "expected_formatted": "250,000.00 W"
+  },
+  {
+    "fn": "convertPowerFromSI",
+    "formatter": "formatPower",
+    "quantity": "power",
+    "system": "imperial",
+    "input_si": 250000,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": 250,
+    "expected_formatted": "250.00 kW"
+  },
+  {
+    "fn": "convertPowerFromSI",
+    "formatter": "formatPower",
+    "quantity": "power",
+    "system": "metric",
+    "input_si": null,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": null,
+    "expected_formatted": "—"
+  },
+  {
+    "fn": "convertPowerFromSI",
+    "formatter": "formatPower",
+    "quantity": "power",
+    "system": "imperial",
+    "input_si": null,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": null,
+    "expected_formatted": "—"
+  },
+  {
+    "fn": "convertDistanceFromSI",
+    "formatter": "formatDistance",
+    "quantity": "distance",
+    "system": "metric",
+    "input_si": 100,
+    "preference": {
+      "distance": "ft",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 328.0839895013123,
+    "expected_formatted": "328.1 ft"
+  },
+  {
+    "fn": "convertPressureFromSI",
+    "formatter": "formatPressure",
+    "quantity": "pressure",
+    "system": "metric",
+    "input_si": 250,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "bar",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 2.5,
+    "expected_formatted": "2.5 bar"
+  },
+  {
+    "fn": "convertDurationFromSI",
+    "formatter": "formatDuration",
+    "quantity": "duration",
+    "system": "metric",
+    "input_si": 90,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "s",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 90,
+    "expected_formatted": "90 s"
+  },
+  {
+    "fn": "convertDurationFromSI",
+    "formatter": "formatDuration",
+    "quantity": "duration",
+    "system": "metric",
+    "input_si": 172800,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "d",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "expected_value": 2,
+    "expected_formatted": "2 d"
+  },
+  {
+    "fn": "convertDistanceFromSI",
+    "formatter": "formatDistance",
+    "quantity": "distance",
+    "system": "metric",
+    "input_si": 1609.344,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US"
+    },
+    "options": {
+      "precision": 3
+    },
+    "expected_value": 1.609344,
+    "expected_formatted": "1.609 km"
+  },
+  {
+    "fn": "convertPowerFromSI",
+    "formatter": "formatPower",
+    "quantity": "power",
+    "system": "imperial",
+    "input_si": 7400,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US",
+      "precision": 0
+    },
+    "expected_value": 7.4,
+    "expected_formatted": "7 kW"
+  },
+  {
+    "fn": "convertEnergyFromSI",
+    "formatter": "formatEnergy",
+    "quantity": "energy",
+    "system": "metric",
+    "input_si": null,
+    "preference": {
+      "distance": "km",
+      "speed": "km/h",
+      "temperature": "°C",
+      "pressure": "kPa",
+      "energy": "Wh",
+      "duration": "h",
+      "power": "W",
+      "locale": "en-US",
+      "emptyDisplay": "N/A"
+    },
+    "expected_value": null,
+    "expected_formatted": "N/A"
+  },
+  {
+    "fn": "convertSpeedFromSI",
+    "formatter": "formatSpeed",
+    "quantity": "speed",
+    "system": "imperial",
+    "input_si": null,
+    "preference": {
+      "distance": "mi",
+      "speed": "mph",
+      "temperature": "°F",
+      "pressure": "psi",
+      "energy": "kWh",
+      "duration": "min",
+      "power": "kW",
+      "locale": "en-US"
+    },
+    "expected_value": null,
+    "expected_formatted": "—"
+  }
+]
