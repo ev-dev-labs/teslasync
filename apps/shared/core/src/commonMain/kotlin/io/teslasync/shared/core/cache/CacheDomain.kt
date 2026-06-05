@@ -268,6 +268,19 @@ public enum class CacheDomain(
     // append-update/delete mutation invalidates the WHOLE partition (the web hooks invalidate
     // `['status-incidents']`), dropping every list AND detail query at once.
     Incidents("incidents", 30.seconds),
+
+    // The per-vehicle Ingest X-Ray (`GET /system/ingest-xray/{vehicleID}`). The web `useIngestXRay`
+    // hook reads it with `STALE_TIMES.REALTIME` (5s) and polls it on `INTERVALS.FAST` (10s) via
+    // `refetchInterval` because the screen is meant to feel "live" while an operator diagnoses a
+    // stalled signal pipeline, so the 5-second window matches the web `staleTime` verbatim while the
+    // S8/UI refetch cadence drives the actual live polling and the cache-then-network operator always
+    // re-fetches on refresh, so no stale value is ever served as fresh. Each
+    // `(vehicleId, window, bucket, limit)` query is cached under its own key (mirroring the web
+    // `ingestXRayKeys.detail` tuple). Payloads are diagnostic rows (signal field names, integer
+    // sample counts, ISO timestamps, a value_kind enum) — not display-unit-bearing — so they
+    // round-trip verbatim with no SI conversion. The web hook file declares no mutations, so the
+    // partition has no invalidation surface.
+    IngestXRay("ingest_xray", 5.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */

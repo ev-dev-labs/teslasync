@@ -1,0 +1,16 @@
+[
+  { "name": "kind_0_unknown", "kind": 0, "expected": "unknown" },
+  { "name": "kind_1_string", "kind": 1, "expected": "string" },
+  { "name": "kind_2_bool", "kind": 2, "expected": "bool" },
+  { "name": "kind_3_int32", "kind": 3, "expected": "int32" },
+  { "name": "kind_4_int64", "kind": 4, "expected": "int64" },
+  { "name": "kind_5_float32", "kind": 5, "expected": "float32" },
+  { "name": "kind_6_float64", "kind": 6, "expected": "float64" },
+  { "name": "kind_7_enum", "kind": 7, "expected": "enum" },
+  { "name": "kind_8_invalid", "kind": 8, "expected": "invalid" },
+  { "name": "kind_9_time", "kind": 9, "expected": "time" },
+  { "name": "kind_10_location", "kind": 10, "expected": "location" },
+  { "name": "kind_11_unmapped_low", "kind": 11, "expected": "kind 11" },
+  { "name": "kind_99_unmapped_high", "kind": 99, "expected": "kind 99" },
+  { "name": "kind_negative_unmapped", "kind": -1, "expected": "kind -1" }
+]
