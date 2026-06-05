@@ -210,6 +210,18 @@ public enum class CacheDomain(
     // display-unit-bearing — so they round-trip verbatim with no SI conversion. The web hook file
     // declares no mutations, so the partition has no invalidation surface.
     FleetTelemetry("fleet_telemetry", 5.minutes),
+
+    // The FSM shadow-mode debugger feeds (`GET /fsm/stats`, `GET /fsm/transitions`). The web
+    // `useFSMStats`/`useFSMTransitions` hooks declare no `staleTime` (TanStack default 0 = always
+    // refetch on mount) and poll both on `INTERVALS.FAST` (10s) via `refetchInterval`, so the
+    // 10-second window keeps the freshness flag honest while the S8/UI refetch cadence drives the
+    // actual live polling and the cache-then-network operator always re-fetches on refresh, so no
+    // stale value is ever served as fresh. The two read shapes share this partition under distinct
+    // prefixed keys (`stats:{vehicleId}` / the transitions query tuple). Payloads are FSM audit rows
+    // (state names, triggers, transition counts, timestamps, pagination ints) — not
+    // display-unit-bearing — so they round-trip verbatim with no SI conversion. The web hook file
+    // declares no mutations, so the partition has no invalidation surface.
+    Fsm("fsm", 10.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
