@@ -1,0 +1,12 @@
+# Redocly lint configuration for the TeslaSync OpenAPI 3.1 contract.
+#
+# The contract is generated from the Chi router (cmd/openapi-gen, ADR-003), so
+# path shapes mirror the real server exactly — including the trailing slashes
+# that chi.Route("/x", r.Get("/", ...)) registers (e.g. /api/v1/vehicles/).
+# Those paths require the trailing slash on the wire (no RedirectSlashes
+# middleware is mounted), so we keep them verbatim and disable the stylistic
+# no-path-trailing-slash rule rather than misrepresent the surface.
+extends:
+  - recommended
+rules:
+  no-path-trailing-slash: off
