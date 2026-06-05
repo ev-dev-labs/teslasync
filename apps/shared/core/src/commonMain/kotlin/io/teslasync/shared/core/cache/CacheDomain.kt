@@ -568,6 +568,25 @@ public enum class CacheDomain(
     // vehicle-refresh hook handles. The payload is per-key { key, value, source } rows whose `value`
     // is arbitrary JSON — not display-unit-bearing — so it round-trips verbatim with no SI conversion.
     VehicleSettings("vehicle_settings", 30.seconds),
+
+    // The VehicleSystems read-models (web/src/api/hooks/useVehicleSystems.ts): the per-vehicle
+    // climate/tire-pressure/safety/media "latest" snapshots and their history lists, plus the
+    // global maintenance-schedule + service-record catalogs and the per-vehicle software-update
+    // list. The four "latest" reads poll `INTERVALS.STANDARD` (30s) via `refetchInterval` and the
+    // history / software-update reads use the default TanStack `staleTime` (0 = refetch on mount);
+    // the 30-second window keeps the freshness flag honest while the S8/UI refetch cadence drives
+    // the actual live polling and `cacheThenNetwork` always re-fetches on refresh, so no stale value
+    // is ever served as fresh. The global `useMaintenance`/`useServiceRecords` catalogs read with
+    // `STALE_TIMES.STATIC` (never stale — deployment-static reference data); they carry an explicit
+    // per-entry STATIC TTL override ([io.teslasync.shared.core.data.repo.VEHICLE_SYSTEMS_STATIC_TTL_MILLIS])
+    // rather than the domain window. Every feed is cached under its own per-feed key (mirroring the
+    // web `vehicleSystemsKeys` tuples) so each caches independently while logout clears the whole
+    // domain in one call; the many distinct read shapes are each carried verbatim as a raw SI
+    // [kotlinx.serialization.json.JsonElement] (the Driving/Analytics strategy). Payloads are SI on
+    // the wire (temps in °C, pressures in Pa, ranges in meters) and round-trip verbatim — display
+    // conversion is the render boundary's job (S5). The web hook file declares no mutations, so the
+    // partition has no invalidation surface.
+    VehicleSystems("vehicle_systems", 30.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
