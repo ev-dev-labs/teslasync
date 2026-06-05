@@ -126,6 +126,14 @@ public enum class CacheDomain(
     // round-trip verbatim with no SI conversion. The web hook file declares no mutations, so the
     // partition has no invalidation surface.
     Commands("commands", 10.seconds),
+
+    // The fleet-overview dashboard summary (`GET /dashboard/stats`). The web `useDashboardStats`
+    // hook reads it with `STALE_TIMES.STANDARD` (60s), so the 1-minute window matches verbatim.
+    // The payload is SI on the wire (`total_m` meters, `total_energy_wh` watt-hours, cost in
+    // integer cents) and stays SI through the cache; display conversion is the render boundary's
+    // job (S5), never this layer's. The web hook file declares no mutations, so the partition has
+    // no invalidation surface.
+    Dashboard("dashboard", 1.minutes),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
