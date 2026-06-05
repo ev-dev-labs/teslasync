@@ -134,6 +134,15 @@ public enum class CacheDomain(
     // job (S5), never this layer's. The web hook file declares no mutations, so the partition has
     // no invalidation surface.
     Dashboard("dashboard", 1.minutes),
+
+    // The named dashboard-layout library (`GET /dashboard/layouts`), backing the LayoutSwitcher's
+    // per-row presets. The web `useNamedDashboardLayouts` hook reads it with `STALE_TIMES.SLOW`
+    // (5 minutes), so the window matches verbatim. Each (vehicle | global) scope is cached under
+    // its own key (mirroring the web `dashboardLayoutLibraryKeys.list` tuple); a
+    // create/update/delete/apply invalidates the WHOLE partition (the web hooks invalidate
+    // `dashboardLayoutLibraryKeys.all`). The `layout` field is an opaque SavedDashboard JSON blob
+    // round-tripped verbatim — not display-unit-bearing — so there is no SI conversion here.
+    DashboardLayouts("dashboard_layouts", 5.minutes),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */

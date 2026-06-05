@@ -1,0 +1,194 @@
+=== P1/S8/0016 DashboardLayouts gate ===
+
+> Task :core:kmpPartiallyResolvedDependenciesChecker
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:compileKotlinIosSimulatorArm64
+> Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
+> Task :core:iosSimulatorArm64MainKlibrary
+> Task :core:compileTestKotlinIosSimulatorArm64
+> Task :core:computeLocalPackageDependencyInputFiles SKIPPED
+> Task :core:generateSyntheticLinkageSwiftPMImportProjectForCinteropsAndLdDump SKIPPED
+> Task :core:generateUmbrellaPackageIdentifierBasedResolutionForDefault SKIPPED
+> Task :core:fetchUmbrellaPackageIdentifierForDefault SKIPPED
+> Task :core:syncPersistedPackageResolvedToSynthetic SKIPPED
+> Task :core:fetchSyntheticImportProjectPackages SKIPPED
+> Task :core:convertSyntheticImportProjectIntoDefFileIphonesimulator SKIPPED
+> Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
+> Task :core:iosSimulatorArm64Test SKIPPED
+> Task :core:compileKotlinMacosArm64
+> Task :core:macosArm64ProcessResources NO-SOURCE
+> Task :core:macosArm64MainKlibrary
+> Task :core:compileTestKotlinMacosArm64
+> Task :core:convertSyntheticImportProjectIntoDefFileMacosx SKIPPED
+> Task :core:linkDebugTestMacosArm64 SKIPPED
+> Task :core:macosArm64Test SKIPPED
+> Task :core:preBuild UP-TO-DATE
+> Task :core:preDebugBuild UP-TO-DATE
+> Task :core:generateDebugResValues UP-TO-DATE
+> Task :core:generateDebugResources UP-TO-DATE
+> Task :core:packageDebugResources UP-TO-DATE
+> Task :core:parseDebugLocalResources UP-TO-DATE
+> Task :core:generateDebugRFile UP-TO-DATE
+> Task :core:javaPreCompileDebug UP-TO-DATE
+> Task :core:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:generateDebugUnitTestStubRFile UP-TO-DATE
+> Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :core:preReleaseBuild UP-TO-DATE
+> Task :core:generateReleaseResValues UP-TO-DATE
+> Task :core:generateReleaseResources UP-TO-DATE
+> Task :core:packageReleaseResources UP-TO-DATE
+> Task :core:parseReleaseLocalResources UP-TO-DATE
+> Task :core:generateReleaseRFile UP-TO-DATE
+> Task :core:javaPreCompileRelease UP-TO-DATE
+> Task :core:preReleaseUnitTestBuild UP-TO-DATE
+> Task :core:generateReleaseUnitTestStubRFile UP-TO-DATE
+> Task :core:javaPreCompileReleaseUnitTest UP-TO-DATE
+> Task :core:compileDebugKotlinAndroid
+> Task :core:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:compileReleaseKotlinAndroid
+> Task :core:processDebugJavaRes
+> Task :core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarDebug
+> Task :core:bundleLibCompileToJarDebug
+> Task :core:processReleaseJavaRes
+> Task :core:bundleLibRuntimeToJarRelease
+> Task :core:bundleLibCompileToJarRelease
+> Task :core:compileDebugUnitTestKotlinAndroid
+> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processDebugUnitTestJavaRes
+> Task :core:compileReleaseUnitTestKotlinAndroid
+> Task :core:testDebugUnitTest
+> Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processReleaseUnitTestJavaRes
+> Task :core:testReleaseUnitTest
+> Task :core:allTests NO-SOURCE
+
+BUILD SUCCESSFUL in 38s
+37 actionable tasks: 19 executed, 18 up-to-date
+TEST_EXIT=0
+> Task :core:loadKtlintReporters UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidMainSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidUnitTestSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleMainSourceSet UP-TO-DATE
+> Task :core:ktlintAppleMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
+> Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosMainSourceSet NO-SOURCE
+> Task :core:ktlintIosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosTestSourceSet NO-SOURCE
+> Task :core:ktlintIosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverKotlinScripts UP-TO-DATE
+> Task :core:ktlintKotlinScriptCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverMacosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosMainSourceSet NO-SOURCE
+> Task :core:ktlintMacosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosTestSourceSet NO-SOURCE
+> Task :core:ktlintMacosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeMainSourceSet NO-SOURCE
+> Task :core:ktlintNativeMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
+> Task :core:ktlintNativeTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverCommonMainSourceSet
+> Task :core:ktlintCommonMainSourceSetCheck
+> Task :core:runKtlintCheckOverCommonTestSourceSet
+
+> Task :core:ktlintCommonTestSourceSetCheck FAILED
+D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:77:64 Missing newline after '{'
+D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:77:85 Missing newline after ';'
+D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:77:104 Missing newline before '}'
+D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:109:41 Expected newline before '.'
+D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:109:49 Expected newline before '.'
+D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:109:80 Expected newline before '.'
+D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:109:102 Expected newline before '.'
+D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:157:45 Expected newline before '.'
+D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:157:69 Expected newline before '.'
+D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:157:91 Expected newline before '.'
+D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:209:45 Expected newline before '.'
+D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:209:69 Expected newline before '.'
+D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:209:91 Expected newline before '.'
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':core:ktlintCommonTestSourceSetCheck'.
+> A failure occurred while executing org.jlleitschuh.gradle.ktlint.worker.ConsoleReportWorkAction
+   > KtLint found code style violations. Please see the following reports:
+     - D:\repos\teslasync\apps\shared\core\build\reports\ktlint\ktlintCommonTestSourceSetCheck\ktlintCommonTestSourceSetCheck.txt
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 12s
+16 actionable tasks: 4 executed, 12 up-to-date
+LINT_EXIT=1
+> Task :core:runKtlintCheckOverMacosTestSourceSet NO-SOURCE
+> Task :core:ktlintMacosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeMainSourceSet NO-SOURCE
+> Task :core:ktlintNativeMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
+> Task :core:ktlintNativeTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverCommonTestSourceSet
+> Task :core:ktlintCommonTestSourceSetCheck
+> Task :core:ktlintCheck
+
+BUILD SUCCESSFUL in 9s
+16 actionable tasks: 2 executed, 14 up-to-date
+LINT_EXIT=0
+> Task :core:processReleaseUnitTestJavaRes UP-TO-DATE
+> Task :core:testReleaseUnitTest
+> Task :core:allTests NO-SOURCE
+
+BUILD SUCCESSFUL in 23s
+37 actionable tasks: 7 executed, 30 up-to-date
+TEST_EXIT=0
+PH_EXIT=0
+
+=== PARITY ===
+Web source: web/src/api/hooks/useDashboardLayouts.ts (5 hooks)
+Reads (1):
+  useNamedDashboardLayouts  -> DashboardLayoutsStore.namedLayouts / HttpDashboardLayoutRepository.namedLayouts
+      GET /dashboard/layouts [?vehicle_id=]  staleTime SLOW(5m) -> CacheDomain.DashboardLayouts TTL 5m
+      cache key mirrors dashboardLayoutLibraryKeys.list(vehicleId ?? 'global')
+Mutations (4):
+  useCreateDashboardLayout   -> createLayout  POST   /dashboard/layouts            invalidate all
+  useUpdateDashboardLayout   -> updateLayout  PUT    /dashboard/layouts/{id}       invalidate all
+  useDeleteDashboardLayout   -> deleteLayout  DELETE /dashboard/layouts/{id} (204) invalidate all
+  useApplyDashboardLayout    -> applyLayout   POST   /dashboard/layouts/{id}/apply invalidate all
+Derivation: none (web hook has no select; `layout` is an opaque blob round-tripped verbatim) ->
+  no golden vectors required (matches Dashboard/Anomalies/Commands no-derivation ports). SI preserved.
+Tests: 11 contract + 5 store = 16, all green (testDebugUnitTest + testReleaseUnitTest).
+Apple targets SKIPPED on Windows host (iosSimulatorArm64Test/macosArm64Test) — expected.
+
+EXIT=0
+STATUS=DONE
