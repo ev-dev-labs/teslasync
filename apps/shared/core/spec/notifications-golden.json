@@ -1,0 +1,65 @@
+{
+  "_comment": "Shared golden vectors for the Notifications domain (web useNotifications). Consumed by both the KMP core (NotificationsGoldenTest) and the Windows C# port so the client-side derivations cannot drift (ADR-004). Source-of-truth web hook: web/src/api/hooks/useNotifications.ts.",
+  "cacheKeys": {
+    "alerts": "alerts",
+    "alertDetail": { "input": 7, "expected": "alert-detail:7" },
+    "alertRules": "alert-rules",
+    "alertMetrics": "alert-metrics",
+    "channels": "channels",
+    "logsPrefix": "notification-logs:",
+    "unreadCount": "notification-logs:unread-count",
+    "bellUnread": { "input": 5, "expected": "notification-logs:bell-unread:5" },
+    "stats": "notification-stats",
+    "quietHours": "notification-quiet-hours"
+  },
+  "minBellLimit": 1,
+  "notificationFilterParams": {
+    "_comment": "Web serializeNotificationFilters: ordered snake_case map; multi-value CSV; bool only when non-null; string only when non-blank; number always when present. Order: severity, vehicle_id, rule_id, from, to, read, archived, q, group_key, limit, offset.",
+    "order": ["severity", "vehicle_id", "rule_id", "from", "to", "read", "archived", "q", "group_key", "limit", "offset"],
+    "vectors": [
+      { "name": "empty", "expected": {} },
+      {
+        "name": "csvMultiValue",
+        "severity": ["critical", "warning"], "vehicleId": [1, 2], "ruleId": [3],
+        "expected": { "severity": "critical,warning", "vehicle_id": "1,2", "rule_id": "3" }
+      },
+      {
+        "name": "boolsAndBlanks",
+        "read": false, "archived": true, "q": "", "from": "",
+        "expected": { "read": "false", "archived": "true" }
+      },
+      {
+        "name": "groupKeyKept",
+        "q": "boot", "groupKey": "thread-9",
+        "expected": { "q": "boot", "group_key": "thread-9" }
+      },
+      {
+        "name": "zeroNumbers",
+        "limit": 0, "offset": 0,
+        "expected": { "limit": "0", "offset": "0" }
+      }
+    ]
+  },
+  "notificationGroupsParams": {
+    "_comment": "Web useNotificationGroups: grouped=true FIRST, then the filters with group_key removed (mutual-exclusion contract).",
+    "input": { "read": true, "groupKey": "drop-me" },
+    "expected": { "grouped": "true", "read": "true" }
+  },
+  "bulkMarkReadBody": {
+    "_comment": "Web useBulkMarkRead JSON.stringify(vars): exactly one of ids | all | group_key.",
+    "vectors": [
+      { "name": "ids", "input": { "ids": [1, 2] }, "expected": { "ids": [1, 2] } },
+      { "name": "all", "input": { "all": true }, "expected": { "all": true } },
+      { "name": "group", "input": { "group_key": "t-1" }, "expected": { "group_key": "t-1" } }
+    ]
+  },
+  "acknowledgeBody": {
+    "_comment": "Web useAcknowledgeAlert: { note } only when the trimmed note is non-empty (verbatim trimmed value sent); otherwise {}.",
+    "vectors": [
+      { "name": "null", "expected": {} },
+      { "name": "blank", "note": "   ", "expected": {} },
+      { "name": "trimmed", "note": "  done  ", "expected": { "note": "done" } },
+      { "name": "verbatim", "note": "ack", "expected": { "note": "ack" } }
+    ]
+  }
+}

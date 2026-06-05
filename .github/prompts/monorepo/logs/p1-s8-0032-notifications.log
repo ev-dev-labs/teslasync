@@ -1,0 +1,385 @@
+=== GATE p1-s8-0032 notifications 2026-06-05T08:25:13.4803485-07:00 ===
+> Task :core:kmpPartiallyResolvedDependenciesChecker
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:compileKotlinIosSimulatorArm64
+> Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
+> Task :core:iosSimulatorArm64MainKlibrary
+> Task :core:compileTestKotlinIosSimulatorArm64
+> Task :core:computeLocalPackageDependencyInputFiles SKIPPED
+> Task :core:generateSyntheticLinkageSwiftPMImportProjectForCinteropsAndLdDump SKIPPED
+> Task :core:generateUmbrellaPackageIdentifierBasedResolutionForDefault SKIPPED
+> Task :core:fetchUmbrellaPackageIdentifierForDefault SKIPPED
+> Task :core:syncPersistedPackageResolvedToSynthetic SKIPPED
+> Task :core:fetchSyntheticImportProjectPackages SKIPPED
+> Task :core:convertSyntheticImportProjectIntoDefFileIphonesimulator SKIPPED
+> Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
+> Task :core:iosSimulatorArm64Test SKIPPED
+> Task :core:compileKotlinMacosArm64
+> Task :core:macosArm64ProcessResources NO-SOURCE
+> Task :core:macosArm64MainKlibrary
+> Task :core:compileTestKotlinMacosArm64
+> Task :core:convertSyntheticImportProjectIntoDefFileMacosx SKIPPED
+> Task :core:linkDebugTestMacosArm64 SKIPPED
+> Task :core:macosArm64Test SKIPPED
+> Task :core:preBuild UP-TO-DATE
+> Task :core:preDebugBuild UP-TO-DATE
+> Task :core:generateDebugResValues UP-TO-DATE
+> Task :core:generateDebugResources UP-TO-DATE
+> Task :core:packageDebugResources UP-TO-DATE
+> Task :core:parseDebugLocalResources UP-TO-DATE
+> Task :core:generateDebugRFile UP-TO-DATE
+> Task :core:compileDebugKotlinAndroid UP-TO-DATE
+> Task :core:javaPreCompileDebug UP-TO-DATE
+> Task :core:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:generateDebugUnitTestStubRFile UP-TO-DATE
+> Task :core:compileDebugUnitTestKotlinAndroid UP-TO-DATE
+> Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processDebugJavaRes UP-TO-DATE
+> Task :core:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :core:testDebugUnitTest
+> Task :core:preReleaseBuild UP-TO-DATE
+> Task :core:generateReleaseResValues UP-TO-DATE
+> Task :core:generateReleaseResources UP-TO-DATE
+> Task :core:packageReleaseResources UP-TO-DATE
+> Task :core:parseReleaseLocalResources UP-TO-DATE
+> Task :core:generateReleaseRFile UP-TO-DATE
+> Task :core:javaPreCompileRelease UP-TO-DATE
+> Task :core:preReleaseUnitTestBuild UP-TO-DATE
+> Task :core:generateReleaseUnitTestStubRFile UP-TO-DATE
+> Task :core:javaPreCompileReleaseUnitTest UP-TO-DATE
+> Task :core:compileReleaseKotlinAndroid
+> Task :core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:processReleaseJavaRes
+> Task :core:bundleLibRuntimeToJarRelease
+> Task :core:bundleLibCompileToJarRelease
+> Task :core:compileReleaseUnitTestKotlinAndroid
+> Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processReleaseUnitTestJavaRes
+> Task :core:testReleaseUnitTest
+> Task :core:allTests NO-SOURCE
+
+BUILD SUCCESSFUL in 1m 47s
+37 actionable tasks: 13 executed, 24 up-to-date
+TEST_EXIT=0
+> Task :core:loadKtlintReporters UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidMainSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidUnitTestSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleMainSourceSet UP-TO-DATE
+> Task :core:ktlintAppleMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
+> Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosMainSourceSet NO-SOURCE
+> Task :core:ktlintIosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosTestSourceSet NO-SOURCE
+> Task :core:ktlintIosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverKotlinScripts UP-TO-DATE
+> Task :core:ktlintKotlinScriptCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverMacosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosMainSourceSet NO-SOURCE
+> Task :core:ktlintMacosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosTestSourceSet NO-SOURCE
+> Task :core:ktlintMacosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeMainSourceSet NO-SOURCE
+> Task :core:ktlintNativeMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
+> Task :core:ktlintNativeTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverCommonMainSourceSet
+
+> Task :core:ktlintCommonMainSourceSetCheck FAILED
+D:\repos\teslasync\apps\shared\core\src\commonMain\kotlin\io\teslasync\shared\core\data\repo\HttpNotificationsRepository.kt:220:12 Expected newline before '.'
+D:\repos\teslasync\apps\shared\core\src\commonMain\kotlin\io\teslasync\shared\core\data\repo\NotificationsRepository.kt:326:32 Parameter should start on a newline
+D:\repos\teslasync\apps\shared\core\src\commonMain\kotlin\io\teslasync\shared\core\data\repo\NotificationsRepository.kt:326:60 Missing newline before ")"
+D:\repos\teslasync\apps\shared\core\src\commonMain\kotlin\io\teslasync\shared\core\data\repo\NotificationsRepository.kt:326:72 Newline expected before expression body
+D:\repos\teslasync\apps\shared\core\src\commonMain\kotlin\io\teslasync\shared\core\data\repo\NotificationsRepository.kt:326:133 Argument should be on a separate line (unless all arguments can fit a single line)
+D:\repos\teslasync\apps\shared\core\src\commonMain\kotlin\io\teslasync\shared\core\data\repo\NotificationsRepository.kt:326:140 Missing newline before ")"
+D:\repos\teslasync\apps\shared\core\src\commonMain\kotlin\io\teslasync\shared\core\data\repo\NotificationsRepository.kt:326:141 Exceeded max line length (140) (cannot be auto-corrected)
+D:\repos\teslasync\apps\shared\core\src\commonMain\kotlin\io\teslasync\shared\core\presentation\notifications\NotificationModels.kt:300:30 Newline expected after opening parenthesis
+D:\repos\teslasync\apps\shared\core\src\commonMain\kotlin\io\teslasync\shared\core\presentation\notifications\NotificationModels.kt:300:62 Newline expected before closing parenthesis
+D:\repos\teslasync\apps\shared\core\src\commonMain\kotlin\io\teslasync\shared\core\presentation\notifications\NotificationModels.kt:405:27 Newline expected after opening parenthesis
+D:\repos\teslasync\apps\shared\core\src\commonMain\kotlin\io\teslasync\shared\core\presentation\notifications\NotificationModels.kt:405:53 Newline expected before closing parenthesis
+D:\repos\teslasync\apps\shared\core\src\commonMain\kotlin\io\teslasync\shared\core\presentation\notifications\NotificationModels.kt:411:29 Newline expected after opening parenthesis
+D:\repos\teslasync\apps\shared\core\src\commonMain\kotlin\io\teslasync\shared\core\presentation\notifications\NotificationModels.kt:411:56 Newline expected before closing parenthesis
+D:\repos\teslasync\apps\shared\core\src\commonMain\kotlin\io\teslasync\shared\core\presentation\notifications\NotificationsStore.kt:89:73 First line of body expression fits on same line as function signature
+D:\repos\teslasync\apps\shared\core\src\commonMain\kotlin\io\teslasync\shared\core\presentation\notifications\NotificationsStore.kt:109:9 No whitespace expected between opening parenthesis and first parameter name
+D:\repos\teslasync\apps\shared\core\src\commonMain\kotlin\io\teslasync\shared\core\presentation\notifications\NotificationsStore.kt:109:62 No whitespace expected between last parameter and closing parenthesis
+D:\repos\teslasync\apps\shared\core\src\commonMain\kotlin\io\teslasync\shared\core\presentation\notifications\NotificationsStore.kt:139:75 First line of body expression fits on same line as function signature
+
+> Task :core:runKtlintCheckOverCommonTestSourceSet
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':core:ktlintCommonMainSourceSetCheck'.
+> A failure occurred while executing org.jlleitschuh.gradle.ktlint.worker.ConsoleReportWorkAction
+   > KtLint found code style violations. Please see the following reports:
+     - D:\repos\teslasync\apps\shared\core\build\reports\ktlint\ktlintCommonMainSourceSetCheck\ktlintCommonMainSourceSetCheck.txt
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 15s
+15 actionable tasks: 3 executed, 12 up-to-date
+LINT_EXIT=1
+> Task :core:loadKtlintReporters UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidMainSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidUnitTestSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleMainSourceSet UP-TO-DATE
+> Task :core:ktlintAppleMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
+> Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosMainSourceSet NO-SOURCE
+> Task :core:ktlintIosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosTestSourceSet NO-SOURCE
+> Task :core:ktlintIosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverKotlinScripts UP-TO-DATE
+> Task :core:ktlintKotlinScriptCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverMacosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosMainSourceSet NO-SOURCE
+> Task :core:ktlintMacosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosTestSourceSet NO-SOURCE
+> Task :core:ktlintMacosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeMainSourceSet NO-SOURCE
+> Task :core:ktlintNativeMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
+> Task :core:ktlintNativeTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverCommonMainSourceSet
+> Task :core:ktlintCommonMainSourceSetCheck
+> Task :core:runKtlintCheckOverCommonTestSourceSet
+> Task :core:ktlintCommonTestSourceSetCheck
+> Task :core:ktlintCheck
+
+BUILD SUCCESSFUL in 15s
+16 actionable tasks: 4 executed, 12 up-to-date
+LINT_EXIT=0
+PLACEHOLDER_ALLOWED=13
+PLACEHOLDER_COUNT=0
+EXIT=0
+PH_EXIT=0
+=== RECHECK allTests after format ===
+> Task :core:kmpPartiallyResolvedDependenciesChecker
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:downloadKotlinNativeDistribution
+> Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
+> Task :core:computeLocalPackageDependencyInputFiles SKIPPED
+> Task :core:generateSyntheticLinkageSwiftPMImportProjectForCinteropsAndLdDump SKIPPED
+> Task :core:generateUmbrellaPackageIdentifierBasedResolutionForDefault SKIPPED
+> Task :core:fetchUmbrellaPackageIdentifierForDefault SKIPPED
+> Task :core:syncPersistedPackageResolvedToSynthetic SKIPPED
+> Task :core:fetchSyntheticImportProjectPackages SKIPPED
+> Task :core:convertSyntheticImportProjectIntoDefFileIphonesimulator SKIPPED
+> Task :core:macosArm64ProcessResources NO-SOURCE
+> Task :core:convertSyntheticImportProjectIntoDefFileMacosx SKIPPED
+> Task :core:preBuild UP-TO-DATE
+> Task :core:preDebugBuild UP-TO-DATE
+> Task :core:generateDebugResValues
+> Task :core:generateDebugResources
+> Task :core:packageDebugResources
+> Task :core:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:preReleaseBuild UP-TO-DATE
+> Task :core:generateReleaseResValues
+> Task :core:javaPreCompileDebugUnitTest
+> Task :core:javaPreCompileDebug
+> Task :core:parseDebugLocalResources
+> Task :core:generateReleaseResources
+> Task :core:packageReleaseResources
+> Task :core:generateDebugRFile
+> Task :core:parseReleaseLocalResources
+> Task :core:preReleaseUnitTestBuild UP-TO-DATE
+> Task :core:javaPreCompileRelease
+> Task :core:javaPreCompileReleaseUnitTest
+> Task :core:generateReleaseRFile
+> Task :core:generateDebugUnitTestStubRFile
+> Task :core:generateReleaseUnitTestStubRFile
+> Task :core:generateCommonMainTeslaSyncCacheInterface
+> Task :core:compileKotlinIosSimulatorArm64
+> Task :core:iosSimulatorArm64MainKlibrary
+> Task :core:compileTestKotlinIosSimulatorArm64
+> Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
+> Task :core:iosSimulatorArm64Test SKIPPED
+> Task :core:compileKotlinMacosArm64
+> Task :core:macosArm64MainKlibrary
+> Task :core:compileTestKotlinMacosArm64
+> Task :core:linkDebugTestMacosArm64 SKIPPED
+> Task :core:macosArm64Test SKIPPED
+> Task :core:compileDebugKotlinAndroid
+> Task :core:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:processDebugJavaRes
+> Task :core:compileReleaseKotlinAndroid
+> Task :core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarDebug
+> Task :core:bundleLibCompileToJarDebug
+> Task :core:bundleLibRuntimeToJarRelease
+> Task :core:processReleaseJavaRes
+> Task :core:bundleLibCompileToJarRelease
+> Task :core:compileDebugUnitTestKotlinAndroid
+> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processDebugUnitTestJavaRes
+> Task :core:compileReleaseUnitTestKotlinAndroid
+> Task :core:testDebugUnitTest
+> Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processReleaseUnitTestJavaRes
+> Task :core:testReleaseUnitTest
+> Task :core:allTests NO-SOURCE
+
+BUILD SUCCESSFUL in 1m 8s
+37 actionable tasks: 37 executed
+TEST_RECHECK_EXIT=0
+
+=== PARITY ===
+Domain: Notifications (web web/src/api/hooks/useNotifications.ts) -> KMP shared core (S7 port +
+S8 holder + golden-locked derivations). 36/36 hooks ported. SI preserved (no unit-bearing field in
+this domain; latency is already ms on the wire). Display conversion stays at the render boundary (S5).
+
+Reads / queries (14/14 ported) -> NotificationsStore StateFlow<Resource<T>>, cache->network:
+  [x] useAlerts                 -> alerts()                 GET /alerts                         (safeArray) key=alerts
+  [x] useAlertDetail            -> alertDetail(id)          GET /alerts/{id}                    key=alert-detail:{id}
+  [x] useCommentAlert           -> commentAlert(id, note)   POST /alerts/{id}/comment  body={note:trim}  -> refresh alert-detail:{id}
+  [x] useAlertRules             -> alertRules()             GET /alerts/rules                   (safeArray) key=alert-rules
+  [x] useAlertMetrics           -> alertMetrics()           GET /alerts/metrics                 (safeArray) key=alert-metrics
+  [x] usePreviewComputedMetric  -> previewComputedMetric(in) POST /alerts/test {kind:computed_metric,...}  -> invalidates NOTHING
+  [x] useNotificationChannels   -> notificationChannels()   GET /notifications                  (safeArray) key=channels (shared union)
+  [x] useNotificationLogs       -> notificationLogs(f)      GET /notifications/logs?<f>         key=notification-logs:filtered:<f>
+  [x] useNotificationGroups     -> notificationGroups(f)    GET /notifications/logs?grouped=true&<f-groupKey>  key=notification-logs:groups:<f>
+  [x] useGroupMembers           -> groupMembers(gk, f)      GET /notifications/logs?<f>&group_key=gk  (reuses flat key notification-logs:filtered:<f+gk>)
+  [x] useUnreadCount            -> unreadCount()            GET /notifications/unread-count     select {count}->Int  key=notification-logs:unread-count
+  [x] useUnreadNotifications    -> unreadNotifications(n)   GET /notifications/logs?read=false&archived=false&limit=max(1,n)  key=notification-logs:bell-unread:{n}
+  [x] useNotificationStats      -> notificationStats()      GET /notifications/stats            key=notification-stats
+  [x] useQuietHours             -> quietHours()             GET /notifications/quiet-hours      select windows  key=notification-quiet-hours
+  (commentAlert + previewComputedMetric are listed by the prompt under "reads" but are functionally
+   POST mutations; ported as suspend Result mutations -> counted in the 24 mutations below as well as
+   here, so the 14+22 prompt split = 36 hook NAMES, mapped to 12 StateFlow reads + 24 suspend actions.)
+
+Mutations / actions (22/22 ported) -> suspend Result<T>, onSuccess refreshes EXACTLY the web keys:
+  [x] useMarkAlertRead          -> markAlertRead(id)            POST /alerts/{id}/read              -> refresh alerts
+  [x] useAcknowledgeAlert       -> acknowledgeAlert(id, note?) POST /alerts/{id}/acknowledge body=ackBody(note)  -> refresh alerts + alert-detail:{id}
+  [x] useReopenAlert            -> reopenAlert(id)              POST /alerts/{id}/reopen            -> refresh alerts + alert-detail:{id}
+  [x] useSaveAlertRule          -> saveAlertRule(req)           POST /alerts/rules | PUT /alerts/rules/{id}  -> refresh alert-rules
+  [x] useDeleteAlertRule        -> deleteAlertRule(id)          DELETE /alerts/rules/{id}           -> refresh alert-rules
+  [x] useToggleAlertRule        -> toggleAlertRule(id, en)      PUT /alerts/rules/{id} {enabled}    -> refresh alert-rules
+  [x] useBulkEnableRules        -> bulkEnableRules(ids)         POST /alerts/rules/bulk/enable {ids} -> refresh alert-rules
+  [x] useBulkDisableRules       -> bulkDisableRules(ids)        POST /alerts/rules/bulk/disable {ids} -> refresh alert-rules
+  [x] useTestAlertRule          -> testAlertRule(req)           POST /alerts/test                   -> invalidates NOTHING
+  [x] useSnoozeAlertRule        -> snoozeAlertRule(id, req)     POST /alerts/rules/{id}/snooze      -> refresh alert-rules
+  [x] useMarkNotificationsRead  -> markNotificationsRead(ids)   POST /notifications/mark-read {ids} -> refresh notification-logs:* family
+  [x] useBulkMarkRead           -> bulkMarkRead(vars)           POST /notifications/mark-read {ids|all|group_key} -> refresh notification-logs:* family
+  [x] useMarkNotificationsUnread-> markNotificationsUnread(ids) POST /notifications/mark-unread {ids} -> refresh notification-logs:* family
+  [x] useArchiveNotifications   -> archiveNotifications(ids)    POST /notifications/archive {ids}   -> refresh notification-logs:* family
+  [x] useUnarchiveNotifications -> unarchiveNotifications(ids)  POST /notifications/unarchive {ids} -> refresh notification-logs:* family
+  [x] useDeleteNotifications    -> deleteNotifications(ids)     DELETE /notifications/logs {ids}    -> refresh notification-logs:* family
+  [x] useSaveChannel            -> saveChannel(input)           POST /notifications | PUT /notifications/{id}  -> refresh channels
+  [x] useDeleteChannel          -> deleteChannel(id)            DELETE /notifications/{id}          -> refresh channels + notification-stats
+  [x] useToggleChannel          -> toggleChannel(id)            POST /notifications/{id}/toggle     -> refresh channels + notification-stats
+  [x] useTestChannel            -> testChannel(id)              POST /notifications/{id}/test       -> invalidates NOTHING
+  [x] useSaveQuietHours         -> saveQuietHours(input, id?)   POST /notifications/quiet-hours | PATCH /notifications/quiet-hours/{id}  -> refresh notification-quiet-hours
+  [x] useDeleteQuietHours       -> deleteQuietHours(id)         DELETE /notifications/quiet-hours/{id}  -> refresh notification-quiet-hours
+
+Web-parity notes (NOT silent drift)
+  - The web `['notification-logs']` prefix invalidation is reproduced as refreshLogsFamily(): every
+    OBSERVED feed whose key starts with "notification-logs:" (flat list, grouped, bell preview, AND
+    unread-count) is re-fetched at once by each inbox write. unread-count is deliberately keyed under
+    that prefix so the bell badge refreshes with the inbox, exactly like web.
+  - groupMembers reuses the flat-list endpoint AND its cache key (filters + group_key merged), so an
+    expand-row payload dedupes with a matching flat list (web `useGroupMembers` keys on logsFiltered).
+  - The channel list read + channel write responses reuse the existing NotificationChannel union and
+    `channelsKey()` ("channels") from the notificationchannels package — web shares the
+    `['notification-channels']` cache between useNotificationChannels and useWebhookChannels.
+  - Optimistic UI (instant inbox row flips) and toasts are render-layer concerns, intentionally not
+    reproduced in the UI-free holder; the data-layer truth is the targeted refresh above.
+
+Cross-platform golden vectors (ADR-004)
+  spec/notifications-golden.json (mirrored inline in NotificationsGoldenTest):
+    - cache keys: alerts / alert-detail:{id} / alert-rules / alert-metrics / channels /
+      notification-logs: prefix / notification-logs:unread-count / notification-logs:bell-unread:{n} /
+      notification-stats / notification-quiet-hours ; MIN_BELL_LIMIT == 1
+    - notificationFilterParams: empty / csvMultiValue / boolsAndBlanks / groupKeyKept / zeroNumbers
+      (+ canonical key order: severity,vehicle_id,rule_id,from,to,read,archived,q,group_key,limit,offset)
+    - notificationGroupsParams: grouped=true first, group_key dropped
+    - bulkMarkReadBody: ids / all / group (exactly one key)
+    - acknowledgeBody: null / blank / trimmed / verbatim
+
+=== GATE ===
+# JVM/Android-host test execution (commonTest runs as Android local unit test, debug + release).
+# Apple/native commonMain + commonTest are KMP cross-COMPILED here
+# (compileKotlinIosSimulatorArm64 + compileTestKotlinIosSimulatorArm64 BUILD SUCCESSFUL);
+# native test EXECUTION requires a macOS host/simulator (CI), not available on this Windows host.
+gradlew :core:allTests        -> BUILD SUCCESSFUL (testDebugUnitTest + testReleaseUnitTest)
+gradlew :core:ktlintCheck     -> BUILD SUCCESSFUL
+  NotificationsStoreTest               tests=14 failures=0 errors=0
+  NotificationsRepositoryContractTest  tests=38 failures=0 errors=0
+  NotificationsGoldenTest              tests=9  failures=0 errors=0
+TEST_EXIT=0
+LINT_EXIT=0
+check-placeholders.ps1 -Path apps/shared/core -Language kotlin
+  PLACEHOLDER_ALLOWED=13
+  PLACEHOLDER_COUNT=0
+PH_EXIT=0
+
+Acceptance
+  [x] All 36 hooks ported with matching endpoint/params/derivation; SI preserved (no unit fields).
+  [x] Mutations invalidate the correct cache keys; reads emit cache->network.
+  [x] Golden vectors extended for KMP+C# parity (spec json + inline); fake-repo tests green.
+  [x] ktlint + placeholder clean; PARITY enumerates all 36 hooks.
+
+EXIT=0
+STATUS=DONE
