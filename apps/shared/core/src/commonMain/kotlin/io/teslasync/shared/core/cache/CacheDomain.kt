@@ -2,6 +2,7 @@ package io.teslasync.shared.core.cache
 
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * The cacheable read-model domains (ADR-013 scope) and their default freshness
@@ -42,6 +43,13 @@ public enum class CacheDomain(
     // it invalidates this key so the next read re-fetches. The 5-minute window matches the
     // other slow-moving read-models — settings change rarely and via explicit user action.
     Settings("settings", 5.minutes),
+
+    // The AI-usage audit feeds (`GET /ai/usage/today|by-feature|recent`). The web hooks poll
+    // these on `INTERVALS.STANDARD` (30s) via `refetchInterval`; the 30-second window keeps the
+    // freshness flag honest while the S8/UI refetch cadence drives the actual live polling. The
+    // payloads are token counts / micro-cents / millisecond latencies — not display-unit-bearing,
+    // so they round-trip verbatim with no SI conversion.
+    AiUsage("ai_usage", 30.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
