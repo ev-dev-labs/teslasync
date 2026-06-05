@@ -24,6 +24,24 @@ public enum class CacheDomain(
 ) {
     Vehicles("vehicles", 5.minutes),
     VehicleState("vehicle_state", 2.minutes),
+
+    // The Vehicles hook-domain partition (web/src/api/hooks/useVehicles.ts): the enrolled-vehicle
+    // list and per-vehicle detail, the last-known state, the positions track, the
+    // motor/climate/security/tire/charging-telemetry/media/location/config/user-preference "latest"
+    // projections, the motor history, and the Tesla Fleet-API info envelopes (mobile-enabled,
+    // options, specs, subscriptions, upgrades, warranty). One partition keeps every vehicles feed
+    // cached independently under a distinct per-feed key while logout still clears the whole domain
+    // in one call. The web reads the list/detail/state/latest/positions feeds with the default
+    // `staleTime` (0) and poll them via `refetchInterval`, so the 30-second default window keeps the
+    // freshness flag honest while the S8/UI refetch cadence drives the actual live polling and
+    // `cacheThenNetwork` always re-fetches on refresh; the slower info-envelope feeds carry an
+    // explicit per-entry TTL override (the list FAST≈default, mobile-enabled SLOW, options/specs
+    // STATIC, subscriptions/upgrades RARE, warranty DAILY) matching their web `staleTime`s. Payloads
+    // are SI on the wire (ranges in meters, temps in °C, pressures in Pa) and round-trip verbatim —
+    // display conversion is the render boundary's job (S5). A per-vehicle info refresh re-fetches
+    // exactly the affected feed via the S8 store's targeted family refresh (the `invalidateQueries`
+    // analogue).
+    VehicleInfo("vehicle_info", 30.seconds),
     Drives("drives", 5.minutes),
     Charging("charging", 5.minutes),
     Energy("energy", 5.minutes),
