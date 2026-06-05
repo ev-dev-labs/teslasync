@@ -1,0 +1,40 @@
+{
+  "baseLocale": "en",
+  "entryCount": 7772,
+  "generatedFrom": "web/src/i18n",
+  "locales": [
+    {
+      "direction": "ltr",
+      "effectiveKeyCount": 7772,
+      "fallbackCount": 0,
+      "locale": "en",
+      "name": "English",
+      "sourceKeyCount": 7772,
+      "status": "base",
+      "translatedCount": 7772
+    },
+    {
+      "direction": "rtl",
+      "effectiveKeyCount": 7772,
+      "fallbackCount": 7772,
+      "locale": "ar",
+      "name": "العربية",
+      "sourceKeyCount": 0,
+      "status": "placeholder",
+      "translatedCount": 0
+    },
+    {
+      "direction": "rtl",
+      "effectiveKeyCount": 7772,
+      "fallbackCount": 7772,
+      "locale": "he",
+      "name": "עברית",
+      "sourceKeyCount": 0,
+      "status": "placeholder",
+      "translatedCount": 0
+    }
+  ],
+  "namespaces": [
+    "translation"
+  ]
+}

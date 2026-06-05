@@ -1,0 +1,17 @@
+P1/S10/0001 i18n catalog + resource generators — artifact log
+=== GATE ===
+web base locale=en leaves=7806 grouped_entries=7772
+locale=en status=base dir=ltr translated=7772 fallback=0 effective=7772
+locale=ar status=placeholder dir=rtl translated=0 fallback=7772 effective=7772
+locale=he status=placeholder dir=rtl translated=0 fallback=7772 effective=7772
+GEN_RESULT=OK files=11 entries=7772
+GEN_EXIT=0
+web base locale=en leaves=7806 grouped_entries=7772
+locale=en status=base dir=ltr translated=7772 fallback=0 effective=7772
+locale=ar status=placeholder dir=rtl translated=0 fallback=7772 effective=7772
+locale=he status=placeholder dir=rtl translated=0 fallback=7772 effective=7772
+COMPLETE_RESULT=OK files=11 entries=7772
+COMPLETE_EXIT=0
+[PASS] catalog generated; completeness + drift check clean
+EXIT=0
+STATUS=DONE
