@@ -11,7 +11,7 @@ ktor = "3.5.0"
 kotlinxSerialization = "1.11.0"
 kotlinxDatetime = "0.7.0"
 kotlinxCoroutines = "1.10.2"
-sqldelight = "2.5.3"
+sqldelight = "2.3.2"
 ktlint = "12.1.2"
 ktlintEngine = "1.5.0"
 android-minSdk = "26"
@@ -32,9 +32,15 @@ ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 # Test-only: virtual-time coroutine test scheduler (deterministic SSE reconnect/staleness).
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
 sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
+# P1/S7 offline cache (ADR-013): platform SQL drivers for the shared cache.
+sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
+sqldelight-native-driver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
+# Test-only: in-memory JDBC SQLite driver so android unit tests hit no real database file.
+sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
+sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }

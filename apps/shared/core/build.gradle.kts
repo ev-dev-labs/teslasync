@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.android.library)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.sqldelight)
 }
 
 kotlin {
@@ -52,6 +53,8 @@ kotlin {
             // P1/S4 networking foundation: JSON content negotiation for the resilient client.
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
+            // P1/S7 offline cache (ADR-013): typed SQLDelight runtime for the shared cache.
+            implementation(libs.sqldelight.runtime)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
@@ -65,9 +68,19 @@ kotlin {
         }
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)
+            // P1/S7: Android SQLite driver backing the offline cache.
+            implementation(libs.sqldelight.android.driver)
         }
         appleMain.dependencies {
             implementation(libs.ktor.client.darwin)
+            // P1/S7: native SQLite driver backing the offline cache on Apple targets.
+            implementation(libs.sqldelight.native.driver)
+        }
+        // P1/S7: android unit tests (JVM) use the in-memory JDBC driver — no real DB file.
+        val androidUnitTest by getting {
+            dependencies {
+                implementation(libs.sqldelight.sqlite.driver)
+            }
         }
     }
 }
@@ -94,6 +107,16 @@ android {
 
 // The XCFramework("Shared") DSL above registers the `assembleSharedXCFramework`
 // task used by the gate; no extra wiring needed here.
+
+// P1/S7 offline cache (ADR-013): one typed SQLDelight database shared by every
+// platform. Generated into build/generated (excluded from ktlint).
+sqldelight {
+    databases {
+        create("TeslaSyncCache") {
+            packageName.set("io.teslasync.shared.core.cache.db")
+        }
+    }
+}
 
 ktlint {
     version.set(libs.versions.ktlintEngine.get())

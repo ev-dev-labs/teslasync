@@ -1,0 +1,35 @@
+-- P1/S7 offline cache (ADR-013).
+--
+-- One typed row per cached read-model. `payload` stores the canonical API DTO JSON
+-- VERBATIM — values are always SI (meters, m/s, °C, Pa, Wh, W); the cache never
+-- converts units, so display conversion stays a render-boundary concern. `domain`
+-- partitions rows per cacheable domain (see CacheDomain) so a single domain can be
+-- invalidated and logout can clear everything. `fetchedAt` is epoch milliseconds at
+-- the moment the value was fetched, driving the freshness/staleness contract.
+CREATE TABLE cacheEntry (
+    domain TEXT NOT NULL,
+    cacheKey TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    fetchedAt INTEGER NOT NULL,
+    PRIMARY KEY (domain, cacheKey)
+);
+
+selectEntry:
+SELECT domain, cacheKey, payload, fetchedAt
+FROM cacheEntry
+WHERE domain = ? AND cacheKey = ?;
+
+upsertEntry:
+INSERT OR REPLACE INTO cacheEntry(domain, cacheKey, payload, fetchedAt)
+VALUES (?, ?, ?, ?);
+
+deleteByKey:
+DELETE FROM cacheEntry
+WHERE domain = ? AND cacheKey = ?;
+
+deleteDomain:
+DELETE FROM cacheEntry
+WHERE domain = ?;
+
+deleteAll:
+DELETE FROM cacheEntry;

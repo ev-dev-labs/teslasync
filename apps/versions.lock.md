@@ -6,7 +6,7 @@
 | Shared | Gradle | 8.14.5 |
 | Shared | Ktor | 3.5.0 |
 | Shared | kotlinx.serialization / datetime | 1.11.0 / 0.7.0 |
-| Shared | SQLDelight | 2.5.3 |
+| Shared | SQLDelight | 2.3.2 |
 | Android | Compose BOM | 2026.04.01 |
 | Android | Material 3 | 1.4.0 (Expressive) |
 | Android | AGP | 8.9.2; minSdk 26; targetSdk 36 (KGP for Kotlin 2.4.0 requires AGP >= 8.5.2) |

@@ -1,0 +1,145 @@
+===== P1/S7/0001 GATE RUN 2026-06-05T00:30:12.8418105-07:00 =====
+HOST=Windows (Apple targets cross-compile to klib; Apple unit tests SKIPPED here, validated on macOS CI)
+> Task :core:kmpPartiallyResolvedDependenciesChecker
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:compileKotlinIosSimulatorArm64 UP-TO-DATE
+> Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
+> Task :core:iosSimulatorArm64MainKlibrary UP-TO-DATE
+> Task :core:compileTestKotlinIosSimulatorArm64 UP-TO-DATE
+> Task :core:computeLocalPackageDependencyInputFiles SKIPPED
+> Task :core:generateSyntheticLinkageSwiftPMImportProjectForCinteropsAndLdDump SKIPPED
+> Task :core:generateUmbrellaPackageIdentifierBasedResolutionForDefault SKIPPED
+> Task :core:fetchUmbrellaPackageIdentifierForDefault SKIPPED
+> Task :core:syncPersistedPackageResolvedToSynthetic SKIPPED
+> Task :core:fetchSyntheticImportProjectPackages SKIPPED
+> Task :core:convertSyntheticImportProjectIntoDefFileIphonesimulator SKIPPED
+> Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
+> Task :core:iosSimulatorArm64Test SKIPPED
+> Task :core:compileKotlinMacosArm64
+> Task :core:macosArm64ProcessResources NO-SOURCE
+> Task :core:macosArm64MainKlibrary
+> Task :core:compileTestKotlinMacosArm64
+> Task :core:convertSyntheticImportProjectIntoDefFileMacosx SKIPPED
+> Task :core:linkDebugTestMacosArm64 SKIPPED
+> Task :core:macosArm64Test SKIPPED
+> Task :core:preBuild UP-TO-DATE
+> Task :core:preDebugBuild UP-TO-DATE
+> Task :core:generateDebugResValues UP-TO-DATE
+> Task :core:generateDebugResources UP-TO-DATE
+> Task :core:packageDebugResources UP-TO-DATE
+> Task :core:parseDebugLocalResources UP-TO-DATE
+> Task :core:generateDebugRFile UP-TO-DATE
+> Task :core:compileDebugKotlinAndroid UP-TO-DATE
+> Task :core:javaPreCompileDebug UP-TO-DATE
+> Task :core:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:generateDebugUnitTestStubRFile UP-TO-DATE
+> Task :core:compileDebugUnitTestKotlinAndroid UP-TO-DATE
+> Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processDebugJavaRes UP-TO-DATE
+> Task :core:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :core:testDebugUnitTest
+> Task :core:preReleaseBuild UP-TO-DATE
+> Task :core:generateReleaseResValues FROM-CACHE
+> Task :core:generateReleaseResources
+> Task :core:packageReleaseResources
+> Task :core:parseReleaseLocalResources FROM-CACHE
+> Task :core:generateReleaseRFile FROM-CACHE
+> Task :core:javaPreCompileRelease FROM-CACHE
+> Task :core:preReleaseUnitTestBuild UP-TO-DATE
+> Task :core:generateReleaseUnitTestStubRFile FROM-CACHE
+> Task :core:javaPreCompileReleaseUnitTest FROM-CACHE
+> Task :core:compileReleaseKotlinAndroid
+> Task :core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:processReleaseJavaRes
+> Task :core:bundleLibRuntimeToJarRelease
+> Task :core:bundleLibCompileToJarRelease
+> Task :core:compileReleaseUnitTestKotlinAndroid
+> Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processReleaseUnitTestJavaRes
+> Task :core:testReleaseUnitTest
+> Task :core:allTests NO-SOURCE
+
+BUILD SUCCESSFUL in 23s
+37 actionable tasks: 13 executed, 6 from cache, 18 up-to-date
+TEST_EXIT=0
+> Task :core:loadKtlintReporters UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestReleaseSourceSetCheck SKIPPED
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosMainSourceSet NO-SOURCE
+> Task :core:ktlintIosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosTestSourceSet NO-SOURCE
+> Task :core:ktlintIosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosMainSourceSet NO-SOURCE
+> Task :core:ktlintMacosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosTestSourceSet NO-SOURCE
+> Task :core:ktlintMacosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeMainSourceSet NO-SOURCE
+> Task :core:ktlintNativeMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
+> Task :core:ktlintNativeTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidMainSourceSet
+> Task :core:runKtlintCheckOverAppleTestSourceSet
+> Task :core:ktlintAndroidMainSourceSetCheck
+> Task :core:ktlintAppleTestSourceSetCheck
+> Task :core:runKtlintCheckOverAndroidUnitTestSourceSet
+> Task :core:ktlintAndroidUnitTestSourceSetCheck
+> Task :core:runKtlintCheckOverKotlinScripts
+> Task :core:ktlintKotlinScriptCheck
+> Task :core:runKtlintCheckOverAppleMainSourceSet
+> Task :core:ktlintAppleMainSourceSetCheck
+> Task :core:runKtlintCheckOverCommonTestSourceSet
+> Task :core:ktlintCommonTestSourceSetCheck
+> Task :core:runKtlintCheckOverCommonMainSourceSet
+> Task :core:ktlintCommonMainSourceSetCheck
+> Task :core:ktlintCheck
+
+BUILD SUCCESSFUL in 15s
+16 actionable tasks: 14 executed, 2 up-to-date
+LINT_EXIT=0
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+EXIT=0
+PH_EXIT=0
+
+----- HONESTY NOTES -----
+- Apple unit tests (iosSimulatorArm64Test/macosArm64Test) are SKIPPED on this Windows host;
+  Apple targets DO cross-compile to klib and Apple TEST sources compile clean
+  (verified :core:compileTestKotlinIosSimulatorArm64 BUILD SUCCESSFUL). Behavioural test
+  execution for Apple must be validated on macOS CI. Android JVM unit tests run and pass.
+- Files modified OUTSIDE apps/shared/core (declared for no-silent-drift):
+  * apps/shared/gradle/libs.versions.toml  -> sqldelight 2.5.3 (fictional) corrected to 2.3.2
+    (latest stable on Maven Central) + added android/native/sqlite drivers + sqldelight plugin.
+  * apps/versions.lock.md                  -> SQLDelight pin 2.5.3 -> 2.3.2.
+  Required to fix a non-existent dependency version; cannot wire SQLDelight without it.
+- Gate results: TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0.
+EXIT=0
+STATUS=DONE
