@@ -338,6 +338,23 @@ public enum class CacheDomain(
     // only the no-context feed via `pinnedKeys.list(type)`), and `cacheThenNetwork` always hits the
     // network on refresh so no stale value is ever served as fresh.
     Pinned("pinned", 5.minutes),
+
+    // The browser/Web-Push subscription surface (`GET /push/public-key`, `GET /push/subscribe`).
+    // The web `usePush` hooks read these with two different staleTimes — the VAPID public key with
+    // `STALE_TIMES.RARE` (1 hour, near-static install config) and the subscription list with
+    // `STALE_TIMES.STANDARD` (60s) — so no single domain window honours both. Each read therefore
+    // passes its own per-entity TTL through the `observe(key, ttlMillis, fetch)` overload (mapping
+    // the web staleTime verbatim via PUSH_PUBLIC_KEY_TTL_MILLIS / PUSH_SUBSCRIPTIONS_TTL_MILLIS);
+    // this default is the 60-second list bound used as the fallback. The two reads share this
+    // partition under distinct keys (mirroring the web `pushKeys.publicKey` / `pushKeys.list`
+    // tuples) so each caches independently while logout still clears the whole domain in one call.
+    // The subscribe/unsubscribe mutations have no cache interaction here; invalidation is the S8
+    // store's targeted refresh of the subscription feed (the web `invalidateQueries(pushKeys.list)`
+    // analogue — neither mutation touches the public-key feed). Payloads are plain rows (ids,
+    // endpoint URLs, opaque key strings, user-agents, ISO stamps) — not display-unit-bearing — so
+    // they round-trip verbatim with no SI conversion; the public key is cached as the derived
+    // `{key}` wrapper (the web `publicKey || null`, with 404/"not configured" ⇒ null).
+    Push("push", 1.minutes),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
