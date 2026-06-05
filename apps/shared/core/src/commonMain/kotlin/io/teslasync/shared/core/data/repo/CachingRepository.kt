@@ -50,6 +50,27 @@ public abstract class CachingRepository<T : Any>(
         )
 
     /**
+     * Per-read variant of [observe] that overrides the domain-default [ttlMillis] with an explicit
+     * [entryTtlMillis] for this key only. Used by repositories whose web hooks declare a spread of
+     * per-read `staleTime`s within one domain (e.g. Operator-Confidence), so each feed flags
+     * staleness on its own web-faithful threshold rather than a single lossy domain compromise.
+     */
+    protected fun observe(
+        key: String,
+        entryTtlMillis: Long,
+        fetch: suspend () -> T,
+    ): Flow<Resource<T>> =
+        cacheThenNetwork(
+            clock = clock,
+            ttlMillis = entryTtlMillis,
+            read = { readCached(key) },
+            fetch = fetch,
+            write = { data, fetchedAt ->
+                store.write(domain, key, json.encodeToString(serializer, data), fetchedAt)
+            },
+        )
+
+    /**
      * Reads and decodes the cached value for [key]. A payload that no longer matches the
      * current DTO shape (corruption, or a schema change across an app upgrade) is treated
      * as a cache miss and evicted, so a stale row can never brick the network refresh.

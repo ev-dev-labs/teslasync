@@ -309,6 +309,23 @@ public enum class CacheDomain(
     // served as fresh. The three anchor fields are plain booleans/counts — not unit-bearing — so
     // there is no SI conversion at this layer; the gate is read directly off `is_complete`.
     Onboarding("onboarding", 15.seconds),
+
+    // The Operator-Confidence admin control-plane (`GET /admin/observability/*`, `/admin/audit-log*`,
+    // `/admin/gdpr/exports/{id}`). The web `useOperatorConfidence` hooks read these with a spread of
+    // staleTimes — STANDARD/60s (schema-drift, vehicle-cost, disk-forecast, secret-rotation),
+    // MODERATE/15s (slow-queries, audit-log), EXTENDED/10min (audit categories/actions), FAST/30s
+    // (audit chain verify) and QUICK/10s (gdpr export) — so no single domain window honours them all.
+    // Rather than pick a lossy compromise, each read passes its own per-entity TTL through the
+    // `observe(key, ttlMillis, fetch)` overload (mapping the web staleTime verbatim); this default is
+    // the modal 60-second STANDARD bound used as the fallback. The reads share this partition under
+    // distinct keys (mirroring the web `operatorConfidenceKeys` tuples) so each caches independently
+    // while logout still clears the whole domain in one call. Every route is read-only (the hook file
+    // declares zero mutations) so the partition has no invalidation surface; the S8/UI refetch cadence
+    // (web `refetchInterval`) drives the actual live polling and `cacheThenNetwork` always re-fetches
+    // on refresh so no stale value is ever served as fresh. Payloads are SI-agnostic control-plane data
+    // (SHA fingerprints, row/byte counts, ms timings, ISO stamps, severity/status strings) and
+    // round-trip verbatim with no SI conversion.
+    OperatorConfidence("operator_confidence", 1.minutes),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
