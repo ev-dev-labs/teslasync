@@ -50,6 +50,16 @@ public enum class CacheDomain(
     // payloads are token counts / micro-cents / millisecond latencies — not display-unit-bearing,
     // so they round-trip verbatim with no SI conversion.
     AiUsage("ai_usage", 30.seconds),
+
+    // The Alert Studio message-template helper catalogs: the preset gallery
+    // (`/alerts/message-presets`) and the autocomplete field catalog. The web hooks treat these
+    // as pure functions of their inputs (no per-user state) and read them with
+    // `STALE_TIMES.EXTENDED` (10 minutes), so the window matches verbatim. The
+    // `POST /alerts/message-preview` render is a mutation with no cache interaction, so it does
+    // not participate in this domain. Payloads (preset templates, catalog entries, preview
+    // title/body) are plain strings — not display-unit-bearing — so they round-trip verbatim
+    // with no SI conversion.
+    AlertMessages("alert_messages", 10.minutes),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
