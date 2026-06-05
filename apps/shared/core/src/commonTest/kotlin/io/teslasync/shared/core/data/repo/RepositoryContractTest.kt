@@ -80,7 +80,7 @@ class RepositoryContractTest {
     @Test
     fun analyticsFleetHitsAnalyticsFleet() =
         runTestBlocking {
-            val url = capture("{}") { AnalyticsRepository(it, newTestCache().store).fleet() }
+            val url = capture("{}") { HttpAnalyticsRepository(it, newTestCache().store).fleetAnalytics() }
             assertEquals("/api/v1/analytics/fleet", url.encodedPath)
         }
 
