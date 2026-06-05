@@ -1,0 +1,8 @@
+root = false
+
+# Gradle Kotlin DSL build scripts legitimately use builder chains and DSL
+# expressions; disable the wrapping/chain rules that fight idiomatic build code.
+# Hand-written Kotlin source sets are still fully linted by ktlint.
+[*.gradle.kts]
+ktlint_standard_chain-method-continuation = disabled
+ktlint_standard_multiline-expression-wrapping = disabled

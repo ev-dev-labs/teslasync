@@ -9,7 +9,7 @@
 | Shared | SQLDelight | 2.5.3 |
 | Android | Compose BOM | 2026.04.01 |
 | Android | Material 3 | 1.4.0 (Expressive) |
-| Android | AGP | 8.4.0; minSdk 26; targetSdk 36 |
+| Android | AGP | 8.9.2; minSdk 26; targetSdk 36 (KGP for Kotlin 2.4.0 requires AGP >= 8.5.2) |
 | Android | Vico (charts) | 2.0.0 |
 | Windows | Windows App SDK | 2.1.3 |
 | Windows | .NET | 10 (LTS) |

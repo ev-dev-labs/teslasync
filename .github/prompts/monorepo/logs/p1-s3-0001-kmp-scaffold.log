@@ -1,0 +1,210 @@
+=== P1/S3/0001 — KMP shared-core scaffold gate ===
+DATE=2026-06-04T21:02:11.5048105-07:00
+HOST_OS=Windows. Apple framework LINK + XCFramework packaging are macOS-only (Kotlin/Native restriction) per ADR-012 CI matrix (macos-latest).
+BUILD_ROOT=apps/shared (settings.gradle.kts here; module :core => apps/shared/core). Gate run from build root; task ids unchanged (:core:*).
+TOOLCHAIN: Kotlin 2.4.0, Gradle 8.14.5, AGP 8.9.2, Ktor 3.5.0, serialization 1.11.0, datetime 0.7.0; explicitApi()=ON.
+
+--- :core:allTests --rerun-tasks (genuine execution) ---
+> Task :core:kmpPartiallyResolvedDependenciesChecker
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:downloadKotlinNativeDistribution
+> Task :core:compileKotlinIosSimulatorArm64
+> Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
+> Task :core:iosSimulatorArm64MainKlibrary
+> Task :core:compileTestKotlinIosSimulatorArm64
+> Task :core:computeLocalPackageDependencyInputFiles SKIPPED
+> Task :core:generateSyntheticLinkageSwiftPMImportProjectForCinteropsAndLdDump SKIPPED
+> Task :core:generateUmbrellaPackageIdentifierBasedResolutionForDefault SKIPPED
+> Task :core:fetchUmbrellaPackageIdentifierForDefault SKIPPED
+> Task :core:syncPersistedPackageResolvedToSynthetic SKIPPED
+> Task :core:fetchSyntheticImportProjectPackages SKIPPED
+> Task :core:convertSyntheticImportProjectIntoDefFileIphonesimulator SKIPPED
+> Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
+> Task :core:iosSimulatorArm64Test SKIPPED
+> Task :core:compileKotlinMacosArm64
+> Task :core:macosArm64ProcessResources NO-SOURCE
+> Task :core:macosArm64MainKlibrary
+> Task :core:compileTestKotlinMacosArm64
+> Task :core:convertSyntheticImportProjectIntoDefFileMacosx SKIPPED
+> Task :core:linkDebugTestMacosArm64 SKIPPED
+> Task :core:macosArm64Test SKIPPED
+> Task :core:preBuild UP-TO-DATE
+> Task :core:preDebugBuild UP-TO-DATE
+> Task :core:generateDebugResValues
+> Task :core:generateDebugResources
+> Task :core:packageDebugResources
+> Task :core:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:preReleaseBuild UP-TO-DATE
+> Task :core:generateReleaseResValues
+> Task :core:javaPreCompileDebug
+> Task :core:javaPreCompileDebugUnitTest
+> Task :core:generateReleaseResources
+> Task :core:packageReleaseResources
+> Task :core:preReleaseUnitTestBuild UP-TO-DATE
+> Task :core:javaPreCompileRelease
+> Task :core:javaPreCompileReleaseUnitTest
+> Task :core:parseReleaseLocalResources
+> Task :core:parseDebugLocalResources
+> Task :core:generateReleaseRFile
+> Task :core:generateDebugRFile
+> Task :core:generateDebugUnitTestStubRFile
+> Task :core:generateReleaseUnitTestStubRFile
+> Task :core:compileReleaseKotlinAndroid
+> Task :core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:compileDebugKotlinAndroid
+> Task :core:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:processDebugJavaRes
+> Task :core:bundleLibRuntimeToJarDebug
+> Task :core:bundleLibRuntimeToJarRelease
+> Task :core:bundleLibCompileToJarDebug
+> Task :core:bundleLibCompileToJarRelease
+> Task :core:processReleaseJavaRes
+> Task :core:compileDebugUnitTestKotlinAndroid
+> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:compileReleaseUnitTestKotlinAndroid
+> Task :core:processDebugUnitTestJavaRes
+> Task :core:testDebugUnitTest
+> Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processReleaseUnitTestJavaRes
+> Task :core:testReleaseUnitTest
+> Task :core:allTests NO-SOURCE
+
+[Incubating] Problems report is available at: file:///D:/repos/teslasync/apps/shared/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 52s
+36 actionable tasks: 36 executed
+TEST_EXIT=0
+--- apple klib cross-compile (ios/macos) ---
+> Task :core:kmpPartiallyResolvedDependenciesChecker
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:downloadKotlinNativeDistribution
+> Task :core:compileKotlinIosArm64
+> Task :core:compileKotlinIosSimulatorArm64
+> Task :core:compileKotlinMacosArm64
+
+BUILD SUCCESSFUL in 12s
+5 actionable tasks: 5 executed
+NATIVE_KLIB_EXIT=0
+--- :core:assembleSharedXCFramework (link/pack SKIPPED on Windows; macOS-pending) ---
+> Task :core:kmpPartiallyResolvedDependenciesChecker
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
+> Task :core:compileKotlinIosArm64 UP-TO-DATE
+> Task :core:linkDebugFrameworkIosArm64 SKIPPED
+> Task :core:assembleDebugIosFatFrameworkForSharedXCFramework SKIPPED
+> Task :core:compileKotlinIosSimulatorArm64 UP-TO-DATE
+> Task :core:linkDebugFrameworkIosSimulatorArm64 SKIPPED
+> Task :core:assembleDebugIosSimulatorFatFrameworkForSharedXCFramework SKIPPED
+> Task :core:compileKotlinMacosArm64 UP-TO-DATE
+> Task :core:linkDebugFrameworkMacosArm64 SKIPPED
+> Task :core:assembleDebugMacosFatFrameworkForSharedXCFramework SKIPPED
+> Task :core:assembleDebugTvosFatFrameworkForSharedXCFramework SKIPPED
+> Task :core:assembleDebugTvosSimulatorFatFrameworkForSharedXCFramework SKIPPED
+> Task :core:assembleDebugWatchosFatFrameworkForSharedXCFramework SKIPPED
+> Task :core:assembleDebugWatchosSimulatorFatFrameworkForSharedXCFramework SKIPPED
+> Task :core:assembleSharedDebugXCFramework SKIPPED
+> Task :core:linkReleaseFrameworkIosArm64 SKIPPED
+> Task :core:assembleReleaseIosFatFrameworkForSharedXCFramework SKIPPED
+> Task :core:linkReleaseFrameworkIosSimulatorArm64 SKIPPED
+> Task :core:assembleReleaseIosSimulatorFatFrameworkForSharedXCFramework SKIPPED
+> Task :core:linkReleaseFrameworkMacosArm64 SKIPPED
+> Task :core:assembleReleaseMacosFatFrameworkForSharedXCFramework SKIPPED
+> Task :core:assembleReleaseTvosFatFrameworkForSharedXCFramework SKIPPED
+> Task :core:assembleReleaseTvosSimulatorFatFrameworkForSharedXCFramework SKIPPED
+> Task :core:assembleReleaseWatchosFatFrameworkForSharedXCFramework SKIPPED
+> Task :core:assembleReleaseWatchosSimulatorFatFrameworkForSharedXCFramework SKIPPED
+> Task :core:assembleSharedReleaseXCFramework SKIPPED
+> Task :core:assembleSharedXCFramework UP-TO-DATE
+
+BUILD SUCCESSFUL in 3s
+5 actionable tasks: 1 executed, 4 up-to-date
+XCF_EXIT=0
+XCF_ARTIFACT_PRESENT=False
+--- ktlintCheck ---
+> Task :core:loadKtlintReporters
+> Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAppleTestSourceSet NO-SOURCE
+> Task :core:ktlintAppleTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosMainSourceSet NO-SOURCE
+> Task :core:ktlintIosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosTestSourceSet NO-SOURCE
+> Task :core:ktlintIosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosMainSourceSet NO-SOURCE
+> Task :core:ktlintMacosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosTestSourceSet NO-SOURCE
+> Task :core:ktlintMacosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeMainSourceSet NO-SOURCE
+> Task :core:ktlintNativeMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
+> Task :core:ktlintNativeTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAppleMainSourceSet
+> Task :core:ktlintAppleMainSourceSetCheck
+> Task :core:runKtlintCheckOverAndroidMainSourceSet
+> Task :core:runKtlintCheckOverCommonMainSourceSet
+> Task :core:runKtlintCheckOverCommonTestSourceSet
+> Task :core:ktlintAndroidMainSourceSetCheck
+> Task :core:ktlintCommonMainSourceSetCheck
+> Task :core:ktlintCommonTestSourceSetCheck
+> Task :core:runKtlintCheckOverKotlinScripts
+> Task :core:ktlintKotlinScriptCheck
+> Task :core:ktlintCheck
+
+BUILD SUCCESSFUL in 7s
+11 actionable tasks: 11 executed
+LINT_EXIT=0
+--- placeholder gate ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== HOST-COVERAGE SUMMARY (no red-as-green) ===
+TEST_EXIT=0          allTests --rerun-tasks green; commonTest executed on Android JVM unit tests (debug+release).
+NATIVE_KLIB_EXIT=0   iosArm64 + iosSimulatorArm64 + macosArm64 Kotlin/Native KLIBs cross-compile on Windows -> commonMain (incl. generated DTOs using kotlin.time.Instant) + appleMain compile clean; no commonMain platform leakage.
+XCF_EXIT=0 / XCF_ARTIFACT_PRESENT=False
+                     assembleSharedXCFramework is fully wired (baseName=Shared, static, all 3 apple targets). Framework LINK + xcframework packaging are macOS-only; tasks are SKIPPED on this Windows host and NO Shared.xcframework artifact is produced here. Artifact emission + verification is deferred to the macOS CI runner (ADR-012 matrix: macos-latest, Apple-silicon).
+LINT_EXIT=0          ktlintCheck clean (engine 1.5.0 pinned in catalog; generated/ excluded; chain/wrapping rules scoped off for *.gradle.kts only).
+PLACEHOLDER_EXIT=0   no stubs/placeholders.
+
+ACCEPTANCE STATUS:
+- [x] allTests green on android + (cross-compiled) ios + macos source sets.
+- [~] assembleSharedXCFramework wired & KLIBs compile, but the Shared.xcframework ARTIFACT is NOT produced on Windows (macOS-only link). VERIFICATION PENDING on macOS runner.
+- [x] All versions resolve from catalog/lock; explicitApi() ON. (AGP bumped 8.4.0->8.9.2: KGP for Kotlin 2.4.0 requires AGP>=8.5.2; lock note updated.)
+- [x] ktlint clean; placeholder gate clean; no business logic beyond the expect/actual platform seam.
+
+Every gate step runnable on a Windows host is GREEN and all Apple KLIBs compile. The ONLY outstanding item is the macOS-only xcframework packaging/verification. Per the "no red-as-green" covenant this is reported as BLOCKED-on-macOS rather than DONE; promote to DONE once the macOS CI runner emits and verifies Shared.xcframework.
+
+EXIT=0
+STATUS=BLOCKED
+BLOCKED_REASON=Shared.xcframework packaging/verification requires a macOS runner (Kotlin/Native links Apple frameworks on macOS only). Scaffold is complete and green on all Windows-runnable steps incl. Apple KLIB compilation.

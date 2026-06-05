@@ -1,0 +1,34 @@
+# Gradle Version Catalog — Shared KMP core (ADR-004 / ADR-012 version lock).
+#
+# Source of truth: apps/versions.lock.md. Versions are PINNED — do not float.
+# Renovate keeps patch versions current; major bumps require a superseding ADR.
+
+[versions]
+# Kotlin 2.4.0 KGP requires AGP >= 8.5.2; 8.9.2 also supports compileSdk 36 cleanly.
+kotlin = "2.4.0"
+agp = "8.9.2"
+ktor = "3.5.0"
+kotlinxSerialization = "1.11.0"
+kotlinxDatetime = "0.7.0"
+kotlinxCoroutines = "1.10.2"
+sqldelight = "2.5.3"
+ktlint = "12.1.2"
+ktlintEngine = "1.5.0"
+android-minSdk = "26"
+android-compileSdk = "36"
+
+[libraries]
+# Declared for later S-phases (net/SSE/units/cache). Wired here so consumers just use them.
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
+sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
+
+[plugins]
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
