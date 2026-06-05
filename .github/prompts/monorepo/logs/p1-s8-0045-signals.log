@@ -1,0 +1,217 @@
+=== P1/S8/0045 Signals state holder gate ===
+> Task :core:kmpPartiallyResolvedDependenciesChecker
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+
+> Task :core:compileKotlinIosSimulatorArm64
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpSignalsRepository.kt:9:54 Unresolved reference 'AvailableSignalsResponse'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpSignalsRepository.kt:10:54 Unresolved reference 'LiveSignalsResponse'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpSignalsRepository.kt:11:54 Unresolved reference 'SignalHistoryRange'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpSignalsRepository.kt:12:54 Unresolved reference 'SignalHistoryResponse'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpSignalsRepository.kt:47:53 Return type of 'fun availableSignals(vehicleId: Long): Flow<Resource<??? (Unresolved qualified name: AvailableSignalsResponse)>>' is not a subtype of the return type of the overridden member 'fun availableSignals(vehicleId: Long): Flow<Resource<??? (Unresolved qualified name: AvailableSignalsResponse)>>' defined in 'io.teslasync.shared.core.data.repo.SignalsRepository'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpSignalsRepository.kt:47:67 Unresolved reference 'AvailableSignalsResponse'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpSignalsRepository.kt:50:11 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpSignalsRepository.kt:50:21 Inapplicable candidate(s): fun normalizeAvailableResponse(raw: JsonElement): ??? (Unresolved qualified name: AvailableSignalsResponse)
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpSignalsRepository.kt:52:48 Return type of 'fun liveSignals(vehicleId: Long): Flow<Resource<??? (Unresolved qualified name: LiveSignalsResponse)>>' is not a subtype of the return type of the overridden member 'fun liveSignals(vehicleId: Long): Flow<Resource<??? (Unresolved qualified name: LiveSignalsResponse)>>' defined in 'io.teslasync.shared.core.data.repo.SignalsRepository'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpSignalsRepository.kt:52:62 Unresolved reference 'LiveSignalsResponse'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpSignalsRepository.kt:55:11 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpSignalsRepository.kt:55:21 Inapplicable candidate(s): fun normalizeLiveResponse(raw: JsonElement): ??? (Unresolved qualified name: LiveSignalsResponse)
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpSignalsRepository.kt:60:16 Unresolved reference 'SignalHistoryRange'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpSignalsRepository.kt:61:8 Return type of 'fun signalHistory(vehicleId: Long, signalName: String, range: ??? (Unresolved qualified name: SignalHistoryRange)): Flow<Resource<??? (Unresolved qualified name: SignalHistoryResponse)>>' is not a subtype of the return type of the overridden member 'fun signalHistory(vehicleId: Long, signalName: String, range: ??? (Unresolved qualified name: SignalHistoryRange) = ...): Flow<Resource<??? (Unresolved qualified name: SignalHistoryResponse)>>' defined in 'io.teslasync.shared.core.data.repo.SignalsRepository'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpSignalsRepository.kt:61:22 Unresolved reference 'SignalHistoryResponse'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpSignalsRepository.kt:67:11 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpSignalsRepository.kt:67:21 Inapplicable candidate(s): fun normalizeHistoryResponse(raw: JsonElement): ??? (Unresolved qualified name: SignalHistoryResponse)
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:3:54 Unresolved reference 'AvailableSignalsResponse'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:4:54 Unresolved reference 'LiveSignalsResponse'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:5:54 Unresolved reference 'SignalDescriptor'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:6:54 Unresolved reference 'SignalEnvelope'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:7:54 Unresolved reference 'SignalHistoryRange'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:8:54 Unresolved reference 'SignalHistoryResponse'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:9:54 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:10:54 Unresolved reference 'SignalUnitKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:11:54 Unresolved reference 'SignalValue'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:55:65 Unresolved reference 'AvailableSignalsResponse'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:62:60 Unresolved reference 'LiveSignalsResponse'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:73:16 Unresolved reference 'SignalHistoryRange'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:73:37 Unresolved reference 'SignalHistoryRange'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:74:22 Unresolved reference 'SignalHistoryResponse'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:113:12 Unresolved reference 'SignalHistoryRange'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:115:5 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:115:5 Inapplicable candidate(s): fun <T> listOf(vararg elements: T): List<T>
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:120:15 Unresolved reference 'hours'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:121:15 Unresolved reference 'from'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:122:15 Cannot infer type for type parameter 'A'. Specify it explicitly.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:122:15 Cannot infer type for type parameter 'B'. Specify it explicitly.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:122:15 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+fun <A, B> A.to(that: B): Pair<A, B>
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:123:16 Unresolved reference 'limit'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:124:7 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:134:38 Unresolved reference 'SignalHistoryRange'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:136:22 Unresolved reference 'from'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:137:20 Cannot infer type for type parameter 'A'. Specify it explicitly.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:137:20 Cannot infer type for type parameter 'B'. Specify it explicitly.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:137:20 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+fun <A, B> A.to(that: B): Pair<A, B>
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:138:9 Unresolved reference 'not' for operator '!'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:138:34 Unresolved reference 'not' for operator '!'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:140:23 Argument type mismatch: actual type is 'Pair<uninferred ??? (Unknown type for type parameter A), uninferred ??? (Unknown type for type parameter B)>', but 'String' was expected.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:142:32 Unresolved reference 'hours'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:144:23 Unresolved reference 'limit'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:145:32 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+fun String.compareTo(other: String, ignoreCase: Boolean = ...): Int
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:158:52 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:159:48 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:164:24 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:165:24 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:166:34 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:167:29 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:168:24 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:169:25 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:174:40 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:175:36 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:176:71 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:177:57 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:178:36 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:179:17 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:189:50 Unresolved reference 'SignalUnitKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:190:48 Unresolved reference 'SignalUnitKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:191:32 Unresolved reference 'SignalUnitKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:193:43 Unresolved reference 'SignalUnitKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:194:49 Unresolved reference 'SignalUnitKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:195:43 Unresolved reference 'SignalUnitKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:196:39 Unresolved reference 'SignalUnitKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:197:35 Unresolved reference 'SignalUnitKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:198:20 Unresolved reference 'SignalUnitKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:199:17 Unresolved reference 'SignalUnitKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:211:11 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:212:4 Unresolved reference 'SignalValue'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:213:52 Unresolved reference 'SignalValue'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:215:12 'when' expression must be exhaustive. Add an 'else' branch.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:216:9 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:216:28 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:217:13 Unresolved reference 'SignalValue'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:218:9 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:220:81 Unresolved reference 'SignalValue'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:221:25 Unresolved reference 'SignalValue'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:223:9 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:223:25 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:230:44 Unresolved reference 'SignalValue'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:230:68 Unresolved reference 'SignalValue'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:232:9 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:234:33 Unresolved reference 'SignalValue'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:235:34 Unresolved reference 'SignalValue'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:236:47 Unresolved reference 'SignalValue'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:237:46 Unresolved reference 'SignalValue'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:238:25 Unresolved reference 'SignalValue'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:248:56 Unresolved reference 'SignalEnvelope'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:249:44 Unresolved reference 'SignalEnvelope'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:249:59 Unresolved reference 'SignalKind'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:249:79 Unresolved reference 'SignalValue'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:251:12 Unresolved reference 'SignalEnvelope'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:262:56 Unresolved reference 'SignalDescriptor'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:263:5 Unresolved reference 'SignalDescriptor'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:277:58 Unresolved reference 'AvailableSignalsResponse'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:282:15 Cannot infer type for type parameter 'R'. Specify it explicitly.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:282:21 Inapplicable candidate(s): fun normalizeSignalDescriptor(raw: JsonObject): ??? (Unresolved qualified name: SignalDescriptor)
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:283:16 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:284:12 Unresolved reference 'AvailableSignalsResponse'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:297:53 Unresolved reference 'LiveSignalsResponse'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:301:9 Cannot infer type for type parameter 'V'. Specify it explicitly.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:304:12 Unresolved reference 'LiveSignalsResponse'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:316:56 Unresolved reference 'SignalHistoryResponse'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:318:45 Cannot infer type for type parameter 'R'. Specify it explicitly.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:318:51 Inapplicable candidate(s): fun normalizeSignalEnvelope(raw: JsonElement?): ??? (Unresolved qualified name: SignalEnvelope)
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:318:79 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SignalsRepository.kt:319:12 Unresolved reference 'SignalHistoryResponse'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/signals/SignalsModels.kt:137:1 Syntax error: Unclosed comment.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/signals/SignalsStore.kt:62:70 Unresolved reference 'AvailableSignalsResponse'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/signals/SignalsStore.kt:63:9 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/signals/SignalsStore.kt:63:48 Return type mismatch: expected 'Flow<Resource<uninferred T (of fun <T> feed)>>', actual 'Flow<Resource<??? (Unresolved qualified name: AvailableSignalsResponse)>>'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/signals/SignalsStore.kt:70:65 Unresolved reference 'LiveSignalsResponse'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/signals/SignalsStore.kt:71:9 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/signals/SignalsStore.kt:71:43 Return type mismatch: expected 'Flow<Resource<uninferred T (of fun <T> feed)>>', actual 'Flow<Resource<??? (Unresolved qualified name: LiveSignalsResponse)>>'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/signals/SignalsStore.kt:81:16 Unresolved reference 'SignalHistoryRange'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/signals/SignalsStore.kt:81:37 Unresolved reference 'SignalHistoryRange'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/signals/SignalsStore.kt:82:27 Unresolved reference 'SignalHistoryResponse'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/signals/SignalsStore.kt:83:9 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/signals/SignalsStore.kt:83:65 Return type mismatch: expected 'Flow<Resource<uninferred T (of fun <T> feed)>>', actual 'Flow<Resource<??? (Unresolved qualified name: SignalHistoryResponse)>>'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/signals/SignalsStore.kt:97:16 Unresolved reference 'SignalHistoryRange'.
+e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/signals/SignalsStore.kt:97:37 Unresolved reference 'SignalHistoryRange'.
+
+> Task :core:compileKotlinIosSimulatorArm64 FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':core:compileKotlinIosSimulatorArm64'.
+> Compilation finished with errors
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 8s
+4 actionable tasks: 2 executed, 2 up-to-date
+TEST_EXIT=1
+
+=== FINAL GATE (2026-06-05T12:27:33-07:00) ===
+Gate run from apps/shared (gradlew wrapper lives at apps/shared, module :core).
+
+$ ./gradlew :core:allTests
+BUILD SUCCESSFUL — 1088 tests completed, 0 failed
+TEST_EXIT=0
+
+$ ./gradlew :core:ktlintCheck
+BUILD SUCCESSFUL
+LINT_EXIT=0
+
+$ ./apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
+PLACEHOLDER_ALLOWED=16
+PLACEHOLDER_COUNT=0
+PH_EXIT=0
+
+=== PARITY ===
+Web source: web/src/api/hooks/useSignals.ts (3 reads, 0 mutations) -> KMP shared-core S8 state holder.
+
+Reads / queries (3/3 ported):
+  [x] useAvailableSignals(vehicleId)
+        -> SignalsStore.availableSignals(vehicleId): StateFlow<Resource<AvailableSignalsResponse>>
+        -> SignalsRepository.availableSignals / HttpSignalsRepository
+        GET /signals/{vehicleID}/available   (no query params)
+        cache key: typed-signals|available|{id}   TTL 300_000ms (web STALE.SLOW 5m)
+        derivation: normalizeAvailableResponse -> normalizeSignalDescriptor
+                    (normalizeSignalKind + normalizeUnitKind), SI preserved.
+  [x] useLiveSignals(vehicleId)
+        -> SignalsStore.liveSignals(vehicleId): StateFlow<Resource<LiveSignalsResponse>>
+        -> SignalsRepository.liveSignals / HttpSignalsRepository
+        GET /signals/{vehicleID}/live   (no query params)
+        cache key: typed-signals|live|{id}        TTL 5_000ms (web STALE.REALTIME 5s)
+        derivation: normalizeLiveResponse -> normalizeSignalEnvelope (+coerceSignalValue), SI preserved.
+        (web refetchInterval/enabled gates are render-layer; intentionally not reproduced.)
+  [x] useSignalHistory(vehicleId, signalName, range)
+        -> SignalsStore.signalHistory(vehicleId, signalName, range): StateFlow<Resource<SignalHistoryResponse>>
+        -> SignalsRepository.signalHistory / HttpSignalsRepository
+        GET /signals/{vehicleID}/{signalName}/history
+        params (snake_case): hours | from&to (both present win, omit hours), limit (only when >0)
+        cache key: typed-signals|history|{id}|{name}|{hours}|{from}|{to}|{limit}
+        TTL 60_000ms (web STALE.STANDARD 60s)
+        derivation: normalizeHistoryResponse -> normalizeSignalEnvelope, SI preserved.
+
+Mutations / actions (0/0): none in this domain.
+
+Caching intent: HttpSignalsRepository extends CachingRepository<JsonElement> (CacheDomain.Signals),
+stores raw SI JsonElement per feed, normalizes per-emission via .mapData(normalizeXxx); reads emit
+cache -> network. SignalsStore folds each feed via trigger -> flatMapLatest -> stateIn and exposes a
+read-only refresh* seam (no mutations to invalidate).
+
+Cross-platform parity: golden vectors in SignalsGoldenTest (normalization, cache-key tuples, history
+query builder) lock the derivations for the C# port (ADR-004); contract test asserts endpoint+params.
+
+Tests: SignalsStoreTest (fake repo: cache->network, feed identity, targeted refresh, no-op refresh),
+SignalsGoldenTest (derivations/keys/query), SignalsRepositoryContractTest (endpoint/param/normalize).
+
+EXIT=0
+STATUS=DONE
