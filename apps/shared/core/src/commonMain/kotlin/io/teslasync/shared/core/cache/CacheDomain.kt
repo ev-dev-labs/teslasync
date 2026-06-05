@@ -190,6 +190,16 @@ public enum class CacheDomain(
     // set/delete invalidates the WHOLE partition (the web hooks invalidate the `['system','flags']`
     // prefix), so a write clears the list, every entry, and every change feed at once.
     FeatureFlags("feature_flags", 15.seconds),
+
+    // The in-app feedback widget's admin queue (`GET /admin/feedback`). The web `useFeedbackList`
+    // hook reads it with the default TanStack `staleTime` (60s — `DEFAULT_QUERY_CLIENT_CONFIG`),
+    // so the 1-minute window matches verbatim. Each `(status, category, limit, offset)` page is
+    // cached under its own key (mirroring the web `feedbackKeys.list` tuple). The public submit
+    // (`useSubmitFeedback`) invalidates nothing; the admin patch (`useUpdateFeedback`) invalidates
+    // the WHOLE partition (the web hook invalidates `feedbackKeys.all`). Payloads are feedback rows
+    // (free text, a status enum, timestamps, an opaque recent-errors blob) — not display-unit-
+    // bearing — so they round-trip verbatim with no SI conversion.
+    Feedback("feedback", 1.minutes),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */

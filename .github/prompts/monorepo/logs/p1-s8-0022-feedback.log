@@ -1,0 +1,109 @@
+================================================================================
+P1 · S8 · 0022 — Feedback shared state holder (web useFeedback parity)
+================================================================================
+Output:  apps/shared/core/.../presentation/feedback/**
+         apps/shared/core/.../data/repo/{FeedbackRepository,HttpFeedbackRepository}.kt
+Web src:  web/src/api/hooks/useFeedback.ts
+ADR refs: ADR-004 (golden parity), ADR-006, ADR-013 (cache-then-network)
+
+--------------------------------------------------------------------------------
+Files created
+--------------------------------------------------------------------------------
+commonMain:
+  presentation/feedback/FeedbackModels.kt
+    FeedbackEntry, FeedbackListResponse, FeedbackSubmitInput,
+    FeedbackUpdateInput, FeedbackListParams
+  presentation/feedback/FeedbackStore.kt           (S8 UI-free state holder)
+  data/repo/FeedbackRepository.kt                  (S7 port + feedbackQuery + feedbackCacheKey)
+  data/repo/HttpFeedbackRepository.kt              (Ktor + offline cache impl)
+edited:
+  cache/CacheDomain.kt                             (+ Feedback("feedback", 1.minutes))
+commonTest:
+  presentation/feedback/FeedbackStoreTest.kt       (fake-repo state-holder tests)
+  presentation/feedback/FeedbackGoldenTest.kt      (golden vectors: query + cache key)
+  data/repo/FeedbackRepositoryContractTest.kt      (endpoint/method/body/invalidation lock)
+
+--------------------------------------------------------------------------------
+=== PARITY === (all 3 web hooks ported — web/src/api/hooks/useFeedback.ts)
+--------------------------------------------------------------------------------
+Reads / queries (1):
+  [x] useFeedbackList   -> FeedbackStore.feedbackList(params)
+                           GET /admin/feedback ?status=&category=&limit=&offset=
+                           query builder = feedbackQuery (web buildQuery: status/category
+                           sent only when non-blank; limit/offset sent whenever present,
+                           incl. explicit 0). cache key = feedbackCacheKey (web
+                           feedbackKeys.list tuple, null-coalesced). TTL = 1m =
+                           DEFAULT_QUERY_CLIENT_CONFIG staleTime 60_000.
+
+Mutations / actions (2):
+  [x] useSubmitFeedback -> FeedbackStore.submitFeedback(input)
+                           POST /feedback ; body = FeedbackSubmitInput (nulls dropped,
+                           empty strings kept = JSON.stringify semantics).
+                           NO cache invalidation — web hook declares none (submit modal
+                           and admin queue are independent surfaces). Verified by
+                           submitFeedbackPostsBodyAndLeavesCacheUntouched + store test
+                           submitDelegatesAndDoesNotRefreshAnyFeed.
+  [x] useUpdateFeedback -> FeedbackStore.updateFeedback(input)
+                           PATCH /admin/feedback/{id} ; body = FeedbackUpdateInput
+                           (only provided fields; forward_to_github only when set).
+                           onSuccess invalidates the WHOLE Feedback partition (clear) =
+                           web invalidateQueries(feedbackKeys.all). Store refreshes every
+                           observed feed. Verified by
+                           updateFeedbackPatchesByIdAndInvalidatesWholePartition +
+                           updateDelegatesAndRefreshesEveryObservedFeed.
+
+SI: no feedback field is unit-bearing (ids, RFC3339 timestamps, free text, status enum,
+    opaque recent_errors JSON blob) — payloads round-trip verbatim, no SI conversion.
+
+Out of scope (no web hook exists): GET /admin/feedback/{id} single-row read.
+
+--------------------------------------------------------------------------------
+Golden vectors (ADR-004 — KMP+C# cannot drift)
+--------------------------------------------------------------------------------
+FeedbackGoldenTest inlines language-neutral fixtures (fixed inputs in / fixed
+expectations out) for the two non-trivial derivations:
+  feedbackQuery   : empty, status_only, category_only, all_params,
+                    blank_filters_dropped, zero_paging_sent
+  feedbackCacheKey: empty, status_only, full, empty_status_stays_empty, zero_paging
+The C# port mirrors these exact rows.
+
+--------------------------------------------------------------------------------
+GATE
+--------------------------------------------------------------------------------
+NOTE ON HOST: this repo's :core module targets androidTarget + apple
+(iosArm64, iosSimulatorArm64, macosArm64) — there is NO jvm target. Apple
+Kotlin/Native targets cannot be compiled or run on this Windows host, so
+`:core:allTests` (which fans out to the apple test binaries) is not runnable
+here. The runnable equivalent that EXECUTES the full commonTest suite on this
+host is the android unit-test task `:core:testDebugUnitTest` (runs on the JVM).
+ktlint is checked over commonMain + commonTest (the apple/native source sets are
+NO-SOURCE for this slice). Reported honestly per the Honesty Covenant (#1, #10).
+
+$ ./gradlew :core:testDebugUnitTest :core:ktlintCheck   (from apps/shared)
+  > Task :core:compileDebugUnitTestKotlinAndroid
+  > Task :core:testDebugUnitTest                 BUILD SUCCESSFUL
+  (all commonTest tests executed, incl. FeedbackStoreTest, FeedbackGoldenTest,
+   FeedbackRepositoryContractTest — green)
+  > Task :core:ktlintCommonMainSourceSetCheck
+  > Task :core:ktlintCommonTestSourceSetCheck
+  > Task :core:ktlintCheck                       BUILD SUCCESSFUL
+TEST_EXIT=0
+LINT_EXIT=0
+
+$ ./apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
+  PLACEHOLDER_ALLOWED=13
+  PLACEHOLDER_COUNT=0
+PH_EXIT=0
+
+--------------------------------------------------------------------------------
+Acceptance criteria
+--------------------------------------------------------------------------------
+[x] All 3 hooks ported with matching endpoint/params/derivation; SI preserved.
+[x] Mutations invalidate the correct cache keys (update=all; submit=none);
+    reads emit cache->network.
+[x] Golden vectors extended for the derivations (KMP+C# parity); fake-repo tests green.
+[x] ktlint + placeholder clean; === PARITY === enumerates all 3 hooks covered.
+[x] EXIT=0 / STATUS=DONE.
+
+EXIT=0
+STATUS=DONE
