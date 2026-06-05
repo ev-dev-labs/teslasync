@@ -35,6 +35,13 @@ public enum class CacheDomain(
     // the freshness flag honest while their UI-side refetch cadence (an S8/UI concern,
     // mirroring the web `refetchInterval`) drives the actual live polling.
     Admin("admin", 1.minutes),
+
+    // The single-document app settings read-model (`GET /settings`). The AI-settings save
+    // path (web `useSaveAiSettings`) reads this cached document, shallow-merges its AI patch
+    // on top, and re-submits the whole thing because `/settings` is full-replace; on success
+    // it invalidates this key so the next read re-fetches. The 5-minute window matches the
+    // other slow-moving read-models — settings change rarely and via explicit user action.
+    Settings("settings", 5.minutes),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
