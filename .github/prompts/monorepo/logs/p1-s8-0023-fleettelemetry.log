@@ -1,0 +1,89 @@
+================================================================================
+P1 · S8 · 0023 — FleetTelemetry shared state holder (web useFleetTelemetry parity)
+================================================================================
+Output:  apps/shared/core/.../presentation/fleettelemetry/**
+         apps/shared/core/.../data/repo/{FleetTelemetryRepository,HttpFleetTelemetryRepository}.kt
+Web src:  web/src/api/hooks/useFleetTelemetry.ts
+ADR refs: ADR-004 (golden parity), ADR-006, ADR-013 (cache-then-network)
+--------------------------------------------------------------------------------
+Files created
+--------------------------------------------------------------------------------
+commonMain:
+  presentation/fleettelemetry/FleetTelemetryModels.kt
+    FleetTelemetryFieldCoverage, FleetTelemetryCategoryCoverage,
+    FleetTelemetryCoverageRaw, FleetTelemetryCoverageResponse,
+    FleetTelemetryCoverage.normalize  (the lone `?? [] / ?? {}` derivation)
+  presentation/fleettelemetry/FleetTelemetryStore.kt   (S8 UI-free state holder)
+  data/repo/FleetTelemetryRepository.kt                (S7 port: coverage())
+  data/repo/HttpFleetTelemetryRepository.kt            (Ktor + offline cache impl)
+edited:
+  cache/CacheDomain.kt                                 (+ FleetTelemetry("fleet_telemetry", 5.minutes))
+spec:
+  spec/fleet-telemetry-coverage-golden.json            (6 normalize vectors)
+commonTest:
+  presentation/fleettelemetry/FleetTelemetryStoreTest.kt          (fake-repo state-holder tests)
+  presentation/fleettelemetry/FleetTelemetryGoldenTest.kt         (golden vectors: normalize)
+  presentation/fleettelemetry/FleetTelemetryGoldenLoader.kt       (expect)
+  data/repo/FleetTelemetryRepositoryContractTest.kt               (endpoint/normalize/cache lock)
+androidUnitTest:
+  presentation/fleettelemetry/FleetTelemetryGoldenLoader.android.kt   (actual)
+appleTest:
+  presentation/fleettelemetry/FleetTelemetryGoldenLoader.apple.kt     (actual)
+--------------------------------------------------------------------------------
+=== PARITY === (all 1 web hooks ported — web/src/api/hooks/useFleetTelemetry.ts)
+--------------------------------------------------------------------------------
+Reads / queries (1):
+  [x] useFleetTelemetryCoverage -> FleetTelemetryStore.coverage()
+                           GET /tesla/fleet-telemetry/coverage  (no params)
+                           hook path carries NO /api/v1 (request() auto-prefixes);
+                           contract test locks final path /api/v1/tesla/fleet-telemetry/coverage
+                           (no double prefix).
+                           queryKey ['fleet-telemetry','coverage'] -> single cache key "coverage"
+                           in CacheDomain.FleetTelemetry.
+                           staleTime STALE_TIMES.SLOW (5 min) -> domain TTL 5.minutes.
+                           derivation: raw.categories ?? [], raw.destination_totals ?? {},
+                           raw.orphan_fields ?? []  -> FleetTelemetryCoverage.normalize
+                           (pure; golden-locked for KMP+C# parity, ADR-004).
+                           SI preserved: payload is category/field/destination names +
+                           integer counts + routing bools — not unit-bearing — round-trips
+                           verbatim through the cache (no conversion).
+
+Mutations / actions (0):
+  (none — the web hook file declares only a single useQuery; no invalidation surface)
+--------------------------------------------------------------------------------
+Gate
+--------------------------------------------------------------------------------
+On this Windows host `:core:allTests` (fans out to apple/native test binaries that
+cannot link without a macOS host) is not runnable; the JVM-equivalent that exercises
+the entire commonTest tree is the android unit-test task `:core:testDebugUnitTest`.
+ktlint is checked over commonMain + commonTest + the android/apple test source sets.
+
+$ ./gradlew :core:testDebugUnitTest :core:ktlintCheck   (from apps/shared)
+  > Task :core:testDebugUnitTest                 BUILD SUCCESSFUL
+  > Task :core:ktlintCommonMainSourceSetCheck
+  > Task :core:ktlintCommonTestSourceSetCheck
+  > Task :core:ktlintCheck                       BUILD SUCCESSFUL
+
+  test-results (testDebugUnitTest):
+    FleetTelemetryRepositoryContractTest   tests=4 failures=0 errors=0 skipped=0
+    FleetTelemetryGoldenTest               tests=2 failures=0 errors=0 skipped=0
+    FleetTelemetryStoreTest                tests=5 failures=0 errors=0 skipped=0
+
+$ ./apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
+    PLACEHOLDER_ALLOWED=13
+    PLACEHOLDER_COUNT=0
+
+TEST_EXIT=0
+LINT_EXIT=0
+PH_EXIT=0
+--------------------------------------------------------------------------------
+Acceptance
+--------------------------------------------------------------------------------
+[x] All 1 hooks ported with matching endpoint/params/derivation; SI preserved.
+[x] Reads emit cache->network (Loading[cache slot] -> Success); no mutations -> no invalidation.
+[x] Golden vectors extended for the normalize derivation (KMP+C# parity); fake-repo tests green.
+[x] ktlint + placeholder clean; === PARITY === enumerates all 1 hooks covered.
+[x] EXIT=0 / STATUS=DONE.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,97 @@
+[
+  {
+    "name": "null_raw_before_first_resolve",
+    "response": null,
+    "expected": { "categories": [], "destination_totals": {}, "orphan_fields": [] }
+  },
+  {
+    "name": "empty_object_all_absent",
+    "response": {},
+    "expected": { "categories": [], "destination_totals": {}, "orphan_fields": [] }
+  },
+  {
+    "name": "explicit_nulls_all_three",
+    "response": { "categories": null, "destination_totals": null, "orphan_fields": null },
+    "expected": { "categories": [], "destination_totals": {}, "orphan_fields": [] }
+  },
+  {
+    "name": "orphan_fields_absent",
+    "response": {
+      "categories": [
+        {
+          "category": "charge",
+          "total_fields": 2,
+          "destinations": { "charging_sessions": 2 },
+          "fields": [
+            { "field": "ChargeState", "destination": "charging_sessions", "column": "state", "also_signal_log": true, "subscribed": true },
+            { "field": "ChargerPower", "destination": "charging_sessions", "subscribed": false }
+          ]
+        }
+      ],
+      "destination_totals": { "charging_sessions": 2 }
+    },
+    "expected": {
+      "categories": [
+        {
+          "category": "charge",
+          "total_fields": 2,
+          "destinations": { "charging_sessions": 2 },
+          "fields": [
+            { "field": "ChargeState", "destination": "charging_sessions", "column": "state", "also_signal_log": true, "subscribed": true },
+            { "field": "ChargerPower", "destination": "charging_sessions", "also_signal_log": false, "subscribed": false }
+          ]
+        }
+      ],
+      "destination_totals": { "charging_sessions": 2 },
+      "orphan_fields": []
+    }
+  },
+  {
+    "name": "populated_passthrough",
+    "response": {
+      "categories": [
+        {
+          "category": "drive",
+          "total_fields": 1,
+          "destinations": { "drives": 1 },
+          "fields": [
+            { "field": "VehicleSpeed", "destination": "drives", "column": "speed", "also_signal_log": false, "subscribed": true }
+          ]
+        }
+      ],
+      "destination_totals": { "drives": 1, "signal_log": 5 },
+      "orphan_fields": ["UnroutedFieldA", "UnroutedFieldB"]
+    },
+    "expected": {
+      "categories": [
+        {
+          "category": "drive",
+          "total_fields": 1,
+          "destinations": { "drives": 1 },
+          "fields": [
+            { "field": "VehicleSpeed", "destination": "drives", "column": "speed", "also_signal_log": false, "subscribed": true }
+          ]
+        }
+      ],
+      "destination_totals": { "drives": 1, "signal_log": 5 },
+      "orphan_fields": ["UnroutedFieldA", "UnroutedFieldB"]
+    }
+  },
+  {
+    "name": "partial_explicit_null_mix",
+    "response": {
+      "categories": [
+        { "category": "climate", "total_fields": 0, "destinations": {}, "fields": [] }
+      ],
+      "destination_totals": null,
+      "orphan_fields": ["Orphan1"]
+    },
+    "expected": {
+      "categories": [
+        { "category": "climate", "total_fields": 0, "destinations": {}, "fields": [] }
+      ],
+      "destination_totals": {},
+      "orphan_fields": ["Orphan1"]
+    }
+  }
+]

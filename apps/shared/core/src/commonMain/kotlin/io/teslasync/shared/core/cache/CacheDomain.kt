@@ -200,6 +200,16 @@ public enum class CacheDomain(
     // (free text, a status enum, timestamps, an opaque recent-errors blob) — not display-unit-
     // bearing — so they round-trip verbatim with no SI conversion.
     Feedback("feedback", 1.minutes),
+
+    // The Fleet-Telemetry routing-coverage snapshot (`GET /tesla/fleet-telemetry/coverage`). The
+    // web `useFleetTelemetryCoverage` hook reads it with `STALE_TIMES.SLOW` (5 minutes), so the
+    // window matches verbatim. The single feed is a package-derived routing map built from
+    // `router.LoadMap()` + `teslaconfig.Builder` (the "what's actively ingested" view), so it has
+    // exactly one cache key and no parameters. Payloads are per-category destination breakdowns
+    // (category names, integer field/destination counts, subscription bools) — not
+    // display-unit-bearing — so they round-trip verbatim with no SI conversion. The web hook file
+    // declares no mutations, so the partition has no invalidation surface.
+    FleetTelemetry("fleet_telemetry", 5.minutes),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
