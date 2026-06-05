@@ -419,6 +419,18 @@ public enum class CacheDomain(
     // display-unit-bearing; the public report's canonical values are SI on the wire and converted
     // only at the render boundary (S5), while the legacy v1 variant round-trips verbatim.
     Sharing("sharing", 5.minutes),
+
+    // The Tesla/API rate-limit budget feed (`GET /system/rate-limits`), backing the Settings
+    // rate-limit panel. The web `useRateLimitStatus` hook reads it with a 15s `staleTime`
+    // (`RATE_LIMIT_STALE_TIME_MS`) and polls it every 30s (`RATE_LIMIT_REFETCH_INTERVAL_MS`) with
+    // `refetchIntervalInBackground:false`, so the 15-second window keeps the freshness flag honest
+    // while the S8/UI refetch cadence drives the actual live polling. There is a single feed (the
+    // web `systemKeys.rateLimits` tuple `['system','rate-limits']`), so the whole partition is the
+    // one cached entry; the web hook file declares no mutations, so the partition has no
+    // invalidation surface (logout clears it). Payloads are budget rows (scope ids/labels, usage
+    // counts, a window-seconds integer, a severity enum, ISO stamps) — not display-unit-bearing —
+    // so they round-trip verbatim with no SI conversion.
+    System("system", 15.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
