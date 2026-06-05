@@ -1,0 +1,58 @@
+P1 · S8 · 0011 — Automations shared state holder(s)
+====================================================
+
+Goal: port web hook domain web/src/api/hooks/useAutomations.ts (12 hooks: 5 reads +
+7 mutations) to UI-free KMP shared-core state holders at web-hook parity — same
+endpoints, same snake_case params, same query keys/caching intent, same derivations,
+SI preserved (conversion is display-only, S5). Delegation FORBIDDEN — implemented in
+this session.
+
+Artifacts produced (apps/shared/core):
+  commonMain:
+    - cache/CacheDomain.kt                                   (+Automations partition, 30s)
+    - presentation/automations/AutomationModels.kt          (all DTOs + 3 id-free sealed
+                                                              step hierarchies, kind disc.)
+    - data/repo/AutomationsRepository.kt                    (S7 port iface + query/key helpers)
+    - data/repo/HttpAutomationsRepository.kt                (HTTP impl over CachingRepository<JsonElement>)
+    - presentation/automations/AutomationsStore.kt          (S8 state holder; targeted refresh)
+  commonTest:
+    - presentation/automations/AutomationsStoreTest.kt       (fake-repo behaviour, 9 tests)
+    - data/repo/AutomationsRepositoryContractTest.kt         (endpoint/method/body/cache, 17 tests)
+    - presentation/automations/AutomationsGoldenTest.kt      (golden vectors, 6 tests)
+
+=== PARITY ===
+Reads (5) — cache→network feed, web query key → S7 cache key, params snake_case:
+  [x] useAutomations          -> GET  /automations                       key list             decode List<Automation> (safeArray)
+  [x] useAutomationHistory    -> GET  /automations/history?limit=N        key history:N        decode AutomationHistoryListResponse
+  [x] useAutomation           -> GET  /automations/{id}                   key detail:id        decode AutomationFull (steps + id-free lanes)
+  [x] useAutomationPresets    -> GET  /automations/presets[?category=]    key presets[:cat]    decode AutomationPresetsResponse (category sent only when non-empty)
+  [x] useAutomationPreset     -> GET  /automations/presets/{id}           key preset:id        decode AutomationPreset
+Mutations (7) — suspend Result, store refreshes EXACTLY the web invalidateQueries set:
+  [x] useToggleAutomation     -> PATCH  /automations/{id}/toggle {enabled}        invalidate -> list
+  [x] useReEnableAutomation   -> PATCH  /automations/{id}/re-enable               invalidate -> list
+  [x] useDeleteAutomation     -> DELETE /automations/{id}                         invalidate -> list + history(all limits)
+  [x] useBulkAutomationsUpdate-> POST   /automations/bulk {ids,op}                invalidate -> list + history(all limits)
+  [x] useTestRunAutomation    -> POST   /automations/{id}/test-run                invalidate -> history(all limits)
+  [x] useCreateAutomationFull -> POST   /automations {full}                       invalidate -> list
+  [x] useUpdateAutomationFull -> PUT    /automations/{id} {full}                  invalidate -> list + detail(id)
+All 12 ported. SI preserved (no unit-bearing fields in this domain). Create/update bodies
+are id-free by type (sealed step hierarchies carry no id/automation_id/step_id), so the
+strict DisallowUnknownFields backend can never 400 them — locked by golden + contract tests.
+
+=== GATE ===
+./gradlew :core:allTests
+  testDebugUnitTest + testReleaseUnitTest: BUILD SUCCESSFUL
+  Automations suites: AutomationsStoreTest=9, AutomationsRepositoryContractTest=17,
+                      AutomationsGoldenTest=6  (32 tests, failures=0 errors=0 skipped=0)
+TEST_EXIT=0
+
+./gradlew :core:ktlintCheck
+  ktlintCommonMainSourceSetCheck + ktlintCommonTestSourceSetCheck: BUILD SUCCESSFUL
+LINT_EXIT=0
+
+apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
+  PLACEHOLDER_ALLOWED=13  PLACEHOLDER_COUNT=0
+PH_EXIT=0
+
+EXIT=0
+STATUS=DONE

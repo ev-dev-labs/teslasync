@@ -82,6 +82,23 @@ public enum class CacheDomain(
     // verbatim with no SI conversion. The web hook file declares no mutations, so the partition
     // has no invalidation surface.
     AuthMode("auth_mode", 5.minutes),
+
+    // The Automations control plane (`GET /automations`, `/automations/history`,
+    // `/automations/{id}`, `/automations/presets`, `/automations/presets/{id}`). The web
+    // `useAutomations`/`useAutomationHistory` hooks poll the live list + history on
+    // `INTERVALS.STANDARD` (30s) via `refetchInterval`, so the 30-second window keeps the
+    // freshness flag honest while the S8/UI refetch cadence drives the actual live polling.
+    // The preset feeds use `STALE_TIMES.STATIC` on the web (they are pure, deployment-static
+    // catalogs); they share this partition because they change far more slowly than the
+    // window, so an occasionally-stale flag on a static catalog is harmless. Payloads are SI
+    // on the wire and not display-unit-bearing, so they round-trip verbatim with no SI
+    // conversion. A create/toggle/re-enable/delete/bulk/test-run mutation re-fetches the
+    // web-faithful feeds via the S8 store's targeted refresh (the `invalidateQueries`
+    // analogue); the durable cache is intentionally left intact so a refresh shows the
+    // last-known rows while the network reload runs (TanStack keeps previous data on
+    // invalidate), and `cacheThenNetwork` always hits the network on refresh so no stale
+    // value is ever served as fresh.
+    Automations("automations", 30.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
