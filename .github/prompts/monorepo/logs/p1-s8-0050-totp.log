@@ -1,0 +1,157 @@
+=== P1/S8/0050 TOTP state holder — gate run 2026-06-05T13:41:12.4577912-07:00 ===
+> Task :core:kmpPartiallyResolvedDependenciesChecker
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:compileKotlinIosSimulatorArm64 UP-TO-DATE
+> Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
+> Task :core:iosSimulatorArm64MainKlibrary UP-TO-DATE
+> Task :core:compileTestKotlinIosSimulatorArm64 UP-TO-DATE
+> Task :core:computeLocalPackageDependencyInputFiles SKIPPED
+> Task :core:generateSyntheticLinkageSwiftPMImportProjectForCinteropsAndLdDump SKIPPED
+> Task :core:generateUmbrellaPackageIdentifierBasedResolutionForDefault SKIPPED
+> Task :core:fetchUmbrellaPackageIdentifierForDefault SKIPPED
+> Task :core:syncPersistedPackageResolvedToSynthetic SKIPPED
+> Task :core:fetchSyntheticImportProjectPackages SKIPPED
+> Task :core:convertSyntheticImportProjectIntoDefFileIphonesimulator SKIPPED
+> Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
+> Task :core:iosSimulatorArm64Test SKIPPED
+> Task :core:compileKotlinMacosArm64 UP-TO-DATE
+> Task :core:macosArm64ProcessResources NO-SOURCE
+> Task :core:macosArm64MainKlibrary UP-TO-DATE
+> Task :core:compileTestKotlinMacosArm64 UP-TO-DATE
+> Task :core:convertSyntheticImportProjectIntoDefFileMacosx SKIPPED
+> Task :core:linkDebugTestMacosArm64 SKIPPED
+> Task :core:macosArm64Test SKIPPED
+> Task :core:preBuild UP-TO-DATE
+> Task :core:preDebugBuild UP-TO-DATE
+> Task :core:generateDebugResValues UP-TO-DATE
+> Task :core:generateDebugResources UP-TO-DATE
+> Task :core:packageDebugResources UP-TO-DATE
+> Task :core:parseDebugLocalResources UP-TO-DATE
+> Task :core:generateDebugRFile UP-TO-DATE
+> Task :core:compileDebugKotlinAndroid UP-TO-DATE
+> Task :core:javaPreCompileDebug UP-TO-DATE
+> Task :core:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:generateDebugUnitTestStubRFile UP-TO-DATE
+> Task :core:compileDebugUnitTestKotlinAndroid UP-TO-DATE
+> Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processDebugJavaRes UP-TO-DATE
+> Task :core:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :core:testDebugUnitTest UP-TO-DATE
+> Task :core:preReleaseBuild UP-TO-DATE
+> Task :core:generateReleaseResValues UP-TO-DATE
+> Task :core:generateReleaseResources UP-TO-DATE
+> Task :core:packageReleaseResources UP-TO-DATE
+> Task :core:parseReleaseLocalResources UP-TO-DATE
+> Task :core:generateReleaseRFile UP-TO-DATE
+> Task :core:compileReleaseKotlinAndroid UP-TO-DATE
+> Task :core:javaPreCompileRelease UP-TO-DATE
+> Task :core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :core:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :core:preReleaseUnitTestBuild UP-TO-DATE
+> Task :core:generateReleaseUnitTestStubRFile UP-TO-DATE
+> Task :core:compileReleaseUnitTestKotlinAndroid UP-TO-DATE
+> Task :core:javaPreCompileReleaseUnitTest UP-TO-DATE
+> Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processReleaseJavaRes UP-TO-DATE
+> Task :core:processReleaseUnitTestJavaRes UP-TO-DATE
+> Task :core:testReleaseUnitTest UP-TO-DATE
+> Task :core:allTests NO-SOURCE
+
+[Incubating] Problems report is available at: file:///D:/repos/teslasync/apps/shared/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 16s
+37 actionable tasks: 1 executed, 36 up-to-date
+TEST_EXIT=0
+> Task :core:loadKtlintReporters UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidMainSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidUnitTestSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleMainSourceSet UP-TO-DATE
+> Task :core:ktlintAppleMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
+> Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonMainSourceSet UP-TO-DATE
+> Task :core:ktlintCommonMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonTestSourceSet UP-TO-DATE
+> Task :core:ktlintCommonTestSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosMainSourceSet NO-SOURCE
+> Task :core:ktlintIosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosTestSourceSet NO-SOURCE
+> Task :core:ktlintIosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverKotlinScripts UP-TO-DATE
+> Task :core:ktlintKotlinScriptCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverMacosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosMainSourceSet NO-SOURCE
+> Task :core:ktlintMacosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosTestSourceSet NO-SOURCE
+> Task :core:ktlintMacosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeMainSourceSet NO-SOURCE
+> Task :core:ktlintNativeMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
+> Task :core:ktlintNativeTestSourceSetCheck SKIPPED
+> Task :core:ktlintCheck UP-TO-DATE
+
+BUILD SUCCESSFUL in 2s
+16 actionable tasks: 16 up-to-date
+LINT_EXIT=0
+PLACEHOLDER_ALLOWED=17
+PLACEHOLDER_COUNT=0
+EXIT=0
+PH_EXIT=0
+
+=== PARITY ===
+Web source: web/src/api/hooks/useTOTP.ts (6 exported hooks) → KMP shared core (TOTPStore + TOTPRepository + HttpTOTPRepository + TOTPDerivations)
+1. useTOTPStatus                -> TOTPStore.status (StateFlow<Resource<TOTPStatus>>) via repo.status(); GET /auth/totp; 30s staleTime (CacheDomain.Totp); 501 AUTH_MODE_OPEN -> TOTPStatus.Open
+2. useTOTPEnroll                -> TOTPStore.enroll(): Result<TOTPEnrollment>; POST /auth/totp/enroll; onSuccess refresh (evict totp status key)
+3. useTOTPVerify                -> TOTPStore.verify(code): Result<TOTPVerifyResult>; POST /auth/totp/verify {code}; onSuccess refresh (evict totp status key)
+4. useTOTPStepUp               -> TOTPStore.stepUp(code?, backupCode?): Result<TOTPSudoToken>; POST /auth/totp/sudo {code?|backup_code?}; NO invalidation; onSuccess SudoTokenSink.cache(token, sudoExpiryMillis(expires_at))
+5. useTOTPRevoke               -> TOTPStore.revoke(): Result<Unit>; DELETE /auth/totp; onSuccess refresh (evict totp status key)
+6. useTOTPRegenerateBackupCodes -> TOTPStore.regenerateBackupCodes(): Result<TOTPBackupCodesResponse>; POST /auth/totp/backup-codes/regenerate; onSuccess refresh (evict totp status key)
+
+Derivations pinned by golden vectors (apps/shared/core/spec/totp-golden.json; KMP+C# parity, ADR-004):
+- statusResponse  (backup_codes_remaining ?? 0; activated/last_used_at passthrough)
+- sudoExpiryMillis (new Date(expires_at).getTime() <-> Instant.parse(...).toEpochMilliseconds())
+- stepUpBody       (conditional code/backup_code, snake_case, empty-as-absent, code-first order)
+Sentinel codes re-exported: AUTH_MODE_OPEN, TOTP_RATE_LIMITED, TOTP_INVALID, TOTP_ENROLLMENT_EXPIRED.
+SI preserved: no unit-bearing fields; no conversion at this layer (S5 is display-only).
+
+EXIT=0
+STATUS=DONE

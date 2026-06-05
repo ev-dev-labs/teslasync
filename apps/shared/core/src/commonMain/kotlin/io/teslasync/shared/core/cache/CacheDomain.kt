@@ -462,6 +462,19 @@ public enum class CacheDomain(
     // re-collection of only the affected feed family (the web `invalidateQueries` analogue), and
     // `cacheThenNetwork` always hits the network on refresh so no stale value is ever served as fresh.
     Telemetry("telemetry", 1.minutes),
+
+    // The per-user TOTP enrollment status (`GET /auth/totp`), backing the Settings two-factor
+    // section. The web `useTOTPStatus` hook reads it with a 30s `staleTime`, so the 30-second
+    // window matches verbatim. There is a single status feed (the web `totpKeys.status` tuple
+    // `['totp','status']`), so the whole partition is the one cached entry; the enroll / verify /
+    // revoke / regenerate-backup-codes mutations evict that key (the web hooks invalidate
+    // `totpKeys.status`) and the S8 store refreshes the feed, while the step-up mutation
+    // (`POST /auth/totp/sudo`) performs no invalidation (the web `useTOTPStepUp` declares none).
+    // The `{ mode: 'open' }` path (the backend's 501 `AUTH_MODE_OPEN` sentinel) is cached as a
+    // successful feature-unavailable value exactly as the web hook normalises it. Payloads are
+    // booleans, counts and ISO stamps — not display-unit-bearing — so they round-trip verbatim
+    // with no SI conversion.
+    Totp("totp", 30.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */

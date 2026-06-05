@@ -1,0 +1,74 @@
+{
+  "status": [
+    {
+      "name": "absent_backup_codes_remaining_normalises_to_zero",
+      "payload": { "mode": "session", "activated": true, "last_used_at": "2026-01-02T00:00:00Z" },
+      "expected": { "activated": true, "last_used_at": "2026-01-02T00:00:00Z", "backup_codes_remaining": 0 }
+    },
+    {
+      "name": "null_backup_codes_remaining_normalises_to_zero",
+      "payload": { "mode": "session", "activated": false, "backup_codes_remaining": null },
+      "expected": { "activated": false, "last_used_at": null, "backup_codes_remaining": 0 }
+    },
+    {
+      "name": "activated_with_codes_and_last_used_passthrough",
+      "payload": { "mode": "session", "activated": true, "last_used_at": "2026-03-04T05:06:07Z", "backup_codes_remaining": 8 },
+      "expected": { "activated": true, "last_used_at": "2026-03-04T05:06:07Z", "backup_codes_remaining": 8 }
+    },
+    {
+      "name": "not_yet_enrolled_no_last_used",
+      "payload": { "mode": "session", "activated": false, "backup_codes_remaining": 0 },
+      "expected": { "activated": false, "last_used_at": null, "backup_codes_remaining": 0 }
+    }
+  ],
+  "sudoExpiry": [
+    {
+      "name": "utc_z_epoch",
+      "expires_at": "1970-01-01T00:00:00Z",
+      "expected_millis": 0
+    },
+    {
+      "name": "utc_z_whole_seconds",
+      "expires_at": "2026-01-01T00:00:00Z",
+      "expected_millis": 1767225600000
+    },
+    {
+      "name": "utc_z_with_millis",
+      "expires_at": "2026-01-01T00:00:00.500Z",
+      "expected_millis": 1767225600500
+    },
+    {
+      "name": "positive_offset_normalises_to_utc",
+      "expires_at": "2026-01-01T01:00:00+01:00",
+      "expected_millis": 1767225600000
+    }
+  ],
+  "stepUpBody": [
+    {
+      "name": "code_only",
+      "code": "123456",
+      "expected": { "code": "123456" }
+    },
+    {
+      "name": "backup_code_only",
+      "backup_code": "ABCD-EFGH",
+      "expected": { "backup_code": "ABCD-EFGH" }
+    },
+    {
+      "name": "both_code_first",
+      "code": "654321",
+      "backup_code": "WXYZ-1234",
+      "expected": { "code": "654321", "backup_code": "WXYZ-1234" }
+    },
+    {
+      "name": "empty_code_treated_as_absent",
+      "code": "",
+      "backup_code": "ONLY-BACKUP",
+      "expected": { "backup_code": "ONLY-BACKUP" }
+    },
+    {
+      "name": "neither_yields_empty_body",
+      "expected": {}
+    }
+  ]
+}
