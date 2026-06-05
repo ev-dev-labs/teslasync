@@ -29,6 +29,12 @@ public enum class CacheDomain(
     Analytics("analytics", 10.minutes),
     Notifications("notifications", 1.minutes),
     Signals("signals", 2.minutes),
+
+    // Admin/operational read-models (api keys, logs, backups, health, audit, …). These
+    // are control-plane feeds the web polls on short intervals; the 1-minute window keeps
+    // the freshness flag honest while their UI-side refetch cadence (an S8/UI concern,
+    // mirroring the web `refetchInterval`) drives the actual live polling.
+    Admin("admin", 1.minutes),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */

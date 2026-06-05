@@ -1,0 +1,150 @@
+=== P1/S8/0002 — Admin state holder — gate run 2026-06-05T01:03:42.6532073-07:00 ===
+HOST=Windows; NOTE: :core:allTests aggregates Apple/native test targets that cannot link/run on a Windows host.
+Executed the identical commonTest sources via the JVM/Android-unit path (:core:testDebugUnitTest), the runnable gate on this host.
+
+> Task :core:kmpPartiallyResolvedDependenciesChecker
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:preBuild UP-TO-DATE
+> Task :core:preDebugBuild UP-TO-DATE
+> Task :core:generateDebugResValues UP-TO-DATE
+> Task :core:generateDebugResources UP-TO-DATE
+> Task :core:packageDebugResources UP-TO-DATE
+> Task :core:parseDebugLocalResources UP-TO-DATE
+> Task :core:generateDebugRFile UP-TO-DATE
+> Task :core:compileDebugKotlinAndroid UP-TO-DATE
+> Task :core:javaPreCompileDebug UP-TO-DATE
+> Task :core:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:generateDebugUnitTestStubRFile UP-TO-DATE
+> Task :core:compileDebugUnitTestKotlinAndroid UP-TO-DATE
+> Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processDebugJavaRes UP-TO-DATE
+> Task :core:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :core:testDebugUnitTest UP-TO-DATE
+
+BUILD SUCCESSFUL in 2s
+17 actionable tasks: 1 executed, 16 up-to-date
+TEST_EXIT=0
+> Task :core:loadKtlintReporters UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidMainSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidUnitTestSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleMainSourceSet UP-TO-DATE
+> Task :core:ktlintAppleMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
+> Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonMainSourceSet UP-TO-DATE
+> Task :core:ktlintCommonMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonTestSourceSet UP-TO-DATE
+> Task :core:ktlintCommonTestSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosMainSourceSet NO-SOURCE
+> Task :core:ktlintIosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosTestSourceSet NO-SOURCE
+> Task :core:ktlintIosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverKotlinScripts UP-TO-DATE
+> Task :core:ktlintKotlinScriptCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverMacosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosMainSourceSet NO-SOURCE
+> Task :core:ktlintMacosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosTestSourceSet NO-SOURCE
+> Task :core:ktlintMacosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeMainSourceSet NO-SOURCE
+> Task :core:ktlintNativeMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
+> Task :core:ktlintNativeTestSourceSetCheck SKIPPED
+> Task :core:ktlintCheck UP-TO-DATE
+
+BUILD SUCCESSFUL in 2s
+16 actionable tasks: 16 up-to-date
+LINT_EXIT=0
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+EXIT=0
+PH_EXIT=0
+
+=== PARITY ===
+Source of truth: web/src/api/hooks/useAdmin.ts (21 hooks). Port: presentation/admin/AdminStore.kt
+(S8 holder) over data/repo/AdminRepository.kt + HttpAdminRepository.kt (S7). Payloads raw SI
+JsonElement (no conversion); list reads array-guarded via ported safeArray (golden-locked).
+
+Reads (15) — hook -> endpoint(method, params) -> store API:
+ 1  useApiKeys            GET /api-keys                                      -> apiKeys()
+ 2  useApiLogs            GET /api-logs?page&limit=25                        -> apiLogs(page)
+ 3  useApiLogStats        GET /api-logs/stats                                -> apiLogStats()
+ 4  useBackupConfigs      GET /backup/configs                                -> backupConfigs()
+ 5  useBackupRuns         GET /backup/runs                                   -> backupRuns()
+ 6  useSystemHealth       GET /system/health                                 -> systemHealth()
+ 7  useMaintenanceState   GET /admin/maintenance                             -> maintenanceState()
+ 8  useAuditLogs          GET /system/audit                                  -> auditLogs()
+ 9  useWebErrorsSummary   GET /admin/web-errors/summary                      -> webErrorsSummary()
+10  useSecurityEvents     GET /security?vehicle_id                           -> securityEvents(vehicleId)
+11  useDBStats            GET /dev-tools/db-stats                            -> dbStats()
+12  useMigrations         GET /dev-tools/migration-status                    -> migrations()
+13  useConnectionPool     GET /dev-tools/runtime-info                        -> connectionPool()
+14  useExportJobs         GET /export/jobs                                   -> exportJobs()
+15  useVehicleStateMachine GET /vehicles/{id}/state                          -> vehicleStateMachine(vehicleId)
+(15b) useStateTimeline   GET /vehicle-states/timeline?vehicle_id&days       -> stateTimeline(vehicleId,days)
+                          [web hook is @deprecated/404; error surfaces via Resource.Error, as web]
+
+Mutations (6) — hook -> endpoint(method, body) -> invalidates:
+16  useCreateApiKey       POST /api-keys {name,permissions}                  -> createApiKey()  inv: api-keys
+17  useDeleteApiKey       DELETE /api-keys/{id}                              -> deleteApiKey()  inv: api-keys
+18  useRevokeApiKey       POST /api-keys/{id}/revoke                         -> revokeApiKey()  inv: api-keys
+19  useUpdateMaintenance  POST /admin/maintenance {mode,message,until}       -> updateMaintenance() inv: maintenance + system-health
+20  useExportJobs (query) GET /export/jobs                                   -> exportJobs()    [listed under mutations in prompt; it is a query, ported as read #14]
+21  useCreateExport       POST /exports {type,format,vehicleId?}             -> createExport()  inv: export-jobs
+                          [body key camelCase 'vehicleId', omitted when null — verbatim web JSON.stringify parity]
+
+Count: 21/21 hooks ported. Reads emit cache->network (ADR-013 Resource). Mutations are non-throwing
+Result; on success refresh exactly the web-invalidated feeds. No direct Ktor in the holder (repo-injected).
+
+Derivation parity: safeArray (web select: safeArray) -> data/repo/AdminRepository.safeArray;
+golden-locked in commonTest/.../admin/AdminSafeArrayGoldenTest.kt (8 language-neutral vectors;
+C# Windows port mirrors the identical rows). No other client-side derivation exists in useAdmin.
+
+Tests:
+ - AdminRepositoryContractTest  (endpoints/params/methods/bodies + cache-key invalidation, MockEngine)
+ - AdminStoreTest               (cache->network emission, mutation delegation + feed refresh, fake repo)
+ - AdminSafeArrayGoldenTest     (safeArray golden vectors)
+
+Files (allowed scope: apps/shared/core/**):
+ + cache/CacheDomain.kt (+Admin domain)
+ + data/repo/AdminRepository.kt        (port interface + safeArray)
+ + data/repo/HttpAdminRepository.kt    (S7 impl)
+ + presentation/admin/MaintenanceUpdateInput.kt
+ + presentation/admin/AdminStore.kt    (S8 holder)
+ + commonTest/.../data/repo/AdminRepositoryContractTest.kt
+ + commonTest/.../presentation/admin/AdminStoreTest.kt
+ + commonTest/.../presentation/admin/AdminSafeArrayGoldenTest.kt
+
+EXIT=0
+STATUS=DONE
