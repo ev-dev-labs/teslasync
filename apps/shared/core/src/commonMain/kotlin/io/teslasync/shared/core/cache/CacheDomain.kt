@@ -445,6 +445,23 @@ public enum class CacheDomain(
     // ages, and millisecond durations — not display-unit-bearing — so they round-trip verbatim with
     // no SI conversion.
     SystemQueues("system_queues", 15.seconds),
+
+    // The raw signal-inspector / fleet-telemetry-diagnostics surface (the web `useTelemetry` hook
+    // domain: `GET /signals/{id}/available|live|stats|{sig}/history|snapshot|diff`, `/signals/catalog`,
+    // `/signals/observations`, `/telemetry`, `/tesla/fleet-telemetry/error-vins|errors`). The web hooks
+    // read with a SPREAD of staleTimes — REALTIME/5s (live signals, observations), SLOW/5min (catalog),
+    // and STANDARD/60s or the TanStack default (everything else) — so no single domain window honours
+    // them all. Each read therefore passes its own per-entity TTL through the
+    // `observe(key, ttlMillis, fetch)` overload (mapping the web staleTime verbatim via
+    // TELEMETRY_REALTIME/SLOW/STANDARD_TTL_MILLIS); this 60-second default is the modal STANDARD bound
+    // used as the fallback. The fourteen reads share this partition under distinct keys (mirroring the
+    // web `telemetryKeys` tuples) so each caches independently while logout still clears the whole
+    // domain in one call. Payloads are SI on the wire (signal values, ms ages, second-based uptime) and
+    // are NOT display-converted here — formatting is the render boundary's job (S5). The two
+    // error-refresh mutations have no cache interaction here; invalidation is the S8 store's targeted
+    // re-collection of only the affected feed family (the web `invalidateQueries` analogue), and
+    // `cacheThenNetwork` always hits the network on refresh so no stale value is ever served as fresh.
+    Telemetry("telemetry", 1.minutes),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
