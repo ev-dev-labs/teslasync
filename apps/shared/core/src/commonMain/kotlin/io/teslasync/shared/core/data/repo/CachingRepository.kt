@@ -83,6 +83,11 @@ public abstract class CachingRepository<T : Any>(
         store.clear(domain)
     }
 
+    /** Removes a single ([domain], [key]) entry — the data-layer `removeQueries(key)` analogue. */
+    protected suspend fun evict(key: String) {
+        store.delete(domain, key)
+    }
+
     protected companion object {
         /** Shared JSON identical to the networking client's, so SI payloads round-trip. */
         public val cacheJson: Json = defaultApiJson

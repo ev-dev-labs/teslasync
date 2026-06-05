@@ -99,6 +99,19 @@ public enum class CacheDomain(
     // invalidate), and `cacheThenNetwork` always hits the network on refresh so no stale
     // value is ever served as fresh.
     Automations("automations", 30.seconds),
+
+    // The AI assistant chat store (`GET /chatbot/sessions`, `GET /chatbot/history`). The web
+    // `useChatSessions`/`useChatHistory` hooks use the default TanStack `staleTime` (0 = always
+    // refetch on mount) and never poll; the 30-second window keeps the freshness flag honest
+    // without thrashing it while the cache-then-network operator always re-fetches on refresh, so
+    // no stale value is ever served as fresh. Two distinct read shapes (session list, message
+    // history) share this partition, each cached as its raw JsonElement (the verbatim-SI strategy
+    // the Admin/Automations ports use) and decoded per-feed. Payloads are plain chat metadata and
+    // text — not display-unit-bearing — so they round-trip verbatim with no SI conversion. A
+    // rename/delete optimistically patches the cached session list (the web `setQueryData`
+    // analogue) and the S8 store re-fetches it (the `invalidateQueries` analogue); a delete also
+    // evicts the deleted session's history key (the web `removeQueries` analogue).
+    Chat("chat", 30.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
