@@ -80,3 +80,10 @@ Dockerfile*  text eol=lf
 # generic case for any other proto we may vendor.
 *.proto      binary
 
+
+# P1/S10 — generated i18n resources are written with LF by
+# apps/shared/i18n/generators/gen-i18n.ts. Keep them LF on every checkout so the
+# gen-i18n drift gate (-Check) doesn't false-positive on Windows (autocrlf=true).
+apps/android/app/src/main/res/**/strings.xml text eol=lf
+apps/windows/Strings/**/Resources.resw       text eol=lf
+apps/apple/**/*.xcstrings                     text eol=lf
