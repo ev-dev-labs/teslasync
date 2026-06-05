@@ -326,6 +326,18 @@ public enum class CacheDomain(
     // (SHA fingerprints, row/byte counts, ms timings, ISO stamps, severity/status strings) and
     // round-trip verbatim with no SI conversion.
     OperatorConfidence("operator_confidence", 1.minutes),
+
+    // The unified pin store (`GET /pinned?type=&context=`). The web `usePinned` hook reads it with
+    // `STALE_TIMES.SLOW` (5 minutes), so the window matches verbatim. Each `(type, context)` bucket
+    // is cached under its own key (mirroring the web `pinnedKeys.list` tuple), so a vehicle-picker
+    // feed and a widget feed cache independently while logout still clears the whole domain in one
+    // call. Pins are plain rows (ids, item ids, integer positions, timestamps) — not
+    // display-unit-bearing — so they round-trip verbatim with no SI conversion. The mutations have
+    // no cache interaction here; invalidation is the S8 store's targeted refresh (the web
+    // `invalidateQueries` analogue — a toggle refreshes every feed via `pinnedKeys.all`, a reorder
+    // only the no-context feed via `pinnedKeys.list(type)`), and `cacheThenNetwork` always hits the
+    // network on refresh so no stale value is ever served as fresh.
+    Pinned("pinned", 5.minutes),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
