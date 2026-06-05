@@ -508,6 +508,22 @@ public enum class CacheDomain(
     // strings and ISO stamps — not display-unit-bearing telemetry — so they round-trip verbatim with
     // no SI conversion; display formatting is the render boundary's job (S5).
     User("user", 5.minutes),
+
+    // The per-vehicle access-control read-models (`GET /vehicles/{id}/drivers`,
+    // `GET /vehicles/{id}/invitations`), backing the VehicleAccess management surface. The web
+    // `useVehicleDrivers` / `useVehicleInvitations` hooks both read with `STALE_TIMES.STANDARD`
+    // (60s), so the 1-minute window matches both verbatim and neither read needs a per-entry TTL
+    // override. The two reads live in one partition under distinct keys (the web
+    // `vehicleAccessKeys.drivers` / `vehicleAccessKeys.invitations` tuples, prefixed so a shared
+    // vehicleId can never collide), so each caches independently while logout still clears the whole
+    // domain in one call. Each list read applies `safeArray` (the web `select: safeArray`) once at
+    // the data layer. The five mutations (drivers refresh/remove, invitations refresh/create/revoke)
+    // call the API directly and on success evict ONLY the affected vehicle's affected feed key — the
+    // driver actions invalidate `vehicleAccessKeys.drivers(id)`, the invitation actions
+    // `vehicleAccessKeys.invitations(id)`, never the sibling feed and never another vehicle — and the
+    // S8 store re-collects that one feed. Payloads are identity/role/url/status strings and ISO
+    // stamps — not display-unit-bearing — so they round-trip verbatim with no SI conversion.
+    VehicleAccess("vehicle_access", 1.minutes),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
