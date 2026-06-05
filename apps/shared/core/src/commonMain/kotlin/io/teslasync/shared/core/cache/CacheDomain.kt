@@ -587,6 +587,23 @@ public enum class CacheDomain(
     // conversion is the render boundary's job (S5). The web hook file declares no mutations, so the
     // partition has no invalidation surface.
     VehicleSystems("vehicle_systems", 30.seconds),
+
+    // The Watch read-models (web/src/api/hooks/useWatch.ts): the full `GET /watch/summary` glance
+    // payload and the minimal `GET /watch/complication` projection, both optionally scoped by
+    // `?vehicle_id=`. The two reads carry distinct web `staleTime`s — the summary `STALE_TIMES.MODERATE`
+    // (15s) and the complication `STALE_TIMES.FAST` (30s) — so each read applies an explicit per-entry
+    // TTL override ([io.teslasync.shared.core.data.repo.WATCH_SUMMARY_TTL_MILLIS] /
+    // [io.teslasync.shared.core.data.repo.WATCH_COMPLICATION_TTL_MILLIS]) rather than the domain window;
+    // the 15-second default below tracks the faster (summary) read. Each feed is cached under its own
+    // per-feed key (mirroring the web `watchKeys` tuples) so each caches independently while logout
+    // clears the whole domain in one call; the two distinct read shapes are each carried verbatim as a
+    // raw [kotlinx.serialization.json.JsonElement] (the Driving/Analytics strategy). The web
+    // `useWatchCommand` mutation invalidates no query on success (its `onSuccess` only raises a toast),
+    // so the partition has no eviction surface. The summary's numeric fields are backend-rendered
+    // (`range_km` in km, temps in °C) and round-trip verbatim — display formatting is the render
+    // boundary's job (S5). The web's `X-API-Key`/`skipAuthRefresh` transport is a networking-layer
+    // concern wired at the platform boundary, not a cache concern.
+    Watch("watch", 15.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
