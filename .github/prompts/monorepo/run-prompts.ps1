@@ -103,12 +103,55 @@ if ($programDirs.Count -eq 0) {
 # Build ordered prompt list across all program dirs (recursive within each)
 # IMPORTANT: skip the top-level 0000-methodology.prompt.md — it is the meta
 # document, not an executable prompt. Also skip any README.md files.
+#
+# Sort order within a program directory uses NATURAL NUMERIC SORT on the
+# filename's leading phase/sequence tokens, NOT plain lexical FullName sort.
+# Lexical sort produces the bug S0 < S1 < S10 < S11 < S2 < S3 ... which
+# silently runs phase-10 prompts before phase-2 and breaks predecessor
+# dependencies (S11 needs S3 but ran after S10 in the broken order).
+#
+# Patterns handled (in priority order):
+#   1. <Letter><PhaseDigit>-<SeqDigit>-<slug>   — infra prompts: S0-0001,
+#      W7-0001, A12-0001, H99-0001. Sort by (letter, phase, seq).
+#   2. <Digit>-<slug>                            — pure-numeric p0 prompts:
+#      0001-, 0099-. Treated as ('', 0, seq) so they sort first.
+#   3. <Letter>-<SeqDigit>-<slug>                — surface prompts with no
+#      phase digit: W-0001-AlertFeed. Treated as (letter, 999, seq) so they
+#      run AFTER all infra prompts in the same program.
+#   4. anything else (e.g. pages/admin/APIKeysPage.prompt.md with no leading
+#      digit or known prefix) — bucketed as ('zzz-unprefixed', 9999, 0) so
+#      they sort dead last within their subdir, tiebroken on name.
+# Subdir name is the 4th key so files in `S8/` (which match pattern 1 with
+# phase=8) interleave naturally between top-level `S7-` and `S9-` files,
+# but subdir surface buckets (dashboard-widgets/, pages/admin/, ...) sort
+# after their parent's top-level infra because their phase is 999/9999.
+function Get-PromptSortKey {
+    param($file, [string]$programRoot)
+    $name = ($file.BaseName -replace '\.prompt$', '')
+    $relDir = $file.DirectoryName.Substring($programRoot.Length).TrimStart('\')
+
+    if ($name -match '^([A-Za-z]+)(\d+)-(\d+)') {
+        return [PSCustomObject]@{ Letter=$Matches[1]; Phase=[int]$Matches[2]; Seq=[int]$Matches[3]; Dir=$relDir; Name=$name }
+    }
+    if ($name -match '^(\d+)-') {
+        return [PSCustomObject]@{ Letter=''; Phase=0; Seq=[int]$Matches[1]; Dir=$relDir; Name=$name }
+    }
+    if ($name -match '^([A-Za-z]+)-(\d+)') {
+        return [PSCustomObject]@{ Letter=$Matches[1]; Phase=999; Seq=[int]$Matches[2]; Dir=$relDir; Name=$name }
+    }
+    return [PSCustomObject]@{ Letter='zzz-unprefixed'; Phase=9999; Seq=0; Dir=$relDir; Name=$name }
+}
+
 $prompts = @()
 $index = 0
 foreach ($pd in $programDirs) {
-    $files = Get-ChildItem -Path $pd.FullName -Recurse -Filter "*.prompt.md" -File |
-             Sort-Object FullName
-    foreach ($file in $files) {
+    $files = Get-ChildItem -Path $pd.FullName -Recurse -Filter "*.prompt.md" -File
+    $sorted = $files |
+        Select-Object @{Name='File';Expression={$_}}, @{Name='Key';Expression={ Get-PromptSortKey $_ $pd.FullName }} |
+        Sort-Object @{Expression={$_.Key.Letter}}, @{Expression={$_.Key.Phase}}, @{Expression={$_.Key.Dir}}, @{Expression={$_.Key.Seq}}, @{Expression={$_.Key.Name}} |
+        Select-Object -ExpandProperty File
+
+    foreach ($file in $sorted) {
         $index++
         $relPath = $file.FullName.Substring($promptsRoot.Length + 1).Replace('\','/')
         $prompts += [PSCustomObject]@{
