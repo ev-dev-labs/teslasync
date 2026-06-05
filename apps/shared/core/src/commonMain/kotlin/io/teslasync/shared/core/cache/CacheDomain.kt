@@ -178,6 +178,18 @@ public enum class CacheDomain(
     // targeted refresh (the `invalidateQueries` analogue); the durable cache is intentionally left
     // intact so a refresh shows the last-known rows while the network reload runs.
     Exports("exports", 5.seconds),
+
+    // The typed feature-flag registry (`GET /system/flags`, `/system/flags/{key}`,
+    // `/system/flags/changes`, `/system/flags/{key}/changes`). The web `useFlags`/`useFlagChanges`
+    // hooks read with `STALE_TIMES.MODERATE` (15s) and poll on `INTERVALS.STANDARD` (30s) via
+    // `refetchInterval`, so the 15-second window keeps the freshness flag honest while the S8/UI
+    // refetch cadence drives the actual live polling. The list, the per-key entries, and the
+    // global/per-key change feeds share this partition under distinct prefixed keys
+    // (`list` / `flag:{key}` / `changes:{scope}:{limit}`). Flag values are arbitrary JSON and no
+    // field is unit-bearing, so payloads round-trip verbatim with no SI conversion. A sudo-gated
+    // set/delete invalidates the WHOLE partition (the web hooks invalidate the `['system','flags']`
+    // prefix), so a write clears the list, every entry, and every change feed at once.
+    FeatureFlags("feature_flags", 15.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
