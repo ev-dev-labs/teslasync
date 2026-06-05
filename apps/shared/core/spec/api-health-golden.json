@@ -1,0 +1,52 @@
+[
+  {
+    "name": "unknown_before_first_probe",
+    "probe": null,
+    "expected": { "status": "unknown", "latency_ms": null, "last_checked_at": null }
+  },
+  {
+    "name": "ok_fast_2xx",
+    "probe": { "ok": true, "latency_ms": 42, "checked_at": "2026-06-05T09:00:00.000Z" },
+    "expected": { "status": "ok", "latency_ms": 42, "last_checked_at": "2026-06-05T09:00:00.000Z" }
+  },
+  {
+    "name": "ok_zero_latency",
+    "probe": { "ok": true, "latency_ms": 0, "checked_at": "2026-06-05T09:00:01.000Z" },
+    "expected": { "status": "ok", "latency_ms": 0, "last_checked_at": "2026-06-05T09:00:01.000Z" }
+  },
+  {
+    "name": "ok_just_below_degraded_threshold",
+    "probe": { "ok": true, "latency_ms": 499, "checked_at": "2026-06-05T09:00:02.000Z" },
+    "expected": { "status": "ok", "latency_ms": 499, "last_checked_at": "2026-06-05T09:00:02.000Z" }
+  },
+  {
+    "name": "degraded_at_threshold_boundary",
+    "probe": { "ok": true, "latency_ms": 500, "checked_at": "2026-06-05T09:00:03.000Z" },
+    "expected": { "status": "degraded", "latency_ms": 500, "last_checked_at": "2026-06-05T09:00:03.000Z" }
+  },
+  {
+    "name": "degraded_just_over_threshold",
+    "probe": { "ok": true, "latency_ms": 501, "checked_at": "2026-06-05T09:00:04.000Z" },
+    "expected": { "status": "degraded", "latency_ms": 501, "last_checked_at": "2026-06-05T09:00:04.000Z" }
+  },
+  {
+    "name": "degraded_high_but_up",
+    "probe": { "ok": true, "latency_ms": 1999, "checked_at": "2026-06-05T09:00:05.000Z" },
+    "expected": { "status": "degraded", "latency_ms": 1999, "last_checked_at": "2026-06-05T09:00:05.000Z" }
+  },
+  {
+    "name": "offline_non_2xx_fast",
+    "probe": { "ok": false, "latency_ms": 12, "checked_at": "2026-06-05T09:00:06.000Z" },
+    "expected": { "status": "offline", "latency_ms": 12, "last_checked_at": "2026-06-05T09:00:06.000Z" }
+  },
+  {
+    "name": "offline_failure_overrides_low_latency",
+    "probe": { "ok": false, "latency_ms": 5, "checked_at": "2026-06-05T09:00:07.000Z" },
+    "expected": { "status": "offline", "latency_ms": 5, "last_checked_at": "2026-06-05T09:00:07.000Z" }
+  },
+  {
+    "name": "offline_failure_overrides_high_latency",
+    "probe": { "ok": false, "latency_ms": 5000, "checked_at": "2026-06-05T09:00:08.000Z" },
+    "expected": { "status": "offline", "latency_ms": 5000, "last_checked_at": "2026-06-05T09:00:08.000Z" }
+  }
+]

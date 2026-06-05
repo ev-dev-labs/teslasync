@@ -1,0 +1,76 @@
+=== p1-s8-0009-apihealth 2026-06-05T02:40:00-07:00 ===
+> Task :core:compileTestKotlinIosSimulatorArm64
+> Task :core:iosSimulatorArm64Test SKIPPED
+> Task :core:compileTestKotlinMacosArm64
+> Task :core:macosArm64Test SKIPPED
+> Task :core:compileDebugKotlinAndroid
+> Task :core:compileReleaseKotlinAndroid
+> Task :core:compileDebugUnitTestKotlinAndroid
+> Task :core:testDebugUnitTest
+> Task :core:testReleaseUnitTest
+> Task :core:allTests NO-SOURCE
+
+BUILD SUCCESSFUL in 29s
+37 actionable tasks: 19 executed, 18 up-to-date
+TEST_EXIT=0
+
+--- ApiHealth test results (core/build/test-results/testDebugUnitTest) ---
+<testsuite name="io.teslasync.shared.core.data.repo.ApiHealthRepositoryContractTest" tests="3" skipped="0" failures="0" errors="0"/>
+  probeHitsRootHealthzNotVersioned
+  successfulProbeIsOk
+  nonSuccessProbeIsNotOk
+<testsuite name="io.teslasync.shared.core.presentation.apihealth.ApiHealthGoldenTest" tests="2" skipped="0" failures="0" errors="0"/>
+  goldenFileParsesAndIsComprehensive
+  everyScenarioMatchesDeriverOutput
+<testsuite name="io.teslasync.shared.core.presentation.apihealth.ApiHealthStoreTest" tests="5" skipped="0" failures="0" errors="0"/>
+  startsUnknownBeforeAnyProbe
+  probesImmediatelyAndDerivesState
+  reProbesOnEachPollInterval
+  bucketsDegradedAndOfflineFromProbe
+  doesNotProbeWithoutASubscriber
+
+> Task :core:ktlintCommonMainSourceSetCheck
+> Task :core:ktlintCommonTestSourceSetCheck
+> Task :core:ktlintAndroidUnitTestSourceSetCheck
+> Task :core:ktlintAppleTestSourceSetCheck
+> Task :core:ktlintCheck
+
+BUILD SUCCESSFUL in 11s
+16 actionable tasks: 8 executed, 8 up-to-date
+LINT_EXIT=0
+
+PLACEHOLDER_ALLOWED=13
+PLACEHOLDER_COUNT=0
+PH_EXIT=0
+
+=== PARITY ===
+Web source: web/src/api/hooks/useApiHealth.ts (1 hook, 0 mutations)
+Reads ported (1/1):
+  [x] useApiHealth -> ApiHealthStore.state (StateFlow<ApiHealthState>)
+        endpoint: GET /healthz at the API server ROOT (versioned=false; NOT under /api/v1),
+                  read as raw text so 2xx is judged on status alone (web `res.ok`)
+        params: none (the web probe takes no query params)
+        poll: web refetchInterval POLL_INTERVAL_MS=15s -> ApiHealthStore.pollIntervalMillis=15000
+              (SharingStarted.WhileSubscribed mirrors refetchIntervalInBackground:false +
+               remount-refetch); no cache/staleTime surface because the web hook never caches.
+        derivation: bucket() + `if (!data) unknown` -> ApiHealth.bucket()/deriveState()
+              ok (2xx <500ms) | degraded (2xx >=500ms) | offline (!ok) | unknown (no probe)
+              -> golden vectors apps/shared/core/spec/api-health-golden.json (10 scenarios:
+                 unknown, ok fast/zero/499, degraded 500/501/1999, offline fast/low/high latency)
+        SI preserved: latencyMs (ms) + lastCheckedAt (ISO-8601) carried verbatim; no S5 conversion.
+Mutations ported (0/0): none (no invalidation surface — the web hook file has only a useQuery)
+Files:
+  apps/shared/core/src/commonMain/.../data/repo/ApiHealthRepository.kt (+ ApiHealthProbe)
+  apps/shared/core/src/commonMain/.../data/repo/HttpApiHealthRepository.kt
+  apps/shared/core/src/commonMain/.../presentation/apihealth/ApiHealthState.kt (enum+state+ApiHealth)
+  apps/shared/core/src/commonMain/.../presentation/apihealth/ApiHealthStore.kt
+  apps/shared/core/spec/api-health-golden.json
+  apps/shared/core/src/commonTest/.../presentation/apihealth/ApiHealthGoldenLoader.kt (expect)
+  apps/shared/core/src/androidUnitTest/.../presentation/apihealth/ApiHealthGoldenLoader.android.kt
+  apps/shared/core/src/appleTest/.../presentation/apihealth/ApiHealthGoldenLoader.apple.kt
+  apps/shared/core/src/commonTest/.../presentation/apihealth/ApiHealthGoldenTest.kt
+  apps/shared/core/src/commonTest/.../presentation/apihealth/ApiHealthStoreTest.kt
+  apps/shared/core/src/commonTest/.../data/repo/ApiHealthRepositoryContractTest.kt
+Gate: TEST_EXIT=0 LINT_EXIT=0 PH_EXIT=0
+EXIT=0
+STATUS=DONE
