@@ -1,0 +1,96 @@
+=== P1/S9/0001 gate run 2026-06-05T16:11:32.9003602-07:00 ===
+wrote windows/Tokens.xaml (5986 bytes)
+wrote android/Theme.kt (4990 bytes)
+wrote apple/Tokens.swift (9066 bytes)
+GENERATION COMPLETE.
+GEN_EXIT=0
+OK (no drift): windows/Tokens.xaml
+OK (no drift): android/Theme.kt
+OK (no drift): apple/Tokens.swift
+CHECK PASSED: no drift.
+DRIFT_EXIT=0
+ΓöÇΓöÇ Golden token fidelity (tokens.json vs web values) ΓöÇΓöÇ
+  OK  color.dark.bg = "#0a0a0f"
+  OK  color.dark.surface = "#0f1019"
+  OK  color.dark.textPrimary = "#ffffff"
+  OK  color.dark.textSecondary = "#9ca3af"
+  OK  color.dark.textMuted = "#8a95a6"
+  OK  color.dark.accent = "#00f0ff"
+  OK  color.dark.border = "rgba(255, 255, 255, 0.12)"
+  OK  color.dark.surfaceGlass = "rgba(255, 255, 255, 0.04)"
+  OK  color.light.bg = "#f8fafc"
+  OK  color.light.textPrimary = "#0f172a"
+  OK  color.light.accent = "#0891b2"
+  OK  color.highContrast.bg = "#ffffff"
+  OK  color.highContrast.textPrimary = "#000000"
+  OK  color.dark.status.success = "#10b981"
+  OK  color.dark.status.warning = "#f59e0b"
+  OK  color.dark.status.danger = "#ef4444"
+  OK  chart.categorical[0] = "#0072B2"
+  OK  chart.categorical[1] = "#E69F00"
+  OK  chart.categorical[7] = "#4B4B4B"
+  OK  motion.durations.fast = 150
+  OK  motion.durations.normal = 250
+  OK  motion.durations.slow = 400
+  OK  motion.easing.standard = "cubic-bezier(0.2, 0, 0, 1)"
+  OK  typography.body.size = 14
+  OK  typography.display.size = 30
+  OK  typography.label.size = 12
+ΓöÇΓöÇ Generated-file coverage (sampled colors present) ΓöÇΓöÇ
+  OK  fluent accent brush (#FF00F0FF)
+  OK  material accent color (0xFF00F0FF)
+  OK  apple accent components (red: 0.000, green: 0.941, blue: 1.000)
+  OK  fluent chart[0] (chart[0])
+  OK  material chart[0] (chart[0])
+FIDELITY PASSED: sampled tokens match web values and appear in all three platform files.
+FID_EXIT=0
+
+=== FINAL GATE 2026-06-05T16:13:00.7765733-07:00 ===
+wrote windows/Tokens.xaml (5986 bytes)
+wrote android/Theme.kt (4990 bytes)
+wrote apple/Tokens.swift (9066 bytes)
+GENERATION COMPLETE.
+GEN_EXIT=0
+OK (no drift): windows/Tokens.xaml
+OK (no drift): android/Theme.kt
+OK (no drift): apple/Tokens.swift
+CHECK PASSED: no drift.
+DRIFT_EXIT=0
+ΓöÇΓöÇ Golden token fidelity (tokens.json vs web values) ΓöÇΓöÇ
+  OK  color.dark.bg = "#0a0a0f"
+  OK  color.dark.surface = "#0f1019"
+  OK  color.dark.textPrimary = "#ffffff"
+  OK  color.dark.textSecondary = "#9ca3af"
+  OK  color.dark.textMuted = "#8a95a6"
+  OK  color.dark.accent = "#00f0ff"
+  OK  color.dark.border = "rgba(255, 255, 255, 0.12)"
+  OK  color.dark.surfaceGlass = "rgba(255, 255, 255, 0.04)"
+  OK  color.light.bg = "#f8fafc"
+  OK  color.light.textPrimary = "#0f172a"
+  OK  color.light.accent = "#0891b2"
+  OK  color.highContrast.bg = "#ffffff"
+  OK  color.highContrast.textPrimary = "#000000"
+  OK  color.dark.status.success = "#10b981"
+  OK  color.dark.status.warning = "#f59e0b"
+  OK  color.dark.status.danger = "#ef4444"
+  OK  chart.categorical[0] = "#0072B2"
+  OK  chart.categorical[1] = "#E69F00"
+  OK  chart.categorical[7] = "#4B4B4B"
+  OK  motion.durations.fast = 150
+  OK  motion.durations.normal = 250
+  OK  motion.durations.slow = 400
+  OK  motion.easing.standard = "cubic-bezier(0.2, 0, 0, 1)"
+  OK  typography.body.size = 14
+  OK  typography.display.size = 30
+  OK  typography.label.size = 12
+ΓöÇΓöÇ Generated-file coverage (sampled colors present) ΓöÇΓöÇ
+  OK  fluent accent brush (#FF00F0FF)
+  OK  material accent color (0xFF00F0FF)
+  OK  apple accent components (red: 0.000, green: 0.941, blue: 1.000)
+  OK  fluent chart[0] (chart[0])
+  OK  material chart[0] (chart[0])
+FIDELITY PASSED: sampled tokens match web values and appear in all three platform files.
+FID_EXIT=0
+
+EXIT=0
+STATUS=DONE
