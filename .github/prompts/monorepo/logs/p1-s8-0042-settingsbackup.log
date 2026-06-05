@@ -1,0 +1,130 @@
+================================================================================
+P1 · S8 · 0042 — SettingsBackup shared state holder (web useSettingsBackup parity)
+================================================================================
+Output:  apps/shared/core/.../presentation/settingsbackup/**
+         apps/shared/core/.../data/repo/{SettingsBackupRepository,HttpSettingsBackupRepository}.kt
+Web src:  web/src/api/hooks/useSettingsBackup.ts
+          (+ derivations from web/src/lib/settingsImportSchema.ts)
+ADR refs: ADR-004 (golden parity), ADR-006 (resilient client), ADR-013 (offline cache)
+
+--------------------------------------------------------------------------------
+Files created
+--------------------------------------------------------------------------------
+commonMain:
+  presentation/settingsbackup/SettingsBackupModels.kt
+    SettingsBundle, SettingsBundleSections, SettingsImportSectionResult,
+    SettingsImportResult, ImportSummary
+  presentation/settingsbackup/SettingsBackupStore.kt   (S8 UI-free state holder)
+  data/repo/SettingsBackupRepository.kt                (S7 port + defaultExportFilename
+                                                        + summariseImportResult + cache keys)
+  data/repo/HttpSettingsBackupRepository.kt            (Ktor impl; no durable cache)
+commonTest:
+  presentation/settingsbackup/SettingsBackupStoreTest.kt   (fake-repo state-holder tests)
+  presentation/settingsbackup/SettingsBackupGoldenTest.kt  (golden vectors: filename +
+                                                            summary + cache keys)
+  data/repo/SettingsBackupRepositoryContractTest.kt        (endpoint/method/body lock)
+
+No existing files edited: the three surfaces are mutations only, so NO new CacheDomain
+partition is needed (the web hooks prime the in-memory query cache via setQueryData, not a
+durable cache; that "last result" is reproduced as StateFlow state on the S8 store).
+
+--------------------------------------------------------------------------------
+=== PARITY === (all 3 web hooks ported — web/src/api/hooks/useSettingsBackup.ts)
+--------------------------------------------------------------------------------
+Reads / queries (0): none — the web domain has NO useQuery. All three hooks are
+  useMutation (the user explicitly clicks Export / Preview / Apply; there is no polling
+  case), so there is no Resource cache-then-network feed in this slice.
+
+Mutations / actions (3):
+  [x] useExportSettings -> SettingsBackupStore.exportSettings()
+                           GET /settings/export ; decodes SettingsBundle.
+                           onSuccess primes StateFlow lastExport = web
+                           setQueryData(settingsBackupKeys.lastExport, bundle).
+                           Verified by exportSettingsGetsSettingsExportAndDecodesBundle
+                           + exportDelegatesAndCachesLastExport.
+  [x] useDryRunImport   -> SettingsBackupStore.dryRunImport(bundle)
+                           POST /settings/import ; body = { dry_run: true, bundle }
+                           (bundle nested verbatim; opaque sections round-trip;
+                           absent/null sections dropped = JSON.stringify / explicitNulls=false).
+                           onSuccess primes StateFlow lastImport = web
+                           setQueryData(settingsBackupKeys.lastImport, result).
+                           Verified by dryRunImportPostsSettingsImportWithDryRunTrueAndBundle
+                           + importBundleRoundTripsOpaqueSectionsAndDropsAbsentOnes
+                           + dryRunDelegatesAndCachesLastImport.
+  [x] useApplyImport    -> SettingsBackupStore.applyImport(bundle)
+                           POST /settings/import ; body = { dry_run: false, bundle }.
+                           onSuccess primes the SAME StateFlow lastImport (both web hooks
+                           write settingsBackupKeys.lastImport). SUDO step-up is handled
+                           transparently by the shared ApiHttpClient (web: the request()
+                           client's SUDO_REQUIRED interceptor) — no bespoke plumbing.
+                           Verified by applyImportPostsSettingsImportWithDryRunFalse
+                           + applyDelegatesAndCachesLastImport
+                           + applyAfterDryRunOverwritesLastImport.
+
+Caching intent: the web hooks do NOT invalidateQueries; they setQueryData on the two flat
+  keys settingsBackupKeys.lastExport / .lastImport. Reproduced as observable StateFlow
+  state on the store (lastExport: StateFlow<SettingsBundle?>, lastImport:
+  StateFlow<SettingsImportResult?>), updated only on mutation SUCCESS — proven by
+  failedMutationsDoNotPrimeCache + lastResultStateStartsNull. Cache-key strings mirrored
+  for C# parity (SETTINGS_BACKUP_PREFIX / settingsLastExportKey / settingsLastImportKey).
+
+Derivations ported (with golden vectors, KMP+C# parity per ADR-004):
+  [x] defaultExportFilename(epochMillis) = web defaultExportFilename
+      "teslasync-settings-YYYYMMDD.json", UTC, month/day zero-padded, hour omitted.
+      Golden: epoch_zero, two_digit_padding, year_rollover_eve, year_rollover_day,
+      leap_day, fixed_now.
+  [x] summariseImportResult(result) = web summariseImportResult
+      total = added + updated (skipped summed separately, NOT in total).
+      Golden: empty, single_section, multi_section, skipped_excluded_from_total.
+
+Not ported (browser-only side effect, not portable): downloadSettingsBundle — uses Blob /
+  document / URL.createObjectURL; the platform programs (P2/P3/P4) own the save-as action,
+  driven by SettingsBackupStore.defaultExportFilename() + the exported bundle.
+
+SI: no bundle/result field is unit-bearing (schema_version, RFC3339 exported_at, opaque
+    JSON section payloads, integer add/update/skip counts, status text). Payloads
+    round-trip verbatim — no SI conversion at this layer; display formatting is S5's job.
+
+--------------------------------------------------------------------------------
+GATE
+--------------------------------------------------------------------------------
+NOTE ON HOST: this repo's :core module targets androidTarget + apple
+(iosArm64, iosSimulatorArm64, macosArm64) — there is NO jvm target. Apple
+Kotlin/Native targets cannot be compiled or run on this Windows host, so
+`:core:allTests` (which fans out to the apple test binaries) is not runnable
+here. The runnable equivalent that EXECUTES the full commonTest suite on this
+host is the android unit-test task `:core:testDebugUnitTest` (runs on the JVM).
+ktlint is checked over commonMain + commonTest (the apple/native source sets are
+NO-SOURCE for this slice). Reported honestly per the Honesty Covenant (#1, #10).
+
+$ ./gradlew :core:testDebugUnitTest :core:ktlintCheck   (from apps/shared)
+  > Task :core:compileDebugKotlinAndroid              (w: monthNumber deprecation only)
+  > Task :core:compileDebugUnitTestKotlinAndroid
+  > Task :core:testDebugUnitTest                      BUILD SUCCESSFUL
+    (all commonTest tests executed, incl. SettingsBackupStoreTest [8],
+     SettingsBackupGoldenTest [6], SettingsBackupRepositoryContractTest [6] — green)
+  > Task :core:ktlintCommonMainSourceSetCheck
+  > Task :core:ktlintCommonTestSourceSetCheck
+  > Task :core:ktlintCheck                            BUILD SUCCESSFUL
+  BUILD SUCCESSFUL
+TEST_EXIT=0
+LINT_EXIT=0
+
+$ ./apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
+  PLACEHOLDER_ALLOWED=13
+  PLACEHOLDER_COUNT=0
+PH_EXIT=0
+
+--------------------------------------------------------------------------------
+Acceptance criteria
+--------------------------------------------------------------------------------
+[x] All 3 hooks ported with matching endpoint/params/derivation; SI preserved.
+[x] Mutations prime the correct cache keys (export->lastExport; dry-run & apply->
+    lastImport) on success only; no read feed exists (web has no useQuery).
+[x] Golden vectors extended for both derivations (filename + summary) (KMP+C# parity);
+    fake-repo tests green.
+[x] ktlint + placeholder clean; === PARITY === enumerates all 3 hooks covered.
+[x] EXIT=0 / STATUS=DONE.
+
+EXIT=0
+STATUS=DONE
