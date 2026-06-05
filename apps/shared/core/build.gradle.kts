@@ -49,9 +49,16 @@ kotlin {
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.kotlinx.datetime)
             implementation(libs.ktor.client.core)
+            // P1/S4 networking foundation: JSON content negotiation for the resilient client.
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.kotlinx.json)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
+            // P1/S4: in-memory engine so tests hit no real network. Suspend tests run on a
+            // real dispatcher (expect/actual runBlocking) — virtual-time runners interact
+            // badly with the engine's async dispatch and the request-timeout race.
+            implementation(libs.ktor.client.mock)
         }
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)

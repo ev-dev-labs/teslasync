@@ -1,0 +1,166 @@
+P1 · S4 · 0001 — Networking foundation (Ktor, resilient)
+Branch: feature/apps  HEAD: 82dd91a95
+Host: Windows (android/JVM commonTest runnable; apple native test EXECUTION deferred to macOS CI matrix per ADR-012; apple test source sets CROSS-COMPILE green here).
+
+SCOPE DELIVERED (apps/shared/core/src/commonMain/.../net):
+  ApiError.kt          sealed Network|Timeout|Http(status,body,code)|Decode|CircuitOpen
+  TokenProvider.kt     auth seam (token + onUnauthorized); NoopTokenProvider default (S6 fills)
+  Scheduler.kt         clock+sleep seam; RealScheduler (monotonic + coroutines delay)
+  CircuitBreaker.kt    consecutive-failure breaker, single-flight HALF_OPEN probe, injected clock
+  ApiClientConfig.kt   HttpMethodKind(idempotency), RequestSpec, ApiClientConfig + builder DSL
+  ApiHttpClient.kt     factory (functional-options) + resilient core: /api/v1-once, snake_case
+                       query, withTimeout-bounded call+decode, exp backoff+jitter (cap), 5xx/
+                       timeout/network retry on idempotent verbs only, 401->onUnauthorized once,
+                       request<T>/safeRequest<T> (Result<T,ApiError>)
+  PlatformEngine.*     expect/actual default engine (OkHttp android / Darwin apple)
+Tests (commonTest/.../net): URL/prefix/snake_case/null-skip, retry+backoff(jitter bounds+cap)+
+  wall-clock guard, error mapping (Http/Network/Timeout/Decode + request-encode->Decode),
+  breaker transitions (client-level) + CircuitBreaker unit (single-flight + time-bound recovery),
+  401 hook once+replay/false/at-most-once, bearer attach/no-op. Real network: NONE (MockEngine).
+== GATE: gradlew :core:allTests ==
+> Task :core:kmpPartiallyResolvedDependenciesChecker
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
+> Task :core:compileKotlinIosSimulatorArm64 UP-TO-DATE
+> Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
+> Task :core:iosSimulatorArm64MainKlibrary UP-TO-DATE
+> Task :core:compileTestKotlinIosSimulatorArm64 UP-TO-DATE
+> Task :core:computeLocalPackageDependencyInputFiles SKIPPED
+> Task :core:generateSyntheticLinkageSwiftPMImportProjectForCinteropsAndLdDump SKIPPED
+> Task :core:generateUmbrellaPackageIdentifierBasedResolutionForDefault SKIPPED
+> Task :core:fetchUmbrellaPackageIdentifierForDefault SKIPPED
+> Task :core:syncPersistedPackageResolvedToSynthetic SKIPPED
+> Task :core:fetchSyntheticImportProjectPackages SKIPPED
+> Task :core:convertSyntheticImportProjectIntoDefFileIphonesimulator SKIPPED
+> Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
+> Task :core:iosSimulatorArm64Test SKIPPED
+> Task :core:compileKotlinMacosArm64 UP-TO-DATE
+> Task :core:macosArm64ProcessResources NO-SOURCE
+> Task :core:macosArm64MainKlibrary UP-TO-DATE
+> Task :core:compileTestKotlinMacosArm64 UP-TO-DATE
+> Task :core:convertSyntheticImportProjectIntoDefFileMacosx SKIPPED
+> Task :core:linkDebugTestMacosArm64 SKIPPED
+> Task :core:macosArm64Test SKIPPED
+> Task :core:preBuild UP-TO-DATE
+> Task :core:preDebugBuild UP-TO-DATE
+> Task :core:generateDebugResValues UP-TO-DATE
+> Task :core:generateDebugResources UP-TO-DATE
+> Task :core:packageDebugResources UP-TO-DATE
+> Task :core:parseDebugLocalResources UP-TO-DATE
+> Task :core:generateDebugRFile UP-TO-DATE
+> Task :core:compileDebugKotlinAndroid UP-TO-DATE
+> Task :core:javaPreCompileDebug UP-TO-DATE
+> Task :core:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:generateDebugUnitTestStubRFile UP-TO-DATE
+> Task :core:compileDebugUnitTestKotlinAndroid UP-TO-DATE
+> Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processDebugJavaRes UP-TO-DATE
+> Task :core:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :core:testDebugUnitTest UP-TO-DATE
+> Task :core:preReleaseBuild UP-TO-DATE
+> Task :core:generateReleaseResValues UP-TO-DATE
+> Task :core:generateReleaseResources UP-TO-DATE
+> Task :core:packageReleaseResources UP-TO-DATE
+> Task :core:parseReleaseLocalResources UP-TO-DATE
+> Task :core:generateReleaseRFile UP-TO-DATE
+> Task :core:javaPreCompileRelease UP-TO-DATE
+> Task :core:preReleaseUnitTestBuild UP-TO-DATE
+> Task :core:generateReleaseUnitTestStubRFile UP-TO-DATE
+> Task :core:javaPreCompileReleaseUnitTest UP-TO-DATE
+> Task :core:compileReleaseKotlinAndroid
+> Task :core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:processReleaseJavaRes UP-TO-DATE
+> Task :core:bundleLibRuntimeToJarRelease
+> Task :core:bundleLibCompileToJarRelease
+> Task :core:compileReleaseUnitTestKotlinAndroid
+> Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processReleaseUnitTestJavaRes UP-TO-DATE
+> Task :core:testReleaseUnitTest
+> Task :core:allTests NO-SOURCE
+
+BUILD SUCCESSFUL in 8s
+36 actionable tasks: 6 executed, 30 up-to-date
+TEST_EXIT=0
+== GATE: gradlew :core:ktlintCheck ==
+> Task :core:loadKtlintReporters UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidMainSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidUnitTestSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleMainSourceSet UP-TO-DATE
+> Task :core:ktlintAppleMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
+> Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosMainSourceSet NO-SOURCE
+> Task :core:ktlintIosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosTestSourceSet NO-SOURCE
+> Task :core:ktlintIosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverKotlinScripts UP-TO-DATE
+> Task :core:ktlintKotlinScriptCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverMacosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosMainSourceSet NO-SOURCE
+> Task :core:ktlintMacosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosTestSourceSet NO-SOURCE
+> Task :core:ktlintMacosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeMainSourceSet NO-SOURCE
+> Task :core:ktlintNativeMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
+> Task :core:ktlintNativeTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverCommonMainSourceSet
+> Task :core:runKtlintCheckOverCommonTestSourceSet
+> Task :core:ktlintCommonMainSourceSetCheck
+> Task :core:ktlintCommonTestSourceSetCheck
+> Task :core:ktlintCheck
+
+BUILD SUCCESSFUL in 6s
+15 actionable tasks: 4 executed, 11 up-to-date
+LINT_EXIT=0
+== GATE: check-placeholders.ps1 ==
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PH_EXIT=0
+
+== JVM commonTest tally (build/test-results/testDebugUnitTest) ==
+TEST_FILES=7 TESTS=30 FAILURES=0 SKIPPED=0
+Apple test source sets cross-compile: macosArm64 / iosArm64 / iosSimulatorArm64 = OK (link/run on macOS CI).
+
+== Acceptance Criteria ==
+[x] /api/v1 prefix applied exactly once (web normalizePath parity); snake_case query params; null params skipped.
+[x] Retry + exponential backoff + jitter (bounds 0.75x-1.25x) + delay cap; idempotent verbs only; covered with VirtualScheduler (no real sleeps) + wall-clock guard.
+[x] Circuit-breaker open/half-open/close transitions covered (client-level + CircuitBreaker unit, single-flight probe, injected clock).
+[x] 401 -> onUnauthorized invoked exactly once then replayed; false short-circuits; error mapping complete (Network|Timeout|Http|Decode|CircuitOpen) incl. request-encode -> Decode (no retry).
+[x] No real network (Ktor MockEngine only); ktlint clean; placeholder gate clean.
+
+TEST_EXIT=0
+LINT_EXIT=0
+PH_EXIT=0
+EXIT=0
+STATUS=DONE
