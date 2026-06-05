@@ -1,0 +1,194 @@
+=== P1/S8/0041 Settings state holder — gate run ===
+DATE=2026-06-05T11:09:58.5992604-07:00
+> Task :core:kmpPartiallyResolvedDependenciesChecker
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:compileKotlinIosSimulatorArm64
+> Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
+> Task :core:iosSimulatorArm64MainKlibrary
+> Task :core:compileTestKotlinIosSimulatorArm64
+> Task :core:computeLocalPackageDependencyInputFiles SKIPPED
+> Task :core:generateSyntheticLinkageSwiftPMImportProjectForCinteropsAndLdDump SKIPPED
+> Task :core:generateUmbrellaPackageIdentifierBasedResolutionForDefault SKIPPED
+> Task :core:fetchUmbrellaPackageIdentifierForDefault SKIPPED
+> Task :core:syncPersistedPackageResolvedToSynthetic SKIPPED
+> Task :core:fetchSyntheticImportProjectPackages SKIPPED
+> Task :core:convertSyntheticImportProjectIntoDefFileIphonesimulator SKIPPED
+> Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
+> Task :core:iosSimulatorArm64Test SKIPPED
+> Task :core:compileKotlinMacosArm64
+> Task :core:macosArm64ProcessResources NO-SOURCE
+> Task :core:macosArm64MainKlibrary
+> Task :core:compileTestKotlinMacosArm64
+> Task :core:convertSyntheticImportProjectIntoDefFileMacosx SKIPPED
+> Task :core:linkDebugTestMacosArm64 SKIPPED
+> Task :core:macosArm64Test SKIPPED
+> Task :core:preBuild UP-TO-DATE
+> Task :core:preDebugBuild UP-TO-DATE
+> Task :core:generateDebugResValues UP-TO-DATE
+> Task :core:generateDebugResources UP-TO-DATE
+> Task :core:packageDebugResources UP-TO-DATE
+> Task :core:parseDebugLocalResources UP-TO-DATE
+> Task :core:generateDebugRFile UP-TO-DATE
+> Task :core:javaPreCompileDebug UP-TO-DATE
+> Task :core:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:generateDebugUnitTestStubRFile UP-TO-DATE
+> Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :core:preReleaseBuild UP-TO-DATE
+> Task :core:generateReleaseResValues UP-TO-DATE
+> Task :core:generateReleaseResources UP-TO-DATE
+> Task :core:packageReleaseResources UP-TO-DATE
+> Task :core:parseReleaseLocalResources UP-TO-DATE
+> Task :core:generateReleaseRFile UP-TO-DATE
+> Task :core:javaPreCompileRelease UP-TO-DATE
+> Task :core:preReleaseUnitTestBuild UP-TO-DATE
+> Task :core:generateReleaseUnitTestStubRFile UP-TO-DATE
+> Task :core:javaPreCompileReleaseUnitTest UP-TO-DATE
+> Task :core:compileDebugKotlinAndroid
+> Task :core:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:compileReleaseKotlinAndroid
+> Task :core:processDebugJavaRes UP-TO-DATE
+> Task :core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:processReleaseJavaRes UP-TO-DATE
+> Task :core:bundleLibCompileToJarDebug
+> Task :core:bundleLibRuntimeToJarDebug
+> Task :core:bundleLibCompileToJarRelease
+> Task :core:bundleLibRuntimeToJarRelease
+> Task :core:compileDebugUnitTestKotlinAndroid
+> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :core:compileReleaseUnitTestKotlinAndroid
+> Task :core:testDebugUnitTest
+> Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processReleaseUnitTestJavaRes UP-TO-DATE
+> Task :core:testReleaseUnitTest
+> Task :core:allTests NO-SOURCE
+
+BUILD SUCCESSFUL in 1m 32s
+37 actionable tasks: 15 executed, 22 up-to-date
+TEST_EXIT=0
+> Task :core:loadKtlintReporters UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidMainSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidUnitTestSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleMainSourceSet UP-TO-DATE
+> Task :core:ktlintAppleMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
+> Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosMainSourceSet NO-SOURCE
+> Task :core:ktlintIosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosTestSourceSet NO-SOURCE
+> Task :core:ktlintIosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverKotlinScripts UP-TO-DATE
+> Task :core:ktlintKotlinScriptCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverMacosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosMainSourceSet NO-SOURCE
+> Task :core:ktlintMacosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosTestSourceSet NO-SOURCE
+> Task :core:ktlintMacosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeMainSourceSet NO-SOURCE
+> Task :core:ktlintNativeMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
+> Task :core:ktlintNativeTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverCommonMainSourceSet
+> Task :core:ktlintCommonMainSourceSetCheck
+> Task :core:runKtlintCheckOverCommonTestSourceSet
+> Task :core:ktlintCommonTestSourceSetCheck
+> Task :core:ktlintCheck
+
+BUILD SUCCESSFUL in 20s
+16 actionable tasks: 4 executed, 12 up-to-date
+LINT_EXIT=0
+PLACEHOLDER_ALLOWED=13
+PLACEHOLDER_COUNT=0
+EXIT=0
+PH_EXIT=0
+
+=== PARITY ===
+Web source: web/src/api/hooks/useSettings.ts (20 hooks)
+Cache partition: CacheDomain.Settings (shared with AiSettings document); per-read entryTtlMillis
+mirrors each web staleTime (web/src/lib/constants.ts STALE_TIMES). Values SI/raw, round-trip verbatim;
+display conversion is the render boundary's job (S5). Mutations call the API directly and DON'T touch
+the durable cache — the S8 store re-fetches (invalidateQueries analogue) by bumping the affected feed's
+trigger, so prior data stays visible during reload.
+
+-- Reads (9; useQuery) -> SettingsRepository read / SettingsStore feed --
+1. useSettings          -> settings()        / SettingsStore.settings()
+   GET /settings; staleTime 0 -> entryTtl 0; key 'settings' (web settingsKeys.settings); raw JsonElement.
+2. useAuthStatus        -> authStatus()      / SettingsStore.authStatus()
+   GET /auth/status; staleTime 0 -> entryTtl 0; key 'auth-status'; -> AuthStatus.
+3. useVehicles          -> vehicles()        / SettingsStore.vehicles()
+   GET /vehicles; staleTime 0 -> entryTtl 0; key 'vehicles'; safeArray-guarded -> List<Vehicle>.
+4. useCarPreferences    -> carPreferences(id)/ SettingsStore.carPreferences(id)
+   GET /user-preferences/latest?vehicle_id={id}; staleTime 0 -> entryTtl 0; key 'car-prefs:{id}'
+   (web settingsKeys.carPrefs(id)); snake_case vehicle_id param -> CarPreferences.
+5. useGasPriceStatus    -> gasPriceStatus()  / SettingsStore.gasPriceStatus()
+   GET /gas-price/status; staleTime 0 -> entryTtl 0; key 'gas-price-status'; -> GasPriceStatus.
+6. useDashboardLayouts  -> dashboardLayouts()/ SettingsStore.dashboardLayouts()
+   GET /settings/dashboard-layouts; staleTime SLOW(5m) -> entryTtl 300000; key 'dashboard-layouts';
+   -> DashboardLayoutsPayload (dashboards carried as opaque JsonElement[]).
+7. usePollingConfig     -> pollingConfig()   / SettingsStore.pollingConfig()
+   GET /settings/polling-config; staleTime SLOW(5m) -> entryTtl 300000; key 'polling-config'; -> PollingConfig (22 fields).
+8. useCaptureStats      -> captureStats()    / SettingsStore.captureStats()
+   GET /dev-tools/telemetry-capture/stats; staleTime FAST(30s) -> entryTtl 30000; key 'capture-stats'; -> CaptureStats.
+9. useVersionInfo       -> versionInfo()     / SettingsStore.versionInfo()
+   GET /system/version; staleTime STANDARD(60s) -> entryTtl 60000; key 'version'; -> VersionInfo.
+
+-- Mutations (11; useMutation) -> SettingsRepository / SettingsStore; onSuccess refresh = web invalidate --
+10. useSaveSettings        -> saveSettings(doc)            PUT  /settings (verbatim JsonElement body)
+    -> refreshes 'settings' (web invalidateAndBroadcast settingsKeys.settings).
+11. useAuthURL             -> authUrl()                    POST /auth/url -> AuthUrlResult; invalidates NOTHING.
+12. useRefreshAuth         -> refreshAuth()                POST /auth/refresh (empty body discarded -> Unit)
+    -> refreshes 'auth-status'.
+13. useDisconnectAuth      -> disconnectAuth()             POST /auth/disconnect (-> Unit) -> refreshes 'auth-status'.
+14. useSyncVehicles        -> syncVehicles()               POST /vehicles/sync -> SyncVehiclesResult -> refreshes 'vehicles'.
+15. usePollGasPrice        -> pollGasPrice()               POST /gas-price/poll -> GasPricePollResult; invalidates NOTHING.
+16. useToggleGasPrice      -> toggleGasPrice(b)            POST /gas-price/toggle {"enabled":b}
+    -> GasPriceToggleResult -> refreshes 'gas-price-status'.
+17. useUpdateGasPriceConfig-> updateGasPriceConfig(iv)     PUT  /gas-price/config {"poll_interval":iv}
+    -> GasPriceConfigResult -> refreshes 'gas-price-status'.
+18. useSaveDashboardLayouts-> saveDashboardLayouts(p)      PUT  /settings/dashboard-layouts (full payload)
+    -> DashboardLayoutsPayload; invalidates NOTHING (web mutation invalidates no keys).
+19. useToggleAPISuspend    -> toggleApiSuspend(b)          POST /settings/suspend-api {"suspended":b}
+    -> ApiSuspendResult -> refreshes 'settings' (web invalidateAndBroadcast settingsKeys.settings).
+20. useUpdatePollingConfig -> updatePollingConfig(c)       PUT  /settings/polling-config (full config)
+    -> PollingConfig -> refreshes 'polling-config' AND 'capture-stats' (web invalidates both).
+
+Derivations golden-pinned (KMP + C# parity, ADR-004), inlined in SettingsDerivationsGoldenTest
+(OperatorConfidence precedent): carPreferencesQuery (single snake_case vehicle_id), gasPriceToggleBody
+{"enabled":b}, gasPriceConfigBody {"poll_interval":iv}, apiSuspendBody {"suspended":b},
+settingsCarPrefsKey 'car-prefs:{id}'. The only client-side derivations in the web hook are these
+request shapes + the vehicles safeArray null-guard; no unit-bearing transforms exist (SI preserved).
+Tests: SettingsStoreTest (13, fake-repo: each read emits cache->network; each mutation delegates +
+refreshes EXACTLY the right feed(s); no-invalidate mutations refresh nothing; feeds shared across
+observers; refresh of an unobserved feed is a no-op) + SettingsDerivationsGoldenTest (5) green.
+No network/cache touched in tests.
+
+EXIT=0
+STATUS=DONE
