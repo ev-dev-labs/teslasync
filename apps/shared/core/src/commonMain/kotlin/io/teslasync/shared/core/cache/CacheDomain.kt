@@ -67,6 +67,13 @@ public enum class CacheDomain(
     // display-unit-bearing — so they round-trip verbatim with no SI conversion. A create/update/
     // delete invalidates the whole partition (the web hooks invalidate `annotationKeys.all`).
     Annotations("annotations", 5.minutes),
+
+    // The per-vehicle signal-anomaly report (`GET /analytics/anomalies`). The web
+    // `useAnomalies` hook reads it with `STALE_TIMES.SLOW` (5 minutes), so the window matches
+    // verbatim. The payload (z-scores, baselines, raw signal values, detection counts) is SI on
+    // the wire and not display-unit-bearing, so it round-trips verbatim with no SI conversion.
+    // The web hook declares no mutations, so the partition has no invalidation surface.
+    Anomalies("anomalies", 5.minutes),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */
