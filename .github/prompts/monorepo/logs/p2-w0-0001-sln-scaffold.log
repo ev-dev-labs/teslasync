@@ -1,0 +1,19 @@
+=== P2/W0-0001 WinUI3 scaffold gate 2026-06-05T17:07:42.9432484-07:00 ===
+SDK: 10.0.300
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.App -> D:\repos\teslasync\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:04.74
+BUILD_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE
