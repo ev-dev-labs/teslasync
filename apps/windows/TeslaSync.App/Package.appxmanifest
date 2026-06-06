@@ -65,11 +65,29 @@
             </com:ExeServer>
           </com:ComServer>
         </com:Extension>
+        <!--
+          P2/W8-0002 — file type association for exported/shared TeslaSync data bundles. Opening a
+          .teslasync file activates the app (ExtendedActivationKind.File, routed in App.HandleActivation)
+          and lands on Backup & Restore. The bundle format itself is owned by the W5 export/import layer.
+        -->
+        <uap:Extension Category="windows.fileTypeAssociation">
+          <uap:FileTypeAssociation Name="teslasync">
+            <uap:DisplayName>TeslaSync data bundle</uap:DisplayName>
+            <uap:SupportedFileTypes>
+              <uap:FileType>.teslasync</uap:FileType>
+            </uap:SupportedFileTypes>
+          </uap:FileTypeAssociation>
+        </uap:Extension>
       </Extensions>
     </Application>
   </Applications>
 
   <Capabilities>
+    <!--
+      The MSIX-packaged app reaches the TeslaSync API, the Fleet-telemetry SSE stream and WNS over the
+      network, so it declares internetClient. runFullTrust is required for the WinAppSDK desktop bridge.
+    -->
+    <Capability Name="internetClient" />
     <rescap:Capability Name="runFullTrust" />
   </Capabilities>
 </Package>

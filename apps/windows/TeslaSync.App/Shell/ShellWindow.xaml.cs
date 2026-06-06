@@ -8,9 +8,13 @@ using TeslaSync.App.Auth;
 using TeslaSync.App.Auth.Onboarding;
 using TeslaSync.App.Components.Feedback;
 using TeslaSync.App.Core.Auth;
+using TeslaSync.App.Core.Lifecycle;
 using TeslaSync.App.Core.Navigation;
+using TeslaSync.App.Core.Settings;
 using TeslaSync.App.Notifications;
+using TeslaSync.App.Platform.Lifecycle;
 using TeslaSync.App.Push;
+using TeslaSync.App.Settings;
 using Windows.Graphics;
 using Windows.System;
 
@@ -36,6 +40,7 @@ public sealed partial class ShellWindow : Window
     private ElementTheme _theme = ElementTheme.Default;
     private bool _navigating;
     private string? _pendingProtectedPath;
+    private bool _startupRouteApplied;
 
     public ShellWindow()
     {
@@ -53,6 +58,7 @@ public sealed partial class ShellWindow : Window
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
+        AppSettingsHost.Service.Changed += OnSettingsChanged;
         Closed += OnShellClosed;
 
         // Foreground push registration + notification routing (P2/W6-0002). Best-effort: an
@@ -70,6 +76,11 @@ public sealed partial class ShellWindow : Window
 
         // Land on the index (Dashboard) route on launch.
         NavigateTo(string.Empty);
+
+        // Signal the lifecycle coordinator that launch activation is complete (Launching -> Running).
+        // Theme/density/startup-route are applied by OnSettingsChanged once the async settings load
+        // raises Changed; first paint keeps the fast-cached theme restored in ConfigureWindow (no flash).
+        AppLifecycle.MarkLaunched();
     }
 
     /// <summary>The shell's navigation/state view-model (exposed for diagnostics and tests).</summary>
@@ -95,6 +106,11 @@ public sealed partial class ShellWindow : Window
 
         appWindow.Changed += OnAppWindowChanged;
         appWindow.Closing += OnAppWindowClosing;
+
+        // P2/W8-0002 — compose app lifecycle: the window's foreground/background and the system
+        // network state drive suspend/resume, and a crash-safe persist flushes settings + window
+        // state on suspend, window close, or a fatal unhandled exception.
+        AppLifecycle.Start(this, AppSettingsHost.Service, AppSettingsHost.Cache, PersistWindowState);
     }
 
     private void OnRootLoaded(object sender, RoutedEventArgs e)
@@ -134,7 +150,27 @@ public sealed partial class ShellWindow : Window
     }
 
     private void OnAppWindowClosing(AppWindow sender, AppWindowClosingEventArgs args) =>
-        _windowState.Save(sender, _theme);
+        // Flush settings + window state through the coordinator's crash-safe persist path.
+        AppLifecycle.RequestShutdownPersist(LifecycleShutdownReason.WindowClosing);
+
+    private void PersistWindowState(LifecycleShutdownReason reason)
+    {
+        try
+        {
+            _windowState.Save(AppWindow, _theme);
+
+            // On a fatal teardown keep the work minimal; otherwise remember the active route so the
+            // "open last visited" startup option can restore it.
+            if (reason != LifecycleShutdownReason.FatalError)
+            {
+                WindowStateService.SaveLastRoute(_viewModel.CurrentPath);
+            }
+        }
+        catch (Exception)
+        {
+            // Persistence is best-effort; never let a teardown save crash the app.
+        }
+    }
 
     private void BuildNavigation()
     {
@@ -392,9 +428,10 @@ public sealed partial class ShellWindow : Window
 
     private void OnToggleTheme(object sender, RoutedEventArgs e)
     {
-        _theme = _theme == ElementTheme.Light ? ElementTheme.Dark : ElementTheme.Light;
-        ApplyTheme(_theme);
-        _windowState.Save(AppWindow, _theme);
+        // Cycle System -> Light -> Dark -> System through the settings service, which persists the
+        // choice and raises Changed; OnSettingsChanged then applies it to the live window.
+        var next = NextTheme(AppSettingsHost.Current.Theme);
+        _ = AppSettingsHost.Service.UpdateAsync(s => s with { Theme = next });
     }
 
     private void ApplyTheme(ElementTheme theme)
@@ -404,6 +441,64 @@ public sealed partial class ShellWindow : Window
             root.RequestedTheme = theme;
         }
     }
+
+    private void OnSettingsChanged(object? sender, AppSettings settings)
+    {
+        if (DispatcherQueue.HasThreadAccess)
+        {
+            ApplySettings(settings);
+        }
+        else
+        {
+            DispatcherQueue.TryEnqueue(() => ApplySettings(settings));
+        }
+    }
+
+    private void ApplySettings(AppSettings settings)
+    {
+        _theme = ToElementTheme(settings.Theme);
+        ApplyTheme(_theme);
+        ApplyDensity(settings.Density);
+        MaybeApplyStartupRoute(settings);
+    }
+
+    private void ApplyDensity(InterfaceDensity density) =>
+        RootNavigation.OpenPaneLength = density == InterfaceDensity.Compact ? 220 : 280;
+
+    private void MaybeApplyStartupRoute(AppSettings settings)
+    {
+        // Honour the "open last visited" preference exactly once, after the first settings load.
+        if (_startupRouteApplied)
+        {
+            return;
+        }
+
+        _startupRouteApplied = true;
+        if (settings.StartupPage != AppStartupPage.LastVisited)
+        {
+            return;
+        }
+
+        var last = WindowStateService.ReadLastRoute();
+        if (!string.IsNullOrEmpty(last) && !string.Equals(last, _viewModel.CurrentPath, StringComparison.Ordinal))
+        {
+            NavigateTo(last);
+        }
+    }
+
+    private static ElementTheme ToElementTheme(AppThemePreference preference) => preference switch
+    {
+        AppThemePreference.Light => ElementTheme.Light,
+        AppThemePreference.Dark => ElementTheme.Dark,
+        _ => ElementTheme.Default,
+    };
+
+    private static AppThemePreference NextTheme(AppThemePreference preference) => preference switch
+    {
+        AppThemePreference.System => AppThemePreference.Light,
+        AppThemePreference.Light => AppThemePreference.Dark,
+        _ => AppThemePreference.System,
+    };
 
     private void OnAuthStateChanged(object? sender, AuthState state)
     {
@@ -452,7 +547,9 @@ public sealed partial class ShellWindow : Window
     private void OnShellClosed(object sender, WindowEventArgs args)
     {
         AppAuth.Service.StateChanged -= OnAuthStateChanged;
+        AppSettingsHost.Service.Changed -= OnSettingsChanged;
         AppPush.Stop();
         AppNotifications.Stop();
+        AppLifecycle.Stop();
     }
 }

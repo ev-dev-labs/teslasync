@@ -40,6 +40,33 @@
     <AnalysisMode>Recommended</AnalysisMode>
   </PropertyGroup>
 
+  <!--
+    P2/W8-0002 — make a bare `dotnet publish TeslaSync.App.csproj -c Release` (the packaging gate's
+    invocation, with no -p:Platform / -r) produce an architecture-specific MSIX payload. A packaged
+    .NET app with an app-host exe cannot be ProcessorArchitecture-neutral, so when the build is invoked
+    without a platform (Platform=AnyCPU, the CLI default for a bare csproj publish) we pin win-x64. The
+    solution build maps this project to the explicit x64/ARM64 platforms, so this fallback never
+    perturbs those configurations.
+  -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == '' and ('$(Platform)' == '' or '$(Platform)' == 'AnyCPU')">
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <!--
+    P2/W8-0002 — MSIX signing profile (locked toolchain). No private certificate is ever committed:
+    CI injects the installed cert's thumbprint via the TESLASYNC_MSIX_CERT_THUMBPRINT environment
+    variable (MSBuild surfaces environment variables as properties), which turns on signing for the
+    packaged build. Locally and in the build/publish gate the variable is unset, so signing stays off
+    and no certificate is required. MSIX packages are produced on demand by the packaging step rather
+    than on every build.
+  -->
+  <PropertyGroup>
+    <GenerateAppxPackageOnBuild>false</GenerateAppxPackageOnBuild>
+    <AppxPackageSigningEnabled Condition="'$(TESLASYNC_MSIX_CERT_THUMBPRINT)' != ''">true</AppxPackageSigningEnabled>
+    <AppxPackageSigningEnabled Condition="'$(TESLASYNC_MSIX_CERT_THUMBPRINT)' == ''">false</AppxPackageSigningEnabled>
+    <PackageCertificateThumbprint Condition="'$(TESLASYNC_MSIX_CERT_THUMBPRINT)' != ''">$(TESLASYNC_MSIX_CERT_THUMBPRINT)</PackageCertificateThumbprint>
+  </PropertyGroup>
+
   <ItemGroup>
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>

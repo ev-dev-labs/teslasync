@@ -3,6 +3,7 @@ using Microsoft.Windows.AppLifecycle;
 using TeslaSync.App.Auth;
 using TeslaSync.App.Core.Navigation;
 using TeslaSync.App.Notifications;
+using TeslaSync.App.Settings;
 using TeslaSync.App.Shell;
 using Windows.ApplicationModel.Activation;
 
@@ -34,6 +35,9 @@ public partial class App : Application
 
         // Rehydrate any persisted session from the Credential Locker (non-blocking).
         _ = AppAuth.InitializeAsync();
+
+        // Load non-secret preferences (theme/density/units/startup) from LocalSettings (non-blocking).
+        _ = AppSettingsHost.InitializeAsync();
 
         HandleActivation(AppInstance.GetCurrent().GetActivatedEventArgs());
     }
@@ -77,6 +81,12 @@ public partial class App : Application
                 case ExtendedActivationKind.Launch when args.Data is ILaunchActivatedEventArgs launch:
                     // P2/W8-0001: a jump-list task launches the app with a teslasync:// deep-link argument.
                     ActivateFromArgumentString(launch.Arguments);
+                    break;
+
+                case ExtendedActivationKind.File when args.Data is IFileActivatedEventArgs file && file.Files.Count > 0:
+                    // P2/W8-0002: opening a .teslasync file (windows.fileTypeAssociation) lands on
+                    // Backup & Restore, where the bundle is imported.
+                    ActivateFromArgumentString($"{DeepLink.Scheme}://{DeepLink.Authority}/backup");
                     break;
 
                 default:

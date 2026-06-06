@@ -20,6 +20,7 @@ internal sealed class WindowStateService
     private const string KeyWidth = "shell.window.width";
     private const string KeyHeight = "shell.window.height";
     private const string KeyTheme = "shell.window.theme";
+    private const string KeyLastRoute = "shell.window.lastRoute";
 
     /// <summary>Minimum width the shell window may be resized to.</summary>
     public int MinWidth { get; } = 1024;
@@ -112,5 +113,36 @@ internal sealed class WindowStateService
         }
 
         return ElementTheme.Default;
+    }
+
+    /// <summary>Persist the route that was active at shutdown, for the "open last visited" startup option.</summary>
+    public static void SaveLastRoute(string? route)
+    {
+        var values = Values;
+        if (values is null)
+        {
+            return;
+        }
+
+        try
+        {
+            values[KeyLastRoute] = route ?? string.Empty;
+        }
+        catch (Exception)
+        {
+            // Non-fatal: a transient settings-store failure must not crash teardown.
+        }
+    }
+
+    /// <summary>The route persisted by <see cref="SaveLastRoute"/>, or <see langword="null"/> when none.</summary>
+    public static string? ReadLastRoute()
+    {
+        var values = Values;
+        if (values is not null && values.TryGetValue(KeyLastRoute, out var value) && value is string route && route.Length > 0)
+        {
+            return route;
+        }
+
+        return null;
     }
 }

@@ -36,4 +36,14 @@
     </Content>
   </ItemGroup>
 
+  <!--
+    P2/W8-0002 — copy the MSIX package manifest next to the test assembly so the packaging assertions
+    (identity, protocol activation, capabilities, file type association) verify the real manifest.
+  -->
+  <ItemGroup>
+    <Content Include="..\TeslaSync.App\Package.appxmanifest" Link="Package.appxmanifest">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
