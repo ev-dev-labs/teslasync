@@ -1,8 +1,15 @@
 import SwiftUI
 
+private struct TSUnitsKey: EnvironmentKey {
+    static let defaultValue: UnitPreferences = .metric
+}
+
 public extension EnvironmentValues {
     /// The active display-unit preferences used by the SI formatter components.
-    @Entry var tsUnits: UnitPreferences = .metric
+    var tsUnits: UnitPreferences {
+        get { self[TSUnitsKey.self] }
+        set { self[TSUnitsKey.self] = newValue }
+    }
 }
 
 public extension View {

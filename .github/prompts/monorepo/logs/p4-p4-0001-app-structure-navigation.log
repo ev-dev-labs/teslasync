@@ -1,0 +1,61 @@
+P4 · P4 · 0001 — app structure + navigation
+prompt: .github/prompts/monorepo/p4-apple/P4-0001-app-structure-navigation.prompt.md
+mode:   code-complete + DEFERRED Xcode gate (user-approved). Real macOS swiftc -typecheck gate.
+
+=== PREFLIGHT ===
+Predecessors: P3-0001..0005 component library DONE (cf1190cb..0cf825ba), P1 facade (43d600e5), P2 tokens (b40c9d6b).
+Clean-tree: apps/apple/Sources/App/** + TeslaSyncApp.swift + Tests/Unit/App + small config tweaks.
+
+=== SURVEY ===
+Mapped web App.tsx route groups + standalone routes → 23 AppRoute cases across 7 sidebar groups, plus the
+web path aliases (/battery, /battery/health, /charging/curves, /statistics, /location, /alerts, /signals,
+/devtools, /account, /). Reused TSEmptyState + TSCommandPalette from the component library.
+
+=== REASONING ===
+- One AppRoute enum drives the sidebar, the iPhone tabs, deep-link parsing, the command palette, and commands.
+  Each route carries pathSegment (kebab), title key, SF Symbol, and group. Parser + registry are pure + tested.
+- Adaptive shell: NavigationSplitView (searchable sidebar grouped by AppRouteGroup + detail) on macOS/iPad
+  regular width; TabView (4 primary tabs + a grouped "More" stack) on compact iPhone (horizontalSizeClass-gated).
+- Pages (P7) plug in via AppRouteHostRegistry (environment). Until a page registers, RouteHost renders a real
+  TSEmptyState ("route.pagePending") — the shell is routing infrastructure, not a fake per-page screen.
+- macOS/iPad commands: ⌘1–4 quick-nav + a Navigate menu mirroring the sidebar groups, bound to the selection.
+- Command palette (⌘K) lists every route; route changes post an AccessibilityNotification.Announcement.
+- @Entry HARDENING: SwiftFormat auto-migrated my EnvironmentKey boilerplate to the @Entry macro, which (like
+  #Preview) needs Xcode's macro plugin and fails plain swiftc. Disabled SwiftFormat's environmentEntry rule and
+  kept manual EnvironmentKey (compiles on every toolchain). Same fix applied to UnitFormatters' tsUnits key.
+
+=== CHANGES === (apps/apple/Sources/App/** unless noted)
+  + AppRoute.swift           AppRoute (23) + AppRouteGroup + path/title/icon/group metadata + primaryTabs
+  + AppRouteParser.swift     deep-link + alias parsing (pure)
+  + RouteHostRegistry.swift  AppRouteHostRegistry + routeHosts environment (manual EnvironmentKey)
+  + AppShell.swift           adaptive NavigationSplitView / TabView shell + RouteHost + command palette + recents + announcer
+  + AppCommands.swift        macOS/iPad menu-bar quick-nav + Navigate menu
+  ~ Sources/TeslaSyncApp.swift   root now AppShell(selection:) + .commands { AppCommands }
+  ~ Sources/Components/DataDisplay/UnitFormatters.swift   tsUnits reverted @Entry → manual EnvironmentKey
+  ~ .swiftformat             --disable environmentEntry (keep manual EnvironmentKey; avoid macro-plugin dependency)
+  + Tests/Unit/App/RouteTests.swift  unique segments, canonical/alias/URL parsing, group membership, registry round-trip
+
+=== PARITY ===
+App-shell prompt (no single page manifest). Coverage = every web App.tsx route group + alias has an AppRoute /
+parser entry, and a NavigationSplitView (macOS/iPad) + TabView (iPhone) shell hosts them. No PARITY_COVERED/REQUIRED emitted.
+
+=== GATE (host-runnable, executed on this machine) ===
+$ xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macosx15.0 <Tokens + non-Shared sources>
+TYPECHECK_EXIT=0      # incl. NavigationSplitView, TabView, Commands, .searchable, onChange(of:), AccessibilityNotification
+$ swiftformat --lint → 0 require formatting    SWIFTFORMAT_EXIT=0
+$ swiftlint --strict → 0 violations in 69 files SWIFTLINT_EXIT=0
+$ placeholder scan → PLACEHOLDER_COUNT=0
+$ xcodegen generate → Created project          XCODEGEN_EXIT=0
+
+=== GATE (Xcode-only — DEFERRED to macos-latest CI, NOT run here; not faked) ===
+#   xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+#   xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync-macOS build test
+IOS_BUILD_TEST=DEFERRED-macOS-pending
+MAC_BUILD_TEST=DEFERRED-macOS-pending
+
+=== COMMIT ===
+  git add apps/apple .github/prompts/monorepo/logs/p4-p4-0001-app-structure-navigation.log
+  git commit -m "feat(apps/apple): add adaptive app shell + route registry (P4/P4)"
+
+EXIT=0
+STATUS=DONE

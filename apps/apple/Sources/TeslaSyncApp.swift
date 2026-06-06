@@ -8,9 +8,14 @@ import SwiftUI
 /// each arrive in their own later P-phase prompt.
 @main
 struct TeslaSyncApp: App {
+    @State private var selection: AppRoute? = .dashboard
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            AppShell(selection: $selection)
+        }
+        .commands {
+            AppCommands(selection: $selection)
         }
         #if os(macOS)
         .windowStyle(.titleBar)

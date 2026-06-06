@@ -1,6 +1,7 @@
 # SwiftFormat — TeslaSync Apple app (run: `swiftformat --lint apps/apple`)
 --swiftversion 6.0
 --maxwidth 120
+--disable environmentEntry
 --exclude Frameworks,build,DerivedData
 
 # Rule tweaks aligned with SwiftLint above.
