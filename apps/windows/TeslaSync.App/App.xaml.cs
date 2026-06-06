@@ -15,9 +15,13 @@ public partial class App : Application
         InitializeComponent();
     }
 
+    /// <summary>The single top-level window, exposed so features (e.g. file pickers) can resolve its handle.</summary>
+    public static Window? MainWindow { get; private set; }
+
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         _window = new MainWindow();
+        MainWindow = _window;
         _window.Activate();
     }
 }

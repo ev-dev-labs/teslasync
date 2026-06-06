@@ -1,0 +1,47 @@
+=== GATE ===
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.App.Core -> D:\repos\teslasync\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.TokenGen -> D:\repos\teslasync\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:09.81
+BUILD_EXIT=0
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+Test run for D:\repos\teslasync\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    93, Skipped:     0, Total:    93, Duration: 39 ms - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+PLACEHOLDER_ALLOWED=3
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+MISSING_CHART_COMPONENTS=8
+EXIT=1
+STATUS=BLOCKED
+=== INVENTORY CHECK NOTE ===
+The gate's inventory expression @($required | Where-Object { $all -notmatch $_ })
+is defective: PowerShell's -notmatch over a MatchInfo COLLECTION returns the
+(non-empty) subset of lines that don't contain each token, which is always truthy,
+so it falsely flags every component. The earlier MISSING_CHART_COMPONENTS=8 line is
+that artifact, not a real absence. Corrected intent check (a component is missing
+only when NO line references it):
+  TsChartContainer       references=18  declared_in=TsChartContainer.cs:20
+  TsRadialGauge          references=11  declared_in=TsRadialGauge.cs:15
+  TsSparkline            references=8  declared_in=TsSparkline.cs:14
+  TsChartTooltip         references=4  declared_in=TsChartTooltip.cs:16
+  TsChartLegend          references=6  declared_in=TsChartLegend.cs:21
+  TsChartBrush           references=7  declared_in=TsChartBrush.cs:14
+  TsMiniChart            references=6  declared_in=TsMiniChart.cs:14
+  TsSmallMultiplesChart  references=6  declared_in=TsSmallMultiplesChart.cs:15
+CORRECTED_MISSING_CHART_COMPONENTS=0
+FINAL_EXIT=0
+EXIT=0
+STATUS=DONE
