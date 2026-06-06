@@ -1,0 +1,63 @@
+=== ROUTE INVENTORY (port of web/src/App.tsx) ===
+TOTAL_ROUTES=156
+STANDALONE=6 REDIRECTS=8 PARAMETERIZED=10 CATCHALL=1 NAV_VISIBLE=120
+GROUP AdminDevTools                    25
+GROUP Analytics                        14
+GROUP Automations                      4
+GROUP BatteryEnergy                    12
+GROUP Charging                         13
+GROUP DashboardExplore                 4
+GROUP Diagnostics                      3
+GROUP MapsLocation                     5
+GROUP None                             1
+GROUP Notifications                    14
+GROUP Onboarding                       1
+GROUP PowerUser                        3
+GROUP SettingsAccountIntegrations      7
+GROUP Sharing                          2
+GROUP Standalone                       1
+GROUP SystemOps                        12
+GROUP TelemetrySignals                 9
+GROUP TripsDriving                     13
+GROUP Vehicles                         4
+GROUP VehicleSystems                   9
+=== GATE ===
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.TokenGen -> D:\repos\teslasync\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  TeslaSync.App.Core -> D:\repos\teslasync\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:08.29
+BUILD_EXIT=0
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+Test run for D:\repos\teslasync\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   494, Skipped:     0, Total:   494, Duration: 108 ms - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+PLACEHOLDER_ALLOWED=10
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+=== SHELL MARKERS ===
+# NOTE: prompt's literal marker check used '$all -notmatch $_', which filters a
+# collection and is tautologically non-empty when >=2 distinct markers match on
+# different lines (it can never reach 0). Corrected to documented intent: a
+# marker is MISSING only when present in NO scanned .cs/.xaml line. Per-marker
+# evidence below makes this auditable (not red-as-green).
+MARKER NavigationView => PRESENT TsTabNav.cs:7
+MARKER RouteRegistry => PRESENT ShellWindow.xaml:18
+MARKER DeepLink => PRESENT RoutePendingView.cs:81
+MARKER AppWindow => PRESENT TsFullscreenButton.cs:8
+MARKER ExtendsContentIntoTitleBar => PRESENT ShellWindow.xaml:14
+MARKER RouteAnnouncer => PRESENT RouteAnnouncer.cs:8
+MISSING_SHELL_MARKERS=0
+EXIT=0
+STATUS=DONE

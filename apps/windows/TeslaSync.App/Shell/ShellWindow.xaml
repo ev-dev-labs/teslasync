@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="TeslaSync.App.Shell.ShellWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:a11y="using:TeslaSync.App.Components.A11y"
+    mc:Ignorable="d"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="TeslaSync">
+
+    <!--
+      P2/W3-0001 — native NavigationView shell.
+      Custom title bar (ExtendsContentIntoTitleBar + Mica) on row 0, the grouped
+      NavigationView + breadcrumb header + content Frame on row 1, and a status bar
+      on row 2. Menu items, navigation, deep-link activation, back stack, title and
+      breadcrumb updates are wired in ShellWindow.xaml.cs against the headless
+      RouteRegistry. A 1x1 TsRouteAnnouncer announces route changes to assistive tech.
+    -->
+    <Grid x:Name="RootGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Custom title bar (drag region = the empty stretch element only). -->
+        <Grid x:Name="AppTitleBar" Grid.Row="0" Background="Transparent">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition x:Name="RightInsetColumn" Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <FontIcon
+                Grid.Column="0"
+                Margin="16,0,8,0"
+                VerticalAlignment="Center"
+                FontSize="16"
+                Glyph="&#xE804;" />
+
+            <TextBlock
+                x:Name="AppTitleText"
+                Grid.Column="1"
+                VerticalAlignment="Center"
+                FontSize="14"
+                FontWeight="SemiBold"
+                Text="TeslaSync" />
+
+            <AutoSuggestBox
+                x:Name="SearchBox"
+                Grid.Column="2"
+                MaxWidth="420"
+                Margin="24,8"
+                HorizontalAlignment="Center"
+                QueryIcon="Find"
+                QuerySubmitted="OnSearchSubmitted"
+                TextChanged="OnSearchTextChanged" />
+
+            <Border x:Name="TitleBarDragRegion" Grid.Column="2" Background="Transparent" />
+
+            <Button
+                x:Name="ThemeToggle"
+                Grid.Column="3"
+                Width="40"
+                Height="32"
+                Margin="0,0,8,0"
+                Padding="0"
+                Background="Transparent"
+                BorderThickness="0"
+                Click="OnToggleTheme"
+                ToolTipService.ToolTip="Toggle theme">
+                <FontIcon FontSize="16" Glyph="&#xE793;" />
+            </Button>
+        </Grid>
+
+        <!-- Main navigation shell. -->
+        <NavigationView
+            x:Name="RootNavigation"
+            Grid.Row="1"
+            BackRequested="OnBackRequested"
+            IsBackButtonVisible="Visible"
+            IsBackEnabled="False"
+            IsPaneToggleButtonVisible="True"
+            IsSettingsVisible="False"
+            ItemInvoked="OnItemInvoked"
+            PaneDisplayMode="Left">
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Padding="24,16,24,8" Spacing="2">
+                    <BreadcrumbBar
+                        x:Name="ShellBreadcrumbs"
+                        ItemClicked="OnBreadcrumbClicked">
+                        <BreadcrumbBar.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </BreadcrumbBar.ItemTemplate>
+                    </BreadcrumbBar>
+
+                    <TextBlock
+                        x:Name="HeaderTitle"
+                        FontSize="28"
+                        FontWeight="SemiBold" />
+                </StackPanel>
+
+                <Frame x:Name="ContentFrame" Grid.Row="1" />
+            </Grid>
+        </NavigationView>
+
+        <!-- Status bar. -->
+        <Border
+            x:Name="StatusBar"
+            Grid.Row="2"
+            Padding="24,4"
+            BorderThickness="0,1,0,0">
+            <TextBlock
+                x:Name="StatusText"
+                FontSize="12"
+                Opacity="0.7" />
+        </Border>
+
+        <!-- Screen-reader route announcer (1x1, visually hidden). -->
+        <a11y:TsRouteAnnouncer x:Name="RouteAnnouncer" Grid.Row="0" />
+    </Grid>
+</Window>
