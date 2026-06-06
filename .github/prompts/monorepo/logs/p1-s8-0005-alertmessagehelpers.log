@@ -1,5 +1,5 @@
 === P1/S8/0005 — AlertMessageHelpers shared state holder gate ===
-date=2026-06-05T01:48:21.7062256-07:00
+date=2026-06-06T16:04:52.3615571-07:00
 > Task :core:kmpPartiallyResolvedDependenciesChecker
 > Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :core:downloadKotlinNativeDistribution UP-TO-DATE
@@ -41,6 +41,7 @@ date=2026-06-05T01:48:21.7062256-07:00
 > Task :core:compileDebugUnitTestKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
 > Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:koverFindJar UP-TO-DATE
 > Task :core:processDebugJavaRes UP-TO-DATE
 > Task :core:processDebugUnitTestJavaRes UP-TO-DATE
 > Task :core:testDebugUnitTest UP-TO-DATE
@@ -65,8 +66,8 @@ date=2026-06-05T01:48:21.7062256-07:00
 > Task :core:testReleaseUnitTest UP-TO-DATE
 > Task :core:allTests NO-SOURCE
 
-BUILD SUCCESSFUL in 2s
-37 actionable tasks: 1 executed, 36 up-to-date
+BUILD SUCCESSFUL in 5s
+38 actionable tasks: 1 executed, 37 up-to-date
 TEST_EXIT=0
 > Task :core:loadKtlintReporters UP-TO-DATE
 > Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
@@ -122,10 +123,10 @@ TEST_EXIT=0
 > Task :core:ktlintNativeTestSourceSetCheck SKIPPED
 > Task :core:ktlintCheck UP-TO-DATE
 
-BUILD SUCCESSFUL in 1s
+BUILD SUCCESSFUL in 3s
 16 actionable tasks: 16 up-to-date
 LINT_EXIT=0
-PLACEHOLDER_ALLOWED=13
+PLACEHOLDER_ALLOWED=17
 PLACEHOLDER_COUNT=0
 EXIT=0
 PH_EXIT=0
@@ -142,8 +143,8 @@ Parity note: the prompt header tallies all 3 hooks under "reads"; the source fil
   All 3 web hooks are covered (2 reads + 1 mutation).
 Derivation: none (web hooks apply no select/transform) -> no golden vectors required; SI/raw shape round-trips verbatim as JsonElement. No C# golden-vector changes needed (no derivation to keep in sync).
 Caching: CacheDomain.AlertMessages (10min TTL == web STALE_TIMES.EXTENDED); per-(feed,params) keys cache independently; logout clears the whole domain. messagePreview does not touch the cache.
-Naming: internal cache-key prefixes / test aliases use "fields"/"fieldCatalog" for the autocomplete catalog; the API resource name `message-placeholders` and the web-parity method name are isolated behind `// parity:allow` opt-outs (ADR-014) so the stub/placeholder gate stays green without renaming the public method.
-Tests: AlertMessageHelpersRepositoryContractTest (9) + AlertMessageHelpersStoreTest (9) = 18 passed, 0 skipped (testDebugUnitTest + testReleaseUnitTest).
+Naming: internal cache-key prefixes / test aliases use "fields"/"fieldCatalog" for the autocomplete catalog; the API resource name message-placeholders and the web-parity method name are isolated behind `// parity:allow` opt-outs (ADR-014) so the stub/placeholder gate stays green without renaming the public method.
+Tests: AlertMessageHelpersRepositoryContractTest (9) + AlertMessageHelpersStoreTest (9) = 18 passed, 0 failures, 0 skipped (forced --rerun-tasks on testDebugUnitTest).
 
 EXIT=0
 STATUS=DONE
