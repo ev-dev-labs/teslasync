@@ -29,6 +29,8 @@ identifier_name:
   excluded:
     - id
     - ok
+    - x
+    - y
 
 type_name:
   max_length:

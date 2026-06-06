@@ -1,0 +1,70 @@
+P4 · P3 · 0002 — Swift Charts component library
+prompt: .github/prompts/monorepo/p4-apple/P3-0002-charts-components.prompt.md
+mode:   code-complete + DEFERRED Xcode gate (user-approved). Real macOS `swiftc -typecheck` gate
+        (Swift Charts ships in the macOS SDK) compile-validated every batch; xcodebuild deferred.
+
+=== PREFLIGHT ===
+Predecessors: P4/P3-0001 UI components DONE (cf1190cb), P4/P2-0001 tokens DONE (b40c9d6b).
+Clean-tree: all changes under apps/apple/Sources/Components/Charts/** + Tests/Unit/Charts.
+Gates: swiftc -typecheck (Charts in macOS SDK), swiftformat, swiftlint, placeholder. xcodebuild/iOS-sim DEFERRED.
+
+=== SURVEY ===
+Mapped the web `components/charts` surface (prompt's explicit list). Reused TSChartPalette/tokens + the
+P3-0001 components (TSCard/TSButton/TSRangeSlider/TSClipboard). Swift Charts (`import Charts`) provides
+LineMark/AreaMark/BarMark/PointMark/SectorMark/RuleMark; radar has no native mark (drawn with Canvas).
+
+=== REASONING ===
+- Shared data model: TSChartPoint / TSChartSeries / TSChartSlice (palette-colored), so every chart consumes
+  one typed shape. Pure helpers (TSChartFormat.axisLabel/downsample/toggleHidden/summary, TSChartGradient)
+  are unit-tested.
+- Safe formatting: axisLabel renders "—" for non-finite (never "nan"); large series downsample to <=300/maxCount.
+- Accessibility (ADR-015): every chart carries an accessibilityLabel; radar/gauge expose an accessibilityValue
+  summary; TSChartContainer surfaces a concise summary line; legend toggles carry .isSelected.
+- Empty/error: TSChartContainer renders a self-contained empty overlay (feedback components are a later prompt,
+  P3-0004) and never hides the panel.
+- Interaction: time markers + annotation lines are @ChartContentBuilder helpers (embedded in a Chart{});
+  TSChartBrush reuses the accessible TSRangeSlider for the x-window (vs a fragile custom gesture);
+  add/list annotation surfaces are binding/action wrappers.
+- Performance: animations honor Reduce Motion via TSAnimation (from P2); downsampling caps mark counts.
+
+=== CHANGES === (apps/apple/Sources/Components/Charts/** — 8 files, ~22 components/utilities)
+  + ChartModels.swift     TSChartPoint, TSChartSeries, TSChartSlice, TSChartFormat (pure), TSChartGradient
+  + ChartContainer.swift  TSChartContainer (title/export/empty/summary), TSChartLegend (toggle)
+  + LineCharts.swift       TSLineChart, TSAreaChart, TSElevationProfile (+ shared tsChartAxes/tsChartNoAxes)
+  + BarCharts.swift        TSBarChart (grouped/stacked), TSComposedChart, TSScatterChart
+  + MiniCharts.swift       TSSparkline, TSMiniChart, TSSmallMultiplesChart
+  + PieGauge.swift         TSPieChart (SectorMark), TSRadialGauge (custom arc)
+  + RadarChart.swift       TSRadarChart (Canvas polygon + a11y summary)
+  + MetricSwitcher.swift   TSMetricSwitcherChart (segmented metric switch)
+  + Interaction.swift      TSChartTooltip, TSAnnotationLine, tsTimeMarker/tsAnnotationLines (@ChartContentBuilder),
+                           TSChartBrush, TSAddAnnotationPopover, TSAnnotationList
+  + Tests/Unit/Charts/ChartLogicTests.swift   axisLabel/downsample/toggle/summary
+  ~ .swiftlint.yml         identifier_name excluded += x, y (conventional chart coordinate names)
+
+=== PARITY ===
+Component-library prompt (no page manifest). Coverage = every listed web charts export has a native Swift
+Charts (or Canvas) equivalent — enumerated in CHANGES. No PARITY_COVERED/REQUIRED emitted.
+
+=== GATE (host-runnable, executed on this machine) ===
+$ xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macosx15.0 <Tokens + all non-Shared sources>
+TYPECHECK_EXIT=0      # REAL macOS compile incl. Swift Charts marks, SectorMark, @ChartContentBuilder, Canvas
+$ swiftformat --lint apps/apple apps/design/generated/apple → 0 require formatting
+SWIFTFORMAT_EXIT=0
+$ swiftlint --strict → 0 violations, 0 serious in 43 files
+SWIFTLINT_EXIT=0
+$ placeholder scan → PLACEHOLDER_COUNT=0
+$ xcodegen generate → Created project
+XCODEGEN_EXIT=0
+
+=== GATE (Xcode-only — DEFERRED to macos-latest CI, NOT run here; not faked) ===
+#   xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+#   xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync-macOS build test
+IOS_BUILD_TEST=DEFERRED-macOS-pending
+MAC_BUILD_TEST=DEFERRED-macOS-pending
+
+=== COMMIT ===
+  git add apps/apple .github/prompts/monorepo/logs/p4-p3-0002-charts-components.log
+  git commit -m "feat(apps/apple): add Swift Charts component library (P4/P3)"
+
+EXIT=0
+STATUS=DONE
