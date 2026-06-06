@@ -12,9 +12,18 @@ struct TeslaSyncApp: App {
     @State private var selection: AppRoute? = .dashboard
     @State private var auth = AuthCoordinator.bootstrap()
 
+    private var isLiveDemo: Bool {
+        ProcessInfo.processInfo.arguments.contains("-uiTestLiveDemo")
+    }
+
     var body: some Scene {
         WindowGroup {
-            RootView(coordinator: auth, selection: $selection)
+            if isLiveDemo {
+                LiveDemoView()
+                    .teslaSyncTheme()
+            } else {
+                RootView(coordinator: auth, selection: $selection)
+            }
         }
         .commands {
             AppCommands(selection: $selection)
