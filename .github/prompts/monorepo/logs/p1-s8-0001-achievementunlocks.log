@@ -1,12 +1,12 @@
-=== P1/S8/0001 AchievementUnlocks gate (final) 2026-06-05T00:44:26.9044338-07:00 ===
+=== P1/S8/0001 AchievementUnlocks gate (final) 2026-06-06T15:14:56.6454821-07:00 ===
 > Task :core:kmpPartiallyResolvedDependenciesChecker
 > Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :core:downloadKotlinNativeDistribution UP-TO-DATE
 > Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
-> Task :core:compileKotlinIosSimulatorArm64
+> Task :core:compileKotlinIosSimulatorArm64 UP-TO-DATE
 > Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
-> Task :core:iosSimulatorArm64MainKlibrary
-> Task :core:compileTestKotlinIosSimulatorArm64
+> Task :core:iosSimulatorArm64MainKlibrary UP-TO-DATE
+> Task :core:compileTestKotlinIosSimulatorArm64 UP-TO-DATE
 > Task :core:computeLocalPackageDependencyInputFiles SKIPPED
 > Task :core:generateSyntheticLinkageSwiftPMImportProjectForCinteropsAndLdDump SKIPPED
 > Task :core:generateUmbrellaPackageIdentifierBasedResolutionForDefault SKIPPED
@@ -16,10 +16,10 @@
 > Task :core:convertSyntheticImportProjectIntoDefFileIphonesimulator SKIPPED
 > Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
 > Task :core:iosSimulatorArm64Test SKIPPED
-> Task :core:compileKotlinMacosArm64
+> Task :core:compileKotlinMacosArm64 UP-TO-DATE
 > Task :core:macosArm64ProcessResources NO-SOURCE
-> Task :core:macosArm64MainKlibrary
-> Task :core:compileTestKotlinMacosArm64
+> Task :core:macosArm64MainKlibrary UP-TO-DATE
+> Task :core:compileTestKotlinMacosArm64 UP-TO-DATE
 > Task :core:convertSyntheticImportProjectIntoDefFileMacosx SKIPPED
 > Task :core:linkDebugTestMacosArm64 SKIPPED
 > Task :core:macosArm64Test SKIPPED
@@ -30,20 +30,44 @@
 > Task :core:packageDebugResources UP-TO-DATE
 > Task :core:parseDebugLocalResources UP-TO-DATE
 > Task :core:generateDebugRFile UP-TO-DATE
+> Task :core:compileDebugKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileDebug UP-TO-DATE
+> Task :core:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:bundleLibCompileToJarDebug UP-TO-DATE
 > Task :core:preDebugUnitTestBuild UP-TO-DATE
 > Task :core:generateDebugUnitTestStubRFile UP-TO-DATE
+> Task :core:compileDebugUnitTestKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:koverFindJar UP-TO-DATE
+> Task :core:processDebugJavaRes UP-TO-DATE
+> Task :core:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :core:testDebugUnitTest UP-TO-DATE
 > Task :core:preReleaseBuild UP-TO-DATE
 > Task :core:generateReleaseResValues UP-TO-DATE
 > Task :core:generateReleaseResources UP-TO-DATE
 > Task :core:packageReleaseResources UP-TO-DATE
 > Task :core:parseReleaseLocalResources UP-TO-DATE
 > Task :core:generateReleaseRFile UP-TO-DATE
+> Task :core:compileReleaseKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileRelease UP-TO-DATE
+> Task :core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :core:bundleLibCompileToJarRelease UP-TO-DATE
 > Task :core:preReleaseUnitTestBuild UP-TO-DATE
 > Task :core:generateReleaseUnitTestStubRFile UP-TO-DATE
+> Task :core:compileReleaseUnitTestKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileReleaseUnitTest UP-TO-DATE
+> Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processReleaseJavaRes UP-TO-DATE
+> Task :core:processReleaseUnitTestJavaRes UP-TO-DATE
+> Task :core:testReleaseUnitTest UP-TO-DATE
+> Task :core:allTests NO-SOURCE
+
+BUILD SUCCESSFUL in 3s
+38 actionable tasks: 1 executed, 37 up-to-date
+TEST_EXIT=0
 > Task :core:loadKtlintReporters UP-TO-DATE
 > Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
 > Task :core:ktlintAndroidDebugSourceSetCheck SKIPPED
@@ -59,8 +83,15 @@
 > Task :core:ktlintAndroidUnitTestDebugSourceSetCheck SKIPPED
 > Task :core:runKtlintCheckOverAndroidUnitTestReleaseSourceSet NO-SOURCE
 > Task :core:ktlintAndroidUnitTestReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidUnitTestSourceSetCheck UP-TO-DATE
 > Task :core:runKtlintCheckOverAppleMainSourceSet UP-TO-DATE
 > Task :core:ktlintAppleMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
+> Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonMainSourceSet UP-TO-DATE
+> Task :core:ktlintCommonMainSourceSetCheck UP-TO-DATE
 > Task :core:runKtlintCheckOverCommonTestSourceSet UP-TO-DATE
 > Task :core:ktlintCommonTestSourceSetCheck UP-TO-DATE
 > Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
@@ -89,41 +120,19 @@
 > Task :core:ktlintNativeMainSourceSetCheck SKIPPED
 > Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
 > Task :core:ktlintNativeTestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverAndroidUnitTestSourceSet
-> Task :core:ktlintAndroidUnitTestSourceSetCheck UP-TO-DATE
-> Task :core:runKtlintCheckOverAppleTestSourceSet
-> Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
-> Task :core:compileDebugKotlinAndroid
-> Task :core:compileDebugJavaWithJavac NO-SOURCE
-> Task :core:processDebugJavaRes UP-TO-DATE
-> Task :core:bundleLibRuntimeToJarDebug
-> Task :core:bundleLibCompileToJarDebug
-> Task :core:compileReleaseKotlinAndroid
-> Task :core:compileDebugUnitTestKotlinAndroid UP-TO-DATE
-> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
-> Task :core:processDebugUnitTestJavaRes UP-TO-DATE
-> Task :core:runKtlintCheckOverCommonMainSourceSet
-> Task :core:testDebugUnitTest
-> Task :core:compileReleaseJavaWithJavac NO-SOURCE
-> Task :core:processReleaseJavaRes UP-TO-DATE
-> Task :core:bundleLibRuntimeToJarRelease
-> Task :core:bundleLibCompileToJarRelease
-> Task :core:ktlintCommonMainSourceSetCheck
-> Task :core:ktlintCheck
-> Task :core:compileReleaseUnitTestKotlinAndroid
-> Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
-> Task :core:processReleaseUnitTestJavaRes UP-TO-DATE
-> Task :core:testReleaseUnitTest
-> Task :core:allTests NO-SOURCE
+> Task :core:ktlintCheck UP-TO-DATE
 
-BUILD SUCCESSFUL in 30s
-52 actionable tasks: 18 executed, 34 up-to-date
-TEST_EXIT=0
+BUILD SUCCESSFUL in 2s
+16 actionable tasks: 16 up-to-date
 LINT_EXIT=0
-PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_ALLOWED=17
 PLACEHOLDER_COUNT=0
-EXIT=0
 PH_EXIT=0
+
+=== FOCUSED TEST EVIDENCE (forced rerun: :core:testDebugUnitTest --tests *achievementunlocks* --rerun) ===
+io.teslasync.shared.core.presentation.achievementunlocks.AchievementUnlocksStoreTest: tests=7 failures=0 errors=0 skipped=0
+io.teslasync.shared.core.presentation.achievementunlocks.AchievementUnlocksGoldenTest: tests=2 failures=0 errors=0 skipped=0
+total=9 failures=0
 
 === PARITY ===
 Web source: web/src/api/hooks/useAchievementUnlocks.ts (SSE-only realtime hook)
@@ -144,11 +153,12 @@ Reads/queries ported (1/1):
       - SI preserved (no unit conversion; display-only at S5 boundary)
 Mutations/actions ported (0/0): none
 Golden vectors: apps/shared/core/spec/achievement-unlocks-golden.json (7 scenarios:
-  ordering, dedup, bound, dismiss, dismiss-absent, dedup_then_bound, dismiss_then_readd)
+  newest_first_ordering, dedup_keeps_original_ignores_rebroadcast, bounded_drops_oldest,
+  dismiss_removes_entry, dismiss_absent_is_noop, dedup_then_bound, dismiss_then_readd_allowed)
   -> replayed by AchievementUnlocksGoldenTest (KMP); same fixture pins future Windows C# port (ADR-004)
 Tests: AchievementUnlocksStoreTest (fake SSE transport, 7 cases),
-       AchievementUnlocksGoldenTest (golden replay)
-Gate results: TEST_EXIT=0  LINT_EXIT=0  PH_EXIT=0 (PLACEHOLDER_ALLOWED=1 pre-existing in SseDecode.kt)
+       AchievementUnlocksGoldenTest (golden replay, 2 cases)
+Gate results: TEST_EXIT=0  LINT_EXIT=0  PH_EXIT=0 (PLACEHOLDER_ALLOWED=17 pre-existing opt-outs in core; PLACEHOLDER_COUNT=0)
 
 EXIT=0
 STATUS=DONE
