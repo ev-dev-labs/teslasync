@@ -123,6 +123,13 @@ if ($programDirs.Count -eq 0) {
 # Patterns handled (in priority order):
 #   1. <Letter><PhaseDigit>-<SeqDigit>-<slug>   — infra prompts: S0-0001,
 #      W7-0001, A12-0001, H99-0001. Sort by (letter, phase, seq).
+#      SPECIAL CASE: Phase=99 is the project-wide acceptance-gate convention
+#      (S99-, W99-, A99-, P99-, H99-). Acceptance gates must run AFTER all
+#      surface/subdir prompts in their program, so we remap Phase=99 to
+#      Phase=99999 (sorts after default subdir bucket 999 and unprefixed
+#      bucket 9999). Without this, W99 runs immediately after W9-0002 and
+#      reports parity 0/N because the page-body prompts in subdirs haven't
+#      executed yet.
 #   2. <Digit>-<slug>                            — pure-numeric p0 prompts:
 #      0001-, 0099-. Treated as ('', 0, seq) so they sort first.
 #   3. <Letter>-<SeqDigit>-<slug>                — surface prompts with no
@@ -131,17 +138,27 @@ if ($programDirs.Count -eq 0) {
 #   4. anything else (e.g. pages/admin/APIKeysPage.prompt.md with no leading
 #      digit or known prefix) — bucketed as ('zzz-unprefixed', 9999, 0) so
 #      they sort dead last within their subdir, tiebroken on name.
-# Subdir name is the 4th key so files in `S8/` (which match pattern 1 with
-# phase=8) interleave naturally between top-level `S7-` and `S9-` files,
+# Subdir name is used as a tiebreaker so files in `S8/` (which match pattern 1
+# with phase=8) interleave naturally between top-level `S7-` and `S9-` files,
 # but subdir surface buckets (dashboard-widgets/, pages/admin/, ...) sort
 # after their parent's top-level infra because their phase is 999/9999.
+#
+# SORT KEY ORDER: (Phase, Letter, Dir, Seq, Name) — Phase comes FIRST so
+# that 99-style acceptance gates (Phase=99999) sort after both the W-style
+# subdir bucket (Phase=999) AND the unprefixed pages/ bucket (Phase=9999).
+# Letter-first would put unprefixed pages (Letter='zzz-...') AFTER all
+# W-letter prompts including W99, breaking the dependency order.
 function Get-PromptSortKey {
     param($file, [string]$programRoot)
     $name = ($file.BaseName -replace '\.prompt$', '')
     $relDir = $file.DirectoryName.Substring($programRoot.Length).TrimStart('\')
 
     if ($name -match '^([A-Za-z]+)(\d+)-(\d+)') {
-        return [PSCustomObject]@{ Letter=$Matches[1]; Phase=[int]$Matches[2]; Seq=[int]$Matches[3]; Dir=$relDir; Name=$name }
+        $letter = $Matches[1]
+        $phase  = [int]$Matches[2]
+        # 99-style acceptance gates: push past subdir/unprefixed buckets.
+        if ($phase -eq 99) { $phase = 99999 }
+        return [PSCustomObject]@{ Letter=$letter; Phase=$phase; Seq=[int]$Matches[3]; Dir=$relDir; Name=$name }
     }
     if ($name -match '^(\d+)-') {
         return [PSCustomObject]@{ Letter=''; Phase=0; Seq=[int]$Matches[1]; Dir=$relDir; Name=$name }
@@ -158,7 +175,7 @@ foreach ($pd in $programDirs) {
     $files = Get-ChildItem -Path $pd.FullName -Recurse -Filter "*.prompt.md" -File
     $sorted = $files |
         Select-Object @{Name='File';Expression={$_}}, @{Name='Key';Expression={ Get-PromptSortKey $_ $pd.FullName }} |
-        Sort-Object @{Expression={$_.Key.Letter}}, @{Expression={$_.Key.Phase}}, @{Expression={$_.Key.Dir}}, @{Expression={$_.Key.Seq}}, @{Expression={$_.Key.Name}} |
+        Sort-Object @{Expression={$_.Key.Phase}}, @{Expression={$_.Key.Letter}}, @{Expression={$_.Key.Dir}}, @{Expression={$_.Key.Seq}}, @{Expression={$_.Key.Name}} |
         Select-Object -ExpandProperty File
 
     foreach ($file in $sorted) {
@@ -306,11 +323,40 @@ function Test-LogIsDeferredBlocked {
 
     # Capture BLOCKED_REASON= as a multi-line block (until next bare KEY= line or EOF).
     # Authors typically soft-wrap reasons across several physical lines.
+    # NOTE: When multiple BLOCKED_REASON= lines exist (compound gates like W99),
+    # we capture only the FIRST and use it for sentinel matching. The hardening
+    # guards below then reject the log if ANY other real-red signal is present
+    # (parity gap, [FAIL], COMMIT_EXIT, UNEXPECTED_COUNT) — so compound BLOCKEDs
+    # with mixed real+deferred reasons stay red.
     $reasonMatch = [regex]::Match($content,
         '(?ms)^BLOCKED_REASON\s*=\s*(.+?)(?=^[A-Z][A-Z_0-9]*\s*=|^==+|\z)')
     if (-not $reasonMatch.Success) { return @($false, '', 'no-reason') }
     $reason = $reasonMatch.Groups[1].Value.Trim()
     if ($reason.Length -eq 0) { return @($false, '', 'no-reason') }
+
+    # Hardening guards: a STATUS=BLOCKED with a deferred sentinel is sanctioned
+    # ONLY if no OTHER real-red signal is present in the same log. Compound
+    # BLOCKEDs (e.g. W99 acceptance gate: deferred signing + real parity gap)
+    # must stay red — the parity/test/commit gap is real work missing, not a
+    # host-deferred verification.
+    if ($content -match '(?m)^\s*\[FAIL\]') {
+        return @($false, $reason, 'has-fail-marker')
+    }
+    $commitMatches = [regex]::Matches($content, '(?m)^COMMIT_EXIT=(\d+)\s*$')
+    if ($commitMatches.Count -gt 0 -and $commitMatches[$commitMatches.Count - 1].Groups[1].Value -ne '0') {
+        return @($false, $reason, 'has-commit-failure')
+    }
+    if ($content -match '(?m)^PARITY_COVERED=(\d+)') {
+        $cov = [int]$Matches[1]
+        if ($content -match '(?m)^PARITY_REQUIRED=(\d+)') {
+            if ($cov -lt [int]$Matches[1]) {
+                return @($false, $reason, 'has-parity-gap')
+            }
+        }
+    }
+    if ($content -match '(?m)^UNEXPECTED_COUNT=(?!0\s*$)\d+') {
+        return @($false, $reason, 'has-unexpected-drift')
+    }
 
     # Explicit opt-in marker: prompt author or agent declared the BLOCKED
     # is environmentally deferred. Wins over sentinel matching.
@@ -416,6 +462,29 @@ if ($SelfTest) {
 
     Assert-Deferred 'blocked-but-exit-zero-macos' `
         "EXIT=0`nSTATUS=BLOCKED`nBLOCKED_REASON=macOS runner required (Kotlin/Native links Apple frameworks on macOS only)." `
+        $true 'macos-deferred'
+
+    # ---- Hardening guards: compound BLOCKED with real-red signals must NOT auto-handle ----
+
+    Assert-Deferred 'compound-blocked-with-parity-gap' `
+        "PARITY_REQUIRED=1754`nPARITY_COVERED=0`nEXIT=1`nSTATUS=BLOCKED`nBLOCKED_REASON=MSIX signing capability absent on this host." `
+        $false 'has-parity-gap'
+
+    Assert-Deferred 'compound-blocked-with-fail-marker' `
+        "[FAIL] 147 UI tests failed`nEXIT=1`nSTATUS=BLOCKED`nBLOCKED_REASON=WinAppDriver not installed." `
+        $false 'has-fail-marker'
+
+    Assert-Deferred 'compound-blocked-with-commit-failure' `
+        "COMMIT_EXIT=1`nEXIT=1`nSTATUS=BLOCKED`nBLOCKED_REASON=macOS runner required." `
+        $false 'has-commit-failure'
+
+    Assert-Deferred 'compound-blocked-with-drift' `
+        "UNEXPECTED_COUNT=5`nEXIT=1`nSTATUS=BLOCKED`nBLOCKED_REASON=android emulator absent." `
+        $false 'has-unexpected-drift'
+
+    # Parity gap met (covered == required) AND sentinel match → still deferred OK
+    Assert-Deferred 'parity-met-deferred-ok' `
+        "PARITY_REQUIRED=10`nPARITY_COVERED=10`nEXIT=0`nSTATUS=BLOCKED`nBLOCKED_REASON=macOS runner required for xcframework packaging." `
         $true 'macos-deferred'
 
     Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
