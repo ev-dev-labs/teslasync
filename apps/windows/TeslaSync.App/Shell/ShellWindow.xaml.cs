@@ -11,12 +11,14 @@ using TeslaSync.App.Core.Auth;
 using TeslaSync.App.Core.Lifecycle;
 using TeslaSync.App.Core.Navigation;
 using TeslaSync.App.Core.Settings;
+using TeslaSync.App.Core.Theme;
 using TeslaSync.App.Notifications;
 using TeslaSync.App.Platform.Lifecycle;
 using TeslaSync.App.Push;
 using TeslaSync.App.Settings;
 using Windows.Graphics;
 using Windows.System;
+using Windows.UI.ViewManagement;
 
 namespace TeslaSync.App.Shell;
 
@@ -38,6 +40,7 @@ public sealed partial class ShellWindow : Window
     private readonly TsAlertBanner _pushBanner = new() { IsOpen = false, Dismissible = true };
 
     private ElementTheme _theme = ElementTheme.Default;
+    private AccessibilitySettings? _accessibility;
     private bool _navigating;
     private string? _pendingProtectedPath;
     private bool _startupRouteApplied;
@@ -486,12 +489,31 @@ public sealed partial class ShellWindow : Window
         }
     }
 
-    private static ElementTheme ToElementTheme(AppThemePreference preference) => preference switch
+    private ElementTheme ToElementTheme(AppThemePreference preference) =>
+        ThemeResolver.Resolve(preference, SystemHighContrast()) switch
+        {
+            ThemeVariant.Light => ElementTheme.Light,
+            ThemeVariant.Dark => ElementTheme.Dark,
+            _ => ElementTheme.Default,
+        };
+
+    /// <summary>
+    /// Reads the OS high-contrast flag defensively. The packaged host always exposes it, but a
+    /// non-packaged or headless launch must never crash theme application, so any failure reports
+    /// "not high contrast" and the persisted light/dark preference is honoured unchanged.
+    /// </summary>
+    private bool SystemHighContrast()
     {
-        AppThemePreference.Light => ElementTheme.Light,
-        AppThemePreference.Dark => ElementTheme.Dark,
-        _ => ElementTheme.Default,
-    };
+        try
+        {
+            _accessibility ??= new AccessibilitySettings();
+            return _accessibility.HighContrast;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
 
     private static AppThemePreference NextTheme(AppThemePreference preference) => preference switch
     {
