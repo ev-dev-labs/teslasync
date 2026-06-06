@@ -1,0 +1,53 @@
+Tooling is available. Let me set up tracking and read the gate scripts.
+
+Now let me run the fast `-Check` gates in parallel while gradle builds.
+
+Core build passed but tests showed UP-TO-DATE (cached). Let me force a real re-run for honest evidence.
+
+Host unit tests genuinely re-ran (18 tasks executed, BUILD SUCCESSFUL). Let me get real test counts and understand the page-units derivation.
+
+Let me verify the S1 OpenAPI conformance check, which is the remaining unrun criterion.
+
+The S1 conformance gate is a Go test. Let me run it plus a spec drift check.
+
+All criteria green so far. Let me confirm S5 golden and S11 redaction tests specifically ran and passed.
+
+All criteria are green (2680 tests, 0 failures; golden + redaction suites present). Now let me build the ledger and contract freeze. First, the ledger schema and hashes.
+
+All evidence gathered. Writing the shared ledger and contract freeze.
+
+Now finalize the gate log with the summary block.
+
+Let me add the schema referenced by the ledger, then commit.
+
+Commit succeeded. Let me clean up my scratch logs and verify the final state.
+
+The P1/S99 shared acceptance gate is complete and committed (`a0a356864`).
+
+## Gate result: `EXIT=0 / STATUS=DONE`
+
+Every check ran for real ΓÇö no asserted greens:
+
+| Check | Result |
+|---|---|
+| `:core:allTests` + `koverVerify` (re-run, not cached) | **2680 tests, 0 fail/error/skip**; coverage floor met |
+| OpenAPI conformance (`go test ./internal/api -run OpenAPI`) | green; spec regen **byte-identical** (no drift) |
+| Client codegen drift (`-Check`) | green ΓÇö 20 files match spec |
+| Parity manifest drift (`-Check`) | green ΓÇö 1754 units |
+| Design themes drift (`-Check`) | green ΓÇö win/android/apple in sync |
+| i18n completeness (`-Check`) | green ΓÇö 7772 entries |
+| Placeholder gate (`apps/shared`, `apps/design`) | `PLACEHOLDER_COUNT=0` |
+| S5 units golden / S8 derivations / S11 redaction | suites present and passing |
+
+**Outputs written & committed:**
+- `apps/parity/shared-ledger.json` ΓÇö 14 shipped shared modules (+ schema)
+- `apps/shared/CONTRACT_FROZEN.md` ΓÇö SHA-256 freeze of OpenAPI (`D5A43C12ΓÇª`), tokens (`757C670CΓÇª`), units-golden (`AF2DFA0AΓÇª`), i18n index, parity manifest
+- `ΓÇª/logs/p1-s99-0001-shared-gate.log` ΓÇö ends `EXIT=0 / STATUS=DONE`
+
+**Honestly disclosed (not hidden):**
+- Apple native test tasks are SKIPPED on this Windows host (Kotlin/Native links Apple frameworks on macOS only); all `commonTest` logic runs on Android/JVM. Only `Shared.xcframework` *packaging* is deferred to macOS CI per S3.
+- `page-units.json`=143 vs manifest page-units=153 logged transparently (Covenant #9); the authoritative manifest drift gate is green.
+
+P2 (Windows) / P3 (Android) / P4 (Apple) are now unblocked on a frozen contract + core.
+
+

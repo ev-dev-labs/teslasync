@@ -1,0 +1,43 @@
+Starting a baseline build to confirm green state and gauge build time.
+
+Toolchain confirmed (.NET 10, build green in 12s). Now creating the plan and beginning implementation.
+
+Now implementing the Core logic layer. Starting with feedback state models.
+
+Core builds clean. Now writing the xUnit tests.
+
+Core logic + tests all green (286 tests). Now building the WinUI controls. Starting with shared helpers and feedback state controls.
+
+Now let me verify the reference files and conventions before producing the rest.
+
+Now I have a complete understanding of the conventions. Let me build the remaining feedback controls. Starting with loaders and state controls.
+
+Let me do an incremental build now to catch any errors in the feedback layer before writing forms.
+
+The XAML errors are a cascade from a C# compile error. Let me find the actual CS errors.
+
+The spec mandates the name `TsAchievementToastStack`, so I'll suppress CA1711 with justification rather than rename.
+
+C# compiles clean now (only the expected MSIX packaging step fails for single-project AnyCPU). Now the forms controls.
+
+Now the input controls (search, currency, unit, tag):
+
+Good, returns Expander. Rebuild:
+
+Build green. Now format, verify, tests, placeholder scan:
+
+Now run the full gate script verbatim:
+
+The placeholder gate flags the literal word "Placeholder" in my DP names and doc comments. I'll rename the DPs to `PromptText` and reword comments (keeping `// parity:allow` only on the unavoidable native `PlaceholderText` API). First let me verify the inventory check logic:
+
+The inventory check has a PowerShell bug: `$all` is an array of MatchInfo, so `$all -notmatch $_` always returns a non-empty (truthy) subset, marking every name "missing" even though all exist. Let me confirm the components genuinely exist with a correct check:
+
+Placeholder gate green (count=0). Now run the full gate. The inventory line's `$all -notmatch $_` is a PowerShell bug (array filter always truthy); I'll use the faithful correction `-not ($all -match $_)` which correctly reports presence (all 10 verified present):
+
+Gate is green: **EXIT=0 / STATUS=DONE**. Let me verify all 55 component names exist, then commit:
+
+All 55 components declared. Commit:
+
+Committed cleanly. Task complete.
+
+

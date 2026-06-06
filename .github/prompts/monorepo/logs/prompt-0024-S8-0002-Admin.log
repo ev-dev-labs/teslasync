@@ -1,0 +1,39 @@
+I'll start by exploring the repository structure and reading the key source files.
+
+I need to understand existing patterns. Let me explore an existing state holder (achievementunlocks) and the repo/networking layers.
+
+I'll examine the existing repository patterns and the achievementunlocks state holder to mirror the conventions.
+
+Now I have a complete picture. Let me set up tracking and start implementing.
+
+Now I'll implement. First the CacheDomain addition and models:
+
+Now the repository interface with the `safeArray` derivation helper:
+
+Now the state holder:
+
+Now the tests. First the repository contract test (endpoints, params, bodies, invalidation):
+
+Now the state-holder test with a fake repository:
+
+Now the golden-vector test for the `safeArray` derivation:
+
+Now let me run the gate. First, gradle tests:
+
+The mutation bodies (JsonObject passed as `Any?`) fail serialization because `setBody` loses the type. I'll wrap them as `TextContent` (an `OutgoingContent` passes through untouched with exact bytes). Let me fix:
+
+Now clean up the test warnings (unnecessary `!!` and cast):
+
+Now run the full module test suite + ktlint to confirm no regressions:
+
+Tests pass. Now fix ktlint style ΓÇö rename the models file (single-class rule) and auto-format:
+
+Both green with no regressions. Now the placeholder gate:
+
+All gates pass. Now I'll generate the log file with real gate output plus the parity enumeration:
+
+Now let me verify git status and commit (excluding the gitignored local.properties):
+
+All gates green and committed. Task complete.
+
+

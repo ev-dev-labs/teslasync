@@ -1,0 +1,101 @@
+Build is green. Let me run the rest of the gate baseline and survey the web sources to mirror.
+
+Baseline fully green (build Γ£ô, 286 tests Γ£ô, 0 placeholders Γ£ô). Now reading web sources.
+
+Now the layout and vehicles sources.
+
+I have enough understanding. Let me set up tracking and start implementing.
+
+Now implementing the Core logic layer. Starting with maps.
+
+Now the route playback engine ΓÇö the logic-heavy core ported from RoutePlayback.tsx.
+
+Now the paint palette port with `inferPaintFromTesla`.
+
+Now the hero metrics core, reusing UnitConverters.
+
+Core compiles. Now writing the tests.
+
+I need to verify my test assumptions match the actual Core APIs I wrote earlier. Let me read them.
+
+Now I'll write the remaining test files for playback/cluster/geofence/coordinate/motion and vehicles.
+
+Now let me build and run the tests to verify Core logic.
+
+Two test-side issues, but the cluster boundary artifact is a real weakness in grid-bucketing. Let me improve the engine to greedy distance-based clustering (closer to leaflet.markercluster) and fix the wrap test.
+
+All 404 tests pass. Now the WinUI controls. Let me study the existing control patterns.
+
+Let me check existing reduce-motion usage and the feedback States, and look at an existing Canvas/animation control if any.
+
+I have enough context. Let me build the components. Starting with a shared motion-preference helper and the A11y components.
+
+Now the Motion controls.
+
+The `Control` base won't render a visual tree without a template, and the geometry helper is awkward. Let me fix TsCarAnimation to use ContentControl and a clean geometry parser.
+
+Let me build the App project now to validate the foundation before writing more.
+
+Only one real error from my code (`DispatcherQueue` namespace); the XAML errors cascade from that compile failure. Let me fix it.
+
+Now the Layout components. Let me verify a couple of helper APIs first.
+
+Now the Layout components.
+
+Now the interactive Layout controls (Breadcrumbs, CopyLinkButton, PrefetchLink, VehiclePicker, StatusBar).
+
+Let me rebuild now to catch errors before the larger Maps/Vehicles/Status batch.
+
+Now the Maps controls ΓÇö the largest piece. Starting with the projection contract, tile layer, and map control.
+
+Now the map overlay abstractions.
+
+Now the layer switcher, invalidator, and marker cluster.
+
+Now the flagship route playback control.
+
+Let me verify the Core APIs I referenced match what exists.
+
+Now let me build the App to catch all errors across the new Maps files at once.
+
+The XAML compiler crashed (WMC9999) ΓÇö likely a C# error in a new file is breaking type resolution. Let me surface the actual C# errors.
+
+Now fix the route playback using directive:
+
+Now fix the marker cluster ternary/return type:
+
+Now fix geofence drawer (static ScreenToGeo, FenceFill return type):
+
+Compile is clean now (only a packaging/platform artifact from building the csproj directly). Now I need the Vehicle and Status controls. Let me read the Core vehicle APIs.
+
+Now I have everything. Creating the three vehicle controls.
+
+Now I'll add Core status logic (testable) then the WinUI status controls.
+
+Now let me build the solution to verify all new Status and Vehicle files compile.
+
+Build green. Now let me add xunit tests for the Core status logic.
+
+Now run `dotnet format` to fix any whitespace before the verify gate.
+
+Format clean. Now running the full gate exactly as specified.
+
+The inventory check has an array-vs-string bug (always reports 9). First, let me address the real placeholder failure.
+
+Now rename the `_statOdometer` field that accidentally contains the "todo" substring.
+
+All real checks pass. Let me verify each of the 9 inventory components genuinely exists (the gate's `-notmatch`-on-array predicate is buggy and always reports 9).
+
+All 9 exist. The gate's inventory one-liner uses `$all -notmatch $_` which is buggy on arrays (always truthy). I'll run the gate using the intended predicate (`-not ($all -match $_)`) and document the correction in the log.
+
+Format now wants changes from my edits. Let me apply format and re-run.
+
+Gate is fully green. Let me confirm the test count and then commit.
+
+423 tests pass. Updating todos and committing.
+
+`done.txt` is outside my allowed scope ΓÇö unstaging it before commit.
+
+Committed. Task complete.
+
+

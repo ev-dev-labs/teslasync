@@ -1,0 +1,41 @@
+I'll start by exploring the existing structure and web sources.
+
+Let me read the key sources and existing skeleton.
+
+Now let me find the CSS variable definitions for the actual color values (light/dark/high-contrast).
+
+I have all the source values. Let me verify tooling and check the log directory and ADR-005.
+
+I have everything needed. Now I'll author `tokens.json` with extracted values.
+
+Now the shared loader and color utilities for generators.
+
+Now the orchestrator (`index.mjs` with `--check`), the PowerShell wrapper, and the fidelity verifier.
+
+Now run the gate. First generate, then check drift, then fidelity.
+
+All three gates pass (GEN/DRIFT/FID = 0). Let me validate tokens.json against its schema and sanity-check the generated files.
+
+All three platform files look correct. There's a shape mismatch: the P0 schema declares color roles directly under `color`, but the prompt mandates `color: {light, dark, highContrast}`. Per honesty covenant #9 (no silent drift), I'll update the schema to match the real P1 shape (allowed ΓÇö `apps/design/**`).
+
+Now add the `colorVariant` definition. Let me append a `definitions` block.
+
+Now validate tokens.json against the schema with ajv to confirm conformance.
+
+ajv isn't installed. Rather than add a dependency, I'll write a small required-keys validator that walks the schema's `required` arrays.
+
+PowerShell mangled the `$ref` escaping. Let me use a temp file instead.
+
+Schema valid. Now a final clean gate run with the required `EXIT`/`STATUS` log footer.
+
+All gates green (GEN/DRIFT/FID/EXIT = 0, STATUS=DONE). Let me update the README's file table to document the new generators, then commit.
+
+Committed. Let me verify the commit contents are exactly the intended files.
+
+The generated platform files aren't in the commit. Let me check if they're gitignored.
+
+The generated theme files are intentionally gitignored (`.gitignore:380 apps/**/generated/`) ΓÇö they're derived artifacts, reproduced by the generator and verified by the `--check` drift gate in CI. The committed source of truth is `tokens.json` + the generators. This matches the prompt's commit scope (`git add apps/design` + log, no force-add).
+
+All work is complete and verified.
+
+

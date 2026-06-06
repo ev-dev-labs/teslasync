@@ -1,0 +1,5 @@
+[2026-06-04 20:20:01] [16/2734] START  p1-shared/S2-0001-client-codegen.prompt.md
+[2026-06-04 20:36:38] [16/2734] DONE in 16.6 min
+[2026-06-04 20:36:48] [17/2734] START  p1-shared/S3-0001-kmp-scaffold.prompt.md
+[2026-06-04 21:05:27] [17/2734] LOG-GATE FAILED (artifact log .github\prompts\monorepo\logs\p1-s3-0001-kmp-scaffold.log: final STATUS=BLOCKED) after 28.7 min
+[2026-06-04 21:05:27] STOPPED at red prompt 17 (log-gate). Resume with: -StartFrom 17

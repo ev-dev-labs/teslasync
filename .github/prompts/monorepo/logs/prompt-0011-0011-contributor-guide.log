@@ -1,0 +1,20 @@
+Now I have everything needed. Let me write the contributor guide.
+
+Now the GATE: verify all 6 sections present and all internal links resolve.
+
+All 6 sections present, sparse-checkout command included, and all 16 internal links resolve (BAD_LINKS=0). Now write the log and commit.
+
+P0/0011 complete.
+
+Wrote the full `apps/README.md` contributor guide (replacing the 0001 placeholder), covering all 6 required sections:
+
+1. **Map** of `apps/` ΓÇö every directory (shared/design/parity/windows/android/apple/tools/docs) + lock files
+2. **Sparse checkout** ΓÇö verbatim `git sparse-checkout set apps/shared apps/design apps/parity apps/windows api/openapi`
+3. **Per-platform setup** ΓÇö Windows/Android/Apple toolchains matching `versions.lock.md` (ADR-012)
+4. **Build/lint/test** ΓÇö the ADR-010 native triad per platform
+5. **Contract location** ΓÇö `api/openapi/teslasync.openapi.json` + client regeneration
+6. **Pointers** ΓÇö methodology, ADRs, parity README, both runbooks
+
+**Gate:** 6/6 sections present, sparse-checkout command included, **16/16 internal links resolve (BAD_LINKS=0)**. Committed `2e8170860` (guide + log, scoped to allowed files). `EXIT=0 / STATUS=DONE`.
+
+

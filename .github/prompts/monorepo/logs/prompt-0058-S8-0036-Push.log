@@ -1,0 +1,38 @@
+Let me explore the repo structure and the web source first.
+
+Let me study existing patterns ΓÇö a comparable presentation holder, the repo layer, and the API client.
+
+I have a clear picture. Let me write a plan and validate the design with the rubber-duck before implementing.
+
+Design is a direct mirror of the established Pinned/NotificationChannels pattern. Implementing now.
+
+Now the models file:
+
+Now let me run the gate. First compile/test:
+
+Tests pass. Now ktlint and placeholder check:
+
+Re-running tests after formatting to be safe, then finalizing the log:
+
+All three gates green. Let me finalize the log with the PARITY enumeration and EXIT/STATUS, then commit.
+
+Done. All gates green and committed.
+
+**P1/S8/0036 ΓÇö Push state holder** ported `usePush.ts` (4 hooks) to the KMP shared core:
+
+**Files (apps/shared/core)**
+- `cache/CacheDomain.kt` ΓÇö added `Push` partition
+- `presentation/push/PushModels.kt` ΓÇö `PushSubscription`, `PushSubscribeBody`/`Keys`, `PushPublicKey`
+- `data/repo/PushRepository.kt` ΓÇö S7 port + pure helpers (keys, web-faithful per-read TTLs, `pushPublicKeyValue`, `isPushUnconfigured`)
+- `data/repo/HttpPushRepository.kt` ΓÇö JsonElement-cached, decode-per-emission; public-key `||null` + 404/"not configured"ΓåÆnull derivation before cache
+- `presentation/push/PushStore.kt` ΓÇö `StateFlow` reads + suspend `Result` mutations
+
+**Parity**
+- `usePushPublicKey` ΓåÆ `publicKey()` GET /push/public-key, RARE 1h, retry:false, 404ΓåÆnull
+- `usePushSubscriptions` ΓåÆ `subscriptions()` GET /push/subscribe, STANDARD 60s, safeArray
+- `useSubscribePush` ΓåÆ `subscribe()` POST `{endpoint,keys}`, refresh list only
+- `useUnsubscribePush` ΓåÆ `unsubscribe()` DELETE `{endpoint}`, refresh list only (public-key feed never invalidated, mirroring web)
+
+**Verification (raw)**: `TEST_EXIT=0`, `LINT_EXIT=0`, `PH_EXIT=0` ΓåÆ `EXIT=0 / STATUS=DONE`. Golden vectors lock the derivations for KMPΓåöC# parity; contract test (MockEngine) locks endpoints/method/params/body + 404ΓåÆnull + cache-intact; store test (fake repo) verifies cacheΓåÆnetwork + invalidation granularity. SI preserved (no unit-bearing fields). C# port untouched (outside allowed file scope; golden vectors are language-neutral for it to adopt).
+
+

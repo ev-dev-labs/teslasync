@@ -1,0 +1,56 @@
+I have the web source. Let me study an existing ported domain to match the pattern. Let me find a similar simple read-only domain holder.
+
+Now let me look at the repository layer (S7) to understand the pattern and find where Trip type and trips repo would live.
+
+No Trip type exists yet in shared core. Let me look at the web Trip type and the generated models structure, plus CacheDomain and CachingRepository.
+
+I have everything needed. Let me check ktlint line-length config and the net `request` signature before writing.
+
+Now I'll write the implementation. Starting with the cache domain and tracking todos.
+
+Now the models file:
+
+Now the repository interface with query/key builders:
+
+Now the HTTP repository implementation:
+
+Now the store:
+
+Now the golden test and store test:
+
+Format applied. Now run the full gate:
+
+ktlint clean. Now run the tests:
+
+Let me verify the new tests actually executed and passed:
+
+Both test classes pass (6 + 5 tests, debug & release). Now the placeholder check:
+
+All gates green. Now writing the log and committing.
+
+I'll unstage the unrelated `done.txt` change to keep the commit scoped to this slice, then commit.
+
+done.txt is now unstaged (working-tree `M`, not in index). Staging is scoped correctly. Committing:
+
+Done. Both `useTrips` hooks ported to the KMP shared core as UI-free state holders, gate green.
+
+## P1 ┬╖ S8 ┬╖ 0051 ΓÇö Trips state holder ΓÇö `STATUS=DONE`
+
+**Ported (2/2 hooks):**
+- `useTrips` ΓåÆ `TripsStore.trips(params)` ΓÇö `GET /trips` with the web's per-field truthy query projection (`vehicle_id`/`limit` non-zero, `offset>0`, non-blank `start`/`end`, in URLSearchParams order), `safeArray` guard, cached under the `['trips', params]` hash.
+- `useTrip` ΓåÆ `TripsStore.trip(id)` ΓÇö `GET /trips/{id}`, cached under `['trips', id]`. The known backend 404 (web hook is `@deprecated`) surfaces verbatim through `Resource.Error`.
+
+**Files (all under `apps/shared/core/**`):** `TripsModels.kt` (SI `Trip` DTO + `TripsParams`), `TripsRepository.kt` (port + `tripsQuery`/key/family builders), `HttpTripsRepository.kt`, `TripsStore.kt`, `CacheDomain.Trips("trips", 60s)`, plus `TripsStoreTest` (5) + `TripsGoldenTest` (6).
+
+**Parity details:** SI preserved (`total_distance_m`/`_energy_wh`/`_duration_s`); no mutations (read-only domain); `refresh()` re-collects the `['trips']` family (list **and** detail) as the `invalidateQueries` analogue; query/key/family derivations locked by golden vectors for KMPΓåöC# parity.
+
+**Gate (actual output):**
+- `:core:allTests` ΓåÆ BUILD SUCCESSFUL; 11 Trips tests pass on debug + release. `TEST_EXIT=0`
+- `:core:ktlintCheck` ΓåÆ BUILD SUCCESSFUL. `LINT_EXIT=0`
+- `check-placeholders.ps1` ΓåÆ `PLACEHOLDER_COUNT=0`, `PH_EXIT=0`
+
+Committed (8 files, +782) as `feat(apps/shared): Trips state holder at web-hook parity (P1/S8)`. Unrelated `done.txt` working-tree change left untouched/unstaged.
+
+The task is fully complete ΓÇö all gates passed and the work is committed.
+
+

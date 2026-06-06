@@ -1,0 +1,47 @@
+Now I have full understanding. Let me create the implementation files.
+
+Now the state holder:
+
+Now add the `Feedback` cache domain:
+
+Now the three test files:
+
+Compiles cleanly. Now run the feedback tests, then the full android unit test suite and ktlint:
+
+Tests pass. ktlint flagged chain-wrapping. Let me auto-format:
+
+Now re-run ktlint check and tests together to confirm green:
+
+Both green. Now the placeholder check:
+
+All gates green. Now writing the execution log:
+
+Now commit:
+
+`done.txt` was already staged from a prior process and is out of my allowed scope. Let me unstage it:
+
+Staged set is now exactly the allowed scope. Committing:
+
+Committed. Task complete.
+
+## Summary
+
+Ported the web `useFeedback` hook domain (`web/src/api/hooks/useFeedback.ts`) to a UI-free KMP shared-core state holder at exact web parity.
+
+**All 3 hooks ported:**
+- `useFeedbackList` ΓåÆ `FeedbackStore.feedbackList(params)` ΓÇö `GET /admin/feedback` cache-then-network `StateFlow<Resource<ΓÇª>>`, query/key built by `feedbackQuery`/`feedbackCacheKey` (web `buildQuery`/`feedbackKeys.list` semantics; status/category dropped when blank, limit/offset sent incl. `0`). TTL 1m = web default `staleTime`.
+- `useSubmitFeedback` ΓåÆ `submitFeedback()` ΓÇö `POST /feedback`, **no cache invalidation** (matches the web hook exactly).
+- `useUpdateFeedback` ΓåÆ `updateFeedback()` ΓÇö `PATCH /admin/feedback/{id}`, invalidates the **whole** partition (= web `invalidateQueries(feedbackKeys.all)`) and refreshes every observed feed.
+
+**Files:** `FeedbackModels.kt`, `FeedbackStore.kt`, `FeedbackRepository.kt` (+ derivation helpers), `HttpFeedbackRepository.kt`, new `CacheDomain.Feedback`, plus 3 test files (fake-repo store tests, golden vectors, HTTP contract test). SI preserved (no unit-bearing fields).
+
+**Gate (honest, Windows host ΓÇö `:core` has android+apple targets, no jvm; apple Kotlin/Native can't run here, so the runnable full-commonTest task was used):**
+- `:core:testDebugUnitTest` ΓåÆ **PASS** (all commonTest incl. new tests)
+- `:core:ktlintCheck` ΓåÆ **PASS**
+- `check-placeholders.ps1` ΓåÆ `PLACEHOLDER_COUNT=0`, EXIT=0
+
+Logged to `p1-s8-0022-feedback.log` with `=== PARITY ===` and `EXIT=0 / STATUS=DONE`. Committed within the allowed file scope only.
+
+The task is fully complete and verified. All work is committed.
+
+

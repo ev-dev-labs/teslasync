@@ -1,0 +1,96 @@
+This is a non-trivial foundation task with a strict honesty covenant. Let me validate my plan before implementing.
+
+## Blocking Issues
+
+1. **Fallback materialization is only honest if it is explicitly ΓÇ£effective fallback,ΓÇ¥ not treated as translation**
+   - **Impact:** If ar/he catalogs look like real translated catalogs, this becomes red-as-green/parity shortcut.
+   - **Fix:** Keep per-entry metadata such as:
+     - `status: "fallback"`
+     - `fallbackFrom: "en"`
+     - `translated: false`
+     - maybe `sourceValueHash`
+   - The log/check output should loudly state: `ar: 0 translated, 7806 fallback`, `he: 0 translated, 7806 fallback`.
+   - Translators must be able to distinguish fallback entries from translated ones. If someone edits a fallback value without clearing the fallback flag, fail or warn strongly.
+
+2. **`-Check` must not silently regenerate away drift**
+   - **Impact:** If default generation runs before `-Check`, the check can only prove the generated output is currently complete, not that committed files were already in sync.
+   - **Fix:** Define `-Check` as read/compare-only: compute expected catalog/resources in memory and compare to files on disk. Exit nonzero on diff, missing files, stale fallback hashes, missing/extra keys, or emitter drift.
+
+3. **Apple `.xcstrings` plural format is easy to get wrong**
+   - **Impact:** A hand-rolled `variations.plural.{one,other}` shape may not be valid Xcode catalog JSON.
+   - **Fix:** Verify against real `.xcstrings` plural examples/Xcode schema. Ideally add a fixture test that parses/validates the generated file, not just JSON-validates it. Do not assume stringsdict-style plurals map directly.
+
+## Non-Blocking Issues
+
+1. **Fallback materialization should preserve source-locale truth**
+   - **Impact:** The neutral catalog could obscure that web ar/he have zero translation keys.
+   - **Fix:** In `_index.json`, record both:
+     - `sourceKeyCount: 0`
+     - `effectiveKeyCount: 7806`
+     - `fallbackKeyCount: 7806`
+   - That keeps the design covenant-compliant: structurally complete for platforms, honest about untranslated locales.
+
+2. **Plural schema should support future CLDR categories**
+   - **Impact:** Arabic will eventually need `zero/two/few/many`; limiting neutral plurals to `one/other` bakes in English assumptions.
+   - **Fix:** Model plural forms as open CLDR categories: `zero | one | two | few | many | other`. Current en-derived fallbacks may only contain `one/other`, but the schema should not prevent proper ar/he translations later.
+
+3. **The `_other`-only plural group must stay valid**
+   - **Impact:** If the generator requires both `one` and `other`, it will incorrectly fail or invent text.
+   - **Fix:** Allow plural groups with only `other`. Require `other`; do not require `one`.
+
+4. **Token ordering must be canonical per entry, not per form**
+   - **Impact:** If plural forms contain tokens in different orders, platform positional arguments can diverge.
+   - **Fix:** Build one deterministic token list per entry/group:
+     - repeated token gets same index every time
+     - plural `count` should have a stable index, preferably first if emitted as `%1$d`
+     - union tokens across all plural forms in deterministic order
+   - Validate that generated placeholders match that canonical order.
+
+5. **Android escaping needs more than XML escaping**
+   - **Impact:** Raw `%`, apostrophes, leading `@`/`?`, and formatting markers can break Android resources.
+   - **Fix:** Apply Android string-resource escaping in addition to XML escaping:
+     - `& < >` XML escape
+     - literal `%` ΓåÆ `%%`
+     - handle apostrophes/quotes according to Android rules
+     - escape leading `@`/`?` when needed
+
+6. **Collision checks need to cover generated suffix conventions**
+   - **Impact:** `a.b_c` and `a_b.c` can collide after dot-to-underscore conversion; Windows plural suffixes can collide with real keys.
+   - **Fix:** Check collisions for:
+     - Android normalized names
+     - Windows `Key.Plural.one/other`
+     - Apple dotted keys if any generated plural/helper key is added
+   - Fail generation on collision.
+
+## Suggestions
+
+1. **Separate ΓÇ£translation completenessΓÇ¥ from ΓÇ£effective platform completenessΓÇ¥**
+   - Effective completeness can be green because fallback provides every key.
+   - Translation coverage should remain visibly red/yellow for ar/he but not fail the gate unless the prompt requires real translations.
+
+2. **Make the final log line unambiguous**
+   - Ensure the last line of every invocation is exactly:
+     - `EXIT=0`
+     - `STATUS=DONE`
+   - Or on failure:
+     - `EXIT=<nonzero>`
+     - `STATUS=BLOCKED`
+   - Preserve native exit codes through `Tee-Object`; donΓÇÖt rely on `$?`.
+
+Overall: fallback materialization can be covenant-compliant, but only if it is explicitly modeled as fallback/effective output, not silently counted as translated content. The highest-risk technical areas are `-Check` drift semantics, Apple plural catalog validity, and platform-specific escaping/placeholders.Now let me run the generator.
+
+Found a real correctness issue: 15 plural bases also have a plain (non-suffixed) key, and 2 plural groups (`export.jobDrawer.activeCount`, `diagnostic.checkCount`) have only `_other` with the singular living in the plain key. My current code silently drops those plain values. Let me fix the grouping to fold the plain i18next base into the plural forms.
+
+I targeted the wrong file path. Let me fix the doc.
+
+All artifacts valid and complete (7772 entries ├ù 3 locales). Now run the drift `--check` and the full gate.
+
+Let me verify the check actually detects drift (negative test), then run the official gate.
+
+The drift check works (exit 1 on tamper, restored clean). Now run the official gate.
+
+Gate is green. Let me verify the log and then commit.
+
+Generated `.resw`, `.xcstrings`, and `strings.xml` have no `eol` attribute. Locally `autocrlf=false` so it's fine, but on a Windows checkout with `autocrlf=true` they'd become CRLF and false-trip the drift gate (exactly what this repo's `.gitattributes` defends against). Let me pin them to LF.
+
+

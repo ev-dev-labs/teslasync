@@ -1,0 +1,25 @@
+This is a substantial port task. Let me study existing sibling state holders to mirror the established pattern.
+
+Now writing the implementation. Starting with the models + derivations:
+
+Now add the `Telemetry` CacheDomain:
+
+All telemetry tests pass (Golden 11, Store 8, 0 failures). Now ktlint + placeholders.
+
+All gates green: tests pass, ktlint clean, placeholders 0. Now writing the gate log.
+
+Let me verify the log's endpoint claims match the actual implementation before committing.
+
+The implementation endpoints differ from my log draft ΓÇö I must reconcile both against the web source. Let me read the actual web hook file and my repository.
+
+My implementation correctly matches the web source ΓÇö but my **log draft has wrong endpoint strings** for several hooks (log, diff, gaps, mqtt, fleet-telemetry paths). The implementation is right; the log must be corrected to match reality.
+
+Two log naming nits: accessor is `vehicleLiveSignals` and `refreshFleetTelemetryErrors()` takes no vin. Fixing.
+
+Log is now accurate. Committing.
+
+Staged files match the allowed set (done.txt modification is unstaged, untouched). Committing.
+
+Committed `15be69a3d`. Task complete.
+
+

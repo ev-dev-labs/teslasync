@@ -1,0 +1,47 @@
+I have the web source. Let me find a similar existing state holder to model from, plus the repo/types structure.
+
+Let me examine a comparable existing domain end-to-end (store, repo, models, tests) to mirror the patterns exactly.
+
+Now let me check for a serialized enum-field example and review the predecessor log format.
+
+Now I have all the patterns. Let me create the files.
+
+Now the repository port and HTTP implementation:
+
+Now the store:
+
+Now add the CacheDomain entry:
+
+Now the tests:
+
+Now let me run the gate. First the tests:
+
+Tests pass. Now ktlint and placeholders:
+
+Lint passes. Now the placeholder check:
+
+All gates green. Now append the PARITY section and final status to the log:
+
+Now commit:
+
+done.txt got staged but isn't in my allowed scope. Let me unstage it and commit only the allowed files:
+
+P1/S8/0057 complete and committed (`c999f7641`).
+
+## Summary
+
+Ported the web `useVehicleSettings.ts` hook domain (all 3 hooks) to UI-free KMP shared-core state holders at web parity.
+
+**Files added (`apps/shared/core`):**
+- `presentation/vehiclesettings/VehicleSettingsModels.kt` ΓÇö `EffectiveSettingSource` (enum, SerialName wire), `EffectiveSetting` (value as `JsonElement` = web `unknown`), `VehicleSettingsResponse`, and the `findEffectiveSetting` selector.
+- `data/repo/VehicleSettingsRepository.kt` ΓÇö S7 port: 1 read + 2 mutations, `vehicleSettingsCacheKey`, `upsertVehicleSettingBody`, TTL constant.
+- `data/repo/HttpVehicleSettingsRepository.kt` ΓÇö Ktor/cache impl; key percent-encoded via `encodeURLPathPart` (= `encodeURIComponent`); evicts the detail key on success.
+- `presentation/vehiclesettings/VehicleSettingsStore.kt` ΓÇö shared `StateFlow` feed + suspend `Result` mutations; refreshes the feed and fires `onVehicleChanged` (the cross-domain `vehicleKeys.detail` analogue).
+- `cache/CacheDomain.kt` ΓÇö new `VehicleSettings("vehicle_settings", 30.seconds)` matching the web `staleTime: 30_000`.
+- Store + Golden tests (fake-repo): cacheΓåÆnetwork emission, feed-sharing, per-vehicle invalidation granularity, mutation routing, failure-no-refresh, and golden-locked derivations (cache key, upsert body, decode, selector).
+
+**Parity mapping:** `useVehicleSettings`ΓåÆ`vehicleSettings`, `useUpsertVehicleSetting`ΓåÆ`upsertVehicleSetting` (PUT `{value}` verbatim), `useResetVehicleSetting`ΓåÆ`resetVehicleSetting` (idempotent DELETE). Both mutations evict the detail key + delegate `vehicleKeys.detail(id)` to `onVehicleChanged`. SI preserved (no unit-bearing fields).
+
+**Gate:** `TEST_EXIT=0`, `LINT_EXIT=0`, `PH_EXIT=0` ΓåÆ `EXIT=0` / `STATUS=DONE`. Log at `.github/prompts/monorepo/logs/p1-s8-0057-vehiclesettings.log` with the `=== PARITY ===` enumeration. (Unrelated pre-existing `done.txt` modification was left unstaged to keep the commit within the allowed file scope.)
+
+

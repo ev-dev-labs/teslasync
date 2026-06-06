@@ -1,0 +1,45 @@
+I'll start by exploring the relevant files and understanding the existing structure.
+
+Let me study existing patterns and the API endpoints. Let me look at a representative store with mutations plus the chat API functions.
+
+Now let me study the repository layer, the Resource type, types, and the test patterns.
+
+Multiple read shapes share one domain in chat. Let me see how Automations/Admin repos handle heterogeneous cached types.
+
+I have everything needed. Let me set up tracking and create the implementation files.
+
+Now the CacheDomain entry and the `evict` helper:
+
+Now let me run the gate. First, verify the gradle setup:
+
+Build succeeded and tests passed. There's a compiler warning about an unnecessary `!!`. Let me fix it and run ktlint + placeholder checks.
+
+ktlint passes. Now run the full tests again (clean) and the placeholder check:
+
+Let me confirm my chat tests actually ran and run the placeholder check:
+
+All 27 chat tests pass. Now the placeholder check:
+
+All gates green. Let me write the log and commit. Let me check the existing log format first:
+
+`done.txt` was already staged from a prior state but is out of my allowed scope. Let me unstage it and commit only the in-scope files:
+
+Done. P1/S8/0013 Chat state holder is complete and committed.
+
+## Summary
+
+Ported all **5 hooks** from `web/src/api/hooks/useChat.ts` to a UI-free KMP shared-core state holder, verified against `devtools.ts`, `router.go`, and `chatbot/dtos.go`.
+
+**Reads (2):** `chatSessions()` ΓåÆ `GET /chatbot/sessions`; `chatHistory(id)` ΓåÆ `GET /chatbot/history?session_id=` (with the web `enabled: !!sessionId` gate). Both exposed as shared cache-then-network `StateFlow<Resource<T>>`.
+
+**Mutations (3):** `renameChatSession` (PATCH, id percent-encoded, body `{title}`), `deleteChatSession` (DELETE 204), `sendChatMessage` (POST, drops `session_id` when null). Rename/delete optimistically patch the cached session list (the `setQueryData` analogue) and the store refreshes the sessions feed (`invalidateQueries` analogue); delete also evicts the session's history key (`removeQueries` analogue). Send has no cache interaction.
+
+**Derivations golden-locked** (KMP+C# parity): `normalizeChatTitle`, `applyRenameToSessions`, `applyDeleteToSessions`, `chatHistoryKey`/`chatHistoryQuery`.
+
+**Files:** new `chat/ChatModels.kt`, `ChatStore.kt`, `ChatRepository.kt`, `HttpChatRepository.kt` + 3 test files; added `CacheDomain.Chat` and a `protected evict(key)` to `CachingRepository`. SI preserved (no unit-bearing fields).
+
+**Gate (all green):** `TEST_EXIT=0` (27 chat tests, 0 failures), `LINT_EXIT=0` (ktlint), `PH_EXIT=0` (placeholders). `EXIT=0 / STATUS=DONE`. Committed as `ae0ec42b2`.
+
+The task is fully complete ΓÇö all gates pass and the work is committed.
+
+

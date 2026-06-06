@@ -1,0 +1,29 @@
+Now I'll make surgical enhancements to satisfy the 0005 contract. First, the param block:
+
+Now enhance `Test-LogSaysRed` to detect commit failures and parity gaps:
+
+Now add the `-SelfTest` block right after the function. Let me view the current location:
+
+I have a logic bug ΓÇö an empty existing file returns not-red. Let me fix that bogus assertion:
+
+Now let me wire `-ContinueOnRed` STOP semantics and a summary table into the main loop. Let me view the relevant region:
+
+Now I'll add a results accumulator, STOP-on-red semantics, and a summary table:
+
+Now add the per-prompt summary table to the final summary:
+
+Now create the empty `done.txt` artifact and run the self-test, capturing output to the log:
+
+Log looks correct. Let me append the covenant-required final markers and verify the full script parses:
+
+Let me verify the raw final bytes of the log ΓÇö the tail display merged two lines:
+
+All acceptance criteria met. The earlier console "PASSEXIT=0" was just a `-Tail` rendering quirk ΓÇö the file has `EXIT=0` and `STATUS=DONE` on their own lines.
+
+Verification summary:
+- **`Test-LogSaysRed`** now detects all 5 red conditions ΓÇö self-test output shows PASS for `STATUS=BLOCKED`, `EXITΓëá0`, `[FAIL]`, `COMMIT_EXITΓëá0`, parity gap, plus a green-case (`isRed=False`) and missing-log case.
+- **Self-test** (`-SelfTest`): both positive and negative cases pass, `SELFTEST_EXIT=0`, process exit code 0.
+- **done.txt**: created empty (0 bytes); runner appends only in the green branch and `break`s on red unless `-ContinueOnRed`.
+- Script parses clean (2978 tokens); committed as `32f04e758`.
+
+

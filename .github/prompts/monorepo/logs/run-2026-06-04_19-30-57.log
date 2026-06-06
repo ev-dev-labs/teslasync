@@ -1,0 +1,4 @@
+[2026-06-04 19:30:57] [17/2734] START  p1-shared/S11-0001-diagnostics.prompt.md
+[2026-06-04 19:30:57] [17/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s11-0001-diagnostics.log
+[2026-06-04 19:36:08] [17/2734] LOG-GATE FAILED (artifact log .github\prompts\monorepo\logs\p1-s11-0001-diagnostics.log: final EXIT=1, final STATUS=BLOCKED) after 5.2 min
+[2026-06-04 19:36:08] STOPPED at red prompt 17 (log-gate). Resume with: -StartFrom 17

@@ -1,0 +1,43 @@
+Now I have a complete understanding of the patterns. Let me set up tracking and create the files.
+
+Now creating the source files:
+
+Now add the CacheDomain and the store:
+
+Following the established `FeedbackStore` precedent (placeholderData left to render layer; single dynamic input for a search box), I'll write the holder:
+
+Module is `:core`, gradle root is `apps/shared`. Let me run the test gate. This will be long; I'll allow time.
+
+Tests pass. Now ktlint and placeholder checks:
+
+ktlint clean. Now re-run tests (edited test files) and the placeholder check:
+
+Now fix the SearchStore.kt occurrence:
+
+Placeholder gate clean. Final verification ΓÇö re-run ktlint and tests together since I edited comments:
+
+All gates pass. Now writing the log and cleaning up:
+
+Done. **P1/S8/0039 ΓÇö Search state holder** is complete and committed (`335d4b80e`).
+
+## What shipped
+Ported the web `useSearch` domain (1 read hook, 0 mutations) to UI-free KMP shared-core state holders, exactly mirroring `web/src/api/hooks/useSearch.ts`:
+
+- **`SearchModels.kt`** ΓÇö `SearchHitType` (9 wire tokens), `SearchHit`/`SearchResponse`, `SearchOptions`/`SearchInput`, and the `planSearch` gating derivation (`!disabled && trim.length >= 2`).
+- **`SearchRepository.kt` + `HttpSearchRepository.kt`** (S7) ΓÇö `GET /search` cache-then-network; `q` always, `types` only when non-empty (comma-joined), `limit` only when `>0`; cache key flattens the web `searchKeys.global` tuple.
+- **`SearchStore.kt`** (S8) ΓÇö single dynamic input ΓåÆ one shared `StateFlow<Resource<SearchResponse>>` via `flatMapLatest`; too-short/disabled queries settle to empty **without** a request.
+- **`CacheDomain.Search`** ΓÇö 30s TTL matching web `STALE_TIMES.FAST`.
+- **Tests** ΓÇö contract (endpoint/params/decode/cache), store (fake-repo routing + gating), and **golden vectors** for `planSearch`/`searchQuery`/`searchCacheKey` (KMPΓåöC# parity).
+
+## Gate results (all green)
+```
+TEST_EXIT=0   (:core:allTests ΓÇö 978 tests, 19 new Search tests)
+LINT_EXIT=0   (:core:ktlintCheck)
+PH_EXIT=0     (check-placeholders ΓÇö PLACEHOLDER_COUNT=0)
+```
+
+Honest scope note: `placeholderData (prev)=>prev` keep-previous is left to the render layer, consistent with the sibling `FeedbackStore` precedent. Log ends `EXIT=0 / STATUS=DONE`.
+
+All gates pass, the work is committed, and all todos are done.
+
+

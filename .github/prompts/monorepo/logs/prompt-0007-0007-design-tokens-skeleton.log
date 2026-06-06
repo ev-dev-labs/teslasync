@@ -1,0 +1,20 @@
+Now I'll create the schema, README, and generated dirs.
+
+Now run the GATE and write the log.
+
+The README category check errored out (bad regex) ΓÇö must verify honestly. Rerunning with substring matching.
+
+All checks green. Committing.
+
+P0/0007 complete and committed (`e8b15b2e5`).
+
+**Delivered** (`apps/design/`):
+- `tokens.schema.json` ΓÇö valid draft-07 schema, all 7 token categories (`color`, `chart`, `typography`, `spacing`, `radius`, `elevation`, `motion`) marked `required`, each with semantic sub-roles (shape only, no values).
+- `README.md` ΓÇö ADR-005 tokenΓåÆFluent/Material 3/HIG mapping table, the 7 categories, and the 3 generation targets (`Tokens.xaml`, `Theme.kt`, `Tokens.swift`).
+- `generated/{windows,android,apple}/.gitkeep` ΓÇö directory contract for P1 generators.
+
+**Verified (raw):** `ConvertFrom-Json` ok ┬╖ `REQUIRED=color,chart,typography,spacing,radius,elevation,motion` ┬╖ `CATEGORY_COUNT=7` ┬╖ all README category/target substrings `True` ┬╖ gen dirs present ┬╖ `COMMIT_EXIT=0`. Log ends `EXIT=0 / STATUS=DONE`.
+
+Note: initial gate's README regex check errored (PowerShell treated `**` as a quantifier); I re-ran with substring matching to honestly confirm coverage rather than trust the bypassed check.
+
+

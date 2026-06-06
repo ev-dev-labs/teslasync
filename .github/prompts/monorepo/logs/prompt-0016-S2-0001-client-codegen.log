@@ -1,0 +1,146 @@
+I'll start by exploring the current state of the repo to understand what exists relative to this task's dependencies.
+
+Let me use more targeted paths.
+
+The OpenAPI spec exists, but `apps/shared/core` (the KMP scaffold from P1/S3) doesn't appear to exist yet. Let me investigate the dependencies and existing tooling.
+
+`apps/shared/core` (the P1/S3 KMP scaffold this depends on) does not exist ΓÇö there's no Gradle module, no `gradlew`, no `:core`. Per the Honesty Covenant (rule 7: No predecessor bypass, rule 3: No skip-and-assume), I need to understand this carefully before deciding. Let me check the spec, prompt conventions, and prior logs.
+
+Done.txt confirms S2 and S3 are **not** complete. The predecessor P1/S3 (KMP scaffold) hasn't run ΓÇö there's no `apps/shared/core` Gradle module. Toolchain: JDK 21, .NET 10, Node 24 available; no gradle/openapi-generator on PATH. Let me read the actual prompt files and inspect the OpenAPI structure.
+
+Now I have the full picture. The S2 gate's `KT_EXIT` step needs the S3 KMP scaffold (`apps/shared/core` Gradle `:core` module), which is **not done** (not in done.txt, directory absent). Per Honesty Covenant rule 7 (No predecessor bypass) I won't fabricate S3. But I can build the full reproducible pipeline, generate both clients, compile-verify C# (dotnet 10 present), and run the drift gate ΓÇö marking only the KT compile honestly as BLOCKED on S3.
+
+Let me inspect the OpenAPI spec structure to design a deterministic emitter.
+
+Only 9 named schemas but 464 paths. Let me examine the schemas in detail and the path/operation structure to design the emitter.
+
+Schemas are clean SI-canonical snake_case with nullable via `["type","null"]`. Let me examine the paths/operations structure.
+
+529 operations (all with operationId), no request bodies, params in path/query, 8 schemas referenced in 200s + Error. Let me verify global security and confirm all schema properties are scalar (no arrays/refs) so my type mapping is complete.
+
+The inline escaping is fragile. Let me write a small analysis script file.
+
+All scalar properties, bearerAuth global, 30 public / 499 secured ops. I have a clear design. Let me record a plan and get a rubber-duck critique before implementing, since the Kotlin compile can't be verified locally (S3 missing) ΓÇö I want to de-risk correctness.
+
+## Blocking Issues
+
+1. **`STATUS=BLOCKED` is the honest outcome**
+   - **Impact:** Acceptance requires `:core` compile, but predecessor P1/S3 has not created `apps/shared/core` / Gradle module.
+   - **Severity:** Blocking.
+   - **Recommendation:** End with `STATUS=BLOCKED`, not `DONE`. GEN/C#/DRIFT green is not enough because acceptance #1 is unmet.
+   - **On minimal Gradle scaffolding:** I would treat that as **predecessor bypass** unless the prompt explicitly authorizes creating the KMP scaffold. Creating ΓÇ£just enoughΓÇ¥ `:core` to compile is effectively implementing P1/S3 partially and risks violating rule 7.
+
+2. **Generated Kotlin cannot be fully validated**
+   - **Impact:** Without the KMP scaffold and serialization plugin/deps, Kotlin syntax/type issues may slip through.
+   - **Severity:** Blocking only for `DONE`; acceptable for `BLOCKED`.
+   - **Recommendation:** Clearly state Kotlin output is generated but not compile-verified because P1/S3 is absent.
+
+## Non-Blocking Issues / Traps to Watch
+
+1. **Kotlin `explicitApi()`**
+   - Public top-level declarations need explicit visibility and explicit types.
+   - Emit e.g.:
+     - `public data class Vehicle(...)`
+     - `public val Endpoints: List<ApiEndpoint> = ...`
+     - constructor props as `public val foo: String`
+   - Avoid inferred public constants/lists.
+
+2. **Reserved identifiers**
+   - Kotlin: `in`, `object`, `when`, `class`, etc. must be escaped with backticks or renamed.
+   - C#: `event`, `namespace`, `params`, `operator`, etc. need `@event` or safe renaming.
+   - Endpoint descriptor field named `in` is a real trap. Prefer `location` / `parameterIn`.
+
+3. **kotlinx.serialization**
+   - Every model needs `@Serializable`.
+   - Every wire-name mismatch needs `@SerialName("snake_case")`.
+   - Optional properties should have defaults, usually `= null`, otherwise deserialization may require them.
+   - Required nullable edge case: if a property is both required and nullable, emit `Type?` **without** default if presence matters.
+
+4. **C# `required`**
+   - `required string Foo { get; init; }` is fine for non-null required refs.
+   - For value types, `required long Foo { get; init; }` may be okay but can be noisier than necessary.
+   - Optional refs should be nullable: `string?`.
+   - Optional value types should be nullable: `long?`, `double?`, `bool?`.
+
+## Custom Emitter
+
+Defensible, given:
+- The schema surface is simple/scalar-only.
+- You need dual-target output.
+- You need endpoint descriptors, not just DTOs.
+- The prompt explicitly permits a small custom emitter.
+
+Risk:
+- You must version/pin the emitter identity clearly, since you are bypassing the locked generators. Good that `codegen.config.json` records this.
+- Make sure README explains why openapi-generator/NSwag/Kiota were not used.
+
+## Drift Gate Flakiness Risks
+
+Watch these:
+- Force deterministic file ordering: sort schemas, operations, properties, params.
+- Normalize line endings. Emit `\n` consistently; configure `.gitattributes` if possible.
+- Always emit final trailing newline.
+- Avoid timestamps, absolute paths, machine-specific temp paths.
+- Use stable JSON parsing/stringification.
+- Ensure `--check` compares normalized content, not platform-specific diff behavior.
+- Temp dir is fine, but cleanup should not affect result; failure should still report drift clearly.
+
+## Bottom Line
+
+Your plan is mostly sound, but **`DONE` would be dishonest** unless `:core` exists and `compileKotlinMetadata` passes. The correct covenant-compliant result is:
+
+`EXIT=1` or task-specific nonzero  
+`STATUS=BLOCKED`  
+Reason: predecessor P1/S3 KMP scaffold absent, so required Kotlin compile acceptance cannot be executed.Rubber-duck confirms STATUS=BLOCKED is the honest outcome and flagged concrete traps (reserved word `in` ΓåÆ use a safe field name; explicitApi `public`/explicit types; `@Serializable`/defaults; C# `required` only for non-null refs; drift-gate determinism: sort everything, normalize CRLF, trailing newline). Let me build the emitter.
+
+A prior partial attempt exists. Let me check git status and any existing log/generated files to reconcile.
+
+A prior pass left `codegen.config.json` (package `io.teslasync.shared.core.api.generated`, `kotlinx.datetime.Instant` / `System.DateTimeOffset` for date-time). I'll honor that config. Let me align: remove my stray `com/` dir, switch the runner to node, and create the emitter reading the config's fields.
+
+Now the emitter:
+
+Now the PowerShell wrapper and README:
+
+Output looks correct. Now create the tiny C# compile-check project and verify it builds with .NET 10.
+
+Now build the C# project to compile-verify, then run the drift gate.
+
+C# compiles clean (0 warnings/errors with TreatWarningsAsErrors). Now run the drift gate.
+
+Drift check reports files as missing though they exist ΓÇö a path bug. Let me debug.
+
+There are unexpected per-schema `.kt` files and `ApiEndpoints.kt` from a prior/concurrent attempt ΓÇö and my `Models.kt`/`Endpoints.kt` vanished. The recent `run-*.log` timestamps (20:19ΓÇô20:20) suggest a concurrent prompt-runner may be writing here. Let me investigate.
+
+A concurrent prompt-runner is executing the **same** `S2-0001-client-codegen` prompt (run log: `[16/2734] START p1-shared/S2-0001-client-codegen.prompt.md` at 20:20:01) and there are node processes started at 20:20:11. My `Models.kt` was overwritten by a competing emitter producing per-schema files. Let me check file timestamps and the competing artifacts.
+
+The competing per-schema files were written at **20:30:55 ΓÇö after** my generation, deleting my `Models.kt`/`Endpoints.kt`. A concurrent agent is actively executing the same prompt. Let me check whether it's still actively writing before deciding how to proceed.
+
+Writes have been stable for 25s+ (newest file is my own `.gitattributes` at 20:31:05); the concurrent attempt appears abandoned ΓÇö it left orphan per-schema `.kt` files but produced no log and isn't in `done.txt`. These orphans would cause duplicate-class compile errors alongside my `Models.kt`. I'll consolidate on my deterministic, verified emitter as the single source of truth. Let me check the C# side for peer files too, then clean and regenerate.
+
+The C# files were rewritten at **20:33:42** ΓÇö within the last minute, after my last check. The concurrent agent is **actively progressing** (Kotlin at 20:30:55, then C# at 20:33:42), executing the identical prompt and replacing my files as it goes. This is a live write-write race. Let me check whether the peer also owns the `apps/tools/codegen` pipeline and whether it's nearing completion.
+
+Now it's unambiguous: the concurrent agent owns the **entire** `apps/tools/codegen` pipeline with its own architecture ΓÇö it just rewrote `codegen.config.json` (20:33:24), added its own `gen-clients.ts` (20:33:16), a `verify/` dir, a `.toolcache/`, and overwrote my `emit.mjs` (20:30:22). It's progressing rapidly (Kotlin ΓåÆ C# ΓåÆ tooling) and hasn't logged/committed yet. Let me do one final confirmation that it's still actively writing.
+
+At T1, the peer rewrote `gen-clients.ps1` at 20:35:40 ΓÇö 2 seconds before now. It is **still actively writing**. This confirms a live concurrent agent executing the identical `S2-0001-client-codegen` prompt with its own complete, coherent implementation (TypeScript emitter, per-schema files, `verify/`, `.toolcache/`), progressing through every file and overwriting mine within seconds.
+
+Continuing would be a destructive write-write race that corrupts the peer's in-flight work and produces a broken, interleaved result (e.g. duplicate Kotlin class declarations). The correct engineering decision in this shared environment is to stand down. Let me remove only my own stray temp file and leave the peer's scope untouched.
+
+I'm standing down. Here's my honest assessment.
+
+## What happened
+
+While executing the **P1/S2 client-codegen** prompt, I discovered a **concurrent agent actively executing the identical prompt** in this shared environment:
+
+- The prompt-runner log shows `[16/2734] START p1-shared/S2-0001-client-codegen.prompt.md` at 20:20:01.
+- The peer is rapidly and continuously rewriting **every file in scope** ΓÇö overwriting my output within seconds: Kotlin models (20:30:55), C# models (20:33:42), `codegen.config.json` (20:33:24), its own `gen-clients.ts` emitter, a `verify/` dir, `.toolcache/`, and `gen-clients.ps1` (last write 20:35:45, seconds before I stopped).
+- It uses its own coherent architecture (one file per schema + `ApiEndpoints`), distinct from my single-file emitter.
+
+Continuing would be a **destructive write-write race**: our two emitters target the same files, so co-existing output produces duplicate Kotlin class declarations (won't compile) and an interleaved, broken commit. The correct engineering decision is to yield to the actively-running, more-complete peer rather than corrupt its in-flight work. I committed nothing (git HEAD unchanged) and removed my only stray temp file.
+
+## Substantive findings (valid regardless of who finishes)
+
+- **The task is genuinely BLOCKED on its predecessor P1/S3.** The gate's `KT_EXIT` step (`cd apps/shared/core && ./gradlew :core:compileKotlinMetadata`) cannot pass: the KMP scaffold (`apps/shared/core` Gradle `:core` module) does not exist and S3 is not in `done.txt`. Per the Honesty Covenant (rule 7, no predecessor bypass), no agent can honestly reach `STATUS=DONE` for S2 until S3 lands ΓÇö the correct terminal state is `STATUS=BLOCKED`. **Whoever finishes S2 must do S3 first.**
+- **Spec shape:** OpenAPI 3.1, 9 scalar-only schemas, 529 operations (all `operationId`, no request bodies, path/query params only), global `bearerAuth` (30 public ops via `security: []`, 499 secured).
+- **Approach validated:** My deterministic C# client generated from the spec compiled cleanly under .NET 10 (`dotnet build`, 0 warnings/0 errors with `TreatWarningsAsErrors`), and the drift-gate design (normalize CRLF, sort all collections, trailing newline) is sound ΓÇö confirming the C# half is fully achievable now while only the Kotlin compile is blocked on S3.
+
+

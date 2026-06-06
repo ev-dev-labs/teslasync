@@ -1,0 +1,47 @@
+I'll start by exploring the structure to understand the task. Let me read the key files.
+
+Let me study an existing simple read-only domain to mirror the pattern. ApiHealth looks like a good single-read template.
+
+Dashboard is a standard cache-then-network read. Let me study a cache-then-network read domain and supporting infrastructure.
+
+Now let me check the backend dashboard endpoint wire shape and look at test patterns (contract test, store test, golden test).
+
+The wire shape is camelCase. Let me check how a typed-model cache-then-network domain is structured (VehicleRepository) to decide typed vs JsonElement.
+
+AuthMode is the ideal template (single typed read, no params/mutations). Let me read its tests and check for any DI wiring I must extend, plus the cache JSON unknown-keys config.
+
+All clear. `STALE_TIMES.STANDARD = 60_000` (1 min). No central DI to wire. Now I'll create the artifacts. First, the cache domain entry.
+
+Now the repository interface + typed model:
+
+Now the store (mirrors AuthModeStore ΓÇö single read, no derivations, no mutations):
+
+Now the tests:
+
+Now let me run the gate. First, verify the log dir and tooling exist.
+
+Module `:core`, gradlew at `apps/shared`. Running the test gate (this will take a while):
+
+Tests pass (TEST_EXIT=0). Let me fix the compiler warning (redundant `!!`) and run ktlint + placeholder checks.
+
+ktlint passes. Now the placeholder check and a re-run of tests (test file was edited):
+
+All gates green (TEST=0, LINT=0, PH=0). Let me finalize the log with the PARITY enumeration and EXIT/STATUS, then commit.
+
+`done.txt` got staged but isn't part of my commit spec. Let me unstage it and commit only the intended files.
+
+Staging is clean now. Committing:
+
+P1/S8/0015 complete. Committed as `a57d27a23`.
+
+**What I built** ΓÇö ported the web `useDashboard` hook (`useDashboardStats`, 1 read, 0 mutations) to a UI-free KMP shared state holder, mirroring the existing `AuthMode` single-read pattern:
+
+- **`DashboardRepository.kt`** ΓÇö S7 port + typed `@Serializable DashboardStats` DTO (camelCase SI fields: `totalM`=meters, `totalEnergyWh`=Wh, `totalCostCents`=cents), all defaulted for safe partial decode.
+- **`HttpDashboardRepository.kt`** ΓÇö cache-then-network impl, `GET /dashboard/stats`, `CacheDomain.Dashboard`.
+- **`CacheDomain.kt`** ΓÇö added `Dashboard` domain, TTL `1.minutes` matching web `STALE_TIMES.STANDARD` (60s).
+- **`DashboardStore.kt`** ΓÇö hot `StateFlow<Resource<DashboardStats>>` via `trigger Γû╕ flatMapLatest Γû╕ stateIn`, with `refresh()`. No derivation (web applies no `select`), no invalidation surface.
+- **Tests** ΓÇö `DashboardStoreTest` (5 fake-repo tests: initial Loading, cacheΓåÆnetwork, SI passthrough, refresh re-fetch, no-op refresh) + `DashboardRepositoryContractTest` (endpoint/no-params, typed round-trip, partial-payload defaults, SI serial-names/no legacy suffixes).
+
+**Gate:** `TEST_EXIT=0`, `LINT_EXIT=0`, `PH_EXIT=0` ΓåÆ `EXIT=0 / STATUS=DONE`. Log at `.github/prompts/monorepo/logs/p1-s8-0015-dashboard.log` with the `=== PARITY ===` enumeration (1/1 hooks). SI preserved throughout; conversion deferred to the S5 display boundary. No central DI required (stores are constructed at the platform layer).
+
+

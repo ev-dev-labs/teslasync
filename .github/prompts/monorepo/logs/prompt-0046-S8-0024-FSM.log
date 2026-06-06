@@ -1,0 +1,47 @@
+Let me explore the task context before making changes.
+
+Let me look at the existing shared core source structure and a sibling state holder for the pattern to follow.
+
+Let me study the established patterns from a representative read-only domain.
+
+Now I have a complete picture. Let me set up todos and create the implementation files.
+
+Now let me create the implementation. First, add the CacheDomain partition:
+
+Now the store test and golden test:
+
+Found it ΓÇö `/*` in `fsm/*` opens a nested comment (Kotlin supports nested block comments). Let me fix:
+
+Tests pass. Now ktlint and placeholder check:
+
+ktlint clean. Now the placeholder check:
+
+All gates green. Let me finalize the log with the parity enumeration and commit:
+
+Staged set matches the prompt scope (`apps/shared/core` + the log). Committing:
+
+Committed. P1/S8/0024 is complete.
+
+## Summary
+
+Ported the web `useFSM` hook domain (`web/src/api/hooks/useFSM.ts`) to UI-free KMP shared-core state holders at full parity.
+
+**Production code (`apps/shared/core/commonMain`):**
+- `data/repo/FsmRepository.kt` ΓÇö S7 port interface + the `FsmType` enum and three pure, golden-locked derivations (`fsmNameParam`, `buildFsmTransitionsQuery`, `fsmTransitionsKey`).
+- `data/repo/HttpFsmRepository.kt` ΓÇö cache-then-network impl over `ApiHttpClient`.
+- `presentation/fsm/FsmStore.kt` ΓÇö shared `StateFlow<Resource<JsonElement>>` holder for both reads, with the `enabled: !!entityId` gate and scoped refresh.
+- `cache/CacheDomain.kt` ΓÇö added the `Fsm` partition (10s window = web `INTERVALS.FAST`).
+
+**Parity (2/2 reads, 0 mutations):**
+- `useFSMStats` ΓåÆ `GET /fsm/stats?vehicle_id=`
+- `useFSMTransitions` ΓåÆ `GET /fsm/transitions` with snake_case core params, conditional `fsm_name` (suppressed for `all`), and the half-open `start`/`end` instant window only when both ends are supplied. SI preserved verbatim.
+
+**Tests:** `FsmRepositoryContractTest` (endpoint/param locks), `FsmStoreTest` (cacheΓåÆnetwork, gate, sharing, scoped refresh), `FsmDerivationGoldenTest` (KMP+C# golden vectors).
+
+**Gate ΓÇö all green:** `TEST_EXIT=0`, `LINT_EXIT=0`, `PH_EXIT=0` ΓåÆ `EXIT=0 / STATUS=DONE`. Logged and committed.
+
+One fix worth noting: an initial `/api/v1/fsm/*` in a KDoc opened a nested block comment (Kotlin supports nesting), which I corrected to explicit endpoint names.
+
+The task is complete. All gates passed and the work is committed.
+
+

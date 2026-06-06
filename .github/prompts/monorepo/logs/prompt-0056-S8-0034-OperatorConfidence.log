@@ -1,0 +1,92 @@
+I have a thorough understanding of the patterns. Let me set up tracking and write the plan.
+
+Now I'll implement. Starting with the models, repository interface, CacheDomain/CachingRepository changes, HTTP repo, and store.
+
+Now the repository interface with query/key builders:
+
+Now add the `observe(key, ttlMillis, fetch)` overload to CachingRepository:
+
+Now the store:
+
+Now the tests. Store test first:
+
+Now the contract test and golden test:
+
+Let me verify the gradle setup and run ktlint first (faster feedback):
+
+Found it ΓÇö Kotlin nests block comments, so `/*` inside `/api/v1/admin/*` opens a nested comment. Let me fix all occurrences:
+
+Let me run ktlintFormat to auto-fix, then handle remaining line-length issues:
+
+ktlint clean. Now running the full test suite:
+
+Tests passed. Let me confirm my new tests actually executed:
+
+All 21 tests pass. Now the placeholder gate:
+
+All three gates pass. Now writing the log file with gate evidence and parity enumeration:
+
+All gates green (TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0). Let me get a rubber-duck review on parity correctness before committing:
+
+No blocking issues found. The implementation is broadly parity-faithful and can proceed, but IΓÇÖd challenge two correctness edges.
+
+## Blocking Issues
+
+None.
+
+## Non-Blocking Issues
+
+### 1. Fresh decode failures can poison the raw cache
+**Issue:** `CachingRepository.observe()` writes the fetched `JsonElement` before `typed()` decodes it. If the server returns a syntactically valid but DTO-incompatible payload, the bad unwrapped JSON is cached, then `typed()` emits `Resource.Error(cached = null)`. Future reads will also see a decode-bad cached slot.
+
+**Impact:** A transient/backend regression can erase the last-known-good operator data. This is weaker than the intended cache-then-network behavior and worse than TanStack QueryΓÇÖs usual ΓÇ£refetch failed, keep previous dataΓÇ¥ behavior.
+
+**Recommended fix:** Validate/decode the fresh `JsonElement` before writing it, or add an `observeValidated(...)` path for this repository: fetch raw ΓåÆ decode typed ΓåÆ only then cache raw + emit typed success. On decode failure, leave the previous cache untouched and emit `Resource.Error(cached = previousDecoded, stale = true, error = e)` if available.
+
+---
+
+### 2. `auditLogKey()` is canonical-by-query, not exact TanStack key parity
+**Issue:** Deriving the key from `auditLogQuery()` intentionally collapses `{}` and `{ categories: [] }`, empty strings, etc. That is faithful to the backend URL, but not exactly faithful to the web query key, which keys on the params object and may distinguish semantically omitted fields.
+
+**Impact:** Usually harmless because the HTTP query is identical, but a native UI changing filters to an equivalent-empty object will reuse the same `StateFlow` and may not trigger the ΓÇ£new query/refetch/loadingΓÇ¥ behavior the web would get.
+
+**Recommended fix:** Either document this as an intentional canonicalization-by-resolved-URL, or call `refreshAuditLog(params)` when the UI applies filters even if the resolved query is unchanged. Also consider escaping/encoding key parts so values containing `|` or `=` cannot collide.
+
+## Direct answers
+
+1. **Raw String severity/status:** Correct parity/robustness call. It avoids decode failure on new backend tokens. Consumers should compare known strings and treat unknown as `"unknown"`/fallback.
+2. **Caching unwrapped envelope:** Consistent with web. The only risk is future response shapes with legitimate top-level `data`; for these 10 endpoints, fine.
+3. **Per-read TTL overload:** Looks clean and additive. I didnΓÇÖt see an obvious pre-existing idiom youΓÇÖre duplicating. Main caveat: TTL marks staleness; it does not suppress network fetches.
+4. **Resolved-query cache key:** Functionally okay, but not exact TanStack object-key parity; see issue #2.
+5. **`auditLogQuery` parity:** Looks correct for order, empty-string omission, list joining, and zero emission for `entity_id`/`limit`/`offset`.
+6. **Dropping `enabled`:** Reasonable at shared-core level. Render/platform layer should decide when to open/collect feeds. For `gdprExport`, consider guarding blank IDs too, since web uses `Boolean(id)`, not merely non-null.The rubber-duck found no blocking issues. Two notes: issue #1 (fresh-decode cache behavior) intentionally matches the established IngestXRay precedent in this codebase, so I'll keep it consistent. Issue #2 is a fair accuracy point ΓÇö let me make my `auditLogKey` KDoc honest about canonicalization-by-resolved-query rather than claiming exact web object-key parity:
+
+Doc-only change. Let me re-verify ktlint, then commit:
+
+ktlint clean. Let me verify what will be committed (avoiding build artifacts), then commit:
+
+Only my source files and log will be staged (build artifacts are gitignored; other logs belong to different prompts). Committing exactly as the prompt specifies:
+
+Exactly the right 10 files staged (8 new + 2 additive base edits + log). Committing:
+
+Done. Task P1/S8/0034 complete and committed.
+
+## Summary
+
+Ported the web `useOperatorConfidence` hook domain (10 reads, 0 mutations) to UI-free KMP shared-core state holders at web-hook parity.
+
+**Files (8 new + 2 additive base edits):**
+- `presentation/operatorconfidence/OperatorConfidenceModels.kt` ΓÇö `@Serializable` snake_case DTOs for all 7 response families; response severity/status kept as decode-robust `String`, request `SlowQueryOrderBy` as an enum.
+- `data/repo/OperatorConfidenceRepository.kt` ΓÇö interface (10 `Flow<Resource<T>>` reads) + query/cache-key builders, including `auditLogQuery` (the `buildAuditLogQuery` port).
+- `data/repo/HttpOperatorConfidenceRepository.kt` ΓÇö cache-then-network HTTP impl; `fetchEnvelope` `{data:T}` unwrap caches the unwrapped payload verbatim (SI preserved); per-read TTL mapped from each web `staleTime`.
+- `presentation/operatorconfidence/OperatorConfidenceStore.kt` ΓÇö shared `StateFlow` feeds with per-key `refresh*`.
+- `cache/CacheDomain.kt` ΓÇö new `OperatorConfidence` domain; `CachingRepository.kt` ΓÇö additive per-entry-TTL `observe` overload.
+- 3 test files: 14 repo-contract, 5 store, 2 golden = **21 tests passing** (debug + release).
+
+**Gate (all green):** `TEST_EXIT=0`, `LINT_EXIT=0`, `PH_EXIT=0` ΓåÆ log at `.github/prompts/monorepo/logs/p1-s8-0034-operatorconfidence.log` ends with `EXIT=0` / `STATUS=DONE`, with a `=== PARITY ===` block enumerating all 10 hooks.
+
+**Acceptance criteria met:** all 10 hooks ported with matching endpoints/snake_case params/derivation; SI preserved; reads emit cacheΓåÆnetwork; the one derivation (`auditLogQuery`) is golden-vectored for KMP+C# parity; ktlint + placeholder clean. A rubber-duck parity review surfaced no blocking issues; I tightened the `auditLogKey` doc for honesty and kept the cache-decode behavior consistent with the existing IngestXRay precedent.
+
+The task is fully complete and verified. All work is committed.
+
+

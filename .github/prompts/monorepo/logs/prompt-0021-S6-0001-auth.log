@@ -1,0 +1,376 @@
+I'll start by exploring the repository structure to understand the current state and dependencies.
+
+This is a Kotlin Multiplatform monorepo. Let me explore the core module structure and the S4 dependency.
+
+Let me read the S4 networking seam files ΓÇö the key dependencies for wiring auth.
+
+Now let me read the supporting infrastructure: ApiError, Scheduler, Platform expect/actual pattern, existing tests, and ADR-008.
+
+Let me read the existing auth test, TestSupport, Runner pattern, PlatformEngine actuals, and ADR-008.
+
+Let me read the Runner actuals, ADR-008, and the P0/0009 runbook for OIDC config.
+
+The monorepo has its own ADRs. Let me find the monorepo ADR-008 and the authentik clients doc.
+
+Let me check available dependencies, the SSE StateFlow pattern, the placeholder checker, and a sample log format.
+
+Let me check the build setup and how prior phases ran the gate (especially re: Apple targets on Windows).
+
+The prior log shows the gate runs on this Windows box (JVM tests + Apple cross-compile checks). Let me establish a baseline by running the gate before making changes. First, locate the Android SDK.
+
+`kotlin.native.ignoreDisabledTargets=true` means Apple targets are skipped on Windows ΓÇö only the Android/JVM test runs here. I'll still write correct Apple actuals for mac CI. Let me run the baseline gate.
+
+Baseline is green (Apple targets skipped on Windows via `ignoreDisabledTargets`). Let me check the editorconfig style rules and confirm the token endpoint conventions, then I'll design.
+
+I have a thorough understanding now. Let me record a plan and get a design critique before implementing this non-trivial auth core.
+
+## Blocking Issues
+
+### 1. Single-flight reactive refresh is not robust with the current `TokenProvider` seam
+**Issue:** Your `doRefresh(failedAccessToken)` algorithm is correct only if `failedAccessToken` is the token actually used on the failed request. But the shipped seam calls:
+
+```kotlin
+val token = tokenProvider.token()
+performCall(token)
+tokenProvider.onUnauthorized()
+```
+
+`onUnauthorized()` receives no failed token. Your proposed implementation:
+
+```kotlin
+onUnauthorized(): doRefresh(tokens?.accessToken)
+```
+
+reads the *current* token, not the failed one.
+
+**Impact:** Concurrent 401s can cause extra refreshes, especially with rotated refresh tokens. Example:
+
+1. Request A uses `stale`.
+2. Request B refreshes to `fresh`.
+3. Request A gets 401.
+4. `onUnauthorized()` reads `tokens?.accessToken == fresh`.
+5. `doRefresh(fresh)` sees current is also `fresh`, so it refreshes again.
+
+That defeats the single-flight guarantee and risks refresh-token rotation races.
+
+**Recommended fix:** Prefer changing the seam if allowed:
+
+```kotlin
+suspend fun onUnauthorized(failedToken: String?): Boolean
+```
+
+and have `ApiHttpClient` pass the exact token used for the failed attempt.
+
+If the seam cannot change, document that perfect token-based single-flight is impossible. Then implement a safer coalescing fallback, e.g. refresh generation + short ΓÇ£recent refreshΓÇ¥ window, but understand it is heuristic and can skip a potentially useful refresh for a freshly rejected token.
+
+---
+
+### 2. `signOut()` must coordinate with refresh/sign-in or tokens can be resurrected
+**Issue:** `signOut()` clears tokens and store, but your design does not say it takes the same mutex as refresh/sign-in.
+
+**Impact:** Race:
+
+1. Refresh starts with old refresh token.
+2. User calls `signOut()`, revokes/clears store, sets `SignedOut`.
+3. Refresh completes later, saves new rotated tokens, sets `SignedIn`.
+
+The user is signed back in after signing out.
+
+**Recommended fix:** Use a single auth-operation mutex for all token-mutating operations: `signIn`, `signOut`, `restore`, and refresh. At minimum, `signOut()` and refresh must share the same lock and re-check state before saving.
+
+---
+
+### 3. Refresh-token rotation makes persistence failure handling critical
+**Issue:** Authentik rotates refresh tokens. After a successful refresh, the previous refresh token is invalid. If `store.save(newTokens)` fails after the token endpoint succeeds, you may have a valid in-memory refresh token but stale persisted storage.
+
+**Impact:** On app restart, the old stored refresh token is reused and causes `invalid_grant`, forcing sign-in. Worse, if memory/store diverge, behavior becomes difficult to reason about.
+
+**Recommended fix:** Treat failure to persist a rotated refresh token as auth failure for durability purposes:
+
+- Do not keep only-in-memory rotated credentials as if everything is fine.
+- Prefer: token endpoint success ΓåÆ attempt secure save ΓåÆ only then replace in-memory tokens/state.
+- If save fails, clear memory/store and surface a non-recoverable auth-storage error requiring sign-in.
+
+---
+
+### 4. Verify the `expect class KeystoreTokenStore` constructor plan before relying on it
+**Issue:** I would not assume this is valid:
+
+```kotlin
+expect class KeystoreTokenStore : SecureTokenStore
+```
+
+with Android actual constructor `(Context, Json)` and Apple actual constructor `(String, Json)`.
+
+KMP expect/actual constructor matching is stricter than normal platform-only declarations. Even if common code does not instantiate the class, differing actual constructors may fail metadata validation depending on Kotlin version/configuration.
+
+**Impact:** This may compile on one target/source set and fail on mac CI, exactly where you cannot test locally.
+
+**Recommended fix:** Avoid exposing this as an `expect class` unless you compile-confirm it on mac CI.
+
+Safer design:
+
+```kotlin
+// commonMain
+public interface SecureTokenStore { ... }
+```
+
+Then define platform-only concrete classes without `expect`:
+
+```kotlin
+// androidMain
+public class AndroidKeystoreTokenStore(...): SecureTokenStore
+
+// appleMain
+public class AppleKeychainTokenStore(...): SecureTokenStore
+```
+
+Common `AuthService` should depend only on `SecureTokenStore`.
+
+If you truly need a common name, use an `expect/actual` factory with a common constructor shape, but platform-specific constructors are better kept out of common API.
+
+---
+
+## Non-Blocking Issues
+
+### 5. Distinguish `invalid_grant` from transient refresh failures
+**Issue:** Your instinct is correct: not all refresh failures should clear tokens.
+
+**Impact:** Clearing tokens on network timeout, DNS failure, 5xx, or temporary Authentik outage creates unnecessary forced sign-ins.
+
+**Recommended behavior:**
+
+- `invalid_grant` / OAuth error indicating invalid refresh token:
+  - Clear memory.
+  - Clear store.
+  - State: `SignedOut` or `ErrorRequiresSignIn`.
+  - `onUnauthorized()` returns `false`.
+
+- Transport failure / timeout / 5xx / decode failure:
+  - Keep existing tokens.
+  - Do not clear store.
+  - `onUnauthorized()` returns `false`.
+  - Prefer restoring previous `SignedIn` state with an error side-channel rather than transitioning to permanent `Error`.
+
+---
+
+### 6. Token endpoint outside `ApiHttpClient` is defensible
+**Issue:** The S4 `ApiHttpClient` is intentionally API-host, JSON, `/api/v1` prefixed. Authentik token/revoke endpoints are absolute URLs with form encoding.
+
+**Impact:** Forcing token exchange through S4 would likely create wrong URLs/content types and blur responsibilities.
+
+**Recommended fix:** Keep a separate `TokenEndpointClient` using raw Ktor `HttpClient`. Make this explicit in the design: it is still part of shared core networking, but not the TeslaSync API client.
+
+Use form encoding via Ktor core APIs, set `Accept: application/json`, and validate OAuth errors carefully.
+
+---
+
+### 7. StateFlow `Refreshing` may cause UI churn for transparent refreshes
+**Issue:** Emitting global `SignedIn ΓåÆ Refreshing ΓåÆ SignedIn` on every proactive or reactive refresh can make UI flicker or temporarily hide signed-in content.
+
+**Impact:** A normal API request could cause visible auth-state flapping.
+
+**Recommended fix:** Prefer either:
+
+```kotlin
+data class SignedIn(..., val isRefreshing: Boolean = false)
+```
+
+or keep `AuthState` as `SignedIn` during transparent refresh and expose a separate refresh status if the UI needs it.
+
+Use `Refreshing` only for user-visible auth operations if necessary.
+
+---
+
+### 8. Token response validation needs to be explicit
+**Issue:** The design says parse `TokenResponse`, but not what is validated.
+
+**Impact:** Accepting malformed OAuth responses can produce broken auth state.
+
+**Recommended checks:**
+
+- `access_token` non-empty.
+- `refresh_token` non-empty on both code exchange and refresh, because Authentik rotates.
+- `expires_in > 0`.
+- `token_type == "Bearer"` case-insensitive.
+- Reject OAuth error responses distinctly from transport/decode failures.
+- Compute `expiresAt` conservatively, e.g. `now + expires_in - smallSkew`, or rely on your 60s proactive window.
+
+---
+
+### 9. Redirect parsing should reject ambiguous callbacks
+**Issue:** ΓÇ£Parse code + state or errorΓÇ¥ is good, but ambiguity matters.
+
+**Impact:** Duplicate params can create parser confusion: `?state=good&state=bad`, multiple `code`s, both `code` and `error`.
+
+**Recommended fix:** Reject callbacks with:
+
+- Missing `state`.
+- Multiple `state` values.
+- Multiple `code` values.
+- Both `code` and `error`.
+- State mismatch.
+
+Also ensure the callback URI matches the configured redirect scheme/host/path before trusting query params.
+
+---
+
+## Suggestions
+
+### 10. PKCE verifier design is good
+`base64url(32 random bytes)` gives 43 chars and 256 bits of entropy, within RFC 7636ΓÇÖs 43ΓÇô128 character verifier length. Good.
+
+Add tests for:
+
+- RFC 7636 verifier/challenge vector.
+- Base64url no padding.
+- SHA-256 padding edge cases: empty input, short input, 55/56/57-byte inputs, and a long input.
+
+---
+
+### 11. Pure Kotlin SHA-256 is acceptable but high-risk
+No dependency constraint makes this reasonable, but SHA-256 implementations are easy to subtly break.
+
+Recommended test coverage:
+
+- NIST known-answer vectors.
+- RFC 7636 challenge vector.
+- Inputs crossing block boundaries.
+- Random differential tests if you can compare against JVM SHA-256 in `jvmTest`/`androidUnitTest`.
+
+---
+
+### 12. Apple actuals need extra caution
+Since Windows cannot compile-check Apple targets, keep Apple-specific code as small as possible.
+
+Watch for:
+
+- `arc4random_buf` interop with pinned `ByteArray`.
+- Correct size conversion.
+- Zero-size handling.
+- Keychain CFDictionary type correctness.
+- `kSecAttrAccessibleAfterFirstUnlock` tradeoff: good usability, but less strict than when-unlocked.
+
+---
+
+## Direct answers
+
+1. **Single-flight:** Not robust with current no-arg `onUnauthorized()`. The algorithm needs the failed token from the request attempt.
+2. **`invalid_grant`:** Clear tokens and sign out. Transient refresh failures should keep tokens and return `false`.
+3. **Token endpoint outside S4:** Yes, defensible. S4 is the wrong abstraction for Authentik form endpoints.
+4. **`expect class` constructors:** Risky. Do not rely on differing actual constructors unless CI proves it. Prefer platform-only concrete stores implementing a common interface.
+5. **Security:** Main concerns are refresh rotation persistence, redirect ambiguity, token response validation, and no token logging. Storing access + refresh together in secure platform storage is normal.
+6. **Verifier length:** Good.
+7. **State machine:** Avoid visible `Refreshing` flapping for transparent refresh unless UI explicitly needs it. Keep signed-in content stable.Excellent critique. Key adoptions: (1) add `failedToken` to the `onUnauthorized` seam for correct single-flight, (2) shared auth mutex so sign-out can't be resurrected, (3) persist-before-memory on rotation, (4) drop the risky `expect class` store in favor of platform-concrete classes implementing a common interface, (5) distinguish `invalid_grant` from transient failures, (6) strict token-response + redirect validation. Let me verify the seam's blast radius.
+
+Critique adopted. I'll start by updating the S4 `onUnauthorized` seam to carry the failed token (required for correct single-flight), which is contained to 3 files.
+
+Now update `ApiHttpClient.requestCore` to capture and pass the failed token:
+
+Now update the 4 existing auth tests to the new signature:
+
+Let me add a test verifying the failed token is passed to the hook, then build the auth module commonMain files.
+
+Now the auth module. Starting with crypto (SHA-256, base64url, PKCE) and the secure-random expect:
+
+Now the OIDC config and PKCE/authorize-URL/redirect files:
+
+Now the token model, auth state, exceptions, and browser seam:
+
+Now the `SecureTokenStore` interface and the token-endpoint client:
+
+Now the `AuthService` orchestrator:
+
+Now the Android platform actuals (these compile on this host):
+
+Now the Apple actuals. The secure-random seam first:
+
+Let me simplify `AuthService` ΓÇö drop the injectable random param (deterministic randomness isn't needed in its tests; PKCE determinism is tested directly) to avoid exposing the internal seam in public API:
+
+I need to fix the `randomBytes` references in `signIn`:
+
+Now let me review the other commonMain auth files to write correct tests:
+
+Now let me look at the net test support to reuse helpers for the integration test:
+
+I see a merge bug in `ApiHttpClientAuthTest.kt` ΓÇö the new test got appended inside the previous test (missing closing braces at line 137-138). Let me fix:
+
+Now I have enough context. Let me create the test files. Starting with shared support:
+
+Let me simplify the form decoding to avoid fragile imports:
+
+Now the crypto test:
+
+Let me verify the SHA-256 vectors for the `"a"*55` and `"a"*56` cases:
+
+Both vectors match. Now the PKCE test:
+
+Now the store round-trip and TokenEndpointClient tests:
+
+Now the main `AuthServiceTest`. First, add a suspension hook to `FakeTokenEndpoint` so the single-flight test exercises real interleaving:
+
+Now the S4 integration test (real `KtorTokenEndpointClient` + `ApiHttpClient`, both MockEngine):
+
+Let me verify `AuthState` property names referenced in tests:
+
+Now let's run the build. Let me set up the environment and run the tests:
+
+`request` is a top-level extension in the net package ΓÇö needs an import:
+
+Test sources compile. Now run the full test suite:
+
+The Apple target IS compiling (Kotlin/Native cross-compiles). Let me view the failing Apple code:
+
+The cinterop indexed-access operators aren't imported, so `keys[index]` resolves to the stdlib `get`. Add `get`/`set`:
+
+`keys[index]` returns a `CPointer`; I should use the indexed `set` operator directly instead of `.value`:
+
+Apple compiles. Let me silence the BetaInteropApi warning by adding the opt-in:
+
+Now run the full `:core:allTests`:
+
+Build successful ΓÇö Android unit tests ran and macOS test sources compiled. Let me confirm the test counts:
+
+109 tests pass, 0 failures. Now ktlint:
+
+ktlint's filename rule wants single-class files named after the class. Let me rename the platform store files:
+
+These are auto-fixable. Let me run ktlintFormat:
+
+The import ordering was auto-fixed. The remaining issue is the function name. Let me rename it:
+
+ktlint clean. Now re-run tests + Apple compile (files changed) and the placeholder gate:
+
+All gates green. Now generate the log file by running the exact gate commands with tee:
+
+Now append the test summary, acceptance checklist, and EXIT/STATUS footer:
+
+All gates green: 109 tests / 0 failures, ktlint clean, 0 placeholders, Apple cross-compiles. Let me review the staged changes before committing:
+
+The prompt's commit block stages only `apps/shared/core` and the log. Let me follow that exactly (other untracked files aren't mine):
+
+All auth files plus the S4 seam changes and log are staged. Committing:
+
+Committed. The task is complete.
+
+## Summary
+
+Implemented **P1/S6/0001 ΓÇö OIDC PKCE auth + secure token store** in the KMP shared core (`apps/shared/core`).
+
+**Shared core (`commonMain/auth/`):** pure-Kotlin SHA-256 + base64url (`AuthCrypto`), PKCE S256 verifier/challenge + authorize-URL builder + strict redirect validation (`Pkce`), `OidcConfig`, `TokenSet`/`TokenGrant`, `AuthState` StateFlow, `AuthBrowser` seam + `AuthException`, `SecureTokenStore` interface, a form-encoded `KtorTokenEndpointClient`, and the `AuthService` orchestrator (single-flight refresh under a shared mutex, persist-before-memory, `invalid_grant` vs transient handling, `asTokenProvider()` wiring into the S4 seam).
+
+**S4 seam:** extended `TokenProvider.onUnauthorized(failedToken)` so concurrent 401s deterministically collapse to one refresh.
+
+**Platform actuals:** Android Keystore AES/GCM + SharedPreferences; Apple Keychain (`AfterFirstUnlock`). `secureRandomBytes` per platform.
+
+**Tests (commonTest):** NIST/RFC 7636 crypto KATs, PKCE, store round-trip, token-endpoint form/parse/error coverage via Ktor MockEngine, full AuthService behavior incl. 5-way concurrent single-flight, and an end-to-end 401ΓåÆrefreshΓåÆretry integration test through `ApiHttpClient`.
+
+**Gate results (all real):**
+- `:core:allTests` ΓåÆ **109 tests, 0 failures** (`TEST_EXIT=0`)
+- `:core:ktlintCheck` ΓåÆ **clean** (`LINT_EXIT=0`)
+- `check-placeholders.ps1` ΓåÆ **0** (`PH_EXIT=0`)
+- Log written ending `EXIT=0 / STATUS=DONE`; committed as `34b8ab9b8`.
+
+**Honesty note:** Apple sources *compile* on this Windows host via Kotlin/Native cross-compilation (`compileKotlinIosSimulatorArm64` + `compileTestKotlinMacosArm64` succeed), but Apple unit tests cannot *execute* on Windows (`macosArm64Test` skipped) ΓÇö Keychain runtime behavior must be validated on macOS CI. This is documented in the log.
+
+

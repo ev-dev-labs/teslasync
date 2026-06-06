@@ -1,0 +1,49 @@
+I'll start by exploring the structure and reading the web source hook and relevant predecessor artifacts.
+
+Let me examine an existing presentation domain that has both reads and mutations to mirror the established pattern, plus the repo/net/cache infrastructure.
+
+Commands has no mutations. Let me find a domain with mutations to mirror invalidation, plus core infra (CacheDomain, CachingRepository, Resource).
+
+Now let me look at the models, CacheDomain, CachingRepository/Resource, and existing tests structure.
+
+Let me examine the test structure and check for any DI registry plus the net layer helpers.
+
+Let me look at the Chat store/repo for the targeted (per-key) invalidation pattern, since Guard mutations invalidate specific config/events keys.
+
+Let me verify the backend routes for guard to confirm the endpoint paths match the web hooks.
+
+Let me check the web constants for the guard staleTimes/intervals and view the FSM store + golden test for the JsonElement vs typed approach reference.
+
+Guard has two different cached shapes (config vs events). Let me see how HttpChatRepository handles multiple typed shapes in one CachingRepository.
+
+Let me confirm the Automations convention (cache-intact mutation + store-side targeted refresh) which best matches Guard's `invalidateQueries` semantics.
+
+Pattern is fully clear (Automations/Chat conventions). Let me set up tracking and create the implementation files.
+
+Now the repository interface and HTTP implementation:
+
+Now the CacheDomain entry and the store:
+
+Now the three test files. Let me view FsmStoreTest briefly for the disabled-gate assertion idiom and the contract test helpers.
+
+Now I'll create the three test files:
+
+Now the repository contract test:
+
+Now let me run the gate. First verify the gradle setup, then run tests.
+
+The gradle wrapper is at `apps/shared`. Let me run the test gate from there.
+
+Tests pass. Now ktlint and the placeholder check:
+
+ktlint wants the single-expression body on the same line as the signature (matching ChatStore style). Fix:
+
+ktlint clean. Re-run tests (test file changed) and the placeholder check:
+
+All gates green. Now write the parity log and commit.
+
+Staged set matches the prompt scope (guard files + CacheDomain + the log). `done.txt` and other logs are pre-existing unrelated changes, left untouched. Committing:
+
+P1/S8/0025 ΓÇö Guard state holder ΓÇö complete and committed (`00651a5ba`).
+
+

@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    P1/S2/0001 — standalone "generated-only" compile check for the C# client.
+    Compiles the generated System.Text.Json records + endpoint descriptors against the
+    in-box net10 framework. No NuGet packages; not part of the shipped Windows app (that
+    project arrives in P2/W). Run via: dotnet build apps/tools/codegen/verify/csharp/Verify.csproj
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <OutputType>Library</OutputType>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NoWarn>CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\..\..\windows\Generated\Api\*.cs" />
+  </ItemGroup>
+
+</Project>

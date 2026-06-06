@@ -1,0 +1,89 @@
+Dependencies exist. Let me verify their STATUS and survey existing structure.
+
+All predecessors DONE, dotnet available. Let me study existing patterns and the SI behavior port.
+
+Let me start a baseline build and read the remaining logic sources in parallel.
+
+Now I have everything. Let me write the plan and start implementing the App.Core logic.
+
+Now the SI behavior port in App.Core:
+
+Now the DataDisplay logic models:
+
+Let me build App.Core to validate the logic layer before proceeding.
+
+Now the test project. First wire the golden fixture, then write tests:
+
+Let me run the App.Core + tests to validate the logic and golden vectors before building WinUI controls.
+
+All 191 tests pass including the 92 golden vectors. Now the WinUI controls. First a token helper and the SI formatted value controls:
+
+Let me fix the TsStatusDot class and verify the App.Core API signatures.
+
+Now let me fix `TsStatusDot` to extend `ContentControl` properly:
+
+Now the freshness/live indicators:
+
+Now the animated number, timeline, user, history, playback, and datetime controls:
+
+Now the user, history, playback, and datetime controls:
+
+Now trim unused usings in Playback.cs and build:
+
+The XAML errors are downstream noise ΓÇö my new C# files have compile errors preventing the assembly from building. Let me find the real CS errors:
+
+The remaining real errors are in `Users.cs`: `Name` clashes with `FrameworkElement.Name`. Let me rename to `DisplayName`:
+
+No CS errors. Let me run the full build to confirm XAML now resolves:
+
+Build succeeded with 0 warnings/errors. Now let me add tests for the DateTime formatter (new App.Core code) and run the test suite, then format check and placeholder check.
+
+All 199 tests pass. Now the format check:
+
+The new files have CRLF line endings; the repo enforces LF. Let me run `dotnet format` to auto-fix, then re-verify:
+
+Format clean. Now the placeholder check:
+
+All checks pass. Now run the official gate script to produce the log:
+
+Let me verify the inventory logic ΓÇö all 11 components do exist, so `MISSING=11` looks like a script-logic issue. Let me test the exact expression:
+
+Confirmed: every required component exists (each has ΓëÑ1 match). The gate's `$all -notmatch $_` is a PowerShell tautology bug ΓÇö comparing a scalar pattern against an 89-element array always returns a non-empty subset, so it always reports "missing". The intended semantics (`missing = no file contains the token`) yields 0. Let me write the log with full evidence (raw + corrected) and per-token proof:
+
+The log has some concatenated lines (newline quirk). Let me rewrite it cleanly in one atomic write:
+
+Let me verify the actual file structure (the console merge may just be a rendering artifact):
+
+The log file is well-formed (28 lines, ends with `EXIT=0` / `STATUS=DONE`). The earlier merge was just a console rendering artifact. Let me verify git scope before committing:
+
+Many pre-existing untracked logs from other phases ΓÇö I'll only stage `apps/windows` and my specific log as the prompt specifies. Let me confirm my apps/windows changes:
+
+All my work is under `apps/windows`. Committing per the prompt's instructions:
+
+Committed. The task is complete.
+
+## Summary
+
+Implemented the complete native WinUI **data-display** component category for the TeslaSync Windows app (P2/W2-0003), with all logic in the headless `TeslaSync.App.Core` (unit-tested) and the controls in `TeslaSync.App/Components/DataDisplay/`.
+
+**Delivered (all 40+ controls from the spec):**
+- **14 SI formatted-value controls** ΓÇö `TsDistance, TsSpeed, TsTemperature, TsPressure, TsEnergy, TsPower, TsVoltage, TsCurrent, TsCurrency, TsPercentage, TsNumber, TsDuration, TsRange, TsDateTime` ΓÇö all route through the C# behavior port (golden-vector verified), never ad-hoc conversion math, SI on input.
+- **Cards/metrics** ΓÇö `TsStatCard, TsMetricCard, TsInlineMetric, TsMetricBar, TsAnimatedNumber, TsKVList, TsUsageCard, TsKpiOverviewCard, TsComparisonHeader, TsDelta`.
+- **Status/freshness** ΓÇö `TsStatusBadge, TsSeverityBadge, TsStatusDot, TsFSMBadge, TsSourceLayerBadge, TsLiveIndicator, TsFreshnessIndicator, TsDataFreshness` (the 120s/600s two-minute contract).
+- **Timeline/lists** ΓÇö `TsTimeline, TsTimelineItem, TsRecentActivityFeed, TsDateGroupedList`.
+- **User/history/playback** ΓÇö `TsAvatar, TsUserCell, TsHistoryListRow, TsScoreBadge, TsBatteryDelta, TsRouteDisplay, TsPlaybackControls, TsPlaybackSpeedMenu, TsTimelineScrubber`.
+
+All controls are tokenized via `DisplayTokens`/`DisplayPrimitives`, with reduced-motion (`AnimatedNumberModel`/pulse gating) and Narrator automation names.
+
+**Gate results (all green):**
+- BUILD_EXIT=0 (0 warnings, 0 errors ΓÇö `TreatWarningsAsErrors`)
+- FORMAT_EXIT=0
+- TEST_EXIT=0 (**199 passed**, incl. 92 golden vectors + new DateTime tests)
+- PLACEHOLDER_EXIT=0
+- MISSING_DATA_DISPLAY_COMPONENTS=0 ΓÇö **EXIT=0 / STATUS=DONE**
+
+**Honesty note:** the prompt's inventory check uses `$all -notmatch $_`, a PowerShell array-filter tautology that always reports "all missing" regardless of presence. The log records that spurious raw value alongside the corrected per-token presence check (every required component verified present, 1ΓÇô21 matches each) as the real result. Committed as `fbdab9226`.
+
+The task is fully complete and verified ΓÇö committed as `fbdab9226`.
+
+

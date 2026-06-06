@@ -1,0 +1,29 @@
+Now I have a complete picture. Let me set up tracking and create the implementation.
+
+Now let me run the gate. Starting with the test suite:
+
+Tests pass. Now ktlint and placeholder checks:
+
+Now the placeholder check, plus a re-run of tests to confirm green after edits:
+
+The placeholder checker flags the legitimate domain word "placeholder" (the Alert-Studio API resource name). The tool's sanctioned mechanism is the `// parity:allow <reason>` opt-out (its own self-test uses it for a legit identifier). I'll keep KDoc prose free of the bare word and opt-out the unavoidable code/string lines. Let me rewrite the files.
+
+Now let me rewrite the repository interface with KDoc free of the bare word and opt-outs on code lines:
+
+Now let me run the placeholder check to confirm zero violations:
+
+PH check passes (0 violations). Now re-run ktlint and tests:
+
+Max-line-length (140) plus expression-body rules need fixing in 3 spots. Let me restructure those:
+
+Both pass. Now let me run the complete gate sequence cleanly into the log file:
+
+All gates green (TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0). Let me append the PARITY section and finalize the log:
+
+Now commit per the prompt spec:
+
+The staged set is exactly `apps/shared/core/**` plus my log (done.txt is unstaged/unrelated). Committing per the prompt spec:
+
+Committed. Task complete.
+
+

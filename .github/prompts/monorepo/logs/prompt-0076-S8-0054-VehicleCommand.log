@@ -1,0 +1,58 @@
+I'll start by examining the web source hook and the existing shared core structure to understand the patterns.
+
+The web hook is actually a mutation despite the prompt's categorization. Let me explore the existing shared core source structure (excluding build) to follow established patterns.
+
+The `commands` domain is the closest analog. Let me examine it plus a mutation-style store and the repository layer.
+
+Now let me look at a mutation-style store and repository pattern, plus the CommandsRepository for reference.
+
+Let me examine the mutation repository pattern, the caching base, cache domains, and vehicle repos.
+
+Now let me look at vehicle repos, the net layer, and an existing mutation store test to model the test style.
+
+Let me view the net layer and the two existing store tests to model my implementation and tests.
+
+Now let me look at the existing repository contract test to model the HTTP/cache test setup.
+
+Let me verify the log directory, MapCacheStore, and tooling paths.
+
+I have everything needed. Let me check the net TestSupport helpers and how request bodies are captured.
+
+I have enough context. Let me create the implementation files. Starting with models and repository.
+
+Now the repository interface and HTTP implementation:
+
+Now the state holder store:
+
+Now let me look at how an existing mutation contract test asserts cache eviction to mirror it.
+
+Now the store test with a fake repository:
+
+Now let me run the gate. First the tests via Gradle:
+
+Tests pass. Now ktlint and the placeholder check:
+
+ktlint clean. Now the placeholder check:
+
+All gates pass. Let me finalize the log with the parity enumeration and status, then verify the new tests actually ran (confirm test class names appear in results).
+
+6 contract tests + store tests all green. Let me append the parity section and final status to the log:
+
+The EXIT line got glued to the Gate line. Let me fix it cleanly:
+
+Now commit:
+
+I'll unstage the unrelated `done.txt` to keep the commit scoped to my changes, then commit:
+
+P1/S8/0054 complete and committed (`a0a5bc169`).
+
+**What was built** ΓÇö the `useVehicleCommand` web hook (1 mutation) ported to a UI-free KMP shared-core state holder:
+
+- **`VehicleCommandModels.kt`** ΓÇö `CommandResult { success, message }` + `SendVehicleCommandInput { vehicleId, command, params? }`.
+- **`VehicleCommandRepository`** (S7 port) + **`HttpVehicleCommandRepository`** ΓÇö `POST /vehicles/{id}/command` body `{ command, params }`; null `params` omitted (JSON.stringify parity). On 2xx it invalidates the four web `onSuccess` surfaces: `VehicleState[id]`, `Commands[latest:id]`, `Commands[history:id]`, and clears the `Vehicles` partition (`vehicleKeys.all`).
+- **`VehicleCommandStore`** (S8) ΓÇö single suspend `sendCommand(): Result<CommandResult>`. Toast (render) and Tesla-auth-expired replay (platform recovery) are documented as out-of-scope; the failure flows out verbatim.
+- **Tests** ΓÇö 6 contract tests (endpoint/method/body, params omit/present, success parse, eviction set, vehicle-scoped vs wholesale clear, failure-leaves-cache) + 4 store tests (input passthrough, success/failure passthrough). No non-trivial derivation ΓåÆ no golden vectors needed.
+
+**Gate:** `TEST_EXIT=0  LINT_EXIT=0  PH_EXIT=0` ΓÇö all real output captured in `p1-s8-0054-vehiclecommand.log`, which ends `EXIT=0 / STATUS=DONE`.
+
+

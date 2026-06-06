@@ -1,0 +1,49 @@
+I have a thorough understanding now. The environment is fully WinUI-capable (build/test/format all green for predecessors). Key decision: **versions.lock.md does NOT pin LiveCharts2**, and the prompt forbids unpinned chart packages ΓÇö so I'll render charts natively with WinUI primitives (Canvas/Shapes/Path), computing all geometry in the headlessly-testable `TeslaSync.App.Core` library (mirroring the W2-0001 split). Let me check the editorconfig and tokens for exact style compliance.
+
+I have full context. Let me set up tracking and create a plan.
+
+Now let me create the Core chart logic. Starting with models, scale, and geometry.
+
+Now the legend state, tooltip model, cursor sync, and annotation state:
+
+Now let me write the xUnit tests for the chart logic:
+
+93 tests pass. Now let me check how existing controls resolve themed brushes in code before building the WinUI layer.
+
+Now the WinUI layer. Let me create the shared brush helper and the container/legend/tooltip/brush controls.
+
+I need TsChartDataView and to check TsRangeSlider for the brush. Let me view it.
+
+The only real error is a missing `using` for `ToggleButton`; the XAML errors cascade from it. Let me fix the usings.
+
+That error is from building the csproj with AnyCPU directly. The gate builds the solution (with x64). Let me build the solution as the gate does.
+
+Solution builds clean. Now the chart primitives. First a shared shape helper, then gauge/sparkline/mini/small-multiples/elevation.
+
+The ControlTemplate approach is wrong. Let me rewrite TsRadialGauge as a ContentControl like the rest of the library.
+
+Let me build the solution to catch issues before continuing with the cartesian and extras.
+
+Build clean. Now the cartesian chart base + subclasses.
+
+Now the cartesian chart base + subclasses:
+
+Now the thin cartesian subclasses, pie/donut and radar:
+
+Let me build before tackling the extras.
+
+Now build to verify the extras compile.
+
+All components implemented. Let me update todos and run the format auto-fix before the gate.
+
+Now run the full gate script verbatim:
+
+The inventory `-notmatch` expression is the known-defective one (W2-0001 documented this). Let me run the corrected check and verify each component genuinely exists:
+
+I'll mirror the W2-0001 mitigation, appending the corrected inventory note to my log:
+
+All gates green: build 0 warnings/errors, format clean, 93 tests pass, placeholder scan 0 violations, all 8 required components present. Now commit:
+
+Committed. Task complete.
+
+

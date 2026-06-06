@@ -1,0 +1,55 @@
+I'll start by exploring the codebase structure and the web source hooks.
+
+Let me examine an existing similar state holder to mirror the established patterns. Let me find a comparable predecessor slice.
+
+Now let me look at the store, models, caching base, cache domain, and tests.
+
+All patterns understood. Now implementing. First, add the cache domain:
+
+Now the repository interface with query/key builders:
+
+Now the HTTP implementation:
+
+Now the state holder:
+
+Now the golden test and store test:
+
+Let me check whether repositories are wired into any DI/factory module that I should extend:
+
+Compiles clean. Now running the full gate with logging:
+
+Tests pass. Now ktlint and placeholder check:
+
+Ktlint formatting issues ΓÇö auto-fixing:
+
+Now the placeholder check:
+
+All three checks green. Re-running tests after format for honest final evidence, then finalizing the log:
+
+Let me confirm my new tests actually executed (not silently skipped):
+
+10 tests passed, 0 failures, 0 skipped (debug + release runs). Now finalizing the log with the PARITY enumeration and terminal status:
+
+Now committing as specified in the prompt:
+
+P1/S8/0058 complete ΓÇö VehicleSystems state holder ported at full web-hook parity.
+
+**What was built** (`apps/shared/core/**`):
+- `VehicleSystemsRepository` (S7 port) + `HttpVehicleSystemsRepository` ΓÇö all **11 reads** with matching endpoints, snake_case `vehicle_id` params, web-faithful cache keys, `safeArray` guards on the 6 list feeds, and STATIC TTL for the global maintenance/service-record catalogs.
+- `VehicleSystemsStore` (S8 holder) ΓÇö UI-free shared `StateFlow<Resource<JsonElement>>` feeds (cacheΓåÆnetwork, deduped, refreshable) + a `refresh()` pull-to-refresh analogue.
+- `CacheDomain.VehicleSystems` partition.
+- Golden + fake-repo tests (`VehicleSystemsGoldenTest`, `VehicleSystemsStoreTest`).
+
+**Parity faithfully reproduced:** all SI preserved (verbatim `JsonElement`, no conversion); `useSoftwareUpdates` keyed per-vehicle yet issues an unparameterised request; 0 mutations ΓåÆ no invalidation surface.
+
+**Gate (verified, raw):**
+- `TEST_EXIT=0` ΓÇö `:core:allTests` passed; new tests **10/10**, failures=0, skipped=0
+- `LINT_EXIT=0` ΓÇö `:core:ktlintCheck` clean (after `ktlintFormat`)
+- `PH_EXIT=0` ΓÇö placeholder check, `PLACEHOLDER_COUNT=0`
+- Log written with `=== PARITY ===` enumerating all 11 hooks, ending `EXIT=0 / STATUS=DONE`
+
+Committed as `f248519af`.
+
+The task is fully complete and verified. All work is done and committed.
+
+

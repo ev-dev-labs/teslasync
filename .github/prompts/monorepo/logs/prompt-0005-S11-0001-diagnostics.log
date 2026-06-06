@@ -1,0 +1,68 @@
+This task is prompt **P1/S11/0001 (diagnostics)** in the KMP monorepo prompt-chain. Its declared dependency is **P1/S3 (KMP scaffold)**. Let me verify the predecessor state before doing anything, since the Honesty Covenant forbids predecessor bypass.
+
+Confirmed: the predecessor **P1/S3 (KMP scaffold)** has not been executed. There is no `apps/shared/core/` Gradle project, no `settings.gradle.kts`, no `gradlew` wrapper, and `done.txt` lists only P0 + P1/S0,S1,S10 as complete. The version catalog present is the Android placeholder, not the shared-core KMP catalog S3 must create.
+
+Let me validate my read of the situation with a critique before finalizing.
+
+BLOCKED is the correct call. I donΓÇÖt see a legitimate path to `STATUS=DONE` under the stated covenant.
+
+## Blocking Issues
+
+### 1. Missing predecessor P1/S3 blocks S11
+**Severity:** Blocking  
+**Impact:** S11 depends on the shared KMP Gradle scaffold. Since `apps/shared/core` and the shared Gradle wiring do not exist, implementing diagnostics would require inventing the predecessorΓÇÖs artifact. That violates **No predecessor bypass** and likely **No skip-and-assume**.  
+**Recommended fix:** Mark S11 as `STATUS=BLOCKED`, citing P1/S3 absent from `done.txt` and missing shared-core scaffold.
+
+### 2. The gate cannot run as written
+**Severity:** Blocking  
+**Impact:** The gate requires:
+
+```powershell
+Push-Location apps/shared/core
+./gradlew :core:allTests
+./gradlew ktlintCheck
+```
+
+But there is no `apps/shared/core`, no wrapper, no Gradle project, and no module. Installing Gradle globally would not satisfy `./gradlew`, and creating the wrapper/build files would be doing S3ΓÇÖs work.  
+**Recommended fix:** Log the exact preflight failure and do not attempt a substituted or partial gate.
+
+### 3. Apple target gate is not legitimately satisfiable on Windows
+**Severity:** Blocking  
+**Impact:** If S3 defines Apple KMP targets such as `iosArm64` / `macosArm64`, full Apple compilation/testing cannot be green on a Windows host. Skipping those targets or altering the gate would violate **No scope narrowing**.  
+**Recommended fix:** Include this as a secondary blocker. The primary blocker remains missing S3.
+
+## Answers
+
+### (a) Should you author diagnostics Kotlin source anyway?
+No. Not as part of this prompt result.
+
+Creating `apps/shared/core/src/.../diagnostics/**` without the S3 scaffold would be speculative and dependent on assumptions about package names, source-set layout, Gradle targets, lint config, dependency versions, and test wiring. That is exactly what **No skip-and-assume** and **No predecessor bypass** are meant to prevent.
+
+If you experiment locally, revert/delete it before finishing. The terminal artifact should be the BLOCKED log only.
+
+### (b) Is there any way the gate could legitimately pass?
+Not from the current repo state.
+
+A legitimate pass would require P1/S3 to have already produced the shared KMP module and runnable gate environment. Since it has not, any path to green would require either:
+
+- implementing S3 inside S11,
+- changing/skipping the gate,
+- faking/stubbing test success,
+- or relying on host tooling not declared by the project.
+
+All of those violate the covenant.
+
+## One nuance
+
+Your plan says ΓÇ£NOT commit any code.ΓÇ¥ Good. If the prompt-chain convention allows committing a BLOCKED log only, do that; if this specific promptΓÇÖs ΓÇ£No commit on redΓÇ¥ is interpreted literally, then do not commit at all. Either way, do not commit source/build artifacts.
+
+Your final log should end with own-line markers, e.g.:
+
+```text
+EXIT=1
+STATUS=BLOCKED
+```The critique confirms BLOCKED is correct. I'll write the honest BLOCKED log documenting the preflight failure, and not commit any code (covenant rule 8: no commit on red).
+
+My only addition is the BLOCKED log; no source or build artifacts were created, and nothing was committed (the other untracked logs are pre-existing harness output, consistent with prior prompts). The task is correctly stopped.
+
+

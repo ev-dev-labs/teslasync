@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    P2/W6-0002 — Windows platform adapters for the push layer.
+
+    This is a deliberately UI-free (no WinUI / no XAML) class library that hosts the
+    WinRT-dependent push implementations: the WNS channel provider (which subscribes to
+    the channel's PushReceived event), the toast service, the device-environment provider
+    and the local registration store. It is isolated from TeslaSync.App because the WinUI
+    XAML markup compiler (Microsoft.UI.Xaml.Markup.Compiler) crashes when an *app-assembly*
+    type references the WNS PushReceived generic WinRT event; moving that reference into a
+    separate referenced assembly keeps the markup compiler's type-info pass from touching it.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <RootNamespace>TeslaSync.App.Platform</RootNamespace>
+    <AssemblyName>TeslaSync.App.Platform</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <AnalysisMode>Recommended</AnalysisMode>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TeslaSync.App.Core\TeslaSync.App.Core.csproj" />
+  </ItemGroup>
+</Project>

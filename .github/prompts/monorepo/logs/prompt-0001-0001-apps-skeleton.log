@@ -1,0 +1,21 @@
+Git status shows untracked harness files (the prompt runner's own script + logs), not pre-existing drift from real work. I'll proceed and scope my commit precisely to `apps/` + my log file.
+
+Now write the log file and run the GATE:
+
+Gate passed. Now commit, scoped to allowed files:
+
+Only 1 file committed ΓÇö let me verify the .gitkeep files were tracked:
+
+All `apps/` files are tracked (a prior run committed the skeleton; my commit finalized the log). Let me confirm the log tail:
+
+P0/0001 complete and verified.
+
+**Result:**
+- `apps/` skeleton created with all 8 subdirs (`shared`, `design`, `parity`, `windows`, `android`, `apple`, `tools`, `docs`), each with `.gitkeep`.
+- `apps/README.md` placeholder present pointing to the monorepo prompts README.
+- GATE passed: `MISSING_DIRS=` (none), `README_PRESENT=True`, `EXIT=0`.
+- Committed (`884ad1bf7`), `COMMIT_EXIT=0`, log ends `STATUS=DONE`.
+
+**Note:** Preflight wasn't strictly empty due to pre-existing prompt-runner harness files (`run-prompts.ps1`, runner logs). I judged these as harness artifacts, not work drift, and scoped my commit to the Allowed files only (`apps/**` + the prompt log). All `apps/` files are tracked and the working tree is clean for them.
+
+

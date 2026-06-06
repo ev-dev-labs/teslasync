@@ -1,0 +1,39 @@
+Now I have full context. Let me set up tracking and the plan, then implement.
+
+Just an unused import. Let me fix it.
+
+ktlint passes. Now run the tests.
+
+All new tests pass (11+7+7). Now the placeholder gate.
+
+All three gates pass. Let me write the parity log and commit.
+
+All gates green. Let me commit.
+
+Staged set is clean. Committing.
+
+P1/S8/0007 complete and committed.
+
+## Summary
+
+Ported `web/src/api/hooks/useAnnotations.ts` (5 hooks) to UI-free KMP shared-core state holders at exact web parity. All gates green: **`EXIT=0` / `STATUS=DONE`**.
+
+**Gates**
+- `:core:allTests` ΓåÆ 0 failures (25 new tests: 11 contract + 7 store + 7 golden, on debug+release)
+- `:core:ktlintCheck` ΓåÆ BUILD SUCCESSFUL
+- `check-placeholders` ΓåÆ `PH_EXIT=0`, count 0
+
+**The 5 hooks ported**
+- Reads: `useChartAnnotations` ΓåÆ `AnnotationsStore.chartAnnotations(params)` (GET `/annotations/`, snake_case query); `useChartAnnotationsAsData` ΓåÆ `chartAnnotationsAsData(params)`, the **same shared upstream** re-projected via `toDataAnnotation` (single fetch, like the web wrapper reusing one query key).
+- Mutations: `useCreateAnnotation`/`useUpdateAnnotation`/`useDeleteAnnotation` ΓåÆ POST/PATCH/DELETE, each invalidating `annotationKeys.all` ΓåÆ repo evicts the whole `CacheDomain.Annotations` partition + store `refreshAll()` re-collects every observed feed.
+
+**Parity details locked**
+- Golden vectors (KMP+C# parity, ADR-004) for `toDataAnnotation`, `annotationQuery` (blank scope/from/to dropped), and `annotationCacheKey` ΓÇö including the subtle edge where an empty scope stays `''` in the cache key but is omitted from the query.
+- SI preserved (annotation fields aren't unit-bearing; cached as typed `ChartAnnotationRow` JSON); new domain TTL = 5 min matching web `STALE_TIMES.SLOW`.
+- Endpoints verified against generated `ApiEndpoints.cs`, `router.go`, and the Go handler.
+
+Files: 5 commonMain (models, repo interface+helpers, Http repo, store, CacheDomain) + 3 commonTest. Committed as `8f85cac03`.
+
+The task is fully complete and verified. All 8 todos are done.
+
+

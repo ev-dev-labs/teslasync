@@ -1,0 +1,87 @@
+Now let me explore the existing KMP shared core structure to understand established patterns.
+
+Let me examine the closest analog ΓÇö `settingsbackup` ΓÇö as a template, including its repo and tests.
+
+Let me read the settingsbackup presentation and repo files (closest analogs ΓÇö both mutation-heavy with sudo) plus the settings repo.
+
+Now let me read the settingsbackup tests to mirror the testing approach, and check for any DI wiring.
+
+Let me check DI wiring, the backend reset endpoint shape, and the Windows C# port location.
+
+No client-side derivation exists in this hook domain (unlike settingsbackup). Let me check how other stores model `qc.invalidateQueries()` (global flush) and the cache invalidation seam.
+
+Line 254 references the exact analog ΓÇö argument-less `invalidateQueries()` ΓåÆ `clearAll`. Let me see that domain and how its store/repo implements clearAll.
+
+The Impersonation repo is the exact analog (mutation + `clearAll` + prime state). Let me read it and its store/models/tests.
+
+Now let me look at the CacheStore interface and the impersonation tests + store to mirror the test wiring.
+
+Let me find the in-memory CacheStore test helper used in repo contract tests.
+
+Let me view the impersonation repo contract test for the cache-store + HTTP wiring pattern.
+
+Let me check the net helpers (`safeRequest`, `HttpMethodKind`, `defaultApiJson`) signatures.
+
+I have everything needed. Let me verify the logs directory exists, then create the implementation files.
+
+Now I'll create the implementation files.
+
+Now the repository interface (with cache-key parity helpers) and HTTP implementation:
+
+Now the state holder:
+
+Now the tests ΓÇö store test, repository contract test, and golden test:
+
+Now the repository contract test:
+
+Now the golden test locking parity-critical constants and wire shape:
+
+Now let me run the gate. First, the Gradle tests:
+
+Tests pass. Now ktlint and placeholder checks:
+
+Minor ktlint style issues. Let me auto-format:
+
+Let me verify the formatted file and re-run the full gate (tests + lint + placeholder check):
+
+Formatting looks good. Now re-run the full gate to record clean results in the log:
+
+Both green. Now the placeholder check:
+
+All gates green. Let me confirm my new tests actually executed (not skipped) by running them targeted:
+
+All 14 tests pass. Now let me append the PARITY enumeration and final status to the log, then commit.
+
+`done.txt` was modified by the placeholder script ΓÇö it's out of scope. Let me unstage it and commit only the allowed files:
+
+Exactly the allowed files staged. Committing:
+
+P1/S8/0043 complete. **`EXIT=0 / STATUS=DONE`**
+
+## What I built
+
+Ported the web `useSettingsReset` hook domain (2 mutations, 0 reads) to UI-free KMP shared-core state holders, mirroring the established `SettingsBackup`/`Impersonation` patterns:
+
+**commonMain (4 files)**
+- `SettingsResetModels.kt` ΓÇö `SettingsResetResult` / `SettingsResetSectionResult` (snake_case wire shape, SI-neutral).
+- `SettingsResetRepository.kt` ΓÇö S7 port interface + cache-key parity constants (`settings:reset` / `settings:reset:last`).
+- `HttpSettingsResetRepository.kt` ΓÇö `POST /settings/reset` with `{section}` or `{}`; on success calls `CacheStore.clearAll()` (the data-layer analogue of the web's argument-less `invalidateQueries()`).
+- `SettingsResetStore.kt` ΓÇö exposes `lastReset: StateFlow`; both mutations prime it (the `setQueryData` analogue).
+
+**commonTest (3 files, 14 tests, 0 failures)**
+- StoreTest (5) ΓÇö delegation + last-reset priming + failure-doesn't-prime.
+- RepositoryContractTest (5) ΓÇö exact path/method/body for both paths + whole-cache flush on success + cache survives on failure.
+- GoldenTest (4) ΓÇö language-neutral cache-key + receipt-shape vectors for KMPΓåöC# parity.
+
+## Parity
+Both `useResetSection` and `useResetAllSettings` ported with matching endpoint/params/cache semantics. No client-side derivation exists in this domain (mutation-only); golden vectors lock the cache-key namespace and receipt wire shape instead.
+
+## Gate (verified, in log)
+```
+TEST_EXIT=0   LINT_EXIT=0   PH_EXIT=0
+```
+Committed only the allowed files (`apps/shared/core/**` + the slice log); reverted the unrelated `done.txt` touched by the placeholder script.
+
+The task is fully complete and verified. All gates passed and the work is committed.
+
+

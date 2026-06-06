@@ -1,0 +1,65 @@
+I'll start by exploring the structure and reading the key files.
+
+Let me explore the existing shared core structure to find patterns for state holders, repositories, and other ported hook domains.
+
+Let me study an existing domain with CRUD mutations (automations) as the reference pattern.
+
+Now let me look at the test patterns, CacheDomain, and supporting infra.
+
+Let me examine the golden test pattern, contract test, CachingRepository, and supporting helpers.
+
+Let me read the web export types, safeArray, the request/safeRequest API, and check the logs dir + placeholders script.
+
+Let me check the generic RepositoryContractTest and whether repos are registered in any factory/DI.
+
+Let me check an existing S8 log format and the ktlint config to match conventions.
+
+I have enough context. Let me write a plan and create the SQL todos, then implement.
+
+Now let me create the model file.
+
+Now the repository interface with key builders and derivations.
+
+Now the store. Let me add the CacheDomain entry first.
+
+Now the tests. Store test first.
+
+Now the contract test and golden test.
+
+Let me simplify the golden test's value extraction to use `jsonPrimitive.content`.
+
+Now let me run the gate. First locate gradlew.
+
+Let me run the gate (tests + ktlint).
+
+Let me auto-fix with ktlintFormat.
+
+Let me verify the auto-formatted changes look correct, then run the full gate.
+
+Now run the full gate.
+
+Build succeeded. Let me confirm my new test classes ran and passed.
+
+All 32 export tests pass. Now the placeholder check.
+
+All gates green. Let me write the log file.
+
+Now commit per the prompt.
+
+Only my intended files are staged (done.txt and other logs remain unstaged). Committing per the prompt.
+
+Done. P1/S8/0020 ΓÇö Exports shared state holder is complete, gated, and committed (`f8eb18e6f`).
+
+**All 13 web `useExports` hooks ported** to UI-free KMP state holders (6 reads + 7 mutations), plus the `exportDownloadUrl` derivation:
+- `ExportsRepository` (S7 port) + `HttpExportsRepository` (cache-then-network, ADR-013) + `ExportsStore` (S8 shared `StateFlow` feeds) + `ExportModels` + `CacheDomain.Exports` (5s TTL).
+- Endpoints/methods/params/bodies, query keys, `enabled` gates (`!!id`/`!!type`), and TanStack prefix-invalidation (`['export-jobs']`+`['exports']` for job mutations, `['scheduled-exports']` for schedule mutations) all match the web verbatim. Values stay SI/raw; conversion deferred to display (S5).
+- Faithfully reproduced the web's loose `request<ExportJob[]>` typing by making `ExportJob` fields nullable/defaulted so a real `ExportJobSummary` payload degrades gracefully instead of failing decode.
+
+**Gate (all green, real output):**
+- `:core:allTests` ΓåÆ BUILD SUCCESSFUL, **TEST_EXIT=0** (ExportsRepositoryContractTest 16, ExportsStoreTest 7, ExportsGoldenTest 9 ΓÇö 32 tests, 0 failures)
+- `:core:ktlintCheck` ΓåÆ **LINT_EXIT=0**
+- `check-placeholders` ΓåÆ **PLACEHOLDER_COUNT=0, PH_EXIT=0**
+
+Golden vectors (language-neutral, inlined) lock the query builder, key builders, download URL, bulk-delete body, and JSON.stringify body parity for KMPΓåöC# (ADR-004). Log written; `EXIT=0 / STATUS=DONE`.
+
+

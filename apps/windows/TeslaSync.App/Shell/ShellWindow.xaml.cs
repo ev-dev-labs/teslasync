@@ -9,6 +9,7 @@ using TeslaSync.App.Auth.Onboarding;
 using TeslaSync.App.Components.Feedback;
 using TeslaSync.App.Core.Auth;
 using TeslaSync.App.Core.Navigation;
+using TeslaSync.App.Push;
 using Windows.Graphics;
 using Windows.System;
 
@@ -29,6 +30,7 @@ public sealed partial class ShellWindow : Window
     private readonly WindowStateService _windowState = new();
     private readonly Dictionary<string, NavigationViewItem> _navItems = new(StringComparer.Ordinal);
     private readonly TsTeslaReauthBanner _authBanner = new();
+    private readonly TsAlertBanner _pushBanner = new() { IsOpen = false, Dismissible = true };
 
     private ElementTheme _theme = ElementTheme.Default;
     private bool _navigating;
@@ -48,8 +50,13 @@ public sealed partial class ShellWindow : Window
         // Onboarding / sign-in surface (P2/W4-0001) for the public onboarding route.
         _viewModel.PageFactory.Register("Onboarding", static () => new OnboardingView());
         ReauthBannerHost.Content = _authBanner;
+        PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
         Closed += OnShellClosed;
+
+        // Foreground push registration + notification routing (P2/W6-0002). Best-effort: an
+        // unpackaged dev run without WNS/package identity simply leaves push inactive.
+        AppPush.Start(DispatcherQueue, _pushBanner);
 
         ConfigureWindow();
         BuildNavigation();
@@ -438,6 +445,9 @@ public sealed partial class ShellWindow : Window
         ReauthBannerHost.Visibility = Visibility.Collapsed;
     }
 
-    private void OnShellClosed(object sender, WindowEventArgs args) =>
+    private void OnShellClosed(object sender, WindowEventArgs args)
+    {
         AppAuth.Service.StateChanged -= OnAuthStateChanged;
+        AppPush.Stop();
+    }
 }

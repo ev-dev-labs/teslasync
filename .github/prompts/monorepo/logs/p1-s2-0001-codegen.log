@@ -1,0 +1,41 @@
+P1/S2/0001 client codegen from OpenAPI — artifact log
+spec: api/openapi/teslasync.openapi.json (OpenAPI 3.1, 9 schemas, 532 operations)
+generator: custom SI-aware emitter (per prompt allowance); pinned toolchain in codegen.config.json
+=== GATE ===
+[GEN] wrote 10 Kotlin + 10 C# files from api/openapi/teslasync.openapi.json.
+GEN_EXIT=0
+KT: canonical ./gradlew :core:compileKotlinMetadata :core:compileCommonMainKotlinMetadata
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :core:kmpPartiallyResolvedDependenciesChecker
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:compileKotlinMetadata SKIPPED
+> Task :core:transformCommonMainDependenciesMetadata UP-TO-DATE
+> Task :core:compileCommonMainKotlinMetadata UP-TO-DATE
+
+[Incubating] Problems report is available at: file:///D:/repos/teslasync/apps/shared/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 20s
+3 actionable tasks: 1 executed, 2 up-to-date
+KT_EXIT=0
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Verify -> D:\repos\teslasync\apps\tools\codegen\verify\csharp\bin\Release\net10.0\Verify.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:02.73
+CS_EXIT=0
+[OK] no drift ΓÇö 20 generated files match the spec.
+DRIFT_EXIT=0
+[PASS] clients generated; Kotlin (:core) + C# compile; drift gate clean.
+EXIT=0
+STATUS=DONE

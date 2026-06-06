@@ -1,0 +1,63 @@
+Now I have full context. Let me write a plan and create the implementation.
+
+Now the golden loader (expect/actual) and tests:
+
+AchievementModels.kt is missing ΓÇö the first create failed. Let me create it now.
+
+Tests + ktlint green. Now the placeholder gate:
+
+All gates green. Let me finalize the log with the parity enumeration and status:
+
+The golden fixture is currently in `apps/shared/spec`, but allowed files are scoped to `apps/shared/core/**`. Let me move it under `core` to respect the file scope while keeping cross-platform readability:
+
+Let me get a quick rubber-duck critique on the parity correctness and architectural mapping before committing.
+
+## Blocking Issues
+
+None found. The port appears fundamentally correct and can proceed, assuming `AchievementUnlocksStore` is intended to be used from a single UI/application lifecycle context.
+
+## Non-Blocking Issues
+
+### 1. `stop()` retention is not exact hook lifecycle parity
+**Impact:** Web `useState` is destroyed on unmount/page refresh; this store keeps `recent` across `stop()`/`start()`. If consumers treat `stop()` as ΓÇ£unmountΓÇ¥, stale unlocks could reappear after foreground/background or navigation unless already dismissed.
+
+**Recommended fix:** Either:
+- document `stop()` as ΓÇ£pause subscription only; queue retainedΓÇ¥, and add `clear()`/`reset()` for true unmount semantics, or
+- clear `_recent` in `stop()` if lifecycle parity is the goal.
+
+Your current test explicitly asserts retention, so this is a semantic decision, not a bug.
+
+### 2. `start()` idempotency is not thread-safe
+**Impact:** `if (job?.isActive == true) return` is fine for single-threaded/UI-thread use, but concurrent `start()` calls could race and create multiple collectors/subscriptions.
+
+**Recommended fix:** If store may be called from multiple dispatchers/threads, guard start/stop with a `Mutex`, confine the store to main thread, or document single-threaded lifecycle ownership.
+
+## Suggestions
+
+### 3. Validate `maxRecent`
+**Impact:** Web has a fixed positive constant. KMP exposes `maxRecent`; `0` behaves as always-empty, negative values can throw via `subList`.
+
+**Recommended fix:** Add `require(maxRecent >= 1)` in the store/reducer boundary, or keep `maxRecent` internal/test-only.
+
+### 4. Architecture deviation is reasonable, but should be explicitly justified
+Injecting `SseClient` is the correct mapping for an SSE-only hook. A REST repository would be less faithful and could imply polling/persistence that the web hook does not have.
+
+**Recommended fix:** Keep the justification in code/docs: ΓÇ£this ports `sseManager.subscribe('achievement_unlocked')`; `SseClient` is the shared SSE abstraction, not a raw Ktor call; no clock because ordering is insertion order.ΓÇ¥
+
+## Direct Answers
+
+1. **De-dup/bound/ordering parity:** Yes, for normal `MAX_RECENT=25`, parity looks exact: newest-first, ignore duplicate IDs, truncate oldest.
+2. **SseClient injection:** Reasonable and architecturally clean for this hook.
+3. **Concurrency:** `MutableStateFlow.update` protects state updates, but `start()`/`stop()` job management is not concurrency-safe.
+4. **Decode leniency:** Boundary looks right: require `achievement.id`, tolerate missing non-identifying fields. This matches the web guard.
+5. **Start/stop:** Idempotent enough for single-owner lifecycle. Main caveat is retained queue semantics across `stop()`/`start()`.Good ΓÇö no blocking issues. I'll adopt the cheap guardrail (validate `maxRecent`); the retention/threading points are documented single-owner lifecycle semantics already covered by KDoc and tests.
+
+Now re-run the full gate to confirm everything is still green after the edits, and refresh the log:
+
+Now commit. Let me stage the allowed files and verify what's staged:
+
+Staged files are exactly my changes plus the log. `done.txt` is an unrelated working-tree change (not staged). Committing:
+
+Committed. Task complete.
+
+

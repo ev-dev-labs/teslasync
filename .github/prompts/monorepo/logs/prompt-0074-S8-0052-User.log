@@ -1,0 +1,46 @@
+Now I have a complete understanding. Let me create the plan and implementation files.
+
+Now let me add the `User` CacheDomain and create the model file:
+
+Now the repository interface with keys and derivation builders:
+
+Now let me run the gate. First verify the gradle wrapper:
+
+Common metadata compiles. Now run the Android unit tests (which execute commonTest on JVM) and ktlint:
+
+Tests pass. Now run ktlint and the full module test suite plus the placeholder check:
+
+Now run the full module test suite to confirm no regressions:
+
+All gates pass. Let me append the parity enumeration and final status to the log:
+
+Now commit per the prompt's spec:
+
+Committed. The P1/S8/0052 User state holder is complete and verified.
+
+## Summary
+
+Ported all **11 hooks** from `web/src/api/hooks/useUser.ts` to UI-free KMP shared-core state holders.
+
+**Files created (under `apps/shared/core`):**
+- `presentation/user/UserModels.kt` ΓÇö DTOs (`User`, `UserActivityEntry`, `TeslaConfigEnvelope<T>`, `TeslaRegionData`, `TeslaOrder`/`ΓÇªEnvelope`, `TeslaUserProfile`/`ΓÇªEnvelope`) + `MyActivityParams`
+- `data/repo/UserRepository.kt` ΓÇö S7 port: 6 reads (`Flow<Resource>`), 5 mutations (`Result`), cache keys + golden-pinned derivations (`myActivityQuery`, `userActivityCacheKey`, `updateUserBody`)
+- `data/repo/HttpUserRepository.kt` ΓÇö cache-then-network impl over `CachingRepository`, per-read web-faithful TTLs (default-0 / 60s / 5m / 10m / STATIC)
+- `presentation/user/UserStore.kt` ΓÇö S8 holder exposing shared `StateFlow<Resource<T>>` reads + suspend mutations; each mutation refreshes exactly the feed its web hook invalidates
+- `UserStoreTest.kt` + `UserDerivationsGoldenTest.kt` (fake-repo + golden vectors)
+- Added `CacheDomain.User`
+
+**Parity decisions:** SI/verbatim payloads (no unit-bearing fields); the one camelCase contract (`/users/me` + `{ displayName }` body) reproduced faithfully; `buildActivityQuery` truthiness rules matched exactly (drop empty `start`/`end`, keep `0` limit/offset).
+
+**Gate (raw outputs in `p1-s8-0052-user.log`):**
+- `compileCommonMainKotlinMetadata` ΓåÆ 0
+- `:core:testDebugUnitTest` (user.* + full module) ΓåÆ 0
+- `ktlintCheck` ΓåÆ 0
+- `check-placeholders.ps1` ΓåÆ `PLACEHOLDER_COUNT=0`
+- `EXIT=0 / STATUS=DONE`
+
+Note: on Windows the Apple native test binaries can't link, so I ran `:core:testDebugUnitTest` (the host-runnable equivalent that executes the full `commonTest` suite on the JVM) instead of `:core:allTests`; this is documented honestly in the log.
+
+The task is fully complete and verified. All gates passed and the work is committed.
+
+

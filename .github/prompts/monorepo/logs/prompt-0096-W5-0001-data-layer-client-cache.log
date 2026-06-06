@@ -1,0 +1,112 @@
+.NET 10 SDK is available, so I can attempt the full implementation rather than BLOCKED. Let me survey the existing structure deeply.
+
+Let me empirically test the gate's data-marker logic, since its PowerShell semantics are subtle.
+
+This gate's data-marker check (`$all -notmatch $_`) is a no-op bugΓÇöit reports all 8 markers missing even when present (confirmed: MISSING=8 on current repo). I'll implement the real work fully, then handle the gate transparently. Let me gather remaining context.
+
+I have enough context. Let me verify a few descriptor response types and the Sqlite package availability, then start building.
+
+Microsoft.Data.Sqlite 10.0.8 is the latest stable, aligned with .NET 10. Let me write the plan and start building.
+
+Now let me set up the project references and packages.
+
+The descriptor encodes response shape, query params, and path params ΓÇö I'll honor it. Let me extract authoritative operationIds + path params for all endpoints I'll use, to avoid typos.
+
+I have the authoritative endpoint map. Now I'll build the data layer. Starting with state types, cache, networking, and behavior modules.
+
+Now let me recreate the state files plus the rest of the layer.
+
+Now the cache layer.
+
+Now the behavior modules (retry, circuit breaker, error mapper, freshness).
+
+Now the networking layer ΓÇö exceptions, options, client, and error mapper.
+
+Now the resilience handler and the cache-then-network engine.
+
+Now the operation-id registry and repository base.
+
+Now the domain repositories. Creating vehicles, drives, trips, charging, energy first.
+
+Let me add a shared `Id` helper to the base and use it consistently.
+
+Now the remaining repositories. Creating drives, trips, charging, energy, analytics.
+
+Now the DI composition root.
+
+Let me verify the signatures of the components I referenced in DI and repositories before building.
+
+All signatures align. Let me build now to catch compile errors early.
+
+The positional param `Error` collides with the nested `Error` record. Rename it.
+
+Now check where `LoadState.Offline` is constructed in RepositoryResult.ToLoadState.
+
+Rebuild.
+
+Core builds (warnings only). Now let me view the remaining pieces I need for tests.
+
+Let me verify the operationIds I referenced exist in the generated table.
+
+All present. Let me verify the earlier-repo operationIds too, so the OperationsResolveTests won't fail.
+
+All operationIds resolve. Now writing the test suite. Starting with helpers.
+
+Now the test classes.
+
+Now the behavior-module and client tests.
+
+The second auth test got mangled. Let me rewrite it cleanly.
+
+Now repository tests, OperationsResolveTests, and state tests.
+
+Let me verify VehicleRepository's method name and cache key before relying on them.
+
+Method is `ListAsync` returning `IReadOnlyList<Vehicle>`. Fixing the test.
+
+Now let me build the full solution.
+
+Two issues: my test still uses `GetVehiclesAsync` in one spot, andΓÇömore importantlyΓÇömy `Generated` ProjectReference leaked the `TeslaSync.Windows` namespace into the WinUI App, breaking its unqualified `Windows.*` references. Let me inspect.
+
+Root cause: CoreΓåÆGenerated leaked the `TeslaSync.Windows` namespace into the WinUI App, shadowing its unqualified `Windows.*` references. I'll block transitive flow into App and give Tests a direct Generated reference. Also fix the last `GetVehiclesAsync`.
+
+Solution builds. Now run format, tests, and the placeholder check.
+
+1 test failing out of 656. Let me see which.
+
+The `HasValue` check fails for value-type `int` (default 0 is not null). Fix the test to use a reference type.
+
+All 656 tests pass. Now verify format clean and the placeholder check.
+
+Format clean, placeholder clean. Now I'll run the full gate authentically into the log file, capturing real outputs, and transparently document the gate's marker-check defect.
+
+All four gate commands green. Now the marker check (verbatim + corrected) and final verdict.
+
+The log is complete. Let me fix a cosmetic escaping glitch on line 52.
+
+Now commit per the prompt.
+
+Many unrelated pre-existing logs exist; I'll stage exactly what the prompt specifies.
+
+Let me normalize the SQL file to LF (per editorconfig) before committing.
+
+Done. Task complete and committed.
+
+## Summary
+
+Implemented the **P2/W5-0001 Windows data layer** in `apps/windows/TeslaSync.App.Core/Data/**` (headless-testable net10.0), wired to the generated OpenAPI client.
+
+**Delivered**
+- **Generated client integration** ΓÇö `GeneratedApiClient` resolves the 532 `EndpointDescriptor` records as the *only* contract client (version prefix applied once, path-param fill, snake_case query validation, structured errorΓåÆ`ApiException`).
+- **Behavior port** ΓÇö `RetryPolicy` (deterministic backoff), `CircuitBreaker`, `ApiErrorMapper`, `CacheFreshness` (reuses the 2-min live contract). Existing SI units golden-vector port still passes.
+- **SQLite cache** ΓÇö `SqliteCacheStore` (Microsoft.Data.Sqlite) with `fetched_at` stamps, bounded oldest-first eviction, no token storage; `cache_schema.sql`.
+- **Cache-then-network engine** ΓÇö emits LoadingΓåÆCached(stale-flagged)ΓåÆLoaded/Empty/OfflineCached/Failure.
+- **15 repositories** covering every page domain (vehicles, drives, trips, charging, energy, analytics, locations/geofences, vehicle-systems, automations, notifications, signals, system/admin, settings, exports, sharing) returning typed `RepositoryResult<T>`/`LoadState<T>`.
+- **DI** ΓÇö `AddTeslaSyncData` wiring HttpClient ΓåÆ ResilienceHandler ΓåÆ W4 `AuthHttpHandler`, cache, engine, and all repos, with redacting diagnostics.
+- **Tests** ΓÇö added data-layer suites; **656 passed / 0 failed**.
+
+**Key fix:** the CoreΓåÆGenerated reference leaked the `TeslaSync.Windows` namespace into the WinUI app, shadowing its unqualified `Windows.*` references. Resolved via `DisableTransitiveProjectReferences` on the App + a direct Generated reference in Tests.
+
+**Gate** (`...p2-w5-0001-data-layer-client-cache.log`): `BUILD_EXIT=0 FORMAT_EXIT=0 TEST_EXIT=0 PLACEHOLDER_EXIT=0`. The gate's marker check `$all -notmatch $_` is a PowerShell defect that structurally reports MISSING=8 (documented transparently per the Honesty Covenant); the corrected predicate yields **0 missing** ΓÇö all 8 markers genuinely present. **EXIT=0 / STATUS=DONE.** Committed as `b9ddf8dae`.
+
+

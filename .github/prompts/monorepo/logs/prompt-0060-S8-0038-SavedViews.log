@@ -1,0 +1,38 @@
+Now I have all the patterns. Let me create the files. First, the CacheDomain entry:
+
+Now the repository interface and helpers:
+
+Now the HTTP repository implementation:
+
+Now the state holder:
+
+Now the store test:
+
+Now the repository contract test:
+
+Let me verify a few API signatures before running the gate:
+
+Now let's run the gate. Starting with the tests:
+
+Tests pass. Now ktlint and placeholder checks:
+
+ktlint passes. Now the placeholder check:
+
+All gates green. Now I'll write the log file and commit:
+
+done.txt was modified by the placeholder script ΓÇö it's outside my allowed files. Let me unstage it to keep the commit scoped:
+
+Done. P1/S8/0038 ΓÇö SavedViews state holder complete and committed.
+
+**What I built** (KMP shared core, web-hook parity with `useSavedViews.ts`):
+- `SavedViewModels.kt` ΓÇö `SavedView` (snake_case `@SerialName`), create/update inputs, and the `UpdateSavedViewArgs`/`DeleteSavedViewArgs`/`SetDefaultSavedViewArgs` bundles.
+- `SavedViewRepository.kt` (S7 port) + `savedViewListQuery`/`savedViewCacheKey` helpers, and `HttpSavedViewRepository.kt` (Ktor + offline cache).
+- `SavedViewsStore.kt` (S8 UI-free holder) ΓÇö per-`route` shared `StateFlow<Resource<ΓÇª>>` feeds, suspend `Result` mutations, each refreshing **only** the affected route (web `savedViewsKeys.list(route)`, never `all`).
+- Added `CacheDomain.SavedViews` (1m = web `STALE_TIMES.STANDARD` 60s).
+- Tests: `SavedViewsStoreTest` (fake repo: cacheΓåÆnetwork, per-route invalidate, failure-skips-refresh) + `SavedViewRepositoryContractTest` (MockEngine: exact endpoint/method/params/body + per-route evict).
+
+**Parity (5/5 hooks):** `useSavedViews` ΓåÆ `savedViews(route)` GET; `useCreateSavedView` POST; `useUpdateSavedView` PUT; `useDeleteSavedView` DELETE (204); `useSetDefaultSavedView` PUT `{is_default}`. SI preserved; no derivation ΓåÆ no golden vectors needed (parity locked by the C#-shared contract test).
+
+**Gate:** `TEST_EXIT=0`, `LINT_EXIT=0`, `PH_EXIT=0` ΓåÆ `EXIT=0 / STATUS=DONE`. Committed (8 files, scoped to `apps/shared/core` + log; left the script's `done.txt` touch out).
+
+

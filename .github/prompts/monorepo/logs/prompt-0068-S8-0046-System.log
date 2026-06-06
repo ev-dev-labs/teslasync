@@ -1,0 +1,42 @@
+I'll start by understanding the task and exploring the relevant files.
+
+Let me look at the RateLimitStatus types in full and the CacheDomain enum + cacheJson location.
+
+Now I'll create the domain. Let me add the CacheDomain entry and create the model, repository, store, and tests.
+
+Now the repository interface and HTTP implementation:
+
+Now the store:
+
+Now the tests. First the store test:
+
+Now the repository contract test:
+
+Now let me run the gate. First the build/tests:
+
+Now run ktlint and placeholder checks:
+
+Lint clean. Now run placeholder check and re-run tests (files changed since last test run):
+
+PH check returned 1. Let me see what it flagged:
+
+All gates pass. Now append the PARITY enumeration and final status to the log:
+
+All gates green. Committing per the prompt's allowed-files scope:
+
+P1/S8/0046 complete. `STATUS=DONE`, `EXIT=0`.
+
+**What I built** ΓÇö the platform-agnostic, UI-free KMP port of the web `useSystem` hook domain (`web/src/api/hooks/useSystem.ts`):
+
+- **`SystemModels.kt`** ΓÇö `RateLimitStatusResponse` / `ScopeBudget` with verbatim snake_case `@SerialName` (SI-agnostic; no conversion at this layer).
+- **`SystemRepository.kt` + `HttpSystemRepository.kt`** ΓÇö S7 data port; `rateLimitStatus()` streams cache-then-network `Resource` from `GET /system/rate-limits`. Bare-body decode (handler uses `httpx.WriteJSON`, no `{data:T}` envelope). New `CacheDomain.System` (15s TTL = web `RATE_LIMIT_STALE_TIME_MS`), key `rate-limits` (web `systemKeys.rateLimits`).
+- **`SystemStore.kt`** ΓÇö S8 hot `StateFlow<Resource<ΓÇª>>` feed, shared/refreshable; read-only (zero mutations ΓåÆ no invalidation), 30s `refetchInterval` + pause-on-hidden left as UI concerns.
+- **Tests (8)** ΓÇö store fold/refresh/cacheΓåÆnetwork behavior + contract test locking endpoint, no double `/api/v1`, verbatim cache round-trip, null `reset_at`, and 5xxΓåÆ`Resource.Error`.
+
+**Parity:** 1/1 hook ported (`useRateLimitStatus`). No client-side derivation ΓåÆ no golden vectors required.
+
+**Gate:** `TEST_EXIT=0` ┬╖ `LINT_EXIT=0` ┬╖ `PH_EXIT=0` ΓÇö logged to `.github/prompts/monorepo/logs/p1-s8-0046-system.log` and committed (`15c70b7b3`).
+
+The task is fully complete and verified ΓÇö all three gates passed and the work is committed.
+
+

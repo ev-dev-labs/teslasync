@@ -60,6 +60,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TeslaSync.App.Core\TeslaSync.App.Core.csproj" />
+    <ProjectReference Include="..\TeslaSync.App.Platform\TeslaSync.App.Platform.csproj" />
   </ItemGroup>
 
 </Project>

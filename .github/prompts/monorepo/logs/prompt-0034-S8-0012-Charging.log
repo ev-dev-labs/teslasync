@@ -1,0 +1,38 @@
+I have full context now. Let me set up tracking and start implementing.
+
+Now creating the implementation. First, the input models:
+
+Now the repository interface with query/key/family helpers (replacing the concrete S7 class):
+
+Now the HTTP implementation:
+
+Now the store:
+
+Now update the existing contract test reference, then write the new tests:
+
+Now the repository contract test:
+
+Now the golden test:
+
+Now let me run the gate. First ktlint format check and tests:
+
+Now run the full test suite:
+
+Tests pass. Now ktlintCheck and placeholder check:
+
+All gates green. Let me check the 0011 log format then write the log:
+
+Let me count tests in my suites for accurate logging:
+
+Now commit:
+
+All gates green and committed.
+
+**P1/S8/0012 ΓÇö Charging state holder: DONE**
+
+- All 16 hooks ported (11 reads + 5 mutations) at web-hook parity ΓÇö same endpoints, snake_case params, query keys, and the exact `invalidateQueries` set per mutation (TanStack prefix semantics via `|`-boundary keys). SI preserved.
+- `ChargingRepository` converted from concrete S7 class ΓåÆ interface; `HttpChargingRepository` over `CachingRepository<JsonElement>`; `ChargingStore` with family-targeted refresh; `ChargingModels` request bodies.
+- Gate: `TEST_EXIT=0` (38 charging tests: Store=8, Contract=21, Golden=9; full `:core:allTests` BUILD SUCCESSFUL), `LINT_EXIT=0`, `PH_EXIT=0`.
+- Log written (`=== PARITY ===` enumerates all 16) and committed (9 files, +1715/-36).
+
+

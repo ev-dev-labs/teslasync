@@ -1,0 +1,25 @@
+I need to understand the existing patterns. Let me find a sibling domain already ported (likely from S7/earlier prompts).
+
+All patterns confirmed. Let me create a plan and start implementing.
+
+Now add the CacheDomain entry:
+
+Now let me run the gate. First the tests:
+
+Metadata compile passed. Now run the full test gate, capturing to the log:
+
+Tests passed. Let me verify my new test classes actually executed:
+
+All 27 incident tests pass (12 contract + 7 golden + 8 store). Now ktlint and placeholder gates:
+
+ktlint passes. Now re-run tests (since I edited test files) and the placeholder check:
+
+All three gates pass. Now finalize the log with the parity enumeration and status:
+
+All gates green. Let me commit per the prompt's commit spec:
+
+Many unrelated untracked files exist. Per the commit spec, I'll stage only `apps/shared/core` and my log file:
+
+Committed. P1/S8/0027 is complete.
+
+

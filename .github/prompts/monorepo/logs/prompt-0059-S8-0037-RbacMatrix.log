@@ -1,0 +1,19 @@
+Now I have a complete understanding. Let me set up todos and start implementing.
+
+Now the models + derivations file:
+
+Now the store:
+
+Now let me write the three test files:
+
+Now run the full test suite:
+
+Tests pass. Now run ktlintCheck + placeholder gate and finalize the log:
+
+All three gates pass. Let me write the parity enumeration and final status to the log:
+
+All gates green. Now commit:
+
+Task complete. Committed cleanly within scope.
+
+

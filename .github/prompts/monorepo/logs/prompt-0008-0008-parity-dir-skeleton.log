@@ -1,0 +1,22 @@
+I'll start by checking preflight conditions and understanding the context.
+
+Now I have full context. Let me check a prior log file format to match conventions.
+
+Now I'll create the schema files and README.
+
+Now the GATE: validate both schemas parse and README references both ADRs.
+
+All gates green. Now write the log and commit.
+
+P0/0008 complete and committed (`105ce13e0`).
+
+**Delivered** (`apps/parity/`):
+- `manifest.schema.json` ΓÇö draft-07 schema, one record per parity unit. `kind` enum covers all 10 unit kinds (route, page, panel, component, chart, map, metric, state, api, string-group); `requiredCount` present and required.
+- `ledger.schema.json` ΓÇö draft-07 per-platform coverage row. `platform` enum covers all 4 targets (windows, android, apple-macos, apple-ios); includes `coveredCount`/`requiredCount` + `evidenceLog`.
+- `README.md` ΓÇö manifestΓåÆledger flow diagram, unit definition, `=== PARITY ===`ΓåÆledger mapping table, and DONE = ledger 100% (cites ADR-006 + ADR-011).
+
+**Verified (raw):** both schemas `ConvertFrom-Json` OK ┬╖ all kinds/platforms present ┬╖ `requiredCount`/`evidenceLog` present ┬╖ README references ADR-006, ADR-011, and "100%" all `True` ┬╖ `COMMIT_EXIT=0`. Log ends `EXIT=0 / STATUS=DONE`.
+
+Note: preflight tree had only untracked prior prompt-runner harness logs (same situation 0001/0007 documented); I scoped the commit to the Allowed files (`apps/parity/**` + the prompt log).
+
+

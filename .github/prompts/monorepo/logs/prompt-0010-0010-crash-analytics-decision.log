@@ -1,0 +1,21 @@
+Now let me read the actual ADR-016 and the S11 diagnostics prompt to ground the doc decisions.
+
+Full context gathered. Now writing the decision doc.
+
+Now the GATE: verify the doc exists and all 5 sections are present via grep headings, then write the log and commit.
+
+All 5 sections present, EXIT=0. Finalizing the log and committing (scoping to allowed files per the documented preflight situation).
+
+P0/0010 complete.
+
+Created `apps/docs/observability.md` pinning the ADR-016 observability decision, with all 5 required sections:
+
+1. **Final choice** ΓÇö single self-hosted Sentry for crash + analytics; per-platform SDKs (`sentry-cocoa`, `sentry-android`/KMP, `sentry-dotnet`) with dSYM/mapping/PDB symbolication.
+2. **PII redaction contract** ΓÇö canonical deny-list (VIN, tokens, lat/long, email/contact), single-redacting-logger rule, with redaction examples.
+3. **Opt-out/consent** ΓÇö default-off toggle + purge-on-revoke, iOS ATT stance, Play Data Safety, App/Microsoft Store privacy labels.
+4. **Self-hosting plan** ΓÇö Helm + build-time DSN (no hard-coded DSNs), deferred to P5/H7 with pointer.
+5. **Event taxonomy** ΓÇö `screen_view`, `command_issued`, `error`; no third-party ad SDKs.
+
+Gate: doc exists, 5/5 sections matched, `EXIT=0` / `STATUS=DONE`. Committed `b24e0f403` (doc + log, scoped to allowed files; preflight tree had only untracked prior harness logs).
+
+

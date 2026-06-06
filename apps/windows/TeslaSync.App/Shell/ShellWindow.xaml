@@ -117,6 +117,13 @@
                         HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Stretch"
                         Visibility="Collapsed" />
+
+                    <!-- Foreground push notice (P2/W6-0002). -->
+                    <ContentControl
+                        x:Name="PushBannerHost"
+                        Margin="0,8,0,0"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch" />
                 </StackPanel>
 
                 <Frame x:Name="ContentFrame" Grid.Row="1" />

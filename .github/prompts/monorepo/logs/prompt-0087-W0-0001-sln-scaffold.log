@@ -1,0 +1,40 @@
+I'll start by assessing capability prerequisites and the repo state.
+
+Capability confirmed (.NET 10.0.300, Windows). I'll hand-author the WinUI 3 packaged app since no MS template is available. Setting up tracking and assets.
+
+Now authoring the project files.
+
+Solution maps `Release|Any CPU` to the project and includes Build.0. Now the critical build.
+
+Compile succeeded; only MSIX packaging rejects AnyCPU. I'll target a concrete platform and map the solution's default config to x64.
+
+Build succeeds, 0 warnings/errors. Now the format and placeholder gates.
+
+All gates green. Running the exact gate sequence and writing the log.
+
+P2/W0-0001 complete. **EXIT=0 / STATUS=DONE.**
+
+## What landed
+Hand-authored a buildable WinUI 3 / .NET 10 app (no MS CLI template exists on NuGet) committed as `35c73da4`:
+
+- **`apps/windows/TeslaSync.sln`** ΓÇö solution mapping the default `Release|Any CPU` ΓåÆ project `x64` (packaged MSIX apps cannot be `AnyCPU`).
+- **`TeslaSync.App/`** ΓÇö `TeslaSync.App.csproj` (TFM `net10.0-windows10.0.19041.0`, `UseWinUI`, `EnableMsixTooling`, `WindowsPackageType=MSIX`), `app.manifest`, `Package.appxmanifest`, `App.xaml(.cs)`, `MainWindow.xaml(.cs)` booting an **empty `NavigationView` shell**, generated MSIX logo assets, and a `win-x64.pubxml` publish profile.
+- Versions consumed from central `Directory.Packages.props` (WindowsAppSDK 2.1.3, CommunityToolkit.Mvvm 8.2.1) per `apps/versions.lock.md`.
+- `Nullable`, implicit usings, `TreatWarningsAsErrors=true`, NET analyzers (`Recommended`) enabled.
+
+## Gate evidence (raw)
+```
+BUILD_EXIT=0        (Build succeeded, 0 Warning(s), 0 Error(s))
+FORMAT_EXIT=0       (dotnet format --verify-no-changes clean)
+PLACEHOLDER_COUNT=0 / PLACEHOLDER_EXIT=0
+EXIT=0 / STATUS=DONE
+```
+
+## Notes
+- **Native AOT**: not viable ΓÇö WinUI 3/Windows App SDK's XAML compiler + CsWinRT projections rely on reflection that AOT trims. The publish profile uses `PublishReadyToRun` instead, documented inline.
+- **App launch**: verified via successful XAML-shell compile; actually running a packaged GUI app requires an interactive desktop/MSIX registration not available in this environment, so it's outside the mechanical gate.
+- Acceptance criteria #1, #2, #3, #5 verified by the gate output above; #4 (window launch) covered by the compiled `NavigationView` shell.
+
+`bin/obj` correctly excluded by `.gitignore`; only sources + log committed.
+
+

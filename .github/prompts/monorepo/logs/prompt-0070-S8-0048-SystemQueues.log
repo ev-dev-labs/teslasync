@@ -1,0 +1,39 @@
+I'll start by exploring the web source hook and the existing KMP shared core structure to understand the patterns.
+
+Let me examine an existing reads-only presentation domain as a template, plus the API types and repo patterns.
+
+Let me check the placeholder checker and the FeatureFlags golden test format, then write the files.
+
+Now I have all patterns. Let me write the implementation. First, add the cache domain:
+
+Now the repository interface with pure derivations:
+
+Now the HTTP implementation:
+
+Now the state holder (store):
+
+Now let me check the FeatureFlags contract test to mirror the decode/typed read pattern:
+
+Now the three test files. First the contract test:
+
+Now the store test and golden test:
+
+Let me verify the logs directory and run the gate. First, build/test:
+
+Now let me run the build/tests. This will take a while:
+
+Build succeeded. Let me confirm my test classes ran and passed:
+
+All passing (8 + 9 + 2, run in both debug & release). Now ktlint and placeholder checks:
+
+ktlint passed. Now the placeholder check:
+
+All gates green. Now write the log file and commit:
+
+The `done.txt` was already staged (not mine). Let me unstage it to keep the commit scoped to allowed files:
+
+Staged set is exactly the allowed files. Now commit:
+
+Committed. All gates pass.
+
+

@@ -1,0 +1,13 @@
+Preflight passes (0001 DONE). Now appending the blocks.
+
+All gate checks pass. Now writing the log and committing.
+
+P0/0002 complete. Γ£à
+
+**Acceptance criteria met:**
+- All three toolchain blocks (KMP/Gradle, .NET/WinUI, Xcode/Swift) + generated block appended to `.gitignore`; no existing lines removed (26 insertions only).
+- `apps/.editorconfig` created with four language sections (kt/kts, cs/xaml, swift, json/yml/yaml).
+- Gate: `IGNORE_EXIT=0`, Apple & generated paths ignored, editorconfig exists ΓåÆ `EXIT=0` / `STATUS=DONE`.
+- Committed on `feature/apps` (`6e42266f1`) with the Co-authored-by trailer.
+
+

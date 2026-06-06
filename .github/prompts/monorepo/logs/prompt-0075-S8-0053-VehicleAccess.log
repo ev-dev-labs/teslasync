@@ -1,0 +1,29 @@
+I'll examine existing patterns. Let me find a comparable state holder with reads + mutations and its repository.
+
+Now let me look at the repository layer (S7) and Resource type.
+
+I have a complete picture. Let me set up tracking and create the files.
+
+Now creating the model file:
+
+Now the repository interface with cache-key/body helpers and TTL:
+
+Now the HTTP-backed repository:
+
+Now the store:
+
+Now add the CacheDomain entry:
+
+Now the tests:
+
+Now let me run the gate. Setting up the log and running tests:
+
+Tests pass. Now ktlint and placeholder checks:
+
+ktlint clean. Now the placeholder check:
+
+All gates green. Let me finalize the log with the parity enumeration and status, then commit:
+
+Committed. Task complete.
+
+

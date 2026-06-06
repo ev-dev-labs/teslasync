@@ -1,0 +1,72 @@
+I'll start by exploring the relevant files: the web hook source and the existing KMP shared core structure.
+
+Let me study existing patterns ΓÇö the Dashboard domain (closest) and a mutation-heavy domain like Annotations.
+
+The Annotations domain is the best mirror (parametered read + mutations). Let me read its full implementation and tests.
+
+Now the test files, CacheDomain, CachingRepository, and net helpers.
+
+Now the core infrastructure: CachingRepository, Resource, net helpers, and how opaque JSON blobs are modeled (Chat/Admin).
+
+Now the net helpers, an opaque-JSON example (Chat), and the backend route + C# port location.
+
+Let me check the backend response model and the C# port structure.
+
+Let me check if there's a central DI/module wiring and the MapCacheStore test helper, plus net HttpMethodKind/jsonHeaders.
+
+I have a complete picture. This is a faithful port following the established Annotations pattern. Let me set up tracking and add the new cache domain.
+
+Now the models file:
+
+Now the repository interface with query/cache-key helpers:
+
+Now the HTTP implementation:
+
+Now the Store:
+
+Now the two test files ΓÇö repository contract test and store test:
+
+Now let me run the gate. First verifying the gradle setup location:
+
+Module uses `:core` with Android + Apple targets. Let me run the gate from `apps/shared`. First the tests (long-running):
+
+Tests pass (Apple targets skipped on Windows as expected; Android/JVM unit tests ran). Now ktlint and placeholder checks:
+
+ktlint style issues in the test. Let me auto-format:
+
+Lint clean. The formatter rewrote the test file ΓÇö let me verify tests still pass and run the placeholder check:
+
+All three gates pass. Let me confirm my test classes actually executed (not silently skipped):
+
+All 16 tests pass (11 contract + 5 store). Let me finalize the log with the parity enumeration and commit.
+
+`done.txt` was already staged before I started (out of my scope). Let me unstage it to match the commit spec exactly, then commit.
+
+Done. Committed successfully.
+
+## Summary
+
+Ported the web `useDashboardLayouts` hook domain (5 hooks) to UI-free KMP shared-state holders, following the established Annotations port pattern. All gates pass: **TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0**.
+
+**New files (`apps/shared/core/**`):**
+- `DashboardLayoutModels.kt` ΓÇö `NamedDashboardLayout` (`@Serializable`, snake_case `@SerialName`, opaque `layout: JsonElement`), `Create`/`Update` inputs.
+- `DashboardLayoutRepository.kt` ΓÇö S7 port interface + `dashboardLayoutListQuery` / `dashboardLayoutCacheKey` (mirrors web `dashboardLayoutLibraryKeys.list(vehicleId ?? 'global')`).
+- `HttpDashboardLayoutRepository.kt` ΓÇö cache-then-network read + 4 mutations; each mutation `clear()`s the whole partition (web `invalidateQueries(...all)` analogue).
+- `DashboardLayoutsStore.kt` ΓÇö per-scope shared `StateFlow<Resource<ΓÇª>>` feeds + suspend `Result` mutations with `refreshAll()`.
+- Added `CacheDomain.DashboardLayouts` (5-min TTL = web `STALE_TIMES.SLOW`).
+- Two test files: 11 contract + 5 store = **16 tests green**.
+
+**Parity (all 5 hooks):**
+| Web hook | Holder/Repo | Endpoint |
+|---|---|---|
+| useNamedDashboardLayouts | namedLayouts | GET /dashboard/layouts[?vehicle_id=] |
+| useCreateDashboardLayout | createLayout | POST /dashboard/layouts |
+| useUpdateDashboardLayout | updateLayout | PUT /dashboard/layouts/{id} |
+| useDeleteDashboardLayout | deleteLayout | DELETE /dashboard/layouts/{id} (204) |
+| useApplyDashboardLayout | applyLayout | POST /dashboard/layouts/{id}/apply |
+
+SI preserved (no unit-bearing fields; `layout` round-trips verbatim). No golden vectors needed ΓÇö the web hook has no `select`/derivation (matches the Dashboard/Anomalies/Commands no-derivation ports). Apple test targets are SKIPPED on the Windows host as expected. Out-of-scope `done.txt` was unstaged to keep the commit within the allowed file set.
+
+The task is fully complete and verified ΓÇö all gates pass and changes are committed.
+
+

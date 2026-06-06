@@ -1,0 +1,47 @@
+I'll start by examining the web source hook and the existing KMP shared core structure.
+
+Now let me explore the existing KMP shared core structure to understand established patterns.
+
+This is a mature codebase with established patterns. Let me examine the SSE infrastructure and an existing SSE-consuming store to mirror the pattern.
+
+Let me study the closest analog (AchievementUnlocks uses SSE) and supporting types.
+
+Let me examine the reducer pattern, golden vectors/spec, test layout, and the placeholder checker.
+
+Let me read the test patterns, golden loader, FakeSseTransport, and the golden spec.
+
+Let me verify the backend route, path constant, and emitted event names to ensure exact parity.
+
+Let me verify build/test infrastructure: gradlew location, logs dir, and ktlint/explicit-API expectations.
+
+I have a thorough understanding. Let me record a brief plan and the parity decisions.
+
+Now let me create the source files.
+
+Now the store:
+
+Now the golden spec and tests.
+
+Now the golden test, reducer unit test, and store test:
+
+Now let me run the tests. I'll run the Android (JVM) unit tests which execute commonTest, plus ktlint.
+
+Tests passed. Let me confirm the test count and run ktlint + the full common test suite + placeholder check.
+
+All 20 logstream tests pass. Now ktlint, the full common test suite, and the placeholder gate.
+
+Let me auto-format and re-check.
+
+Formatting looks correct. Now re-run ktlint check, full common test suite, and placeholder gate together.
+
+Now the placeholder gate:
+
+All gates green. Now I'll write the execution log.
+
+All gates pass. Let me commit per the prompt's instructions.
+
+Only my files are staged (the `done.txt` and other logs are pre-existing, unstaged). Committing:
+
+Committed. Task complete.
+
+

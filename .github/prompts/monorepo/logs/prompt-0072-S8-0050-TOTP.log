@@ -1,0 +1,33 @@
+Now I have enough context. Let me create a plan and start implementing.
+
+Now the models:
+
+Now the SudoTokenSink seam, repository interface and HTTP impl:
+
+Now the golden test:
+
+Now append the parity enumeration and final EXIT/STATUS to the log:
+
+P1/S8/0050 complete and committed (`dca332b1d`).
+
+## Summary
+
+Ported the web `useTOTP` hook domain (`web/src/api/hooks/useTOTP.ts`) to UI-free, platform-agnostic state holders in the KMP shared core, at full parity.
+
+**All 6 hooks ported** ΓåÆ `TOTPStore` (S8) over a new `TOTPRepository`/`HttpTOTPRepository` (S7):
+- `useTOTPStatus` ΓåÆ `status: StateFlow<Resource<TOTPStatus>>` (GET `/auth/totp`, 30s TTL, 501 `AUTH_MODE_OPEN`ΓåÆ`TOTPStatus.Open`)
+- `useTOTPEnroll` / `useTOTPVerify` / `useTOTPRevoke` / `useTOTPRegenerateBackupCodes` ΓåÆ suspend `Result`s that evict + refresh the status key on success (mirroring `invalidate(totpKeys.status)`)
+- `useTOTPStepUp` ΓåÆ mints `TOTPSudoToken`, performs **no** invalidation, and hands the token + parsed expiry to an injectable `SudoTokenSink` (the `setCachedSudoToken` analogue)
+
+**Derivations pinned by golden vectors** (`spec/totp-golden.json`, KMP+C# parity per ADR-004): `statusResponse` (`backup_codes_remaining ?? 0`), `sudoExpiryMillis` (`new Date(expires_at).getTime()`), and conditional `stepUpBody`. SI preserved (no unit-bearing fields). Sentinel codes re-exported.
+
+**Gate (all green):**
+- `:core:allTests` ΓåÆ `TEST_EXIT=0` (new `TOTPStoreTest`: 15 tests; `TOTPGoldenTest`: 4 tests ΓÇö fake-repo, cacheΓåÆnetwork, invalidation, sink behavior)
+- `:core:ktlintCheck` ΓåÆ `LINT_EXIT=0`
+- `check-placeholders.ps1` ΓåÆ `PH_EXIT=0` (0 placeholders)
+
+Log at `.github/prompts/monorepo/logs/p1-s8-0050-totp.log` ends with `EXIT=0` / `STATUS=DONE` and a `=== PARITY ===` block enumerating all 6 hooks.
+
+The task is complete and verified. All work was implemented, gated green, and committed.
+
+

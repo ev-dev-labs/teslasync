@@ -1,0 +1,13 @@
+[2026-06-04 16:45:12] [1/74] START  p1-shared/S0-0001-parity-manifest-generator.prompt.md
+[2026-06-04 16:56:42] [1/74] DONE in 11.5 min
+[2026-06-04 16:56:52] [2/74] START  p1-shared/S0-0002-ui-prompt-generator.prompt.md
+[2026-06-04 17:09:43] [2/74] DONE in 12.8 min
+[2026-06-04 17:09:53] [3/74] START  p1-shared/S1-0001-openapi-emit.prompt.md
+[2026-06-04 17:39:02] [3/74] DONE in 29.2 min
+[2026-06-04 17:39:12] [4/74] START  p1-shared/S10-0001-i18n-catalog.prompt.md
+[2026-06-04 17:56:46] [4/74] Cleaning up stale copilot PID 76616
+[2026-06-04 17:56:46] [4/74] Cleaning up stale copilot PID 79536
+[2026-06-04 17:56:46] [4/74] DONE in 17.6 min
+[2026-06-04 17:56:56] [5/74] START  p1-shared/S11-0001-diagnostics.prompt.md
+[2026-06-04 18:01:15] [5/74] LOG-GATE FAILED (transcript log: final EXIT=1, final STATUS=BLOCKED; artifact log .github\prompts\monorepo\logs\p1-s11-0001-diagnostics.log: final EXIT=1, final STATUS=BLOCKED) after 4.3 min
+[2026-06-04 18:01:15] STOPPED at red prompt 5 (log-gate). Resume with: -StartFrom 5

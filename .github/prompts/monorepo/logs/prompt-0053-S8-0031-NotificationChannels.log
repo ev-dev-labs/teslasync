@@ -1,0 +1,32 @@
+Now I have full understanding. Let me set up tracking and create the implementation files.
+
+ktlint clean. Now run the unit tests.
+
+All gates pass. Now writing the log and committing.
+
+All gates green and committed.
+
+## P1 ┬╖ S8 ┬╖ 0031 ΓÇö NotificationChannels state holder ┬╖ `STATUS=DONE`
+
+Ported all **4 hooks** from `useNotificationChannels.ts` to UI-free KMP shared-core state holders, delegating entirely to a new S7 repository (no direct Ktor in the holder).
+
+**Created (committed `0fc01b250`, 9 files, +1157):**
+- `NotificationChannelModels.kt` ΓÇö `NotificationChannel` sealed union (`@JsonClassDiscriminator("kind")`, all 7 web kinds) + webhook test/preview DTOs.
+- `NotificationChannelsRepository.kt` (S7 port) + `HttpNotificationChannelsRepository.kt` (Ktor + cache-then-network).
+- `NotificationChannelsStore.kt` (S8 holder) + 3 test files + shared golden spec JSON.
+
+**Parity mapping:**
+| Web hook | Port |
+|---|---|
+| `useWebhookChannels` | `webhookChannels()` StateFlow ΓÇö `GET /notifications`, cached `key="channels"`, filtered `is Webhook` on every emission |
+| `useTestWebhookChannel` | `testWebhookChannel(id,title?,message?)` ΓÇö `POST .../webhook-test`; blank-guarded verbatim body, no body when empty; HTTP-200-on-receiver-failure decodes to `success=false`; invalidates nothing |
+| `useWebhookSignaturePreview` | `previewWebhookSignature(secret,body)` ΓÇö `POST .../webhooks/preview-signature` |
+| `useInvalidateWebhookChannels` | `invalidateWebhookChannels()` ΓÇö refreshes the channel feed; no-op when unobserved |
+
+SI preserved (no unit fields). The 5 re-exported channel-CRUD hooks belong to the separate `useNotifications` domain and are out of scope.
+
+**Gate (raw):** ktlint `BUILD SUCCESSFUL`; `testDebugUnitTest` full host suite `BUILD SUCCESSFUL` (Golden 6 / Store 7 / Contract 9 = 22, 0 failures); placeholders `PLACEHOLDER_COUNT=0`. Native execution deferred to macOS CI (compiled + ktlint-clean here). `EXIT=0`.
+
+The task is fully complete and verified. All work is committed.
+
+

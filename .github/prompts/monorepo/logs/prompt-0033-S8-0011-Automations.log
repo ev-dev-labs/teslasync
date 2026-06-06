@@ -1,0 +1,159 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+This is a substantial KMP porting task. Let me examine the existing shared core structure to understand the established patterns from predecessor S8 ports.
+
+A well-established pattern exists. Let me study a representative domain with both reads and mutations (Annotations) plus the supporting infrastructure.
+
+Excellent, very clear pattern. Now let me examine the infrastructure (CacheDomain, CachingRepository, net request), the test pattern, DI wiring, and web types.
+
+Now let me look at the net request helpers, the repository contract test, the DI wiring, and the web types for automations.
+
+Let me read the web automation type definitions in detail.
+
+The polymorphic automation step types add significant complexity. Let me examine the net request helpers, DI wiring, and a multi-endpoint store (Admin) to understand patterns for varied responses and registration.
+
+Let me find the DI/graph wiring, the JSON config, and check for any existing polymorphic serialization patterns.
+
+Let me check the web constants for the exact refetch/stale intervals, and look at the AdminStore (multi-feed store pattern).
+
+Let me verify the backend automation routes and check test helpers + the placeholder script.
+
+Let me view the exact router subroutes and check the gradle/serialization setup.
+
+I have the full picture. Let me check the `safeArray` helper and the cache test helpers (`MapCacheStore`) before writing.
+
+I now have a complete understanding of the patterns. Let me set up tracking and write the plan.
+
+Before writing ~800 lines of polymorphic serialization code, let me validate the riskiest design decisions with the rubber-duck agent.
+
+## Blocking Issues
+
+### 1. Raw-JSON cache + typed mapping can brick refresh on bad cached shape
+**Impact:** If cached `JsonElement` no longer matches the typed DTO, a simple `map { decode... }` can throw while transforming the initial `Loading(cached=...)` emission. That cancels the flow before the network fetch runs, so schema drift/corrupt cache may never self-heal.
+
+**Why this matters:** `CachingRepository` only evicts cache decode failures for its own serializer. With `JsonElement.serializer()`, almost any valid JSON decodes, so typed shape validation moves outside the base safety net.
+
+**Recommended fix:** DonΓÇÖt let typed decode exceptions escape the mapping layer. Use a `transform`-style mapper:
+- Decode cached values with `runCatching`.
+- If cached decode fails, drop/evict that key and continue to allow the network fetch.
+- If fresh `Success` decode fails, delete the key and emit `Resource.Error` rather than throwing.
+- Consider adding repository-level `deleteKey(key)` support if not exposed.
+
+### 2. Reusing response step DTOs for create/update risks sending forbidden IDs
+**Impact:** Backend automation create/update uses strict JSON decoding and step DTOs do **not** accept `id`, `automation_id`, or `step_id`. If you reuse the same sealed classes for responses and requests, any populated response object serialized back into an update body can produce a 400.
+
+**Recommended fix:** Either:
+- Create separate input DTO sealed hierarchies without `id`, `automation_id`, `step_id`, or
+- Add an explicit `toInput()` mapper/custom serializer for mutation bodies that strips response-only fields.
+
+`step_order` appears accepted by backend DTOs, but the ID fields are not.
+
+## Non-Blocking Issues
+
+### 3. `clear()` before targeted refresh may cause active feeds to lose cached data
+**Impact:** Your reasoning is partly correct: `clear()` itself is not reactive, so observed-but-not-refreshed feeds wonΓÇÖt immediately emit empty. However, for feeds you *do* refresh after `clear()`, the restarted cache-then-network flow will see no cache and likely emit `Loading(cached=null)`, temporarily wiping the in-memory value. TanStack Query invalidation usually keeps previous data while refetching.
+
+**Recommended fix:** Prefer targeted `store.delete(domain, key)` in mutations, matching web invalidation, instead of unconditional `clear()`. If you keep `clear()` as a backstop, consider store logic that preserves previous `StateFlow` data during refresh rather than replacing it with `Loading(null)`.
+
+### 4. Whole-partition `clear()` invalidates more than web semantics
+**Impact:** Presets/detail caches that web does not invalidate will be dropped. They may not emit immediately, but after `WhileSubscribed` stops and restarts, theyΓÇÖll refetch and may show empty loading. So itΓÇÖs not only a ΓÇ£future cold startΓÇ¥ effect.
+
+**Recommended fix:** Use per-key deletes for the known invalidation map. Reserve `clear()` for logout/global reset/schema migration.
+
+### 5. Prefix-refreshing history keys can race if using a mutable map
+**Impact:** Iterating `triggers.keys` while feeds are being created can cause concurrent modification issues depending on coroutine/thread usage.
+
+**Recommended fix:** Snapshot before iterating: `triggers.keys.filter { it.startsWith("history:") }.toList().forEach(::refresh)` or guard the maps with a `Mutex`.
+
+## Suggestions / Serialization Traps
+
+### 6. `encodeDefaults=true` is broader than ΓÇ£always emit arraysΓÇ¥
+**Impact:** It will emit every property with a default value, not just `triggers/conditions/actions`. This can accidentally send `enabled=false`, `description=""`, `command_params={}`, `days_of_week=[]`, etc., where web would omit `undefined`.
+
+**Recommended fix:** For mutation DTOs:
+- Use `default = null` for optional fields you want omitted.
+- Avoid non-null defaults except for arrays that must always be present.
+- Add contract tests comparing the exact JSON body for create/update against expected web parity.
+
+### 7. Sealed discriminator setup is sound, with caveats
+Your plan is generally correct:
+- `@JsonClassDiscriminator("kind")` + `@SerialName(...)` works.
+- Do **not** declare a real `kind` property on subclasses.
+- Ensure every base and subclass is `@Serializable`.
+- Use the concrete sealed base serializer for each lane list.
+
+Main caveat: if request and response reuse the same classes, response-only fields must not serialize into mutation bodies.
+
+### 8. Decoding-on-every-emission is acceptable performance-wise
+This is probably fine unless automation payloads are very large. With `stateIn`, decode happens on upstream emissions, not per subscriber replay. Correctness/error handling is the real concern, not CPU.
+
+Overall: the architecture is close, but I would not proceed until you fix the typed-decode failure path and avoid serializing response-only step IDs in mutation bodies.The critique surfaced real issues. I need to understand `cacheThenNetwork` semantics (does a fresh cache suppress the network fetch?) before finalizing the invalidation design.
+
+The critique raised two blocking issues. Key finding: `cacheThenNetwork` **always** re-fetches on collection (TTL only flags staleness), which reshapes my invalidation design. Let me check the backend decode strictness to settle the step-DTO reuse question.
+
+Confirmed: backend uses `DisallowUnknownFields()` and input DTOs have **no** id/automation_id/step_id ΓÇö only `step_order`. So mutation bodies must be id-free. This resolves the design: one id-free input hierarchy per lane (reused for input bodies, presets, and full detail), with identity preserved via `steps`. Let me read the exact backend input DTO fields to match precisely.
+
+Design validated and refined. Key decisions locked:
+- `cacheThenNetwork` always re-fetches on collection, so mutations just trigger store-level feed refresh (TanStack-faithful: previous data shown during refetch). No cache clearing needed.
+- Backend `DisallowUnknownFields` + id-free input DTOs ΓåÆ one **id-free** input step hierarchy per lane, reused for bodies/presets/detail; step identity preserved via `steps`.
+- Typed decode guarded against failures.
+
+Let me start implementing. First the CacheDomain and the models file.
+
+Now the models file with the polymorphic step hierarchies and all response/input types.
+
+Models done. Now the repository interface with query/key helpers, then the HTTP implementation.
+
+Now the HTTP repository implementation.
+
+Now the state holder.
+
+Let me verify the gradle setup and run an early compile to catch errors before writing tests.
+
+gradlew is in `apps/shared`. Let me compile the main sources first to catch errors early.
+
+compileKotlinMetadata got skipped. Let me compile an actual target that includes commonMain.
+
+Main sources compile. Now the tests. First the store test with a fake repository.
+
+Let me verify the actual model/store signatures before finalizing tests, and create the directory.
+
+Now create the store test:
+
+Now let me review the HTTP repo and the existing contract test pattern before writing the contract test.
+
+Now let me look at the golden test pattern:
+
+BUILD SUCCESSFUL. Let me confirm my new tests actually executed (not skipped):
+
+All 32 new tests pass (17 contract + 6 golden + 9 store). Now ktlint and placeholder check:
+
+Ktlint formatting violations. Let me run the auto-formatter:
+
+ktlint clean. Re-run tests (files changed) and the placeholder check:
+
+All gates green. Let me verify the reformatted test files still pass and write the log:
+
+Now write the log file:
+
+done.txt and other logs are not mine ΓÇö they're unstaged/untracked and won't be committed. My staged set matches the prompt's allowed scope. Committing:
+
+P1/S8/0011 complete and committed.
+
+**What I did:** Ported all 12 `useAutomations.ts` hooks (5 reads + 7 mutations) to UI-free KMP shared-core state holders at web-hook parity.
+
+**Files (apps/shared/core):**
+- `AutomationModels.kt` ΓÇö DTOs + 3 id-free sealed step hierarchies (`kind` discriminator) reused for input/preset/detail, so the strict `DisallowUnknownFields` backend can never 400 a mutation body.
+- `AutomationsRepository.kt` ΓÇö S7 port interface + pure query/key helpers.
+- `HttpAutomationsRepository.kt` ΓÇö `CachingRepository<JsonElement>` impl with guarded typed decode.
+- `AutomationsStore.kt` ΓÇö S8 holder with web-faithful targeted refresh per `invalidateQueries`.
+- `CacheDomain.kt` ΓÇö `Automations` 30s partition.
+
+**Gate (all green):**
+- `:core:allTests` ΓåÆ 32 new tests pass (9 store + 17 contract + 6 golden), 0 failures. `TEST_EXIT=0`
+- `:core:ktlintCheck` ΓåÆ `LINT_EXIT=0`
+- `check-placeholders.ps1` ΓåÆ `PLACEHOLDER_COUNT=0`, `PH_EXIT=0`
+
+Log written with `=== PARITY ===` enumerating all 12 hooks and `EXIT=0` / `STATUS=DONE`. Committed as `c8a2e1412`.
+
+

@@ -1,0 +1,91 @@
+Let me explore the repository structure and the key files first.
+
+This is a substantial KMP porting task. Let me explore the existing shared core structure, especially the presentation layer and repositories from prior slices.
+
+The pattern is clear. There's already an `EnergyRepository.kt` from S7. Let me study a complete analogous domain (driving) and the energy repo + web types.
+
+This is a large port. Let me check the existing `EnergyRepository` usages, the cache domain enum, web types, constants, and the golden test infrastructure for an analogous domain (charging).
+
+Let me check how the existing `EnergyRepository` is used in tests, the constants/STALE_TIMES web reference, and look at the golden test + store test pattern for charging.
+
+The concrete `EnergyRepository` (stub hitting `/analytics/energy`) coexists like `DriveRepository` does alongside the `DrivingRepository` domain interface. I'll create a new domain interface without colliding. Let me check what hook `/analytics/energy` maps to, the spec dir, golden infra, and the charging tests.
+
+Now let me read the golden test infrastructure, the charging repo interface/keys, and supporting helpers.
+
+I have the full pattern. Let me read the remaining helper signatures: `ApiHttpClient` request/safeRequest, `safeArray`, `CachingRepository`, and the existing concrete `EnergyRepository` references for renaming.
+
+Let me find `safeArray` and confirm `HttpMethodKind` and the `jsonHeaders`/`MapCacheStore` test helpers, plus check the golden loader pattern for whether I need platform actuals (inline approach avoids them).
+
+`safeArray` returns `JsonArray`. I need the `AS_OF_QUERY_PARAM` value for battery-health. Let me check it and confirm `HttpMethodKind` values, then write a plan.
+
+I have a complete understanding. Key insight: all 17 energy reads carry raw `JsonElement` (no generated DTOs), simplifying the store. Let me set up tracking and write a plan.
+
+Now the rename. Create the renamed file, delete the old, and update the contract test:
+
+Now the new `EnergyRepository` interface with query builders and keys:
+
+Now the `HttpEnergyRepository`:
+
+Now the `EnergyStore` state holder:
+
+Now the tests. First the `EnergyStoreTest` with a fake repo:
+
+Now the golden test for query/key/family derivations:
+
+Now the HTTP URL contract test:
+
+Let me verify `runTestBlocking` signature and `newTestCache` import before running.
+
+`runTestBlocking` returns `Unit`. Let me fix the `capture` helper and add the `newTestCache` import.
+
+Now let me run the gate. First check the gradle setup and log path.
+
+Gradle root is `apps/shared` (module `:core`). On Windows I can't build Apple targets, so I'll run the JVM-executable common tests via `testDebugUnitTest` plus ktlint. Let me start (first run compiles + downloads ΓÇö long wait):
+
+Tests pass. Now ktlint:
+
+ktlint has formatting issues. Let me auto-format:
+
+One line (165) couldn't be auto-corrected. Let me re-run check and view that line:
+
+ktlint clean. Now placeholder check + re-run tests to confirm formatting didn't break anything:
+
+All green. Let me confirm my new test classes actually executed:
+
+All three Energy test classes ran (24+13+9 tests, all pass). Now writing the gate log:
+
+Let me verify the log's endpoint claims match the actual implementation and the web source before committing:
+
+The log's enumerated endpoints don't match the actual implementation ΓÇö I wrote them from memory. I must correct the log to reflect the real code. Let me read both the implementation and the web source to get accurate paths:
+
+Now let me verify the implementation matches the web source exactly:
+
+The implementation faithfully matches the web source. My log's PARITY endpoints were wrong ΓÇö let me correct them to the real paths:
+
+Log now accurate. Let me update todos and check git status before committing:
+
+Everything green and accurate. Committing exactly the allowed files:
+
+Done. P1/S8/0019 complete.
+
+## Summary
+
+Ported all **24 `useEnergy.ts` hooks** (17 reads + 7 mutations) into UI-free KMP shared-core state holders, mirroring the existing Driving/Charging slices.
+
+**Deliverables** (`apps/shared/core`):
+- `data/repo/EnergyRepository.kt` ΓÇö interface + snake_case query builders + cache/feed keys + family helpers
+- `data/repo/HttpEnergyRepository.kt` ΓÇö HTTP+cache impl (verbatim-SI `JsonElement`; `safeArray` on the 6 list reads)
+- `presentation/energy/EnergyStore.kt` ΓÇö `StateFlow<Resource<JsonElement>>` reads + suspend `Result` mutations with web-faithful invalidation
+- Renamed the pre-existing concrete `EnergyRepository` ΓåÆ `EnergySummaryRepository` to free the canonical name
+- Tests: `EnergyStoreTest` (9), `EnergyGoldenTest` (13), `HttpEnergyRepositoryTest` (24 ΓÇö one URL/param contract per hook)
+
+**Gate (all green):**
+- `:core:testDebugUnitTest` ΓåÆ BUILD SUCCESSFUL (all 3 Energy test classes ran; 46 Energy tests pass)
+- `:core:ktlintCheck` ΓåÆ clean (after `ktlintFormat`)
+- `check-placeholders.ps1` ΓåÆ `PLACEHOLDER_COUNT=0`, EXIT=0
+
+Note: `allTests` aggregate links Apple targets, which can't build on Windows, so I ran the JVM-executable `testDebugUnitTest` (executes all commonTest) ΓÇö documented honestly in the log. I also caught and corrected an inaccuracy in my first log draft: the enumerated endpoints were rewritten to match the actual implementation, verified byte-for-byte against `useEnergy.ts`.
+
+Committed as `96bdf8f84` with the `=== PARITY ===` enumeration and `EXIT=0`/`STATUS=DONE`.
+
+

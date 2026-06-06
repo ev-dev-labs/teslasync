@@ -1,0 +1,40 @@
+Let me explore the existing shared core source structure and find a sibling state holder to mirror.
+
+There's an existing `enabled` gate pattern in `AlertMessageHelpersStore`. Let me read it.
+
+Now I have all the patterns. Let me set up todos and create the files.
+
+No DI wiring needed. Adding the cache domain and creating the files.
+
+Now the tests.
+
+Now let me run the gate. First the tests.
+
+Tests pass. Now ktlint and the placeholder check.
+
+All three gates pass (TEST=0, LINT=0, PH=0). Let me finalize the log with the PARITY enumeration and EXIT/STATUS, then commit.
+
+Done. Committed `8f...` ΓåÆ new commit for P1/S8/0008.
+
+## Summary
+
+Ported the web `useAnomalies` hook to a UI-free KMP shared-core state holder at exact parity.
+
+**Parity (1/1 hooks, 0 mutations):**
+- `useAnomalies` ΓåÆ `AnomaliesStore.anomalies(vehicleId, days=7)`
+- Endpoint `GET /analytics/anomalies?vehicle_id={id}&days={days}` ΓÇö snake_case params, default 7-day window.
+- `enabled: vehicleId !== null` reproduced as a stable, non-fetching `Loading` feed when `vehicleId` is null.
+- `staleTime: STALE_TIMES.SLOW` (5 min) ΓåÆ new `CacheDomain.Anomalies` with `5.minutes` TTL.
+- No web `select`/derivation, so no golden vectors needed; payload stays SI (display conversion is S5's job).
+
+**Files added/changed:**
+- `cache/CacheDomain.kt` ΓÇö `Anomalies` entry
+- `data/repo/AnomaliesRepository.kt` + `HttpAnomaliesRepository.kt` (cache-then-network via existing `CachingRepository`)
+- `presentation/anomalies/AnomaliesStore.kt` (StateFlow feed + enabled gate + refresh)
+- `AnomaliesRepositoryContractTest.kt` (endpoint/param/SI-cache locks) + `AnomaliesStoreTest.kt` (cacheΓåÆnetwork, sharing, keying, refresh, disabled gate)
+
+**Gate ΓÇö actual output:** `TEST_EXIT=0`, `LINT_EXIT=0`, `PH_EXIT=0` ΓåÆ `EXIT=0 / STATUS=DONE`. Log written to `.github/prompts/monorepo/logs/p1-s8-0008-anomalies.log`.
+
+The task is complete and verified ΓÇö all gates passed and the work is committed.
+
+

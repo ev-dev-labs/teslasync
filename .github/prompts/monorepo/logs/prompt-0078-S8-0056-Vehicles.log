@@ -1,0 +1,77 @@
+I'll start by exploring the repository structure and the key files involved.
+
+The web hook file has 21 reads + 10 mutations = 31 hooks. Now let me understand the existing KMP shared core structure, especially repositories (S7) and existing presentation patterns.
+
+Let me study a representative store pattern, the repo layer, and supporting infrastructure.
+
+Now let me read the existing Vehicle repositories, the Driving repo (key/family conventions), Resource, and an example test.
+
+The Driving domain is the clear template. Let me read the infrastructure files, the Http impl, a Store test, and a golden test to match conventions exactly.
+
+Let me examine the test patterns, golden vectors, CacheDomain, safeArray, and the net layer.
+
+Let me verify the exact backend paths and web path conventions.
+
+Let me check the web constants (STALE_TIMES/INTERVALS) and the useDriving path convention.
+
+Endpoints all confirmed. Let me verify the log directory and check an existing repository contract test for the mock-engine pattern.
+
+I have a complete understanding of the pattern. Let me set up tracking and start creating files.
+
+Now the models file:
+
+Now the repository interface with query/key/family builders and the state normalization derivation:
+
+I need to reconcile the single-domain constraint of `CachingRepository`. I'll route the whole repo through one `VehicleInfo` domain with per-entry TTL overrides, and broaden its doc.
+
+Now the HTTP implementation:
+
+Now the S8 store:
+
+Now the store test with a fake repository:
+
+Now the golden test locking the normalization derivation and key/query builders:
+
+Let me verify my actual repo/store signatures and the DTO field names before writing the contract test:
+
+batteryLevel is `Long`. Fix the golden test literals and check the Vehicle DTO:
+
+Now let me view the store to confirm its public API matches my store test:
+
+Store API matches. Now let me view the Driving contract test to mirror its harness exactly:
+
+Now the contract test mirroring the Driving harness:
+
+Let me check the DrivingStoreTest patterns and confirm CacheDomain edit:
+
+My patterns match. Let me confirm the CacheDomain edit landed and check Instant import usage:
+
+All files in place. Now run the gate. Starting with the Gradle tests:
+
+Gradle root is `apps/shared`. Running from there:
+
+Build succeeded, tests ran green. Let me fix the redundant `!!` warning, then run ktlint:
+
+ktlint found issues. Let me rename the models file and run ktlintFormat for the auto-fixable ones:
+
+Now run ktlintFormat to auto-fix the formatting issues:
+
+Now re-run the full gate (tests + ktlintCheck) to confirm green:
+
+Both green. Let me verify my three test classes actually executed and passed:
+
+All 28 tests pass. Now the placeholder check:
+
+The word "placeholder" in a doc comment triggered it. Let me reword:
+
+All three gates pass. Now I'll run the gate exactly as scripted, teeing to the log file:
+
+Now append the per-class test evidence, PARITY enumeration, and final status to the log:
+
+Gate complete (EXIT=0 / STATUS=DONE). Now commit:
+
+Committing exactly the prompt's scope:
+
+All gates pass and the commit is in. Task complete.
+
+

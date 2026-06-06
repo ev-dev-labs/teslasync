@@ -1,0 +1,94 @@
+I'll start by exploring the repository structure to understand the task scope and dependencies.
+
+Let me read the web SSE contract and the existing shared http client.
+
+Let me read the sseManager (the actual SSE connection logic), the prompt file, and the existing http client.
+
+Now let me read the existing http client (S4-0001 dependency), build config, and test support to mirror conventions.
+
+Let me examine the backend SSE hub to enumerate the exact event taxonomy, and check ADR-009/013.
+
+Let me read the backend SSE hub and the web sseClient to nail the event taxonomy, plus find monorepo ADRs.
+
+Let me find the monorepo ADR definitions and look at the related W6/P6 SSE prompts for parity context, plus the existing log format.
+
+Let me check the version catalog for coroutines-test and Ktor streaming availability, plus the README ADR descriptions.
+
+I have enough context. Let me verify the gradle wrapper and Java availability before designing, and confirm coroutines-test isn't already wired.
+
+Let me check the editorconfig (ktlint rules) and the PlatformEngine for the production transport seam.
+
+I have a complete picture. Let me record a plan and the SURVEY, then implement.
+
+Now let me create the source files.
+
+Now the transport interface and the SSE client:
+
+The `currentlyActive`/anchor helpers are hacky. Let me rewrite cleanly using `currentCoroutineContext().isActive`.
+
+Now the production Ktor transport:
+
+Now add the coroutines-test dependency to the catalog and build file:
+
+Now the tests. First the fake transport, then the test suites:
+
+Now the main client test with virtual clock:
+
+Now let me run the gate. First compile to catch errors quickly:
+
+The Android SDK exists; it just needs to be referenced. Let me set `ANDROID_HOME` and recompile.
+
+Two fixes: import `currentTime`, and suppress the deprecation warning.
+
+Compiles. Let me add the opt-in annotation to silence the experimental warnings, then run the tests.
+
+Let me see the actual assertion details.
+
+Both failing tests got 0 opens ΓÇö `advanceUntilIdle()` alone didn't drive the `backgroundScope` collector. The passing tests all kick off with `runCurrent()` first. Let me fix both to use that pattern.
+
+Now `advanceUntilIdle` is unused ΓÇö remove the import.
+
+All SSE tests pass. Now run the full gate (`allTests` + `ktlintCheck` + placeholders), writing to the log.
+
+ktlint violations. Let me try auto-format.
+
+ktlint clean. Re-run tests (format touched test files) and placeholders check.
+
+Placeholder check flags 3 "TODO" hits. Let me inspect those lines.
+
+The checker matches "toDo" inside `.toDouble()` case-insensitively. Let me check the script's pattern.
+
+The "common" pattern `TODO` matches case-insensitively, and `.toDouble()` contains "toDo". False positive ΓÇö but I must avoid the substring. Let me view SseDecode.kt:157 and fix all three.
+
+`.toDouble()` / `.toDoubleOrNull()` contain "toDo" ΓåÆ false positive. I'll remove `.toDouble()` in SseClient (Long*Double works natively) and use the designed `parity:allow` marker where the stringΓåÆdouble conversion is genuinely required.
+
+Let me check for any other "toDo"/"todo"/"fixme"/"xxx" substrings across the new files, then re-run the placeholder gate.
+
+Now re-run placeholder check, ktlint, and tests to confirm all green.
+
+Comment pushed it over 140. Shorten the reason.
+
+All gates green. Now write the gate log. Let me check the predecessor log format and the test count.
+
+Now create the gate log.
+
+Now commit per the prompt's commit block (plus the necessary catalog change).
+
+Only my intended files are staged. Commit now.
+
+All gates pass and the work is committed.
+
+**P1/S4-0002 ΓÇö Shared SSE live-event client: DONE**
+
+Implemented a KMP `SseClient` in `apps/shared/core` mirroring the web SSE contract:
+
+- **6 commonMain files** (`net/sse/`): `LiveEvent` taxonomy (Connected/Heartbeat/VehicleUpdate/Alert/ExportStatus/AchievementUnlocked/Signal/Unknown + `Connection` state machine), `SseFrameParser` (cross-chunk `event/data/id/retry`), `SseDecode` (typed parsing + signal kind/value tables mirroring `sseClient.ts`), `SseTransport` seam, `SseClient` (cold `Flow<LiveEvent>` + `StateFlow<Connection>`, reconnect w/ backoff + `Last-Event-ID`, staleness >2 min per ADR-013), and a production `KtorSseTransport`.
+- **4 commonTest files**: fake transport + virtual clock; 25 SSE tests covering parsing, reconnect-with-id, staleness (marks not drops), recovery, and cancellation.
+
+**Final fixes this session**: corrected the 2 virtual-clock tests (`runCurrent()` ordering), removed unused import, resolved ktlint (auto-format + line-length), and cleared a placeholder false-positive (`.toDoubleOrNull()` "toDo" substring) ΓÇö removed `.toDouble()` in `SseClient` and used the gate's designed `// parity:allow` marker in `SseDecode`.
+
+**Gate**: `TEST_EXIT=0` (55 tests green) ┬╖ `LINT_EXIT=0` ┬╖ `PH_EXIT=0` ΓåÆ `EXIT=0` / `STATUS=DONE`. Log written and committed as `833001995`.
+
+Note: added `kotlinx-coroutines-test` to `apps/shared/gradle/libs.versions.toml` (one level above the allow-list) ΓÇö unavoidable for the virtual-clock mandate; documented in the log.
+
+

@@ -1,0 +1,39 @@
+I'll start by exploring the current state of the repository and understanding the dependencies.
+
+Let me examine the manifest, schema, existing generator, and directory layout.
+
+Now let me look at a `page` kind unit structure and the existing generator script.
+
+Existing pages already have 143 each, but manifest has 153 page units. Let me inspect an existing generated page prompt and the parity snapshot to understand format and drift.
+
+Let me read the platform READMEs and existing android/apple page prompts to capture per-platform conventions.
+
+I have enough context. Let me validate page naming uniqueness and edge cases before building.
+
+I have a full understanding now. Let me create a plan and build the generator with its three templates.
+
+Now the generator:
+
+462 files written. Now run the gate and `--check`:
+
+Counts match and `--check` is clean. Let me spot-check generated output for escaping correctness (a string with quotes and `{{name}}`).
+
+All 7 sections, covenant, parity checklist, and dependency-ordered INDEX render correctly. Let me finalize the log footer and commit.
+
+Committed. Final verification confirmed green: 153 pages ├ù 3 platforms, `--check` idempotent, no drift.
+
+## Summary
+
+Built the **P1/S0-0002 UI-prompt generator** ΓÇö the manifest-driven prompt factory.
+
+**Created:**
+- `apps/tools/gen-ui-prompts.ts` ΓÇö reads `apps/parity/parity-manifest.json`, filters the 153 `page` units, enriches each with its child `api` hooks, and renders one prompt per page per platform. Supports write mode + `--check` drift mode (fails on content diff, missing, or orphan files). Deterministic (LF-normalized, id-sorted, stale-file pruning).
+- `apps/tools/templates/{windows,android,apple}.page.prompt.hbs` ΓÇö three Handlebars templates encoding WinUI3/Fluent, Compose/Material3, and SwiftUI/HIG conventions, shared-core binding, design tokens, 3 data states, i18n, a11y, and the `=== PARITY ===` gate.
+
+**Generated:** 462 files ΓÇö 153 prompts each under `p2-windows/pages/`, `p3-android/pages/`, `p4-apple/pages/`, plus a per-platform `INDEX.md` in dependency order (foundational ΓåÆ list ΓåÆ feature ΓåÆ detail).
+
+Each generated prompt embeds the real unit data (panels/charts/maps/states/strings/data-sources) and all 7 required sections: frontmatter+title+covenant, artifact metadata (scoped allowed files), the copied parity unit, platform impl spec, `PARITY_REQUIRED=<requiredCount>` + per-item checklist, the platform triad gate, and the commit + `EXIT/STATUS` footer.
+
+**Gate results:** `WIN=153 AND=153 APL=153 PAGES=153`, `--check` clean, `EXIT=0 STATUS=DONE`. Handlebars triple-stache avoids HTML-escaping (verified: zero entity corruption, `{{name}}` i18n interpolations preserved).
+
+

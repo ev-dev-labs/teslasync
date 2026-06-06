@@ -1,0 +1,55 @@
+I'll start by understanding the task structure and exploring the relevant files.
+
+I have the web source. Now let me understand the existing shared core architecture, especially prior slices' patterns.
+
+The codebase has an extensive established pattern. Let me study a representative existing slice and the supporting infrastructure.
+
+Now let me study a complete existing slice with both reads and mutations, plus the test pattern and infra.
+
+Let me study a complete read+mutation slice (NotificationChannels) including its test, plus how ApiEndpoints and a golden test work.
+
+Let me examine the networking helpers, CacheDomain, a test example, and the golden vector/placeholder infrastructure.
+
+I used the wrong parameter. Let me view the CacheDomain file directly in sections.
+
+Good ΓÇö there's an existing `Settings` cache domain and a clear per-slice pattern. Let me read the web types/constants, an existing Store test, the golden-vector infra, and the placeholder script.
+
+Let me check the `safeArray` helper and a few model/serialization details before writing.
+
+I have everything I need. Let me write the plan and create the implementation files.
+
+Now the models file:
+
+Now the repository interface with keys, query/body builders (golden-pinned):
+
+Now the golden test and the store test:
+
+Now let me run the gate. First verify the gradle wrapper and run the tests.
+
+Let me verify my created files align with the test before the slow gradle run.
+
+Everything aligns. Let me verify the golden test then run the gate.
+
+Now let me review the HTTP impl before running the gate.
+
+All files are consistent with the existing infrastructure. Now running the gate.
+
+Tests pass. Now ktlint and placeholder checks.
+
+ktlint formatting violations. Let me auto-format.
+
+Formatted. Regenerating the log with a clean full gate run.
+
+Both green. Now the placeholder check.
+
+All gates green. Now appending the PARITY section and final status to the log.
+
+Log complete. Now committing.
+
+done.txt was already staged from before; the prompt's commit scope is only apps/shared/core + the log. Unstaging it to match.
+
+Staged set is exactly the allowed files. Committing.
+
+Committed `ec8cb1fdd`. Task complete.
+
+

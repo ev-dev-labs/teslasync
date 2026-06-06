@@ -1,0 +1,28 @@
+{
+  "$comment": "P1/S2/0001 codegen config. SI-aware custom emitter (per prompt allowance). Pinned to apps/versions.lock.md contract row.",
+  "spec": "api/openapi/teslasync.openapi.json",
+  "generator": {
+    "kind": "custom-si-emitter",
+    "reason": "Schemas already encode SI in field names; emitter preserves snake_case + SI semantics and maps Go-pointer nullables faithfully. OpenAPI Generator 7.6.0 (lock) is the fallback baseline but not required for this flat schema set.",
+    "node": ">=20",
+    "runner": "tsx@4.22.4"
+  },
+  "notes": [
+    "Optional (not-required) fields are emitted as nullable-with-default — a consumer-friendly approximation for response DTOs; OpenAPI absent-vs-explicit-null is not distinguished.",
+    "The OpenAPI contract declares no request bodies (0 operations), so descriptors carry no requestType; add one here if request bodies are introduced.",
+    "Drift gate (CI): run `npx --yes tsx@4.22.4 apps/tools/codegen/gen-clients.ts --check` on changes to the spec or generated dirs. Workflow wiring is intentionally NOT included (outside this artifact's allowed-files)."
+  ],
+  "kotlin": {
+    "package": "io.teslasync.shared.core.api.generated",
+    "outDir": "apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/api/generated",
+    "serialization": "kotlinx.serialization",
+    "dateTime": "kotlin.time.Instant"
+  },
+  "csharp": {
+    "namespace": "TeslaSync.Windows.Generated.Api",
+    "outDir": "apps/windows/Generated/Api",
+    "serialization": "System.Text.Json",
+    "dateTime": "System.DateTimeOffset"
+  },
+  "header": "GENERATED — DO NOT EDIT. Source: api/openapi/teslasync.openapi.json via apps/tools/codegen (P1/S2/0001)."
+}

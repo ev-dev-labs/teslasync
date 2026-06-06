@@ -1,0 +1,33 @@
+Now I have a complete picture. Let me create the implementation files.
+
+Now the repository interface and HTTP impl:
+
+Now the store:
+
+Now the golden test that locks cache keys, wire shape, and the formatter derivation:
+
+Now let me run the gate. First ktlintFormat to auto-fix style, then the full gate:
+
+Tests pass. Now run ktlintCheck and the placeholder gate, appending to the log:
+
+All gates green. Now finalize the log with the parity section:
+
+Now commit per the prompt:
+
+Done. P1/S8/0047 SystemDiagnostic state holder ported at full web-hook parity.
+
+**Verified gate (raw):** `TEST_EXIT=0  LINT_EXIT=0  PH_EXIT=0` ΓåÆ `EXIT=0 / STATUS=DONE`.
+
+**What I built** (KMP shared core, all under `apps/shared/core`):
+- `SystemDiagnosticModels.kt` ΓÇö `DiagnosticReport`/`DiagnosticCheck` with snake_case `@SerialName` (`generated_at`, `overall_status`, `duration_ms`; `remediation` omitemptyΓåÆnullable).
+- `SystemDiagnosticDerivations.kt` ΓÇö `formatDiagnosticReportText` ported verbatim from the web helper.
+- `SystemDiagnosticRepository.kt` + `HttpSystemDiagnosticRepository.kt` ΓÇö bodyless `POST /system/diagnostic`, no cache flush (mirrors the web hook's `onSuccess` which only `setQueryData`s, never `invalidateQueries`). Cache-key constants mirror `diagnosticKeys`.
+- `SystemDiagnosticStore.kt` ΓÇö `lastReport: StateFlow` (the `useLastDiagnostic` cache-peek analogue) + `runDiagnostic()` priming it on success.
+
+**Parity (both hooks):** `useRunDiagnostic` ΓåÆ `runDiagnostic()`; `useLastDiagnostic` ΓåÆ `lastReport`. SI preserved (`duration_ms` is a raw count, not unit-bearing).
+
+**Tests (13, fake-repo + MockEngine + golden):** store (5), repository contract (3), golden (5 ΓÇö cache keys, snake_case/omitempty wire shape, and the formatter locked across empty/single/warn/multi cases for KMPΓåöC# parity). Committed as `4894fbe31`.
+
+The task is fully complete and verified. All gates passed and changes are committed.
+
+

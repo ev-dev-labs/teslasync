@@ -49,7 +49,7 @@ param(
     [switch]$Reset        = $false,
     [int]$StartFrom       = 1,
     [int]$DelaySeconds    = 10,
-    [int]$TimeoutMinutes  = 60,              # Platform UI prompts often need more than schema work
+    [int]$TimeoutMinutes  = 600,              # Platform UI prompts often need more than schema work
     [switch]$ContinueOnRed = $false,         # Do not STOP after a red prompt (default: STOP on red)
     [switch]$SelfTest      = $false          # Run Test-LogSaysRed self-test and exit
 )

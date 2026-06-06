@@ -1,0 +1,41 @@
+Now I understand the conventions. Let me set up tracking and create the diagnostics module.
+
+Now the platform actuals:
+
+Now the test suite with a fake sink:
+
+Now let's run the gate. First the test task from the gradle root (`apps/shared`):
+
+Tests pass. Now ktlint and placeholder gate:
+
+ktlint wants one argument per line. Let me auto-format with the ktlint formatter:
+
+ktlintFormat couldn't fix the comment-interspersed list. Let me put each entry on its own line:
+
+ktlintFormat already split them. Let me verify and re-run the check:
+
+Now the placeholder gate, and re-run tests to confirm green after formatting:
+
+All three gates pass (TEST=0, LINT=0, PH=0). Let me finalize the log and commit:
+
+Done. P1/S11/0001 diagnostics module implemented, gated, and committed.
+
+## What was built (per ADR-016)
+
+A shared, consent-gated, PII-redacting diagnostics module under `apps/shared/core/src/{common,android,apple}Main/.../diagnostics/`:
+
+- **`Redaction`** ΓÇö central scrubber: deny-list keys (VIN, tokens, lat/lon, email, address, etc. ΓÇö snake_case + camelCase normalized) ΓåÆ `[REDACTED]`, plus value-pattern pass (JWT, Bearer, 17-char VIN, coord pairs, email, E.164) for defense-in-depth. Non-PII operational fields retained.
+- **`Logger`** ΓÇö leveled, structured, scrubbed centrally (not per-call).
+- **`Telemetry`** ΓÇö typed `TelemetryEvent` taxonomy (`screen_view`, `command_issued`, `error`); no free-form payloads.
+- **`CrashReporter`** ΓÇö breadcrumbs + exceptions scrubbed before the sink.
+- **`Diagnostics` + `DiagnosticsConsent`** ΓÇö default-OFF consent; all sinks no-op until granted; **revoke purges queued data**.
+- **`DiagnosticsSink`** `expect`/`actual` with android (`Log`) + apple (`NSLog`) actuals over a shared `BufferedDiagnosticsSink` (P5/H7 binds Sentry at the same seam).
+
+## Verification (raw exits)
+- `:core:allTests` ΓåÆ **TEST_EXIT=0** (compiles common/android/apple; tests run on JVM/Android)
+- `:core:ktlintCheck` ΓåÆ **LINT_EXIT=0**
+- `check-placeholders.ps1 -Language kotlin` ΓåÆ **PLACEHOLDER_COUNT=0, PH_EXIT=0**
+
+Tests cover planted-PII redaction across all three components, no-op-without-consent, typed event schema, breadcrumb/exception scrubbing, and purge-on-revoke. Log at `.github/prompts/monorepo/logs/p1-s11-0001-diagnostics.log` ends `EXIT=0 / STATUS=DONE`. Committed on `refactor/signals-rewrite`.
+
+

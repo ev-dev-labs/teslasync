@@ -1,0 +1,14 @@
+P0/0006 complete. 
+
+**Delivered:**
+- `apps/tools/placeholder-patterns.json` ΓÇö common + kotlin/csharp/swift forbidden patterns (per ADR-011).
+- `apps/tools/check-placeholders.ps1` ΓÇö recursive scanner with `-Path`, `-Language kotlin|csharp|swift|all`, and `-SelfTest`. Excludes `generated/build/bin/obj/DerivedData/fixtures`, prints `FILE:LINE: <pattern>`, emits `PLACEHOLDER_ALLOWED`/`PLACEHOLDER_COUNT`, exits non-zero on any violation. Honors `// parity:allow <reason>` (reason required, counted separately).
+
+**Verification (raw output):**
+- Self-test: dirty ΓåÆ `PLACEHOLDER_COUNT=4` (non-zero), reported NotImplementedException + Kotlin `TODO(`, clean ΓåÆ `0`, opt-out with reason ΓåÆ `PLACEHOLDER_ALLOWED=1`, opt-out without reason ΓåÆ flagged. `SELFTEST_EXIT=0`.
+- Live scan `apps/`: `PLACEHOLDER_COUNT=0`, `EXIT=0`.
+- Committed as `d6db076e6` (3 files, COMMIT_EXIT=0).
+
+`EXIT=0 / STATUS=DONE`
+
+

@@ -1,0 +1,85 @@
+All dependencies DONE. dotnet 10.0.300 available. Let me explore the existing project structure.
+
+Now let me see the actual `<Routes>` definitions:
+
+Let me establish a baseline build before making changes.
+
+Build works and environment is capable. Let me run the format + test baseline, then build the Core navigation logic.
+
+Baseline is green (423 tests pass, build + format clean). Now I'll build the navigation logic in Core. Let me create a plan file and start.
+
+Now the big route table. Let me write it with helpers:
+
+Now let me build Core and write the tests before tackling the WinUI shell:
+
+Let me fix the CA1859 warning to keep things clean:
+
+Now the test suite for the navigation logic:
+
+494 tests pass. Now let me look at the a11y announcer infrastructure so I wire the shell correctly:
+
+All navigation logic is tested and green. Now the WinUI shell. Let me create the supporting App classes first:
+
+Now the centerpiece ΓÇö the ShellWindow. First the XAML:
+
+Now the code-behind:
+
+Now expose `ScrollHost` on RoutePendingView and wire up `App` to launch the shell:
+
+Now build the full solution:
+
+Those XAML errors are a cascade from the C# compile errors. Let me fix the two real issues:
+
+Good ΓÇö XAML cascade resolved. Just 3 CA1822 analyzer errors. Let me view and fix each:
+
+I'll make `Save` use instance min-size data (legitimately clamping persisted geometry):
+
+Build clean. Now run tests, format check, and placeholder scan:
+
+CRLF/LF issues in my new files. Run `dotnet format` to autofix:
+
+Now the placeholder scan:
+
+`PlaceholderText` is a built-in WinUI property triggering the literal match. Let me check how the checker works for an allowlist mechanism:
+
+`PlaceholderText` is a built-in property. Let me see how existing XAML files opt out:
+
+The established pattern sets `PlaceholderText` in code-behind with a `// parity:allow` marker. Let me move it out of XAML:
+
+Now find where the shell initializes the search box in code-behind to set the placeholder text:
+
+Build clean (2 warnings are pre-existing in Core). Now run the full gate per the prompt:
+
+`MISSING_SHELL_MARKERS=6` is a bug in the gate's marker check: `$all -notmatch $_` filters a collection (always truthy when multiple distinct markers match different lines), so it can never reach 0. Let me verify the markers genuinely exist, then correct the tautological expression honestly:
+
+All 6 markers genuinely present. The literal `$all -notmatch $_` is tautological. I'll re-run the gate with a corrected, intent-preserving marker check and document the bug transparently in the log:
+
+The inner `$_` shadows the outer marker variable. Let me fix with explicit variables:
+
+Correct count is 0. Now rewrite the gate cleanly into the log with the fixed loop:
+
+Gate is green (EXIT=0/STATUS=DONE). Let me replace the placeholder inventory note with real route counts by group via reflection, as the prompt's step 2 requires:
+
+Now insert the real inventory into the log, replacing the placeholder note:
+
+Log is complete. Now commit per the prompt:
+
+Staging matches the prompt (only `apps/windows` + the log). Committing:
+
+Done. **P2/W3-0001 ΓÇö STATUS=DONE / EXIT=0**, committed as `743a89469`.
+
+## What was built
+A native WinUI 3 NavigationView shell + typed route registry porting **156 routes** from `web/src/App.tsx` (6 standalone, 8 redirects, 10 parameterized, 1 catch-all, 120 nav-visible across 19 groups).
+
+**Core (net10.0, testable):** `RouteGroup`, `RouteDefinition`, `RouteTable` (full App.tsx port incl. aliases/redirects/`:id` params/`s/:token`/standalone/catch-all), `RouteRegistry` (match ΓåÆ param-extract ΓåÆ redirect-resolve ΓåÆ deep-link), `DeepLink` (`teslasync://`), `NavigationHistory` (back/forward), `RecentPages`, `ScrollRestoration` ΓÇö **71 new tests, 494 total passing**.
+
+**App (WinUI):** `ShellWindow` (NavigationView + custom title bar via `AppWindow`/`ExtendsContentIntoTitleBar` + Mica + persisted size/position/theme, breadcrumbs, Alt+ΓåÉ/ΓåÆ accelerators, `TsRouteAnnouncer`), `ShellViewModel`, `ShellPageFactory`, `RoutePendingView` (honest routing-diagnostics host for W7-pending pages ΓÇö not a fake page), `WindowStateService`, `Localization`. Wired `App.xaml.cs` to launch the shell + forward protocol activation; removed `MainWindow`.
+
+## Gate results
+`BUILD_EXIT=0 ┬╖ FORMAT_EXIT=0 ┬╖ TEST_EXIT=0 ┬╖ PLACEHOLDER_EXIT=0 ┬╖ MISSING_SHELL_MARKERS=0 ΓåÆ EXIT=0 / STATUS=DONE`
+
+**One honest note:** the prompt's literal marker check `$all -notmatch $_` is a PowerShell collection-filter bug ΓÇö tautologically non-empty whenever ΓëÑ2 distinct markers match different lines, so it can never reach 0. I corrected it to its documented intent (marker missing only if absent from *all* scanned files) and logged **per-marker PRESENT evidence** with file:line for all six, so the pass is fully auditable rather than red-as-green.
+
+The task is fully complete and verified. All gate stages passed (build/format/test/placeholder/markers all green), the commit landed, and the log ends with `EXIT=0 / STATUS=DONE`.
+
+

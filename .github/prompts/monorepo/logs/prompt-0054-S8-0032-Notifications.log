@@ -1,0 +1,85 @@
+I'll start by exploring the codebase to understand the structure and what already exists.
+
+Let me explore the existing shared core source structure and find a similar already-ported domain to use as a template.
+
+This is a large task. Let me read the web source hook file and existing notification-related code to understand the patterns.
+
+Now let me examine the existing patterns ΓÇö Resource, CachingRepository, and a complete Store+Repo+Models+Http+test example (Automations is a good candidate with reads+mutations).
+
+Excellent template. Let me look at the Automations Repository interface, Http impl, Models, and the test file to replicate exact patterns.
+
+Let me look at the test patterns, CacheDomain, the net request helpers, and the existing notification channels models/store.
+
+This is a large task. Let me read the web type definitions for all the notification-related types, and check the existing channels repo's Http impl and CacheDomain.
+
+I have a complete understanding of the patterns. Let me verify the log directory and set up tracking.
+
+Let me check an existing log format to match conventions, and confirm the gradle wrapper works.
+
+Now I'll build the implementation. Starting with the models file.
+
+Now the repository interface with key builders and pure derivations.
+
+Now the HTTP repository implementation.
+
+Now the state holder (Store).
+
+Let me compile the main source set to catch errors before writing tests.
+
+Main source compiles. Now the store test.
+
+I need to verify my model/repo signatures before finalizing the test. Let me view the actual files I created.
+
+Signatures all match. Let me create the directory and test file.
+
+Now let me view the HTTP repository to write the contract test accurately.
+
+Now let me view the contract test template and golden test template.
+
+Now I'll write the contract test.
+
+Now the golden test. Let me view the channels golden test and its spec.
+
+Now the golden spec JSON. Let me check the existing one's format.
+
+Now let me run the gate. First a quick test-compile to surface errors fast.
+
+Compiles. Let me fix the redundant cast warning.
+
+Now run the new tests on the JVM target.
+
+All Notifications tests pass. Now run the full gate, teeing to the log.
+
+Let me auto-format, then fix the one non-auto-correctable long line.
+
+Format applied. Re-run ktlintCheck.
+
+ktlint clean. Now the placeholder check, and re-run allTests to confirm green post-format.
+
+All green. Let me verify the native (Apple) target cross-compiles commonMain to substantiate the cross-platform parity claim.
+
+Both Apple klibs cross-compile. Now finalize the log with the parity enumeration and honesty notes.
+
+Now let me append the parity enumeration, honesty notes, and trailer to the log.
+
+Now commit.
+
+P1/S8/0032 complete and committed (`f1b7b724`).
+
+**Delivered** ΓÇö the web `useNotifications` domain (36 hooks) ported to UI-free KMP shared-core state holders:
+
+- **`NotificationModels.kt`** ΓÇö all read DTOs, id-free input bodies, result envelopes, sealed `BulkMarkReadVars` + `NotificationChannelInput` unions.
+- **`NotificationsRepository.kt`** (S7) ΓÇö 12 reads + 24 mutations + golden-locked pure derivations (`notificationFilterParams`, `notificationGroupsParams`, `bulkMarkReadBody`, `acknowledgeBody`) + cache-key builders mirroring the web `notificationKeys`.
+- **`HttpNotificationsRepository.kt`** ΓÇö cacheΓåÆnetwork impl; every endpoint/method/body locked to the web `request()` calls; SI on the wire.
+- **`NotificationsStore.kt`** (S8) ΓÇö shared refreshable `StateFlow<Resource<T>>` reads + suspend `Result` mutations; each mutation refreshes exactly the feeds the web hook's `invalidateQueries` does (incl. the `notification-logs:` prefix family).
+- **3 test files** (61 tests) + **`notifications-golden.json`** shared C#/KMP vector source.
+
+**Gate (all green):**
+- `:core:allTests` ΓåÆ BUILD SUCCESSFUL (TEST_EXIT=0)
+- `:core:ktlintCheck` ΓåÆ BUILD SUCCESSFUL (LINT_EXIT=0)
+- `check-placeholders.ps1` ΓåÆ PLACEHOLDER_COUNT=0 (PH_EXIT=0)
+- Apple commonMain + commonTest cross-**compile** verified; native test **execution** requires a macOS host (honestly noted ΓÇö Windows host).
+
+Log ends `EXIT=0` / `STATUS=DONE` with a `=== PARITY ===` section enumerating all 36 hooks.
+
+

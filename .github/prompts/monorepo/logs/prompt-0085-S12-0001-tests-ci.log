@@ -1,0 +1,35 @@
+Now I understand the setup. Let me add Kover coverage. First the version catalog and build config:
+
+Now add the Kover configuration block to the core build:
+
+Now I need to measure actual coverage to set honest floors. Let me run a measurement build:
+
+The Kover rule-level `filters` block isn't supported in 0.9.x. Let me use report-level includes + package grouping instead:
+
+Now let me measure actual coverage before locking floors. Running report tasks (not verify yet):
+
+Total critical coverage is 86.86%. Let me check per-package numbers from the XML report:
+
+Lowest package is 61% (presentation/telemetry). Let me set safe-but-meaningful floors: aggregate 80%, per-package 55%:
+
+Now let me rewrite the CI workflow to run the real gate:
+
+Let me verify the OpenAPI spec path and run the drift check locally:
+
+Drift check passes. Now the full gate (tests + coverage verify):
+
+Gate passed (BUILD SUCCESSFUL, koverVerify green, 86.86% critical coverage). Let me confirm tests actually executed and validate the workflow YAML:
+
+1340 tests, 0 failures. Let me validate the workflow YAML:
+
+All green: 1340 tests pass, 86.86% critical coverage, drift clean, YAML valid. Now let me write the artifact log:
+
+Now clean up temp files and review final changes:
+
+All correct. Now commit per the prompt's commit spec:
+
+My intended files are staged. Let me commit:
+
+Task complete and committed (`cbaba1d52`).
+
+

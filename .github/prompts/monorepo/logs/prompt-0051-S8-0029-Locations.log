@@ -1,0 +1,61 @@
+I'll start by exploring the relevant files: the web hook source and the existing shared core structure.
+
+Let me study an existing comparable domain to match the established pattern. Annotations looks similar (reads + mutations).
+
+Now let me examine the S7 repository layer to understand the repo pattern, cache keys, and Resource type.
+
+Now let me look at the CachingRepository base, CacheDomain enum, and a golden test to understand the full picture.
+
+Let me view the CacheDomain enum, web location types, ApiHttpClient, and check for any DI wiring/registry.
+
+Let me look at the geofence handler's BulkUpdate response shape and the Geofence/VisitedLocation Go models.
+
+Let me check the web QueryClient default staleTime and the `safeArray` helper, plus look at how a simpler store without "as-data" derivation handles a single read + mutation. Let me also check the IncidentsStore (simpler) and check an existing repo contract test.
+
+Let me study the Guard domain (JsonElement feed + decode-in-store + enabled gate) and the Driving repo (mixed types) to pick the cleanest pattern.
+
+I have a complete understanding of the patterns. Let me set up a plan and create the files. First, add the CacheDomain entry.
+
+Now the models file:
+
+I made a mess of the mutation method. Let me fix it properly:
+
+Now the store:
+
+Now the tests. Store test first:
+
+Now the golden test:
+
+Now the repository contract test:
+
+Let me verify the gradle setup and a couple of API signatures before running the gate.
+
+Running the Android (JVM) unit tests which execute commonTest ΓÇö this validates compilation and test logic:
+
+Tests pass. Now let me run the full gate sequence and capture to the log file.
+
+allTests green. Now ktlint and the placeholder check, plus a native compile to confirm common code compiles for Apple targets:
+
+Now the placeholder check and an Apple/native compile to confirm cross-platform compilation:
+
+All gates pass (TEST=0, LINT=0, PH=0, native compile OK). Let me finalize the log with the parity enumeration and commit.
+
+Done. P1/S8/0029 Locations state holder is complete and committed.
+
+**What was delivered** (cross-platform port of `web/src/api/hooks/useLocations.ts`, all 3 hooks):
+
+| Web hook | KMP API | Endpoint | Notes |
+|---|---|---|---|
+| `useLocations` | `LocationsStore.visitedLocations(vehicleId?)` | `GET /locations?vehicle_id=` | `enabled: !!vehicleId` gate, `safeArray`, key `locations:{id}` |
+| `useGeofences` | `LocationsStore.geofences()` | `GET /geofences` | `safeArray`, key `geofences` |
+| `useBulkGeofencesDelete` | `LocationsStore.bulkDeleteGeofences(ids)` | `POST /geofences/bulk {ids,op:delete}` | invalidates **geofences feed only** |
+
+**Files:** `CacheDomain.kt` (+`Locations`), `presentation/locations/{LocationModels,LocationsStore}.kt`, `data/repo/{LocationRepository,HttpLocationRepository}.kt`, plus 3 tests (store/golden/contract).
+
+**Faithful-to-wire choices:** modeled the real snake-case backend shapes (`VisitedLocation`, augmented `Geofence` with derived `latitude/longitude/radius`), not the drifted legacy camelCase UI types. SI preserved (`total_duration_s`, `radius` meters) ΓÇö conversion stays at the S5 render boundary. Derivations (`locationsEnabled`, `visitedLocationsKey`, `geofencesKey`, `geofenceBulkDeleteBody`) locked by golden vectors for KMPΓåöC# parity.
+
+**Gate (all green):** `TEST_EXIT=0`, `LINT_EXIT=0`, `PH_EXIT=0`; common compiles for `macosArm64`. Log at `.github/prompts/monorepo/logs/p1-s8-0029-locations.log` ends with `EXIT=0 / STATUS=DONE`. Committed as `392fd66b6`.
+
+(On this Windows host the Apple test-*run* tasks are `NO-SOURCE`; commonTest executed via the Android JVM unit-test path and Apple compilation was verified separately.)
+
+

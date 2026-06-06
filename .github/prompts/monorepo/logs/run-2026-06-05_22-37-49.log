@@ -1,0 +1,24 @@
+[2026-06-05 22:37:50] [97/2734] START  p2-windows/W6-0001-live-data-sse.prompt.md
+[2026-06-05 23:33:53] [97/2734] Cleaning up stale copilot PID 50056
+[2026-06-05 23:33:53] [97/2734] Cleaning up stale copilot PID 51584
+[2026-06-05 23:33:53] [97/2734] Cleaning up stale copilot PID 65624
+[2026-06-05 23:33:53] [97/2734] Cleaning up stale copilot PID 65716
+[2026-06-05 23:33:53] [97/2734] Cleaning up stale copilot PID 66756
+[2026-06-05 23:33:53] [97/2734] Cleaning up stale copilot PID 68224
+[2026-06-05 23:33:53] [97/2734] Cleaning up stale copilot PID 68728
+[2026-06-05 23:33:53] [97/2734] Cleaning up stale copilot PID 70904
+[2026-06-05 23:33:53] [97/2734] Cleaning up stale copilot PID 73576
+[2026-06-05 23:33:53] [97/2734] Cleaning up stale copilot PID 79944
+[2026-06-05 23:33:53] [97/2734] Cleaning up stale copilot PID 87764
+[2026-06-05 23:33:53] [97/2734] Cleaning up stale copilot PID 89752
+[2026-06-05 23:33:53] [97/2734] Cleaning up stale copilot PID 90108
+[2026-06-05 23:33:53] [97/2734] Cleaning up stale copilot PID 90364
+[2026-06-05 23:33:53] [97/2734] Cleaning up stale copilot PID 91144
+[2026-06-05 23:33:53] [97/2734] Cleaning up stale copilot PID 92900
+[2026-06-05 23:33:53] [97/2734] DONE in 56.1 min
+[2026-06-05 23:34:03] [98/2734] START  p2-windows/W6-0002-push-wns.prompt.md
+[2026-06-06 00:34:15] [98/2734] TIMEOUT after 60 min - force stopping
+[2026-06-06 00:34:15] [98/2734] Killing copilot PID 45320
+[2026-06-06 00:34:15] [98/2734] Killing copilot PID 88892
+[2026-06-06 00:34:18] [98/2734] FAILED (exit -1) after 60.3 min
+[2026-06-06 00:34:18] STOPPED at red prompt 98 (exit). Resume with: -StartFrom 98

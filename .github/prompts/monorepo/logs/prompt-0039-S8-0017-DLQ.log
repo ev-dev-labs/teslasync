@@ -1,0 +1,35 @@
+Now adding the `Dlq` cache domain:
+
+Now the repository interface with pure derivations:
+
+Now running the gate (tests + lint):
+
+Tests pass. Now ktlint and placeholder checks:
+
+Lint passes. Now placeholder check and writing the gate log:
+
+All 16 DLQ tests green. Now writing the gate log and committing:
+
+Done. P1/S8/0017 ΓÇö DLQ state holder ΓÇö complete and committed (`3c0f879ea`).
+
+## Summary
+
+Ported all 4 web `useDLQ.ts` hooks to UI-free KMP shared-core state holders, at web-hook parity:
+
+| Web hook | KMP API | Endpoint |
+|---|---|---|
+| `useDLQList` | `DlqStore.list()` | `GET /system/dlq` |
+| `useDLQEntry` | `DlqStore.entry(id, enabled)` | `GET /system/dlq/{id}` ΓÇö `enabled && numericId>0` gate reproduced as a stable non-fetching feed |
+| `useDLQAudit` | `DlqStore.audit(dlqId, limit)` | scoped `ΓÇª/{id}/audit?limit` or global `ΓÇª/audit?limit` |
+| `useDLQReplay` | `DlqStore.replay(id)` | `POST ΓÇª/{id}/replay` ΓåÆ clears whole `Dlq` partition + refreshes every observed feed (`invalidateQueries(['system','dlq'])` analogue) |
+
+**Files:** added `DlqRepository`, `HttpDlqRepository`, `DlqStore`, a `Dlq` cache domain (15s TTL), plus 3 test files (contract, store, golden) ΓÇö 16 tests, all green.
+
+**Verification (raw output):**
+- `:core:allTests` ΓåÆ **TEST_EXIT=0** (DlqRepositoryContractTest 7, DlqStoreTest 7, DlqDerivationGoldenTest 2; 0 failures/errors)
+- `:core:ktlintCheck` ΓåÆ **LINT_EXIT=0**
+- `check-placeholders.ps1` ΓåÆ **PLACEHOLDER_COUNT=0 / PH_EXIT=0**
+
+SI preserved end-to-end (raw `JsonElement`, no conversion); derivations (entry-id guard, audit scoping) locked by inlined language-neutral golden vectors for KMP+C# parity (ADR-004). Log written with `=== PARITY ===` enumerating all 4 hooks; `EXIT=0 / STATUS=DONE`.
+
+

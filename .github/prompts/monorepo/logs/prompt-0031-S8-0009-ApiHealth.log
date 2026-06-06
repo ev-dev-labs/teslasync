@@ -1,0 +1,35 @@
+Now I have a complete picture. Let me create the implementation files.
+
+Now the golden vectors file and loaders:
+
+Now let me run the gate. First the tests:
+
+Tests pass. Let me fix the `!!` warning in the contract test:
+
+Lint clean. Now re-run tests and the placeholder check:
+
+Let me confirm my new tests actually execute and pass (not silently skipped):
+
+All 10 tests pass. Now writing the gate log and committing:
+
+All 12 files committed. Task complete.
+
+## Summary
+
+Ported the web `useApiHealth` hook (`web/src/api/hooks/useApiHealth.ts`) to a UI-free KMP shared-core state holder at full parity.
+
+**What I built:**
+- **`ApiHealthRepository` + `ApiHealthProbe`** (S7 port) ΓÇö a single `suspend probe()`, no cache/mutation surface (the web hook neither caches nor mutates).
+- **`HttpApiHealthRepository`** ΓÇö probes `GET /healthz` at the API **root** (`versioned=false`, *not* `/api/v1`), reads the body as raw text so 2xx is judged on status alone (web `res.ok`), times the round-trip via injected `Clock`, and resolves failures to `ok=false` (never throws) ΓÇö mirroring the web `try/catch`.
+- **`ApiHealth` derivation** ΓÇö pure `bucket()`/`deriveState()`: `ok` (<500ms), `degraded` (ΓëÑ500ms), `offline` (!ok), `unknown` (no probe).
+- **`ApiHealthStore`** ΓÇö hot `StateFlow<ApiHealthState>` that probes immediately, re-probes every 15s (`POLL_INTERVAL_MS`), and pauses when unobserved (`WhileSubscribed` Γåö `refetchIntervalInBackground:false`). SI preserved (latency ms, ISO timestamp).
+- **Golden vectors** (`spec/api-health-golden.json`, 10 scenarios incl. 499/500/501 boundaries) + cross-platform loaders (common expect + android/apple actuals) to pin KMPΓåöC# parity.
+- **10 tests** (3 contract + 2 golden + 5 store), all passing.
+
+**Gate:** `TEST_EXIT=0`, `LINT_EXIT=0`, `PH_EXIT=0` (PLACEHOLDER_COUNT=0). Logged to `p1-s8-0009-apihealth.log` with a full `=== PARITY ===` enumeration. **EXIT=0 / STATUS=DONE.**
+
+One faithful deviation noted in the log: this domain is a *poll*, not cacheΓåÆnetwork, because the web hook itself uses `refetchInterval` with no cache ΓÇö so the generic "reads emit cacheΓåÆnetwork" template doesn't apply here.
+
+The task is fully complete and verified. All gates pass and the work is committed.
+
+

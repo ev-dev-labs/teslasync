@@ -1,0 +1,28 @@
+Now I'll author the four workflows.
+
+Now validate the YAML.
+
+action-validator takes one file at a time. Running each separately.
+
+All four validate. Now writing the log and committing.
+
+P0/0004 complete and committed (`50b9ad322`).
+
+**Four path-filtered workflows created** (`.github/workflows/apps-*.yml`):
+
+| Workflow | `paths:` filter | `runs-on` | Triad |
+|---|---|---|---|
+| apps-shared | `apps/shared/**`, `api/openapi/**` | ubuntu-latest | gradlew build ┬╖ ktlint+detekt ┬╖ gradlew test |
+| apps-windows | + `apps/windows/**` | windows-latest | dotnet build ┬╖ format --verify ┬╖ dotnet test |
+| apps-android | + `apps/android/**` | ubuntu-latest | assembleDebug ┬╖ ktlint+detekt+lint ┬╖ gradlew test |
+| apps-apple | + `apps/apple/**` | macos-latest | xcodebuild ┬╖ swiftlint --strict+swiftformat ┬╖ xcodebuild test |
+
+Each has: `pull_request` + push-to-program-branch (ADR-007) triggers, per-ref concurrency, platform caches (Gradle/NuGet/SPM), the ADR-010 build+strict-lint+test triad with no `continue-on-error`, and a final `EXIT=0` honesty marker.
+
+**No-op-but-valid guard:** a documented "Detect buildable project" step (not a bare `exit 0`) ΓÇö passes when no build target exists yet, but the real build/lint/test steps run and fail once a project exists that doesn't build.
+
+**Verification:** `@action-validator/cli` ΓåÆ all four `EXIT=0` (only informational glob warnings). Existing Go/web CI untouched; no real project files added.
+
+`YAML_EXIT=0` ┬╖ `EXIT=0` ┬╖ `STATUS=DONE`
+
+

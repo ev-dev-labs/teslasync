@@ -1,0 +1,67 @@
+I have the web source. Now let me study an existing ported state holder to mirror the pattern. Let me find a similar mutation-heavy domain.
+
+`feedback` looks like the best mutation-only template. Let me read it fully plus its repo layer.
+
+Now the S7 repository layer. Let me read the FeedbackRepository and find how repos are structured/registered.
+
+Now let me read the HTTP repo pattern, the existing Settings repo (closely related), and the web schema types.
+
+This domain has derivations (`defaultExportFilename`, `summariseImportResult`) and the mutations prime cache keys (`setQueryData`) rather than invalidate. Let me examine the net layer and a non-caching repo pattern, plus how the Settings page uses these.
+
+Let me check the net request signatures and whether stores/repos are wired into a DI registry.
+
+Let me view the full feedback log to mirror its structure, and check the C# port location for golden-vector parity.
+
+Let me view the contract test pattern and check CacheDomain (though I likely won't need a cache domain since these mutations don't persist).
+
+Now let me verify the backend endpoint shapes for export/import to ensure exact parity.
+
+All patterns understood. Let me create the directories and write the files.
+
+Now the tests. Let me check for an existing test clock helper.
+
+Now let me run the gate. Building/testing via Gradle (this host runs the android unit-test task since apple targets can't run here).
+
+Now fix `cacheJson` ΓåÆ `defaultApiJson` in the HTTP repo:
+
+Compilation passes (monthNumber is just a deprecation warning). Fixing 3 ktlint expression-body formatting issues:
+
+BUILD SUCCESSFUL ΓÇö tests + ktlint pass. Now the placeholder check:
+
+All gates green: TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0. Let me write the log file.
+
+All gates pass. Let me commit per the prompt's instructions.
+
+`done.txt` was already staged (pre-existing); the prompt's commit scope is only my files. Let me unstage it and commit exactly as specified.
+
+Done. P1/S8/0042 ΓÇö **SettingsBackup state holder** complete and committed (`f53e8defa`).
+
+## What shipped
+Ported all **3 web hooks** from `useSettingsBackup.ts` to UI-free KMP shared-core state holders:
+
+| Web hook | KMP surface | Endpoint |
+|---|---|---|
+| `useExportSettings` | `SettingsBackupStore.exportSettings()` | `GET /settings/export` |
+| `useDryRunImport` | `dryRunImport(bundle)` | `POST /settings/import {dry_run:true, bundle}` |
+| `useApplyImport` | `applyImport(bundle)` | `POST /settings/import {dry_run:false, bundle}` |
+
+**Key parity decisions:**
+- The domain has **0 reads** (all `useMutation`, no `useQuery`), so no `Resource` feed/CacheDomain ΓÇö instead the hooks' `setQueryData(lastExport/lastImport)` priming is reproduced as observable `StateFlow<SettingsBundle?>`/`StateFlow<SettingsImportResult?>`, updated only on success.
+- Bundle nested verbatim under `bundle`; opaque sections round-trip shape-preserving; null sections dropped (`JSON.stringify`/`explicitNulls=false`).
+- SUDO step-up handled transparently by the shared client (no bespoke plumbing).
+- `downloadSettingsBundle` correctly excluded (browser-only Blob/DOM side effect).
+
+**Derivations** (golden-vectored for KMP+C# parity): `defaultExportFilename` (UTC `YYYYMMDD`) and `summariseImportResult` (`total = added+updated`, skipped excluded).
+
+## Gate (all green)
+```
+TEST_EXIT=0   (SettingsBackupStoreTest[8] + GoldenTest[6] + ContractTest[6])
+LINT_EXIT=0   (ktlint commonMain + commonTest)
+PH_EXIT=0     (placeholders: 0)
+EXIT=0 / STATUS=DONE
+```
+Host note: `:core:allTests` fans out to Apple/native binaries unrunnable on Windows; the runnable full-commonTest equivalent `:core:testDebugUnitTest` was executed (logged honestly).
+
+The task is fully complete and committed. All gates pass.
+
+

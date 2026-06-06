@@ -1,0 +1,111 @@
+I'll start by examining the web source hook and the existing shared core structure to understand the patterns.
+
+Let me look at an existing presentation state holder to mirror the pattern. Let me find a similar read-only one.
+
+Let me examine an existing simple read-only state holder (apihealth) and its repository/test to mirror the pattern.
+
+Let me find a standard cache-then-network read example. Let me look at the repo layer patterns and a recent simple domain.
+
+Anomalies is the closest match (single read, no mutations, no golden). Let me view its full set.
+
+Let me examine the golden vector infrastructure via AuthMode (which has derivations + golden tests).
+
+Now let me find the C# (Windows) port and how it consumes golden vectors.
+
+This is a well-templated task. Let me record a plan and get a quick design critique before implementing.
+
+No blocking issues found. Design is mostly correct and aligned with existing KMP cache/state patterns.
+
+## Blocking Issues
+
+None.
+
+## Non-Blocking Issues
+
+### 1. DonΓÇÖt decode directly into non-null-defaulted canonical model
+**Impact:** Explicit JSON `null` would not reliably match web `?? []` / `?? {}` semantics. With `explicitNulls=false` and no `coerceInputValues`, missing fields with defaults are fine, but explicit `null` for a non-null `List`/`Map` can still fail decoding.  
+**Severity:** Non-Blocking, but important for parity.  
+**Fix:** Keep `FleetTelemetryCoverageRaw` with nullable fields + `normalize(raw)`.
+
+### 2. Fresh decode failure may drop usable cached data
+**Impact:** Existing `HttpFeatureFlagsRepository` maps fresh decode failure to `Resource.Error(cached = null, ...)`. That is safe for flow continuity, but less like React Query, which usually retains previous successful `data` when a refetch errors. If malformed fresh JSON arrives after a valid cached value, the KMP UI may lose displayable data.  
+**Severity:** Non-Blocking parity trap.  
+**Fix:** If `CachingRepository` exposes cached alongside fresh success/error context, preserve decoded cached data in `Resource.Error(cached = decodedCached, ...)`. If not, document that this intentionally follows existing KMP repo semantics rather than exact React Query retained-data behavior.
+
+### 3. Test explicit-null cases, not only missing-field cases
+**Impact:** The main reason for Raw+normalize is explicit-null parity. If the golden only covers missing keys, the critical behavior is unpinned.  
+**Severity:** Non-Blocking.  
+**Fix:** Golden vectors should include:
+- `{}` ΓåÆ all empty
+- `{"categories":null,"destination_totals":null,"orphan_fields":null}` ΓåÆ all empty
+- populated payload passes through verbatim
+- optional field booleans/columns absent vs present
+
+## Suggestions
+
+### 4. Golden fixture is justified if acceptance says ΓÇ£any derivationΓÇ¥
+**Impact:** The derivation is trivial, but it is cross-platform contract glue and protects against accidental removal of nullable raw semantics.  
+**Severity:** Suggestion.  
+**Fix:** Keep the golden, but make it small and focused on null/missing normalization.
+
+### 5. Cache/feed shape looks right
+**Impact:** Single domain key `"coverage"` is appropriate because the web query key has no params. `WhileSubscribed` sharing mirrors existing stores.  
+**Severity:** Suggestion.  
+**Fix:** Ensure `refreshCoverage()` only bumps an existing trigger/feed, so it remains a no-op before first observation, matching your stated test.
+
+### 6. Contract test should assert both forms
+**Impact:** Avoids double-prefix regressions.  
+**Severity:** Suggestion.  
+**Fix:** Assert repository passes `"/tesla/fleet-telemetry/coverage"` to `ApiHttpClient`, and MockEngine observes final URL path `"/api/v1/tesla/fleet-telemetry/coverage"`.Design validated. Now implementing. Let me add the CacheDomain entry and create the model/derivation, repository, and store files.
+
+Now the repository port and HTTP implementation:
+
+Now the store:
+
+Now the golden fixture and test infrastructure:
+
+Now the store test and the repository contract test:
+
+Let me verify the build tooling location and run the gate (tests + ktlint).
+
+Now running the gate: tests + ktlint from `apps/shared`.
+
+ktlint flagged a method chain. Let me fix it.
+
+Contract test wasn't flagged. Re-running the gate.
+
+Build passed. Let me confirm my new tests actually executed and run the placeholder check.
+
+All 11 tests pass, ktlint + placeholder clean. Now writing the gate log and committing.
+
+`done.txt` is out of my allowed scope. Let me check why it changed and unstage it.
+
+Scope is clean (only allowed files + the log). Committing:
+
+Done. P1/S8/0023 complete.
+
+## Summary
+
+Ported the web hook `useFleetTelemetry.ts` (1 read: `useFleetTelemetryCoverage`, 0 mutations) to a UI-free KMP shared-core state holder, following the established Anomalies (single read) + AuthMode (golden derivation) patterns.
+
+**Created (all in `apps/shared/core`):**
+- `presentation/fleettelemetry/FleetTelemetryModels.kt` ΓÇö wire models + `FleetTelemetryCoverage.normalize`, the pure port of the web `?? [] / ?? {}` coalescing.
+- `presentation/fleettelemetry/FleetTelemetryStore.kt` ΓÇö single shared `StateFlow<Resource<ΓÇª>>` feed via `trigger Γû╕ flatMapLatest Γû╕ stateIn(WhileSubscribed)` + `refreshCoverage()`.
+- `data/repo/FleetTelemetryRepository.kt` + `HttpFleetTelemetryRepository.kt` ΓÇö S7 port + Ktor/offline-cache impl (raw `JsonElement` cached verbatim, decodedΓåÆnormalized per emission with guarded decode).
+- `cache/CacheDomain.kt` ΓÇö added `FleetTelemetry("fleet_telemetry", 5.minutes)` (= web `STALE_TIMES.SLOW`).
+- `spec/fleet-telemetry-coverage-golden.json` + golden test/loaders (expect + android/apple) and store + contract tests.
+
+**Parity guarantees:** endpoint `/tesla/fleet-telemetry/coverage` (no double `/api/v1`), no params, SI preserved (counts/names/bools round-trip verbatim), cacheΓåÆnetwork reads, no invalidation surface.
+
+**Gate (verified, raw output):**
+- `:core:testDebugUnitTest` BUILD SUCCESSFUL ΓÇö 11 tests, 0 failures (Contract=4, Golden=2, Store=5).
+- `:core:ktlintCheck` BUILD SUCCESSFUL ΓåÆ LINT_EXIT=0.
+- `check-placeholders.ps1` ΓåÆ PLACEHOLDER_COUNT=0, PH_EXIT=0.
+
+Committed as `d783aa137` (scope limited to allowed files; the pre-existing out-of-scope `done.txt` change was left unstaged). Log written with `=== PARITY ===` and `EXIT=0 / STATUS=DONE`.
+
+A design critique caught two parity points I adopted: keep the nullable `Raw` + explicit `normalize` (so explicit-null parity is C#-portable, not reliant on serializer null-coercion), and cover explicit-null cases in the golden fixture.
+
+The task is fully complete and verified. All gate checks passed and the work is committed.
+
+

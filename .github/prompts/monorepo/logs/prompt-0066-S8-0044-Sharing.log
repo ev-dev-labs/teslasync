@@ -1,0 +1,60 @@
+Now I have a complete blueprint. Let me create the files.
+
+Now the repository interface with cache-key helpers, the polymorphic serializer, and the body builder:
+
+I added an unnecessary import/anchor. Let me remove it.
+
+Now add the `Sharing` CacheDomain entry:
+
+Now the S8 state holder:
+
+Let me compile the main source before writing tests.
+
+Now the golden test:
+
+Let me clean up the golden test helpers (JsonObject already has `isEmpty()`, and avoid fully-qualified names):
+
+Now run the test gate:
+
+Fix the redundant-cast warning:
+
+Now run ktlintCheck:
+
+Auto-fix import ordering with ktlintFormat:
+
+ktlint clean. Now run the full gate and write the log:
+
+All gates green. Append the PARITY section and final status to the log:
+
+Let me confirm the new tests actually execute (not skipped):
+
+All 23 tests pass. Now commit:
+
+done.txt is unstaged (not mine) ΓÇö only my files are staged. Commit:
+
+Done. P1/S8/0044 ΓÇö Sharing state holder is complete and committed (`828ae272c`).
+
+## What I built
+Ported all **4 hooks** from `web/src/api/hooks/useSharing.ts` to UI-free KMP shared-core state holders, following the established S7/S8 architecture (mirroring the Push/SavedViews/Annotations ports):
+
+**Reads (2):**
+- `useShareLinks(driveId)` ΓåÆ `SharingStore.shareLinks` ΓÇö `GET /drives/{driveId}/shares`, staleTime 0, `List<ShareToken>`
+- `useSharedDrive(token)` ΓåÆ `SharingStore.sharedDrive` ΓÇö public `GET /share/{token}`, staleTime SLOW(5m), `SharedDrive` union
+
+**Mutations (2):**
+- `useCreateShareLink` ΓåÆ `POST /drives/{driveId}/share`, invalidates **only** `sharingKeys.shares(driveId)`
+- `useRevokeShareLink` ΓåÆ `DELETE /shares/{token}`, delete-by-token / invalidate-by-drive
+
+**Key parity decisions:** SI preserved on the canonical `SharedDriveData` (`distance_m`/`duration_s`/`*_mps`); the legacy `SharedDriveDataV1` (`*_km`/`*_kmh`) is kept verbatim only for the share-link transition; union discriminated by `payload_version` presence via `SharedDriveSerializer`. Cache keys are prefixed so the two reads never collide in one partition.
+
+## Verification (raw results)
+- `:core:allTests` ΓåÆ **TEST_EXIT=0**; new Sharing tests execute: ContractTest 6/6, GoldenTest 9/9, StoreTest 8/8 ΓÇö **0 failures, 0 skipped**
+- `:core:ktlintCheck` ΓåÆ **LINT_EXIT=0**
+- `check-placeholders.ps1` ΓåÆ **PH_EXIT=0**
+- Golden vectors lock cache keys, `createShareBody`, and the v1/v2 discriminator for KMPΓåöC# parity.
+
+Log written to `.github/prompts/monorepo/logs/p1-s8-0044-sharing.log` ending `EXIT=0` / `STATUS=DONE`.
+
+The task is complete and verified. All gates pass and the commit has landed.
+
+

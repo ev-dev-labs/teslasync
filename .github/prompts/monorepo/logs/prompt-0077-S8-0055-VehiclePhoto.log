@@ -1,0 +1,21 @@
+Now I have enough understanding. Let me create the implementation files.
+
+Now the store, the CacheDomain entry, and the ApiHttpClient multipart fix:
+
+Now add the CacheDomain entry and fix ApiHttpClient for multipart bodies:
+
+Now let me run the gate. Starting with the test build (this may take a while):
+
+Native targets compile on this host. Let me run the full official gate, starting fresh on the log:
+
+BUILD SUCCESSFUL. Now ktlint and placeholder checks:
+
+Ktlint passes. Now the placeholder check:
+
+All gates green. Now appending the PARITY enumeration and final status to the log:
+
+All gates pass. Let me commit per the prompt's commit spec:
+
+Committed. Task complete.
+
+

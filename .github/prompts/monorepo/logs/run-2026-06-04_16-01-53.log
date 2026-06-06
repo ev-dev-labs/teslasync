@@ -1,0 +1,27 @@
+[2026-06-04 16:01:53] [1/12] START  p0-foundation/0001-apps-skeleton.prompt.md
+[2026-06-04 16:03:48] [1/12] DONE in 1.9 min
+[2026-06-04 16:03:58] [2/12] START  p0-foundation/0002-gitignore-editorconfig.prompt.md
+[2026-06-04 16:05:47] [2/12] DONE in 1.8 min
+[2026-06-04 16:05:57] [3/12] START  p0-foundation/0003-version-lock-manifests.prompt.md
+[2026-06-04 16:11:35] [3/12] Cleaning up stale copilot PID 20892
+[2026-06-04 16:11:35] [3/12] DONE in 5.6 min
+[2026-06-04 16:11:45] [4/12] START  p0-foundation/0004-ci-matrix-path-filters.prompt.md
+[2026-06-04 16:15:16] [4/12] DONE in 3.5 min
+[2026-06-04 16:15:26] [5/12] START  p0-foundation/0005-prompt-runner.prompt.md
+[2026-06-04 16:21:06] [5/12] LOG-GATE FAILED (transcript log: [FAIL] marker; artifact log .github\prompts\monorepo\logs\p0-0005-prompt-runner.log: [FAIL] marker) after 5.7 min
+[2026-06-04 16:22:39] [6/12] START  p0-foundation/0006-placeholder-gate.prompt.md
+[2026-06-04 16:26:09] [6/12] DONE in 3.5 min
+[2026-06-04 16:26:20] [7/12] START  p0-foundation/0007-design-tokens-skeleton.prompt.md
+[2026-06-04 16:29:17] [7/12] DONE in 3 min
+[2026-06-04 16:29:27] [8/12] START  p0-foundation/0008-parity-dir-skeleton.prompt.md
+[2026-06-04 16:32:07] [8/12] DONE in 2.7 min
+[2026-06-04 16:32:17] [9/12] START  p0-foundation/0009-authentik-native-clients-runbook.prompt.md
+[2026-06-04 16:34:42] [9/12] DONE in 2.4 min
+[2026-06-04 16:34:52] [10/12] START  p0-foundation/0010-crash-analytics-decision.prompt.md
+[2026-06-04 16:38:44] [10/12] Cleaning up stale copilot PID 88660
+[2026-06-04 16:38:44] [10/12] DONE in 3.9 min
+[2026-06-04 16:38:54] [11/12] START  p0-foundation/0011-contributor-guide.prompt.md
+[2026-06-04 16:42:58] [11/12] Cleaning up stale copilot PID 88644
+[2026-06-04 16:42:58] [11/12] DONE in 4.1 min
+[2026-06-04 16:43:08] [12/12] START  p0-foundation/0099-p0-gate.prompt.md
+[2026-06-04 16:44:20] [12/12] DONE in 1.2 min

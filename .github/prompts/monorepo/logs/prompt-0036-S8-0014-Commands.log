@@ -1,0 +1,19 @@
+I'll start by examining the web source hook and the existing KMP shared core structure to understand the patterns to follow.
+
+Let me study an existing simple read-only store, its models, tests, and the repository layer pattern.
+
+I have enough understanding. Let me set up tracking and create the files, mirroring the Anomalies precedent (raw `JsonElement`, no derivation, gated reads).
+
+Now the store, mirroring the Anomalies pattern but with two gated reads:
+
+Now let me run the gate. First I'll set up the log path and run the gradle tests + ktlint + placeholder check.
+
+Tests pass. Now ktlint and the placeholder check:
+
+ktlint clean. Now the placeholder check:
+
+All three gates pass. Now I'll append the parity enumeration and final status to the log, then commit.
+
+All intended files staged (done.txt is unstaged and won't be committed). Committing:
+
+

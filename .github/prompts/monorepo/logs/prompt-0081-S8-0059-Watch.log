@@ -1,0 +1,61 @@
+Let me explore the repo structure and the key files referenced in this prompt.
+
+Let me examine an existing state holder domain to follow the established pattern. Let me look at a comparable one with both reads and mutations.
+
+Let me study the VehicleSettings domain end-to-end as the template, plus the shared infrastructure.
+
+The repo has two read types (summary + complication). Let me see how multi-shape repos handle a single `CachingRepository<T>` base.
+
+The multi-typed read pattern is clear. Let me view the CacheDomain enum and a golden test + the units golden infrastructure to understand what "golden vectors" entails here.
+
+All infrastructure confirmed. Let me create the log file and write the artifacts. Starting with models, repository, and HTTP repo.
+
+Now the repository interface with cache keys, TTLs, and command body builder:
+
+Now the CacheDomain entry and the WatchStore:
+
+Now the tests ΓÇö store test (fake repo) and golden test:
+
+Let me check for central DI wiring and any exhaustive CacheDomain test that might need updating.
+
+A contract test is the established convention for verifying endpoints/params/body. Let me study the Driving one (same JsonElement+decode pattern, has a POST mutation).
+
+A contract test will lock endpoints/params/body. Let me add one mirroring that harness:
+
+Now let me run the gate. First a fast targeted JVM test run to catch compile errors before the full suite.
+
+Targets are Android + Apple (no JVM). The JVM-equivalent is the Android unit test. Let me run it filtered:
+
+Watch tests pass. Now the full gate: `:core:allTests`, `ktlintCheck`, and the placeholder check. Let me write the log and run the gate.
+
+Full tests pass (TEST_EXIT=0). Now ktlint and placeholder checks:
+
+Ktlint clean. Now the placeholder check:
+
+All gates green. Let me finalize the log with the PARITY enumeration and run the placeholder check explicitly verbose to confirm, then commit.
+
+done.txt was already staged (unrelated). Let me unstage it to keep the commit scoped to my changes, then commit:
+
+Staged set is exactly my changes. Committing:
+
+P1/S8/0059 ΓÇö Watch state holder complete. All gates green, committed.
+
+## Summary
+
+Ported the web `useWatch` hook domain (`web/src/api/hooks/useWatch.ts`, 3 hooks) to UI-free, platform-agnostic state holders in the KMP shared core, following the established S7/S8 architecture (cache-then-network `Resource`, `StateFlow` feeds, raw-`JsonElement`+`decode` multi-shape repo pattern).
+
+**Files added (`apps/shared/core/**`):**
+- `presentation/watch/WatchModels.kt` ΓÇö `WatchSummary`, `WatchComplication`, `WatchCommandResult` (verbatim snake_case wire decode).
+- `data/repo/WatchRepository.kt` ΓÇö S7 port + cache keys, per-read TTLs, command-body builder.
+- `data/repo/HttpWatchRepository.kt` ΓÇö HTTP impl over the resilient client + offline cache.
+- `presentation/watch/WatchStore.kt` ΓÇö S8 shared state holder.
+- Tests: `WatchStoreTest` (fake-repo), `WatchGoldenTest` (language-neutral derivation vectors), `WatchRepositoryContractTest` (MockEngine endpoint/param/body lock).
+- `cache/CacheDomain.kt` ΓÇö added the `Watch` partition.
+
+**Parity (all 3):** `useWatchSummary` ΓåÆ `watchSummary` (GET `/watch/summary`, 15s TTL), `useWatchComplication` ΓåÆ `watchComplication` (GET `/watch/complication`, 30s TTL), `useWatchCommand` ΓåÆ `sendWatchCommand` (POST `/watch/command` `{vehicle_id??0, command}`, invalidates nothing ΓÇö matching the web `onSuccess`-toast-only behavior). SI preserved (backend-rendered payloads carried verbatim; formatting deferred to S5). Toasts and `X-API-Key` transport documented as out-of-layer concerns.
+
+**Gate:** `TEST_EXIT=0`, `LINT_EXIT=0`, `PH_EXIT=0` ΓåÆ `EXIT=0 / STATUS=DONE`. Logged to `.github/prompts/monorepo/logs/p1-s8-0059-watch.log` and committed (`24d32c5b5`).
+
+The task is fully complete ΓÇö all artifacts written, all three gates passed (TEST=0, LINT=0, PH=0), and the work committed.
+
+

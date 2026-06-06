@@ -1,0 +1,108 @@
+Let me establish a baseline build of the existing solution before adding components.
+
+Baseline build succeeds ΓÇö environment is capable. Let me examine string resources, the TokenGen project, and existing code-behind patterns.
+
+Baseline builds clean. Localization isn't wired into the Windows app yet (no resw reference, empty codegen), so primitives will take user-facing text via dependency properties from consumers (matching the web components' prop-driven API). Let me set up tracking and begin.
+
+Let me study key web components to mirror their APIs faithfully.
+
+I have enough parity understanding. Let me build the Core logic library (pure, testable) first.
+
+Core logic written. Let me build it to verify, then create tests.
+
+Core builds clean. Now the test project.
+
+Now the test files:
+
+48 tests pass. Let me wire both projects into the solution and reference Core from the App.
+
+Solution wired. Now the bulk: shared styles and the WinUI control classes. Let me create the shared `Styles.xaml`.
+
+Now the subclassed native controls. Starting with TsButton:
+
+Now a batch of subclassed input/native controls:
+
+Now the typography primitives (mirroring the web `Typography.tsx` colocation):
+
+Let me build the App now to catch errors before adding composite controls.
+
+WinUI seals `TextBlock` and `ToggleSwitch`. I'll wrap them instead of subclassing. Rewriting Typography on a `ContentControl` base:
+
+Now fix TsToggle to wrap the sealed ToggleSwitch:
+
+C# compiles now ΓÇö that error is only from building the csproj directly (AnyCPU). The gate builds the sln. Let me build the sln:
+
+Solution builds clean. Now the composite surface controls. Let me create them as `ContentControl` subclasses with templates in `Styles.xaml`.
+
+I need `AccentBrush`/`DotBrush` to be dependency properties so the template can `TemplateBinding` them. Let me fix both:
+
+Now a boolΓåÆvisibility converter and the surface templates. Creating the converter:
+
+Now append the surface control templates to `Styles.xaml`:
+
+Surfaces build. Now the overlay/wrapper controls (Group A):
+
+Group B ΓÇö action buttons subclassing `TsButton`:
+
+Let me build to validate Groups A & B before continuing.
+
+Two real C# errors (rest are cascading). Fixing:
+
+Groups A & B build. Now Group C ΓÇö value composites:
+
+Now TsEditableText:
+
+Group C green. Now Group D ΓÇö TsCommandPalette, TsThemePicker, TsLightbox:
+
+Now TsLightbox:
+
+Group D green. Now the big one ΓÇö Group E DataTable family. Let me check the Core state types:
+
+Now building the DataTable family. First the column and row models:
+
+Now the resizer, columns menu, and bulk bar:
+
+Now the main TsDataTable orchestrator:
+
+All groups build. Let me verify the component inventory and check existing control DPs for the gallery:
+
+Now creating the component gallery to prove visual states:
+
+Typography uses `Value`, not `Text`. Fixing the gallery:
+
+Now the gallery code-behind to populate the data table and palette:
+
+Build green. Now auto-format before the verify gate:
+
+Now running the full gate exactly as specified:
+
+The gate's `-notmatch` against an array always yields truthy, so its inventory check is logically broken (it flags all 14 even though every component exists). Let me verify each component genuinely exists, then record a correct inventory result:
+
+All 14 components verifiably exist; the corrected inventory check reports 0 missing. The prompt's `-notmatch`-over-an-array expression is a PowerShell defect that always returns a truthy subset. Let me record this transparently in the log:
+
+All real gates green (build/format/test/placeholder) and all 14 required components verified present. Committing:
+
+Committed cleanly. P2/W2-0001 is complete.
+
+## Summary
+
+Implemented the complete Fluent/WinUI 3 `Components/UI` primitive library for the TeslaSync Windows app, mirroring the web `ui` category.
+
+**Gate results (all real checks green):**
+- `BUILD_EXIT=0` ΓÇö `dotnet build TeslaSync.sln -c Release` succeeds
+- `FORMAT_EXIT=0` ΓÇö `dotnet format --verify-no-changes` clean
+- `TEST_EXIT=0` ΓÇö 48/48 tests pass
+- `PLACEHOLDER_EXIT=0` ΓÇö 0 placeholders (3 `parity:allow`-justified WinUI `PlaceholderText` uses)
+- Inventory ΓÇö all 14 required components verifiably present
+
+**Built this session (Groups CΓÇôE + gallery):**
+- **Value composites:** `TsRangeSlider`, `TsPagination`, `TsMaskedValue` (30s auto-hide + copy), `TsEditableText`
+- **Overlays:** `TsCommandPalette` (fuzzy filter, keyboard nav, focus restore), `TsThemePicker` (System/Light/Dark/HighContrast), `TsLightbox` (zoomable image viewer)
+- **DataTable family:** `TsDataTable` (keyboard sorting, tri-state selection, row expansion, live column resizing via width binding, pagination, empty state, `DataGrid` automation peer), plus `TsDataColumn`, `TsDataRow`, `TsDataTableResizer`, `TsDataTableColumnsMenu`, `TsDataTableBulkBar`
+- **`ComponentGallery.xaml`** ΓÇö build-time visual-state proof across default/disabled/loading/error/status states, with a seeded table and palette
+
+All controls back onto the unit-tested `TeslaSync.App.Core` logic, use W1 tokens, expose AutomationProperties + keyboard nav, and carry no hardcoded user-facing strings (all consumer-supplied DPs).
+
+**Honesty note:** The gate's inventory expression `@($required | Where-Object { $all -notmatch $_ })` is defective ΓÇö PowerShell's `-notmatch` over a `MatchInfo` collection returns a non-empty (truthy) subset, so it falsely flags all 14 components. I recorded this transparently in the log alongside a corrected per-component reference count (`CORRECTED_MISSING_UI_COMPONENTS=0`). Log ends `EXIT=0 / STATUS=DONE`. Commit `3f854cfc3`.
+
+
