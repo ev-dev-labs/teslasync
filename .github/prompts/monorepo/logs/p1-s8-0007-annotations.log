@@ -1,67 +1,233 @@
 === P1/S8/0007 Annotations state holder gate ===
+> Task :core:kmpPartiallyResolvedDependenciesChecker
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:compileKotlinIosSimulatorArm64 UP-TO-DATE
+> Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
+> Task :core:iosSimulatorArm64MainKlibrary UP-TO-DATE
+> Task :core:compileTestKotlinIosSimulatorArm64 UP-TO-DATE
+> Task :core:computeLocalPackageDependencyInputFiles SKIPPED
+> Task :core:generateSyntheticLinkageSwiftPMImportProjectForCinteropsAndLdDump SKIPPED
+> Task :core:generateUmbrellaPackageIdentifierBasedResolutionForDefault SKIPPED
+> Task :core:fetchUmbrellaPackageIdentifierForDefault SKIPPED
+> Task :core:syncPersistedPackageResolvedToSynthetic SKIPPED
+> Task :core:fetchSyntheticImportProjectPackages SKIPPED
+> Task :core:convertSyntheticImportProjectIntoDefFileIphonesimulator SKIPPED
+> Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
+> Task :core:iosSimulatorArm64Test SKIPPED
+> Task :core:compileKotlinMacosArm64 UP-TO-DATE
+> Task :core:macosArm64ProcessResources NO-SOURCE
+> Task :core:macosArm64MainKlibrary UP-TO-DATE
+> Task :core:compileTestKotlinMacosArm64 UP-TO-DATE
+> Task :core:convertSyntheticImportProjectIntoDefFileMacosx SKIPPED
+> Task :core:linkDebugTestMacosArm64 SKIPPED
+> Task :core:macosArm64Test SKIPPED
+> Task :core:preBuild UP-TO-DATE
+> Task :core:preDebugBuild UP-TO-DATE
+> Task :core:generateDebugResValues UP-TO-DATE
+> Task :core:generateDebugResources UP-TO-DATE
+> Task :core:packageDebugResources UP-TO-DATE
+> Task :core:parseDebugLocalResources UP-TO-DATE
+> Task :core:generateDebugRFile UP-TO-DATE
+> Task :core:compileDebugKotlinAndroid UP-TO-DATE
+> Task :core:javaPreCompileDebug UP-TO-DATE
+> Task :core:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:generateDebugUnitTestStubRFile UP-TO-DATE
+> Task :core:compileDebugUnitTestKotlinAndroid UP-TO-DATE
+> Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:koverFindJar UP-TO-DATE
+> Task :core:processDebugJavaRes UP-TO-DATE
+> Task :core:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :core:testDebugUnitTest UP-TO-DATE
+> Task :core:preReleaseBuild UP-TO-DATE
+> Task :core:generateReleaseResValues UP-TO-DATE
+> Task :core:generateReleaseResources UP-TO-DATE
+> Task :core:packageReleaseResources UP-TO-DATE
+> Task :core:parseReleaseLocalResources UP-TO-DATE
+> Task :core:generateReleaseRFile UP-TO-DATE
+> Task :core:compileReleaseKotlinAndroid UP-TO-DATE
+> Task :core:javaPreCompileRelease UP-TO-DATE
+> Task :core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :core:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :core:preReleaseUnitTestBuild UP-TO-DATE
+> Task :core:generateReleaseUnitTestStubRFile UP-TO-DATE
+> Task :core:compileReleaseUnitTestKotlinAndroid UP-TO-DATE
+> Task :core:javaPreCompileReleaseUnitTest UP-TO-DATE
+> Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processReleaseJavaRes UP-TO-DATE
+> Task :core:processReleaseUnitTestJavaRes UP-TO-DATE
+> Task :core:testReleaseUnitTest UP-TO-DATE
+> Task :core:allTests NO-SOURCE
+
+BUILD SUCCESSFUL in 4s
+38 actionable tasks: 1 executed, 37 up-to-date
 TEST_EXIT=0
+
+=== Forced fresh re-run (honesty: --rerun-tasks) ===
+> Task :core:kmpPartiallyResolvedDependenciesChecker
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:preBuild UP-TO-DATE
+> Task :core:preDebugBuild UP-TO-DATE
+> Task :core:generateDebugResValues
+> Task :core:generateDebugResources
+> Task :core:packageDebugResources
+> Task :core:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:javaPreCompileDebug
+> Task :core:javaPreCompileDebugUnitTest
+> Task :core:koverFindJar
+> Task :core:parseDebugLocalResources
+> Task :core:generateDebugRFile
+> Task :core:generateDebugUnitTestStubRFile
+> Task :core:generateCommonMainTeslaSyncCacheInterface
+
+> Task :core:compileDebugKotlinAndroid
+w: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SettingsBackupRepository.kt:77:19 'val monthNumber: Int' is deprecated. Use the 'month' property instead.
+
+> Task :core:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:processDebugJavaRes
+> Task :core:bundleLibRuntimeToJarDebug
+> Task :core:bundleLibCompileToJarDebug
+> Task :core:compileDebugUnitTestKotlinAndroid
+> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processDebugUnitTestJavaRes
+> Task :core:testDebugUnitTest
+
+[Incubating] Problems report is available at: file:///D:/repos/teslasync/apps/shared/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 59s
+18 actionable tasks: 18 executed
+RERUN_TEST_EXIT=0
+> Task :core:loadKtlintReporters UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidMainSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidUnitTestSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleMainSourceSet UP-TO-DATE
+> Task :core:ktlintAppleMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
+> Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonMainSourceSet UP-TO-DATE
+> Task :core:ktlintCommonMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonTestSourceSet UP-TO-DATE
+> Task :core:ktlintCommonTestSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosMainSourceSet NO-SOURCE
+> Task :core:ktlintIosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosTestSourceSet NO-SOURCE
+> Task :core:ktlintIosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverKotlinScripts UP-TO-DATE
+> Task :core:ktlintKotlinScriptCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverMacosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosMainSourceSet NO-SOURCE
+> Task :core:ktlintMacosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosTestSourceSet NO-SOURCE
+> Task :core:ktlintMacosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeMainSourceSet NO-SOURCE
+> Task :core:ktlintNativeMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
+> Task :core:ktlintNativeTestSourceSetCheck SKIPPED
+> Task :core:ktlintCheck UP-TO-DATE
+
+BUILD SUCCESSFUL in 2s
+16 actionable tasks: 16 up-to-date
 LINT_EXIT=0
-PLACEHOLDER CHECK:
-PLACEHOLDER_ALLOWED=13
-PLACEHOLDER_COUNT=0
-EXIT=0
 PH_EXIT=0
 
-GATE SUMMARY: TEST_EXIT=0 LINT_EXIT=0 PH_EXIT=0
+GATE SUMMARY: TEST_EXIT=0 RERUN_TEST_EXIT=0 LINT_EXIT=0 PH_EXIT=0
 
-Test breakdown (testDebugUnitTest + testReleaseUnitTest, identical):
-  AnnotationRepositoryContractTest  tests=11 failures=0 errors=0
-  AnnotationsStoreTest              tests=7  failures=0 errors=0
-  AnnotationsGoldenTest             tests=7  failures=0 errors=0
-Native targets (iosSimulatorArm64Test/macosArm64Test) SKIPPED on the Windows host;
-JVM/Android unit-test source set is the common-code coverage surface and is green.
+Test breakdown (freshly executed via :core:testDebugUnitTest --rerun-tasks;
+testReleaseUnitTest is identical and was green under :core:allTests):
+  AnnotationRepositoryContractTest  tests=11 failures=0 errors=0   (data/repo)
+  AnnotationsStoreTest              tests=7  failures=0 errors=0   (presentation/annotations)
+  AnnotationsGoldenTest             tests=7  failures=0 errors=0   (presentation/annotations)
+  TOTAL                             tests=25 failures=0 errors=0
+Native targets (iosSimulatorArm64Test / macosArm64Test) are SKIPPED on the Windows
+host; the JVM/Android unit-test source set is the common-code coverage surface and is green.
+Placeholder gate clean (PH_EXIT=0): no TODO/FIXME/"coming soon"/stub markers under apps/shared/core.
 
 === PARITY ===
-Ported web/src/api/hooks/useAnnotations.ts (2 reads, 3 mutations) ->
-AnnotationRepository (S7) + HttpAnnotationRepository + AnnotationsStore (S8).
+Ported web/src/api/hooks/useAnnotations.ts (2 reads + 3 mutations = 5 hooks) ->
+AnnotationRepository (S7) + HttpAnnotationRepository + AnnotationsStore (S8). UI-free; SI preserved.
 
 Reads (2):
- 1. useChartAnnotations(params)       -> AnnotationsStore.chartAnnotations(params)
-        GET /annotations/?vehicle_id=&scope=&from=&to=  (annotationQuery: vehicle_id sent when present;
-        scope/from/to only when non-blank, mirroring web buildQuery truthy guards)
-        typed List<ChartAnnotationRow>; cached under annotationCacheKey == web annotationKeys.list tuple.
- 2. useChartAnnotationsAsData(params) -> AnnotationsStore.chartAnnotationsAsData(params)
-        SAME shared upstream re-projected through toDataAnnotation (single fetch, like the web wrapper
-        reusing the same TanStack query key). Web {annotations,isLoading} -> Resource (data + is Loading).
+ 1. useChartAnnotations(params)        -> AnnotationsStore.chartAnnotations(params) : StateFlow<Resource<List<ChartAnnotationRow>>>
+        GET /annotations/?vehicle_id=&scope=&from=&to=   (annotationQuery mirrors web buildQuery:
+        vehicle_id sent whenever present via !=null; scope/from/to only when non-blank via the JS truthy guard).
+        Cache-then-network (ADR-013); typed List<ChartAnnotationRow> cached under annotationCacheKey,
+        which reproduces the web annotationKeys.list tuple ['annotations', vehicleId??'all', scope??'all', from??'', to??''].
+        TTL = CacheDomain.Annotations 5.minutes == web STALE_TIMES.SLOW (5*60_000).
+ 2. useChartAnnotationsAsData(params)  -> AnnotationsStore.chartAnnotationsAsData(params) : StateFlow<Resource<List<DataAnnotation>>>
+        The SAME shared upstream re-projected through toDataAnnotation (one fetch backs both views, exactly
+        like the web wrapper reusing the same TanStack query key -- asserted in AnnotationsStoreTest).
+        Web { annotations, isLoading } maps onto Resource: annotations = data/cached list, isLoading = (it is Resource.Loading).
 
-Mutations (3) — each invalidates annotationKeys.all (whole 'annotations' tree):
- 3. useCreateAnnotation -> store.createAnnotation(input)  POST /annotations/        body: occurred_at,category,
-        title (+ vehicle_id/description/scope/color when present) -> repo clear(domain) + store refreshAll()
- 4. useUpdateAnnotation -> store.updateAnnotation(input)  PATCH /annotations/{id}   body: only changed fields,
-        clear_description/clear_color only when set -> repo clear(domain) + store refreshAll()
- 5. useDeleteAnnotation -> store.deleteAnnotation(id)     DELETE /annotations/{id}  204 No Content ->
-        repo clear(domain) + store refreshAll()
+Mutations (3) -- each mirrors web invalidateAndBroadcast(qc, { queryKey: annotationKeys.all }):
+ 3. useCreateAnnotation -> store.createAnnotation(input) : Result<ChartAnnotationRow>
+        POST /annotations/   body { occurred_at, category, title (+ vehicle_id/description/scope/color only when present,
+        mirroring JSON.stringify dropping undefined keys) }  -> repo evicts the WHOLE CacheDomain.Annotations partition (clear)
+        + store.refreshAll() re-collects every observed feed.
+ 4. useUpdateAnnotation -> store.updateAnnotation(input) : Result<ChartAnnotationRow>
+        PATCH /annotations/{id}   body = only the changed fields; clear_description/clear_color sent only when set
+        (explicit erasers) -> clear() + refreshAll().
+ 5. useDeleteAnnotation -> store.deleteAnnotation(id) : Result<Unit>
+        DELETE /annotations/{id}   (server 204 No Content read as raw text and discarded) -> clear() + refreshAll().
 
-Invalidate-all semantics: web invalidateAndBroadcast(qc, {queryKey: annotationKeys.all}) drops every
-(vehicle,scope,window) query => repo evicts the ENTIRE CacheDomain.Annotations partition and the store's
-refreshAll() bumps every observed feed (raw + the as-data feeds re-derive automatically). A failed mutation
-leaves the cache untouched (asserted). A feed nobody observes is a no-op refresh (asserted).
+Invalidate-all semantics: the web hooks invalidate annotationKeys.all (the whole 'annotations' tree) because a write can
+affect any (vehicle, scope, window) list -- a fleet-wide row (vehicle_id NULL) appears on every vehicle. The data layer
+evicts the ENTIRE partition; the store bumps every observed feed's trigger (the as-data feeds re-derive automatically
+because they observe the raw feeds). A FAILED mutation leaves the cache untouched (asserted: mutationFailureDoesNotInvalidate).
+A feed nobody observes is a no-op refresh (asserted: refreshAllIsNoOpWhenNothingIsObserved).
 
-Derivations golden-locked (KMP+C# parity, AnnotationsGoldenTest, ADR-004):
-  - toDataAnnotation (id stringified, context = first scope bucket, null-preserving description/vehicle id)
-  - annotationQuery   (vehicle_id always-when-present; blank scope/from/to dropped)
-  - annotationCacheKey (web annotationKeys.list null-coalescing; empty scope stays '' in the KEY though
-    it is dropped from the QUERY — the one subtle web edge, pinned by 'empty_scope_stays_empty').
+Derivations golden-locked for KMP+C# parity (AnnotationsGoldenTest, ADR-004; language-neutral JSON in / fixed out):
+  - toDataAnnotation   : id stringified, label=title, context = scope[0] ?? '', null-preserving description/vehicleId
+                         (cases: full_row, fleet_wide_null_vehicle, scopeless_row, multi_scope_takes_first, null_description).
+  - annotationQuery    : vehicle_id always-when-present; blank scope/from/to dropped
+                         (cases: empty, vehicle_only, all_params, blank_optionals_dropped, scope_only).
+  - annotationCacheKey : web annotationKeys.list null-coalescing; the subtle edge where an empty scope stays '' in the KEY
+                         even though it is dropped from the QUERY (case: empty_scope_stays_empty).
 
-SI preserved: annotation fields are ids/timestamps/titles/hex colours — not unit-bearing — so they
-round-trip verbatim as typed ChartAnnotationRow JSON; conversion is display-only (S5). New cache domain
-Annotations = 5 min (matches web STALE_TIMES.SLOW on useChartAnnotations).
+SI: annotation fields are ids / timestamps / titles / hex colours -- not unit-bearing -- so they round-trip verbatim as
+typed ChartAnnotationRow JSON; no conversion at this layer (display formatting is the S5 render boundary's job).
 
-Endpoints verified against generated apps/windows/Generated/Api/ApiEndpoints.cs and internal/api/router.go
-(/annotations Get/Post, /annotations/{id} Patch/Delete) and the Go handler
-internal/api/chartannotation/handler.go (wire shape + create/patch body fields).
+Endpoints verified against internal/api/router.go (r.Route("/annotations"): Get "/", Post "/", Patch "/{id}", Delete "/{id}")
+and the web wire shape in web/src/types/annotations.ts (ChartAnnotationRow / DataAnnotation / toDataAnnotation).
 
 Files (apps/shared/core/**):
-  commonMain presentation/annotations/AnnotationModels.kt
-  commonMain data/repo/AnnotationRepository.kt (interface + annotationQuery + annotationCacheKey)
+  commonMain presentation/annotations/AnnotationModels.kt   (ChartAnnotationRow, DataAnnotation, toDataAnnotation,
+                                                             AnnotationListParams, CreateAnnotationInput, UpdateAnnotationInput)
+  commonMain data/repo/AnnotationRepository.kt              (interface + annotationQuery + annotationCacheKey)
   commonMain data/repo/HttpAnnotationRepository.kt
   commonMain presentation/annotations/AnnotationsStore.kt
-  commonMain cache/CacheDomain.kt (+ Annotations)
+  commonMain cache/CacheDomain.kt                           (Annotations = "annotations", 5.minutes)
   commonTest data/repo/AnnotationRepositoryContractTest.kt
   commonTest presentation/annotations/AnnotationsStoreTest.kt
   commonTest presentation/annotations/AnnotationsGoldenTest.kt
