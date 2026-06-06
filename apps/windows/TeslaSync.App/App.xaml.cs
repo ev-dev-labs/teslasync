@@ -1,6 +1,8 @@
 using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
 using TeslaSync.App.Auth;
+using TeslaSync.App.Core.Navigation;
+using TeslaSync.App.Notifications;
 using TeslaSync.App.Shell;
 using Windows.ApplicationModel.Activation;
 
@@ -48,23 +50,52 @@ public partial class App : Application
 
     private void HandleActivation(AppActivationArguments? args)
     {
+        if (args is null)
+        {
+            return;
+        }
+
         try
         {
-            if (args?.Kind == ExtendedActivationKind.Protocol
-                && args.Data is IProtocolActivatedEventArgs protocol)
+            switch (args.Kind)
             {
-                // OAuth callbacks are consumed by the awaiting sign-in; never route them as deep links.
-                if (AppAuth.TryHandleActivation(protocol.Uri))
-                {
-                    return;
-                }
+                case ExtendedActivationKind.Protocol when args.Data is IProtocolActivatedEventArgs protocol:
+                    // OAuth callbacks are consumed by the awaiting sign-in; never route them as deep links.
+                    if (!AppAuth.TryHandleActivation(protocol.Uri))
+                    {
+                        _window?.ActivateFromUri(protocol.Uri);
+                    }
 
-                _window?.ActivateFromUri(protocol.Uri);
+                    break;
+
+                case ExtendedActivationKind.AppNotification
+                    when args.Data is Microsoft.Windows.AppNotifications.AppNotificationActivatedEventArgs notification:
+                    // P2/W8-0001: a toast (or one of its buttons) routes through the notification activator.
+                    AppNotifications.HandleActivation(notification);
+                    break;
+
+                case ExtendedActivationKind.Launch when args.Data is ILaunchActivatedEventArgs launch:
+                    // P2/W8-0001: a jump-list task launches the app with a teslasync:// deep-link argument.
+                    ActivateFromArgumentString(launch.Arguments);
+                    break;
+
+                default:
+                    break;
             }
         }
         catch (Exception)
         {
             // Activation is best-effort; a missing/identity-less host must not crash launch.
+        }
+    }
+
+    private void ActivateFromArgumentString(string? arguments)
+    {
+        if (!string.IsNullOrWhiteSpace(arguments)
+            && Uri.TryCreate(arguments, UriKind.Absolute, out var uri)
+            && string.Equals(uri.Scheme, DeepLink.Scheme, StringComparison.OrdinalIgnoreCase))
+        {
+            _window?.ActivateFromUri(uri);
         }
     }
 }

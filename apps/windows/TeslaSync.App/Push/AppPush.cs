@@ -4,6 +4,7 @@ using TeslaSync.App.Components.Feedback;
 using TeslaSync.App.Core.Auth;
 using TeslaSync.App.Core.Data.Net;
 using TeslaSync.App.Core.Push;
+using TeslaSync.App.Notifications;
 using TeslaSync.App.Platform;
 
 namespace TeslaSync.App.Push;
@@ -107,10 +108,10 @@ public static class AppPush
         var store = new LocalSettingsPushRegistrationStore();
         var diagnostics = new PushDiagnostics();
 
-        var inbox = new NotificationInbox();
-        var bannerSink = new PushBannerPresenter(dispatcher, banner);
-        var toast = new WindowsToastService();
-        var router = new ForegroundPushRouter(inbox, bannerSink, toast, diagnostics);
+        // P2/W8-0001: route foreground pushes through the rich notification dispatcher when it is
+        // available (actionable toasts + foreground/quiet-hours coordination); otherwise fall back to
+        // the basic W6 router so notifications still surface.
+        var router = AppNotifications.Router ?? BuildFallbackRouter(dispatcher, banner, diagnostics);
 
         var service = new PushRegistrationService(provider, client, store, environment, diagnostics);
         var controller = new PushSessionController(service, router, provider, AppAuth.Service);
@@ -121,6 +122,15 @@ public static class AppPush
         _controller = controller;
 
         controller.Start();
+    }
+
+    private static ForegroundPushRouter BuildFallbackRouter(
+        DispatcherQueue dispatcher, TsAlertBanner banner, PushDiagnostics diagnostics)
+    {
+        var inbox = AppNotifications.Inbox ?? new NotificationInbox();
+        var bannerSink = new PushBannerPresenter(dispatcher, banner);
+        var toast = new WindowsToastService();
+        return new ForegroundPushRouter(inbox, bannerSink, toast, diagnostics);
     }
 
     private static Uri ResolveApiBase()

@@ -9,6 +9,7 @@ using TeslaSync.App.Auth.Onboarding;
 using TeslaSync.App.Components.Feedback;
 using TeslaSync.App.Core.Auth;
 using TeslaSync.App.Core.Navigation;
+using TeslaSync.App.Notifications;
 using TeslaSync.App.Push;
 using Windows.Graphics;
 using Windows.System;
@@ -55,7 +56,10 @@ public sealed partial class ShellWindow : Window
         Closed += OnShellClosed;
 
         // Foreground push registration + notification routing (P2/W6-0002). Best-effort: an
-        // unpackaged dev run without WNS/package identity simply leaves push inactive.
+        // unpackaged dev run without WNS/package identity simply leaves push inactive. The W8
+        // notification graph (actionable toasts, taskbar, jump list) starts first so it provides the
+        // foreground push router; push registration then follows the auth session.
+        AppNotifications.Start(this, DispatcherQueue, _pushBanner);
         AppPush.Start(DispatcherQueue, _pushBanner);
 
         ConfigureWindow();
@@ -449,5 +453,6 @@ public sealed partial class ShellWindow : Window
     {
         AppAuth.Service.StateChanged -= OnAuthStateChanged;
         AppPush.Stop();
+        AppNotifications.Stop();
     }
 }
