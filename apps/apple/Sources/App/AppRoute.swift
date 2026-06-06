@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Sidebar grouping for routes (web `App.tsx` route groups).
-public enum AppRouteGroup: String, CaseIterable, Identifiable {
+public enum AppRouteGroup: String, CaseIterable, Identifiable, Sendable {
     case overview, vehicle, energy, insights, operations, system, account
 
     public var id: String {
@@ -24,7 +24,7 @@ public enum AppRouteGroup: String, CaseIterable, Identifiable {
 /// Every top-level destination, mirroring `web/src/App.tsx` route groups + standalone
 /// routes. Each carries its canonical path, title, icon, and sidebar group; one enum
 /// drives the sidebar, the iPhone tabs, and the deep-link parser.
-public enum AppRoute: String, CaseIterable, Identifiable, Hashable {
+public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case dashboard, vehicles, charging, trips, energy, driving, analytics, maps
     case vehicleSystems, automations, notifications, telemetry, diagnostics
     case admin, powerUser, system, settings, onboarding, explore, search, sharing, watch

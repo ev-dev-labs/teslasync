@@ -40,6 +40,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: io.teslasync.app
         PRODUCT_MODULE_NAME: TeslaSync
         TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_ENTITLEMENTS: Resources/TeslaSync.entitlements
+        INFOPLIST_FILE: Resources/Info-iOS.plist
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
@@ -48,6 +50,7 @@ targets:
     dependencies:
       - framework: Frameworks/Shared.xcframework
         embed: false
+      - target: TeslaSyncActivities
     preBuildScripts:
       - path: Scripts/build-shared-xcframework.sh
         name: "Build KMP Shared.xcframework"
@@ -68,6 +71,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: io.teslasync.app.macos
         PRODUCT_NAME: TeslaSync
         PRODUCT_MODULE_NAME: TeslaSync
+        CODE_SIGN_ENTITLEMENTS: Resources/TeslaSync-macOS.entitlements
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
         INFOPLIST_KEY_NSHumanReadableCopyright: ""
         ENABLE_HARDENED_RUNTIME: YES
@@ -78,6 +82,28 @@ targets:
       - path: Scripts/build-shared-xcframework.sh
         name: "Build KMP Shared.xcframework"
         basedOnDependencyAnalysis: false
+
+  # ---- iOS Live Activities widget extension ----
+  # The lock-screen / Dynamic Island UI for the charging / drive / command Live
+  # Activities. iOS-only (ActivityKit + WidgetKit); the `ActivityAttributes` are
+  # shared with the app via file membership so both agree on the payload shape.
+  TeslaSyncActivities:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: NotificationsExtension
+      - path: Sources/Notifications/LiveActivities/ChargingActivityAttributes.swift
+      - path: Sources/Notifications/LiveActivities/DriveActivityAttributes.swift
+      - path: Sources/Notifications/LiveActivities/CommandActivityAttributes.swift
+      - path: Localization
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.teslasync.app.activities
+        PRODUCT_MODULE_NAME: TeslaSyncActivities
+        INFOPLIST_FILE: Resources/Info-Activities.plist
+        INFOPLIST_KEY_CFBundleDisplayName: TeslaSync Activities
+        INFOPLIST_KEY_NSHumanReadableCopyright: ""
 
   # ---- iOS test bundles ----
   TeslaSyncTests:
