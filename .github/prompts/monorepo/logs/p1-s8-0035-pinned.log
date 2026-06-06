@@ -1,0 +1,87 @@
+P1 · S8 · 0035 — Pinned state holder (web-hook parity) — EXECUTION LOG
+======================================================================
+
+GOAL
+Port the web `usePinned` hook domain (web/src/api/hooks/usePinned.ts, 3 hooks) to a
+platform-agnostic, UI-free shared state holder in apps/shared/core, consumed identically by
+Android/Apple (KMP) and Windows (C# port). Same endpoints, same snake_case params, same query
+keys/caching intent, same invalidate granularity, SI preserved.
+
+=== PARITY ===
+usePinned.ts → 3 hooks, ALL ported:
+
+READS (1):
+  usePinned(type, context?)        → PinnedStore.pinned(type, context)
+      GET /pinned?type=<wire>[&context=<context>], staleTime SLOW (5 min) → CacheDomain.Pinned 5 min.
+      buildQuery faithfully reproduced by pinnedQuery(): `type` always sent; `context` sent
+      whenever != null (explicit "" IS on the wire). Cache/feed key reproduced by
+      pinnedCacheKey() = "<wire>:<null|v:context>", mirroring pinnedKeys.list = ['pinned', type,
+      context ?? null]; the `v:` prefix keeps ABSENT(null) distinct from PRESENT "" / "null"
+      exactly as the JS array tuples differ. One shared StateFlow<Resource<List<PinnedItem>>> per
+      (type,context) bucket; same bucket ⇒ same feed, distinct bucket ⇒ distinct feed.
+
+MUTATIONS (2):
+  useTogglePin(type)               → PinnedStore.togglePin(type, itemId, pin, context?)
+      pin=true:  POST /pinned {item_type, item_id[, context]} (context present-when-non-null).
+      pin=false: resolve existing row id from the cached bucket (repo.peekPinned — the
+                 getQueryData analogue) with a fresh-fetch fallback (repo.fetchPinned — the
+                 `await request(...)` analogue) on a cold cache OR a cached-but-missing item;
+                 then DELETE /pinned/{existing.id}. No matching row ⇒ Result.success(null) (web
+                 returns null) which STILL refreshes. A failed fallback fetch / POST / DELETE is
+                 propagated and refreshes nothing (web onError skips invalidation).
+      onSuccess: refreshAll() — bumps EVERY observed feed = invalidateQueries(pinnedKeys.all)=['pinned'].
+  useReorderPin(type)              → PinnedStore.reorderPin(type, id, position)
+      PATCH /pinned/{id} {position}.
+      onSuccess: refreshType(type) — bumps ONLY the (type, no-context) feed =
+      invalidateQueries(pinnedKeys.list(type)) = ['pinned', type, null]. TanStack partial-match
+      touches ONLY the null-context query (a ['pinned', type, 'ctx'] feed has 'ctx' != null at
+      index 2, so it does NOT match) — reproduced exactly; verified by a rubber-duck critique.
+
+SI / UNITS
+Pin rows are ids / item ids / integer positions / RFC3339 timestamps — NOT unit-bearing — so they
+round-trip verbatim as typed PinnedItem JSON with no SI conversion; display formatting is the
+render boundary's job (S5). New cache domain Pinned = 5 min (matches web STALE_TIMES.SLOW).
+
+DERIVATIONS GOLDEN-LOCKED (KMP+C# parity, PinnedGoldenTest, ADR-004):
+  - pinnedQuery   (type always; context only when != null incl. explicit "")
+  - pinnedCacheKey(web pinnedKeys.list null-vs-present distinction via the `v:` prefix; the
+    'literal_null_string' vector proves null and the string "null" do NOT collide)
+
+ENDPOINTS VERIFIED against internal/api/router.go (Route "/pinned": Get "/", Post "/",
+Patch "/{id}", Delete "/{id}") and the Go handler internal/api/pinned/handler.go (List requires
+?type=, optional ?context=; Create body item_type/item_id/optional context; Update body position;
+Delete by id → 204) and the model internal/models/dashboard/pinned.go (closed PinnedItemType enum,
+snake_case JSON tags). PinnedItemType modelled as a closed @Serializable enum with @SerialName
+wire tokens (vehicle, widget, alert_rule, location, geofence, automation, dashboard, command).
+
+ARCHITECTURE NOTES
+Mutations have NO cache interaction in the repository (unlike the Annotations port's clear()):
+invalidateQueries is refetch-not-remove, so the durable cache is left intact and the store's
+targeted refresh (trigger bump → cacheThenNetwork always hits the network) re-fetches while the
+last-known rows stay visible — a closer analogue of TanStack invalidation than eviction. The
+repository makes the only network calls; the store injects the repo + scope and holds no Ktor.
+
+FILES (apps/shared/core/**):
+  commonMain presentation/pinned/PinnedModels.kt        (PinnedItem + PinnedItemType enum)
+  commonMain data/repo/PinnedRepository.kt              (interface + pinnedQuery + pinnedCacheKey)
+  commonMain data/repo/HttpPinnedRepository.kt          (HTTP + offline-cache impl)
+  commonMain presentation/pinned/PinnedStore.kt         (S8 UI-free state holder)
+  commonMain cache/CacheDomain.kt                       (+ Pinned, 5 min)
+  commonTest presentation/pinned/PinnedStoreTest.kt     (11 tests — fake repo)
+  commonTest data/repo/PinnedRepositoryContractTest.kt  (13 tests — MockEngine)
+  commonTest presentation/pinned/PinnedGoldenTest.kt    (6 tests — golden vectors)
+
+=== GATE ===
+Push-Location apps/shared (gradle wrapper lives here; settings include :core)
+./gradlew :core:allTests   → BUILD SUCCESSFUL; TEST_EXIT=0
+    PinnedStoreTest             tests=11 failures=0 skipped=0
+    PinnedRepositoryContractTest tests=13 failures=0 skipped=0
+    PinnedGoldenTest            tests=6  failures=0 skipped=0
+./gradlew :core:ktlintCheck → BUILD SUCCESSFUL; LINT_EXIT=0 (after ktlintFormat normalised 3 style
+    findings in HttpPinnedRepository.kt / PinnedModels.kt)
+check-placeholders.ps1 -Path apps/shared/core -Language kotlin → PLACEHOLDER_COUNT=0; PH_EXIT=0
+
+All 3 hooks ported. TEST/LINT/PH all 0.
+
+EXIT=0
+STATUS=DONE

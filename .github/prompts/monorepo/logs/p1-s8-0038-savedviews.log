@@ -1,0 +1,60 @@
+P1 · S8 · 0038 — SavedViews state holder
+=========================================
+
+Output: apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/savedviews/**
+Web source: web/src/api/hooks/useSavedViews.ts (5 hooks)
+Backend contract: internal/api/savedviews/handler.go, router.go /api/v1/saved-views
+ADR refs: ADR-004, ADR-006, ADR-013
+
+Artifacts created
+-----------------
+- presentation/savedviews/SavedViewModels.kt
+    SavedView (SerialName snake_case, mirrors web SavedView / Go dashboardmodel.SavedView),
+    SavedViewCreateInput, SavedViewUpdateInput,
+    UpdateSavedViewArgs, DeleteSavedViewArgs, SetDefaultSavedViewArgs
+- presentation/savedviews/SavedViewsStore.kt  (S8 UI-free state holder)
+- data/repo/SavedViewRepository.kt   (S7 port + savedViewListQuery + savedViewCacheKey)
+- data/repo/HttpSavedViewRepository.kt (Ktor + offline cache, ADR-013)
+- cache/CacheDomain.kt: + SavedViews("saved_views", 1.minutes)  [web STALE_TIMES.STANDARD = 60s]
+Tests:
+- presentation/savedviews/SavedViewsStoreTest.kt  (fake repo: cache->network reads, per-route invalidate)
+- data/repo/SavedViewRepositoryContractTest.kt    (MockEngine: endpoint/method/params/body + per-route evict)
+
+=== PARITY ===
+Reads / queries (1 — the web file's single useQuery, listed by the prompt under "mutations"):
+- useSavedViews(route)                  -> SavedViewsStore.savedViews(route): StateFlow<Resource<List<SavedView>>>
+    GET /saved-views?route=<route>  (savedViewListQuery: always sends route)
+    cache key = route (web savedViewsKeys.list(route)); staleTime STANDARD 60s -> CacheDomain.SavedViews 1m
+    always-an-array guarantee preserved; no select/derivation (web applies none); SI verbatim
+
+Mutations / actions (4):
+- useCreateSavedView                    -> SavedViewsStore.createSavedView(input)
+    POST /saved-views  body{name,route,query,[is_default],[is_pinned],[sort_order]} (optionals omitted when null)
+    invalidate savedViewsKeys.list(created.route): repo evicts created.route key; store refreshes created.route feed
+- useUpdateSavedView                    -> SavedViewsStore.updateSavedView(UpdateSavedViewArgs{id,route,patch})
+    PUT /saved-views/{id}  body=JSON.stringify(patch) (only changed fields; id path-only)
+    invalidate savedViewsKeys.list(vars.route): repo evicts route key; store refreshes route feed
+- useDeleteSavedView                    -> SavedViewsStore.deleteSavedView(DeleteSavedViewArgs{id,route})
+    DELETE /saved-views/{id}  (204 No Content; empty body read-as-text + discarded)
+    invalidate savedViewsKeys.list(route): repo evicts route key; store refreshes route feed
+    [web uses optimistic remove+broadcast; the cache-then-network analogue is evict(route)+refresh(route)]
+- useSetDefaultSavedView                -> SavedViewsStore.setDefaultSavedView(SetDefaultSavedViewArgs{id,route,isDefault})
+    PUT /saved-views/{id}  body={is_default}  (same endpoint as Update, body is ONLY is_default)
+    invalidate savedViewsKeys.list(vars.route): repo evicts route key; store refreshes route feed
+
+5/5 hooks ported. SI preserved (no unit-bearing fields; query is an opaque querystring blob,
+round-tripped verbatim). Display conversion is the S5 render boundary's job — not this layer.
+Failed mutation refreshes nothing (web onError skips invalidation) — verified by tests.
+Toasts (useMutationToast) and queryBroadcast cross-tab fanout are render/runtime concerns, not
+reproduced in the UI-free core (documented deviation, not silent).
+
+Golden vectors: NONE required — the web hook applies no select/derivation/client-side transform,
+so there is no non-trivial derivation for KMP+C# to drift on. Parity is locked instead by the
+shared repository contract test (endpoints/params/bodies/keys) that also pins the future C# port.
+
+Gate results: TEST_EXIT=0  LINT_EXIT=0  PH_EXIT=0 (PLACEHOLDER_ALLOWED=13, PLACEHOLDER_COUNT=0)
+:core:allTests BUILD SUCCESSFUL (testDebugUnitTest + testReleaseUnitTest executed;
+ iosSimulatorArm64/macosArm64 compiled, host-skip on this Windows runner).
+
+EXIT=0
+STATUS=DONE

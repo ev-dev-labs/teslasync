@@ -1,0 +1,192 @@
+=== P1/S8/0056 — Vehicles state holder gate ===
+DATE=2026-06-05T15:21:35.9158378-07:00
+--- ./gradlew :core:allTests ---
+> Task :core:kmpPartiallyResolvedDependenciesChecker
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+
+> Task :core:compileKotlinIosSimulatorArm64
+w: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SettingsBackupRepository.kt:77:19 'val monthNumber: Int' is deprecated. Use the 'month' property instead.
+
+> Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
+> Task :core:iosSimulatorArm64MainKlibrary
+> Task :core:compileTestKotlinIosSimulatorArm64
+> Task :core:computeLocalPackageDependencyInputFiles SKIPPED
+> Task :core:generateSyntheticLinkageSwiftPMImportProjectForCinteropsAndLdDump SKIPPED
+> Task :core:generateUmbrellaPackageIdentifierBasedResolutionForDefault SKIPPED
+> Task :core:fetchUmbrellaPackageIdentifierForDefault SKIPPED
+> Task :core:syncPersistedPackageResolvedToSynthetic SKIPPED
+> Task :core:fetchSyntheticImportProjectPackages SKIPPED
+> Task :core:convertSyntheticImportProjectIntoDefFileIphonesimulator SKIPPED
+> Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
+> Task :core:iosSimulatorArm64Test SKIPPED
+
+w: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SettingsBackupRepository.kt:77:19 'val monthNumber: Int' is deprecated. Use the 'month' property instead.
+> Task :core:compileKotlinMacosArm64
+
+> Task :core:macosArm64ProcessResources NO-SOURCE
+> Task :core:macosArm64MainKlibrary
+> Task :core:compileTestKotlinMacosArm64
+> Task :core:convertSyntheticImportProjectIntoDefFileMacosx SKIPPED
+> Task :core:linkDebugTestMacosArm64 SKIPPED
+> Task :core:macosArm64Test SKIPPED
+> Task :core:preBuild UP-TO-DATE
+> Task :core:preDebugBuild UP-TO-DATE
+> Task :core:generateDebugResValues UP-TO-DATE
+> Task :core:generateDebugResources UP-TO-DATE
+> Task :core:packageDebugResources UP-TO-DATE
+> Task :core:parseDebugLocalResources UP-TO-DATE
+> Task :core:generateDebugRFile UP-TO-DATE
+> Task :core:javaPreCompileDebug UP-TO-DATE
+> Task :core:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:generateDebugUnitTestStubRFile UP-TO-DATE
+> Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :core:preReleaseBuild UP-TO-DATE
+> Task :core:generateReleaseResValues UP-TO-DATE
+> Task :core:generateReleaseResources UP-TO-DATE
+> Task :core:packageReleaseResources UP-TO-DATE
+> Task :core:parseReleaseLocalResources UP-TO-DATE
+> Task :core:generateReleaseRFile UP-TO-DATE
+> Task :core:javaPreCompileRelease UP-TO-DATE
+> Task :core:preReleaseUnitTestBuild UP-TO-DATE
+> Task :core:generateReleaseUnitTestStubRFile UP-TO-DATE
+> Task :core:javaPreCompileReleaseUnitTest UP-TO-DATE
+
+> Task :core:compileDebugKotlinAndroid
+w: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SettingsBackupRepository.kt:77:19 'val monthNumber: Int' is deprecated. Use the 'month' property instead.
+
+> Task :core:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:bundleLibCompileToJarDebug UP-TO-DATE
+
+> Task :core:compileReleaseKotlinAndroid
+w: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SettingsBackupRepository.kt:77:19 'val monthNumber: Int' is deprecated. Use the 'month' property instead.
+
+> Task :core:compileDebugUnitTestKotlinAndroid UP-TO-DATE
+> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processDebugJavaRes UP-TO-DATE
+> Task :core:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :core:testDebugUnitTest UP-TO-DATE
+> Task :core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :core:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :core:compileReleaseUnitTestKotlinAndroid UP-TO-DATE
+> Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processReleaseJavaRes UP-TO-DATE
+> Task :core:processReleaseUnitTestJavaRes UP-TO-DATE
+> Task :core:testReleaseUnitTest UP-TO-DATE
+> Task :core:allTests NO-SOURCE
+
+[Incubating] Problems report is available at: file:///D:/repos/teslasync/apps/shared/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 55s
+37 actionable tasks: 7 executed, 30 up-to-date
+TEST_EXIT=0
+--- ./gradlew :core:ktlintCheck ---
+> Task :core:loadKtlintReporters UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidMainSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidUnitTestSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleMainSourceSet UP-TO-DATE
+> Task :core:ktlintAppleMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
+> Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonTestSourceSet UP-TO-DATE
+> Task :core:ktlintCommonTestSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosMainSourceSet NO-SOURCE
+> Task :core:ktlintIosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosTestSourceSet NO-SOURCE
+> Task :core:ktlintIosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverKotlinScripts UP-TO-DATE
+> Task :core:ktlintKotlinScriptCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverMacosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosMainSourceSet NO-SOURCE
+> Task :core:ktlintMacosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosTestSourceSet NO-SOURCE
+> Task :core:ktlintMacosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeMainSourceSet NO-SOURCE
+> Task :core:ktlintNativeMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
+> Task :core:ktlintNativeTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverCommonMainSourceSet
+> Task :core:ktlintCommonMainSourceSetCheck
+> Task :core:ktlintCheck
+
+BUILD SUCCESSFUL in 16s
+16 actionable tasks: 2 executed, 14 up-to-date
+LINT_EXIT=0
+--- check-placeholders.ps1 ---
+PLACEHOLDER_ALLOWED=17
+PLACEHOLDER_COUNT=0
+EXIT=0
+PH_EXIT=0
+
+--- Vehicles test classes (JVM debug+release) ---
+io.teslasync.shared.core.data.repo.VehiclesRepositoryContractTest: tests=12 failures=0 errors=0 skipped=0
+io.teslasync.shared.core.presentation.vehicles.VehiclesGoldenTest: tests=9 failures=0 errors=0 skipped=0
+io.teslasync.shared.core.presentation.vehicles.VehiclesStoreTest: tests=7 failures=0 errors=0 skipped=0
+
+=== PARITY === (31/31 useVehicles hooks ported → VehiclesRepository + VehiclesStore)
+Reads (21):
+  useVehicles                 -> vehicles()                GET /vehicles                              key=vehicles
+  useVehicle                  -> vehicle(id)               GET /vehicles/{id}                         key=vehicles|{id}
+  useVehicleState             -> vehicleState(id,asOf)     GET /vehicles/{id}/state[?as_of=]          key=vehicle-state|{id}[|asOf]  (normalizeVehicleStateResponse)
+  useVehiclePositions         -> vehiclePositions(id,lim)  GET /vehicles/{id}/positions?limit=100     key=vehicle-positions|{id}
+  useMotorLatest              -> motorLatest(id)           GET /motor/latest?vehicle_id={id}          key=motor-latest|{id}
+  useMotorHistory             -> motorHistory(id,lim)      GET /motor?vehicle_id={id}&limit=200        key=motor-history|{id}|{lim}
+  useDriveDynamicsLatest      -> driveDynamicsLatest(id)   GET /drive-dynamics/latest?vehicle_id={id} key=drive-dynamics-latest|{id}
+  useClimateLatest            -> climateLatest(id)         GET /climate/latest?vehicle_id={id}        key=climate-latest|{id}
+  useSecurityLatest           -> securityLatest(id)        GET /security/latest?vehicle_id={id}       key=security-latest|{id}
+  useLatestTirePressure       -> latestTirePressure(id)    GET /tire-pressure/latest?vehicle_id={id}  key=tire-latest|{id}
+  useChargingTelemetryLatest  -> chargingTelemetryLatest   GET /charging-telemetry/latest?vehicle_id  key=charging-telemetry-latest|{id}
+  useMediaLatest              -> mediaLatest(id)           GET /media/latest?vehicle_id={id}          key=media-latest|{id}
+  useLocationSnapshotLatest   -> locationSnapshotLatest    GET /location-snapshots/latest?vehicle_id  key=location-latest|{id}
+  useVehicleConfigLatest      -> vehicleConfigLatest(id)   GET /vehicle-config/latest?vehicle_id={id} key=vehicle-config-latest|{id}
+  useUserPreferenceLatest     -> userPreferenceLatest(id)  GET /user-preferences/latest?vehicle_id    key=user-pref-latest|{id}
+  useVehicleMobileEnabled     -> vehicleMobileEnabled(id)  GET /vehicles/{id}/mobile-enabled          key=vehicle-mobile-enabled|{id}
+  useVehicleOptions           -> vehicleOptions(id)        GET /vehicles/{id}/options                 key=vehicle-options|{id}
+  useVehicleSpecs             -> vehicleSpecs(id)          GET /vehicles/{id}/specs                   key=vehicle-specs|{id}
+  useVehicleSubscriptions     -> vehicleSubscriptions(id)  GET /vehicles/{id}/subscriptions           key=vehicle-subscriptions|{id}
+  useVehicleUpgrades          -> vehicleUpgrades(id)       GET /vehicles/{id}/upgrades                key=vehicle-upgrades|{id}
+  useWarrantyDetails          -> warrantyDetails()         GET /tesla/warranty                        key=warranty-details
+Mutations (10):
+  useRefreshVehicle               -> refreshVehicle(id)              POST /vehicles/{id}/wake                 invalidates ['vehicles'] (list+detail)
+  useDeleteVehicle                -> deleteVehicle(id)               DELETE /vehicles/{id}                    invalidates ['vehicles']
+  useSyncVehicles                 -> syncVehicles()                  POST /vehicles/sync                      invalidates ['vehicles']
+  useWakeVehicle                  -> wakeVehicle(id)                 POST /vehicles/{id}/wake                 invalidates nothing
+  useRefreshVehicleMobileEnabled  -> refreshVehicleMobileEnabled(id) POST /vehicles/{id}/mobile-enabled/refresh invalidates ['vehicle-mobile-enabled',id]
+  useRefreshVehicleOptions        -> refreshVehicleOptions(id)       POST /vehicles/{id}/options/refresh      invalidates ['vehicle-options',id]
+  useRefreshVehicleSpecs          -> refreshVehicleSpecs(id)         POST /vehicles/{id}/specs/refresh        invalidates ['vehicle-specs',id]
+  useRefreshVehicleSubscriptions  -> refreshVehicleSubscriptions(id) POST /vehicles/{id}/subscriptions/refresh invalidates ['vehicle-subscriptions',id]
+  useRefreshVehicleUpgrades       -> refreshVehicleUpgrades(id)      POST /vehicles/{id}/upgrades/refresh     invalidates ['vehicle-upgrades',id]
+  useRefreshWarrantyDetails       -> refreshWarrantyDetails()        POST /tesla/warranty/refresh             invalidates ['warranty-details']
+SI preserved end-to-end (cache+wire); conversion is display-only (S5). Derivation golden vectors shared with C# port (ADR-004).
+
+EXIT=0
+STATUS=DONE

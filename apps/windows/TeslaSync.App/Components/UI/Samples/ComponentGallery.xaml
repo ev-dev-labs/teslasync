@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="TeslaSync.App.Components.UI.Samples.ComponentGallery"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="using:TeslaSync.App.Components.UI"
+    xmlns:core="using:TeslaSync.App.Core"
+    mc:Ignorable="d"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">
+
+    <!--
+      Build-time visual-state proof for the Fluent UI primitives (P2/W2-0001).
+      Each section instantiates a primitive across its documented states
+      (default, disabled, loading, validation error, semantic status, etc.) so the
+      XAML compiler verifies every control resolves and binds. Strings here are
+      sample captions only — primitives carry no hardcoded user-facing text.
+    -->
+    <ScrollViewer>
+        <StackPanel Spacing="16" Padding="24">
+
+            <ui:PageTitle Value="Component gallery" />
+            <ui:Caption Value="Visual states for the TeslaSync Fluent UI primitives." />
+
+            <ui:SectionTitle Value="Buttons" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <ui:TsButton Variant="Primary" Text="Primary" />
+                <ui:TsButton Variant="Secondary" Text="Secondary" />
+                <ui:TsButton Variant="Subtle" Text="Subtle" />
+                <ui:TsButton Variant="Destructive" Text="Destructive" />
+                <ui:TsButton Variant="Primary" Text="Loading" IsLoading="True" />
+                <ui:TsButton Variant="Primary" Text="Disabled" IsEnabled="False" />
+                <ui:TsButton Variant="Subtle" IconGlyph="&#xE713;" />
+            </StackPanel>
+
+            <ui:SectionTitle Value="Badges and status pills" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <ui:TsBadge Status="Success" Content="Online" />
+                <ui:TsBadge Status="Warning" Content="Degraded" />
+                <ui:TsBadge Status="Danger" Content="Offline" Dot="True" />
+                <ui:TsBadge Status="Info" Content="Syncing" />
+                <ui:TsBadge Status="Neutral" Content="Idle" />
+                <ui:TsStatusPill Status="Success" Content="Charging" Pulse="True" />
+                <ui:TsStatusPill Status="Danger" Content="Fault" />
+            </StackPanel>
+
+            <ui:SectionTitle Value="Cards and surfaces" />
+            <ui:TsCard>
+                <StackPanel Spacing="8">
+                    <ui:TsCardHeader>
+                        <ui:PanelTitle Value="Vehicle summary" />
+                    </ui:TsCardHeader>
+                    <ui:Text Value="Card body content area." />
+                    <ui:TsCardFooter>
+                        <ui:TsButton Variant="Subtle" Text="Footer action" />
+                    </ui:TsCardFooter>
+                </StackPanel>
+            </ui:TsCard>
+            <ui:TsGlassPanel Glow="Cyan">
+                <ui:Text Value="Glass panel with accent glow." />
+            </ui:TsGlassPanel>
+
+            <ui:SectionTitle Value="Inputs and validation" />
+            <StackPanel Spacing="8" MaxWidth="360">
+                <ui:TsInput Hint="Default input" />
+                <ui:TsInput Hint="Error input" HasError="True" Text="bad value" />
+                <ui:TsInput Hint="Disabled input" IsEnabled="False" />
+                <ui:TsTextarea Hint="Multi-line notes" Height="80" />
+                <ui:TsSelect>
+                    <ComboBoxItem Content="Option A" />
+                    <ComboBoxItem Content="Option B" />
+                </ui:TsSelect>
+                <ui:TsCheckbox Content="Enable feature" />
+                <ui:TsToggle Header="Live telemetry" IsOn="True" />
+                <ui:TsSlider Minimum="0" Maximum="100" Value="40" />
+                <ui:TsRangeSlider Minimum="0" Maximum="100" Low="20" High="80" />
+            </StackPanel>
+
+            <ui:SectionTitle Value="Disclosure and navigation" />
+            <ui:TsAccordion Header="Advanced settings">
+                <ui:Text Value="Expanded accordion content." />
+            </ui:TsAccordion>
+            <ui:TsTabs>
+                <TabViewItem Header="Overview" />
+                <TabViewItem Header="History" />
+            </ui:TsTabs>
+            <ui:TsPagination Page="2" PageSize="25" TotalItems="240"
+                             FirstLabel="First" PreviousLabel="Previous"
+                             NextLabel="Next" LastLabel="Last" />
+
+            <ui:SectionTitle Value="Sensitive values and inline edit" />
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <ui:TsMaskedValue Value="TESLA-1234-SECRET" Variant="Token"
+                                  RevealLabel="Reveal" AllowCopy="True" />
+                <ui:TsEditableText Value="Garage" EditLabel="Edit"
+                                   ConfirmLabel="Save" CancelLabel="Cancel" />
+                <ui:TsCopyButton ValueToCopy="copied-text" CopyLabel="Copy" CopiedLabel="Copied" />
+            </StackPanel>
+
+            <ui:SectionTitle Value="Theme and command surfaces" />
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <ui:TsThemePicker SystemLabel="System" LightLabel="Light"
+                                  DarkLabel="Dark" HighContrastLabel="High contrast" />
+                <ui:TsButton x:Name="OpenPaletteButton" Variant="Secondary" Text="Open palette" />
+            </StackPanel>
+            <ui:TsCommandPalette x:Name="Palette" SearchHint="Search commands"
+                                 AccessibleName="Command palette" />
+
+            <ui:SectionTitle Value="Data table" />
+            <ui:TsDataTable x:Name="Table" PageSize="5" Selectable="True"
+                            Expandable="True" EmptyMessage="No rows to display." />
+
+            <ui:SectionTitle Value="Typography" />
+            <StackPanel Spacing="4">
+                <ui:Heading Value="Heading" />
+                <ui:Subhead Value="Subhead" />
+                <ui:Text Value="Body text" />
+                <ui:Caption Value="Caption" />
+                <ui:HelperText Value="Helper text" />
+                <ui:ErrorText Value="Error text" />
+                <ui:Label Value="Label" />
+                <ui:MetricValue Value="42.0" />
+                <ui:MetricLabel Value="kWh" />
+                <ui:Code Value="GET /api/v1/vehicles" />
+            </StackPanel>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
+

@@ -13,6 +13,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
+import io.ktor.http.content.OutgoingContent
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.TimeoutCancellationException
@@ -210,8 +211,16 @@ public class ApiHttpClient internal constructor(
                 header(HttpHeaders.Authorization, "Bearer $token")
             }
             if (spec.body != null) {
-                contentType(ContentType.Application.Json)
-                setBody(spec.body)
+                // A body that carries its own Content-Type (e.g. a multipart upload's boundary
+                // header) MUST NOT be clobbered with application/json — that is exactly why the web
+                // hook bypasses its JSON request() wrapper for the photo upload. Every JSON body
+                // (data class / JsonObject) still gets the json content type set here.
+                if (spec.body is OutgoingContent) {
+                    setBody(spec.body)
+                } else {
+                    contentType(ContentType.Application.Json)
+                    setBody(spec.body)
+                }
             }
         }
     }

@@ -1,0 +1,92 @@
+================================================================================
+P1 · S8 · 0049 — Telemetry state holder (KMP shared core)
+Port of web hook domain web/src/api/hooks/useTelemetry.ts (14 reads + 2 mutations)
+to UI-free, platform-agnostic state holders in apps/shared/core.
+================================================================================
+
+--- ARTIFACTS PRODUCED (apps/shared/core/**) ---
+commonMain/.../presentation/telemetry/TelemetryModels.kt    (408 lines) — read models + TelemetryDerivations (signalNames, signalGaps, adaptObservations, normalizeMqttStatus + SI-faithful JS coercion helpers)
+commonMain/.../data/repo/TelemetryRepository.kt             (292 lines) — S7 port interface, cache keys, query builders, TTL consts, family consts
+commonMain/.../data/repo/HttpTelemetryRepository.kt                    — HTTP+cache impl over CachingRepository<JsonElement>; per-read TTL observe(); 2 POST mutations
+commonMain/.../presentation/telemetry/TelemetryStore.kt     (281 lines) — S8 state holder: 14 StateFlow<Resource<T>> reads + 2 suspend Result mutations with family invalidation
+commonMain/.../cache/CacheDomain.kt                                    — added Telemetry("telemetry", 1.minutes)
+commonTest/.../presentation/telemetry/TelemetryStoreTest.kt            — fake-repo: 8 tests (cache→network, sharing, distinct feeds, per-feed refresh isolation, both mutations' family-scoped invalidation, observations passthrough)
+commonTest/.../presentation/telemetry/TelemetryGoldenTest.kt           — 11 golden vector tests locking every non-trivial derivation + query/key builder (KMP↔C# parity, ADR-004)
+
+--- NOTED DECISIONS (no silent drift) ---
+* SI preserved end-to-end: repository caches the RAW server JsonElement verbatim; derivations never coerce
+  numeric-kind null values to 0 (golden: adaptObservationsSteersValueByKind row[4]). Unit conversion stays
+  display-only (S5), never in this layer.
+* Response-shape source-of-truth = the Go backend JSON (snake_case), matching established S8 siblings
+  (Signals/FleetTelemetry). The web `@/types/telemetry` SignalHistoryResponse `{timestamp,valueNum}` shape is
+  STALE/nominal; the real /signals/{id}/{sig}/history endpoint (internal/api/signalinspect/handler.go) emits the
+  typed `{ts,kind,value}` point, so SignalHistoryPoint was modeled as {ts,kind,value:JsonElement?}.
+* TTL mapping mirrors web staleTime via constants.ts STALE_TIMES: live-signals + observations = REALTIME 5s;
+  catalog = SLOW 5min; all others = STANDARD 60s. CacheDomain.Telemetry default = 1.minutes.
+* useSignalCatalog is deprecated/404 on the backend (per web hook comment) — ported faithfully (returns the same
+  empty/erroring shape) without inventing a new endpoint.
+* Mutation invalidation mirrors web invalidateQueries via prefix-match family keys (separator "|"); error-vins and
+  errors families have disjoint first segments (TanStack array-prefix semantics) so they never cross-invalidate.
+
+================================================================================
+=== GATE ===
+================================================================================
+
+$ ./gradlew :core:allTests
+> Task :core:testDebugUnitTest
+> Task :core:testReleaseUnitTest
+> Task :core:allTests
+BUILD SUCCESSFUL in 1m 23s
+TEST_EXIT=0
+
+  Telemetry test-result XML (core/build/test-results/testDebugUnitTest):
+    TEST-...presentation.telemetry.TelemetryGoldenTest.xml : tests=11 failures=0 errors=0
+    TEST-...presentation.telemetry.TelemetryStoreTest.xml  : tests=8  failures=0 errors=0
+  (re-verified green after ktlintFormat: ./gradlew :core:testDebugUnitTest BUILD SUCCESSFUL)
+
+$ ./gradlew :core:ktlintCheck
+BUILD SUCCESSFUL in 19s
+LINT_EXIT=0
+  (4 "body expression fits on same line" nits auto-fixed via :core:ktlintFormat, then re-checked clean)
+
+$ & ./apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
+PLACEHOLDER_ALLOWED=17
+PLACEHOLDER_COUNT=0
+PH_EXIT=0
+
+================================================================================
+=== PARITY ===  (all 16 useTelemetry hooks ported)
+================================================================================
+
+READS (14):
+(endpoints below are byte-for-byte the paths in HttpTelemetryRepository.kt, which reproduce the web `request(...)` URLs verbatim — the request() client auto-prefixes /api/v1, so hooks/holders carry no prefix)
+
+ 1. useSignals                  -> TelemetryStore.signals(vehicleId)              GET /signals/{vehicleID}/available           derive: TelemetryDerivations.signalNames (safeArray + {name})  TTL 60s (STANDARD)
+ 2. useVehicleLiveSignals       -> TelemetryStore.vehicleLiveSignals(vehicleId)   GET /signals/{vehicleID}/live                                                                            TTL 5s (REALTIME)
+ 3. useSignalStats              -> TelemetryStore.signalStats(vehicleId)          GET /signals/{vehicleID}/stats                                                                           TTL 60s
+ 4. useSignalHistory            -> TelemetryStore.signalHistory(vid,sig,hours)    GET /signals/{vehicleID}/{signalName}/history?hours=               query: telemetrySignalHistoryQuery  TTL 60s
+ 5. useSignalLog                -> TelemetryStore.signalLog(vid,sig,hours,pg,sz)  GET /signals/{vehicleID}/{signalName}/history?hours=&page=&page_size=  query: telemetrySignalLogQuery; NOTE web reuses the /history endpoint (distinct query key 'signal-log')  TTL 60s
+ 6. useSignalDiff               -> TelemetryStore.signalDiff(vid,sig,from,to)     GET /signals/{vehicleID}/{signalName}/history?from=&to=            query: telemetrySignalDiffQuery; NOTE web reuses the /history endpoint (distinct query key 'signal-diff')  TTL 60s
+ 7. useSignalSnapshot           -> TelemetryStore.signalSnapshot(vid,at,signals)  GET /signals/{vehicleID}/snapshot?at=&signals=          query: telemetrySnapshotQuery (omit empty)        TTL 60s
+ 8. useSignalDiffServer         -> TelemetryStore.signalDiffServer(vid,a,b,sig)   GET /signals/{vehicleID}/diff?at_a=&at_b=&signals=      query: telemetryDiffServerQuery (omit empty)      TTL 60s
+ 9. useSignalGaps               -> TelemetryStore.signalGaps(vehicleId)           GET /signals/{vehicleID}/live   NOTE web reuses the /live endpoint (distinct query key 'signal-gaps')  derive: TelemetryDerivations.signalGaps (.signals ?? {})  TTL 60s
+10. useMQTTStatus               -> TelemetryStore.mqttStatus()                    GET /telemetry                               derive: normalizeMqttStatus (record->array, vin inject)  TTL 60s
+11. useSignalCatalog            -> TelemetryStore.signalCatalog()                 GET /signals/catalog (deprecated/404, ported faithfully)                                                  TTL 5min (SLOW)
+12. useSignalObservations       -> TelemetryStore.signalObservations(params)      GET /signals/observations?vehicle_id=&field=&since=&until=&limit=  query: telemetryObservationsQuery; derive adaptObservations  TTL 5s (REALTIME)
+13. useFleetTelemetryErrorVINs  -> TelemetryStore.fleetTelemetryErrorVINs()       GET /tesla/fleet-telemetry/error-vins                                                                     TTL 60s
+14. useFleetTelemetryErrors     -> TelemetryStore.fleetTelemetryErrors(vin?)      GET /tesla/fleet-telemetry/errors?vin=      query: telemetryErrorsQuery (omit empty)                  TTL 60s
+
+MUTATIONS (2):
+15. useRefreshFleetTelemetryErrorVINs -> TelemetryStore.refreshFleetTelemetryErrorVINs()  POST /tesla/fleet-telemetry/error-vins/refresh  invalidates family "fleet-telemetry-error-vins"
+16. useRefreshFleetTelemetryErrors    -> TelemetryStore.refreshFleetTelemetryErrors()      POST /tesla/fleet-telemetry/errors/refresh      invalidates family "fleet-telemetry-errors"
+
+GOLDEN-LOCKED DERIVATIONS & BUILDERS (TelemetryGoldenTest, 11 cases):
+  signalNames (array/{signals}/{name}/malformed-dropped/null), signalGaps (.signals ?? {}),
+  adaptObservations (numeric/int/enum/bool/null-numeric/compound-fallthrough + camelCase vehicleId),
+  normalizeMqttStatus (record->array+vin inject, snake/camel coalescing, array form, streaming_vehicles fallback),
+  telemetrySnapshotQuery, telemetryDiffServerQuery, telemetryObservationsQuery (signal_name->field, limit>0 guard),
+  telemetrySignalHistoryQuery, telemetrySignalLogQuery, telemetrySignalDiffQuery, telemetryErrorsQuery,
+  telemetrySignalsKey, telemetrySignalObservationsKey, telemetryErrorsKey (null vin -> family head).
+
+EXIT=0
+STATUS=DONE

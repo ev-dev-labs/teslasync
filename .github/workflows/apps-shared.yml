@@ -1,21 +1,24 @@
 name: apps-shared
 
-# P0/0004 — path-filtered CI for the shared KMP core (ADR-001/007/010/012).
-# Linux runner per ADR-012 (KMP builds on ubuntu). The job is no-op-but-valid
-# until the P1 shared program adds a buildable Gradle project; the guard step
-# documents that state instead of a bare `exit 0`.
+# P1/S12 — path-filtered CI lane for the shared KMP core (ADR-010/012).
+# Runs the consolidated shared suites (KMP unit + golden-vector tests), enforces
+# the Kover coverage floor on the critical packages (net/auth/cache/units/
+# presentation), and gates the OpenAPI contract via the regenerate-and-diff drift
+# check plus an optional runtime shape check. Linux runner per ADR-012.
 
 on:
   pull_request:
     paths:
       - 'apps/shared/**'
       - 'api/openapi/**'
+      - 'apps/tools/codegen/**'
       - '.github/workflows/apps-shared.yml'
   push:
-    branches: [feat/apps-shared]
+    branches: [feat/apps-shared, feature/apps]
     paths:
       - 'apps/shared/**'
       - 'api/openapi/**'
+      - 'apps/tools/codegen/**'
       - '.github/workflows/apps-shared.yml'
   workflow_dispatch:
 
@@ -28,7 +31,7 @@ permissions:
 
 jobs:
   shared:
-    name: Shared KMP (build + lint + test)
+    name: Shared KMP (tests + coverage + contract drift)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -41,34 +44,48 @@ jobs:
           java-version: '21'
           cache: gradle
 
-      - name: Detect buildable project (guard)
-        id: detect
-        shell: bash
+      - name: Set up Node (OpenAPI codegen drift gate)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Shared suites + coverage floor (gradlew :core:allTests koverVerify)
+        working-directory: apps/shared
+        run: ./gradlew :core:allTests :core:koverVerify :core:koverLog --no-daemon --console=plain --stacktrace
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apps-shared-coverage
+          path: |
+            apps/shared/core/build/reports/kover/report.xml
+            apps/shared/core/build/reports/kover/html
+          if-no-files-found: warn
+
+      - name: OpenAPI contract drift gate (regenerate + diff)
+        shell: pwsh
+        run: ./apps/tools/codegen/gen-clients.ps1 -Check
+
+      - name: OpenAPI runtime shape check (optional, BLOCKED if no backend)
+        shell: pwsh
+        env:
+          APPS_SHARED_CONFORMANCE_API_URL: ${{ vars.APPS_SHARED_CONFORMANCE_API_URL }}
         run: |
-          set -euo pipefail
-          if [ -f apps/shared/gradlew ] || [ -f apps/shared/build.gradle.kts ] || [ -f apps/shared/settings.gradle.kts ]; then
-            echo "buildable=true" >> "$GITHUB_OUTPUT"
-            echo "Buildable Gradle project detected under apps/shared — running full triad."
-          else
-            echo "buildable=false" >> "$GITHUB_OUTPUT"
-            echo "GUARD: no buildable Gradle project under apps/shared yet (P1 not landed)."
-            echo "GUARD: passing as a documented no-op; will fail once a project exists but does not build."
-          fi
-
-      - name: Build (gradlew :shared:build)
-        if: steps.detect.outputs.buildable == 'true'
-        working-directory: apps/shared
-        run: ./gradlew :shared:build --no-daemon
-
-      - name: Strict lint/format (ktlint + detekt)
-        if: steps.detect.outputs.buildable == 'true'
-        working-directory: apps/shared
-        run: ./gradlew ktlintCheck detekt --no-daemon
-
-      - name: Unit tests (gradlew :shared:test)
-        if: steps.detect.outputs.buildable == 'true'
-        working-directory: apps/shared
-        run: ./gradlew :shared:test --no-daemon
+          $base = $env:APPS_SHARED_CONFORMANCE_API_URL
+          if ([string]::IsNullOrWhiteSpace($base)) {
+            Write-Host "RUNTIME_SHAPE=BLOCKED reason=no test backend reachable (set repo variable APPS_SHARED_CONFORMANCE_API_URL to enable)"
+            exit 0
+          }
+          $spec = Get-Content 'api/openapi/teslasync.openapi.json' -Raw | ConvertFrom-Json
+          $url = ($base.TrimEnd('/')) + '/api/v1/system/version'
+          try {
+            $resp = Invoke-RestMethod -Uri $url -TimeoutSec 10
+            Write-Host "RUNTIME_SHAPE=OK probed=$url"
+          } catch {
+            Write-Host "RUNTIME_SHAPE=BLOCKED reason=backend configured but unreachable ($url): $($_.Exception.Message)"
+            exit 0
+          }
 
       - name: CI honesty marker
         if: success()

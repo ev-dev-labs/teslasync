@@ -1,0 +1,107 @@
+================================================================================
+P1 · S8 · 0051 — Trips state holder (web-hook parity for useTrips)
+================================================================================
+Branch  : refactor/signals-rewrite (monorepo P1/S8)
+Date    : 2026-06-05T13:43:09-07:00
+Output  : apps/shared/core/src/commonMain/.../presentation/trips/**
+          apps/shared/core/src/commonMain/.../data/repo/Trips*.kt
+          apps/shared/core/src/commonMain/.../cache/CacheDomain.kt (Trips entry)
+Web src  : web/src/api/hooks/useTrips.ts
+Depends  : P1/S4 (net) · S5 (units) · S6 (auth) · S7 (cache/repos)
+ADR refs : ADR-004 · ADR-006 · ADR-013
+
+--------------------------------------------------------------------------------
+Files
+--------------------------------------------------------------------------------
+  presentation/trips/TripsModels.kt   — Trip (SI DTO, snake_case) + TripsParams
+  presentation/trips/TripsStore.kt    — S8 state holder (2 reads + family refresh)
+  data/repo/TripsRepository.kt        — S7 port + tripsQuery / key builders / family
+  data/repo/HttpTripsRepository.kt    — HTTP+cache impl (CachingRepository<JsonElement>)
+  cache/CacheDomain.kt                — Trips("trips", 1.minutes) partition
+  commonTest/.../trips/TripsStoreTest.kt   — fake-repo store tests (5)
+  commonTest/.../trips/TripsGoldenTest.kt  — golden vectors (6)
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+--------------------------------------------------------------------------------
+Reads / queries (2/2 ported):
+  [x] useTrips
+        endpoint : GET /trips        (versioned client adds /api/v1)
+        params   : vehicle_id=<id>  only when truthy (non-null AND != 0)
+                   limit=<n>         only when truthy (non-null AND != 0)
+                   offset=<n>        only when (!= null AND > 0)
+                   start=<iso>       only when non-null AND non-blank
+                   end=<iso>         only when non-null AND non-blank
+                   (URLSearchParams insertion order: vehicle_id,limit,offset,start,end)
+        derivation: select:safeArray → applied once at the data layer
+        cache key: tripsListKey(params) ≡ web ['trips', params]
+                   (TanStack hashKey: undefined dropped, 0/"" kept, sorted keys)
+        staleTime: none declared → QueryClient default 60s → CacheDomain.Trips 60s TTL
+        decode   : List<Trip> (SI: total_distance_m / _energy_wh / _duration_s)
+  [x] useTrip
+        endpoint : GET /trips/{id}   (versioned client adds /api/v1)
+        params   : (none — id is a path segment)
+        cache key: tripDetailKey(id) ≡ web ['trips', id]
+        enabled  : web `enabled: !!id` is a render-layer gate (screen does not
+                   collect trip(id) until it has an id) — NOT reproduced here
+        note     : backend registers only GET /trips (no /trips/{id}); the web
+                   hook is @deprecated and 404s. The 404 surfaces through
+                   Resource.Error — the same channel web TripDetailPage renders
+                   gracefully. Behaviour ported verbatim (no scope narrowing).
+        decode   : Trip
+
+Mutations / actions (0/0):
+  (none — web hook file is read-only; no invalidation surface)
+
+Refresh surface:
+  TripsStore.refresh() ≡ web invalidateQueries({ queryKey: tripKeys.all }) — the
+  ['trips'] family prefix matches BOTH the list and the detail (tripsKeyInFamily),
+  re-collecting every observed feed. A feed nobody observes is a no-op.
+
+Client-side derivations golden-pinned (KMP+C# parity, ADR-004):
+  tripsQuery     — 6 vectors (all-absent / 0-dropped / offset-0-dropped /
+                   blank-range-dropped / offset-present / full) + insertion-order test
+  tripsListKey   — bare family / single field / full sorted / 0-and-""-kept / empty-string
+  tripDetailKey  — numeric + non-numeric id, list/detail non-collision
+  tripsKeyInFamily — ['trips'] matches list+detail, rejects foreign + 'trips-…' siblings
+
+Notes / honest scope:
+  - Timestamps (start_date/started_at/created_at + nullable end_date/ended_at) are
+    carried as raw RFC3339 strings exactly as the web `Trip` interface types them
+    (`string`); parse/format is the render boundary's job (S5).
+  - SI columns round-trip verbatim; no conversion at this layer (Phase-48).
+  - List + detail share CacheDomain.Trips under distinct keys; logout clears both.
+  - The Trip DTO mirrors the backend tripSummaryResponse (internal/api/trip/handler.go)
+    which is a superset of models.Trip — the web interface is the contract.
+
+--------------------------------------------------------------------------------
+Gate
+--------------------------------------------------------------------------------
+$ ./gradlew :core:allTests
+BUILD SUCCESSFUL
+TEST_EXIT=0
+  (Trips tests: 11 — TripsStoreTest 5 + TripsGoldenTest 6, green on both
+   testDebugUnitTest and testReleaseUnitTest. Apple/native test tasks SKIPPED
+   on the Windows host, as expected.)
+
+$ ./gradlew :core:ktlintCheck
+BUILD SUCCESSFUL
+LINT_EXIT=0
+
+$ ./apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
+PLACEHOLDER_ALLOWED=17
+PLACEHOLDER_COUNT=0
+PH_EXIT=0
+
+--------------------------------------------------------------------------------
+Acceptance Criteria
+--------------------------------------------------------------------------------
+  [x] All 2 hooks ported; endpoint/params/derivation match; SI preserved.
+  [x] No mutations (read-only domain); reads emit cache→network (store test).
+      refresh() re-collects the correct ['trips'] family (list + detail).
+  [x] Golden vectors extended for query/list-key/detail-key/family (KMP+C# parity); green.
+  [x] ktlint + placeholder clean; === PARITY === enumerates all 2 hooks.
+  [x] EXIT=0 / STATUS=DONE.
+
+EXIT=0
+STATUS=DONE

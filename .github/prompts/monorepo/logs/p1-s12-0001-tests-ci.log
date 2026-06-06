@@ -1,0 +1,75 @@
+P1/S12/0001 — Shared test + CI consolidation — artifact log
+ADR-010 (repo reorganization / clean-architecture finishing pass). Delegation FORBIDDEN.
+
+Goal: a green, enforced CI lane for the shared KMP core — all unit + golden-vector
+tests, the OpenAPI contract drift gate, and a Kover coverage floor on the critical
+packages (net/auth/cache/units/presentation) — path-filtered on every PR touching
+apps/shared/** or api/openapi/**, with Gradle cached.
+
+=== CHANGES ===
+- apps/shared/gradle/libs.versions.toml
+    + kover = "0.9.8"   (versions)
+    + kover plugin id  = "org.jetbrains.kotlinx.kover"   (plugins)
+- apps/shared/build.gradle.kts
+    + alias(libs.plugins.kover) apply false   (root resolves the plugin)
+- apps/shared/core/build.gradle.kts
+    + alias(libs.plugins.kover)               (applied in the only code module)
+    + kover { reports { ... } } block:
+        * report scope = critical packages only
+          (net/auth/cache/units/presentation); generated DTOs/endpoints
+          (api.generated.*) and the generated SQLDelight db (cache.db.*) excluded.
+        * total.log onCheck=true — prints total critical-package line coverage.
+        * verify rules:
+            - aggregate line coverage >= 80%  (actual 86.86%)
+            - per-package line coverage >= 55% (lowest actual 61.0% — presentation/telemetry)
+- .github/workflows/apps-shared.yml
+    Replaced the P0/0004 no-op guard with the real lane:
+        * path filters: apps/shared/**, api/openapi/**, apps/tools/codegen/**, the workflow.
+        * actions/setup-java temurin 21 with `cache: gradle`.
+        * gradlew :core:allTests :core:koverVerify :core:koverLog  (suites + coverage floor).
+        * upload-artifact: kover report.xml + html.
+        * OpenAPI contract drift gate: apps/tools/codegen/gen-clients.ps1 -Check.
+        * OpenAPI runtime shape check: probes vars.APPS_SHARED_CONFORMANCE_API_URL;
+          documents RUNTIME_SHAPE=BLOCKED with reason when no backend is reachable
+          (not skipped silently).
+
+Golden vectors: aggregated and asserted by KMP commonTest. Units S5 vectors load
+from apps/shared/spec/units-golden.json (deterministic, language-neutral); S8
+derivation vectors load from apps/shared/core/spec/*-golden.json. The C# side
+asserts the same vectors in P2/W5 (out of scope here).
+
+=== GATE ===
+Push-Location apps/shared/core; ./gradlew :core:allTests koverVerify  (run via apps/shared root)
+
+> Task :core:testDebugUnitTest      — 181 suites, 1340 tests, 0 failures, 0 errors
+> Task :core:testReleaseUnitTest    — 181 suites, 1340 tests, 0 failures, 0 errors
+> Task :core:koverGenerateArtifact
+> Task :core:koverVerify            — PASS (both rules satisfied)
+> Task :core:koverLog
+shared :core critical-package coverage (total)
+application line coverage: 86.8597%
+BUILD SUCCESSFUL
+TEST_EXIT=0
+
+Per-package line coverage (critical scope, from build/reports/kover/report.xml):
+  units        98.8%   net      83.1%   net/sse  86.1%
+  auth         89.6%   cache    96.1%
+  presentation 61.0%..100.0% per sub-package (aggregate 80.5%+; min telemetry 61.0%)
+All >= the enforced floors (aggregate 80%, per-package 55%).
+
+OpenAPI contract drift gate:
+> npm exec tsx@4.22.4 apps/tools/codegen/gen-clients.ts --check
+[OK] no drift — 20 generated files match the spec.
+DRIFT_EXIT=0
+
+OpenAPI runtime shape check (local, no live backend):
+RUNTIME_SHAPE=BLOCKED reason=no test backend reachable locally
+(CI enables it via repo variable APPS_SHARED_CONFORMANCE_API_URL; documented, not
+silently skipped). The enforced contract conformance is the regenerate-and-diff
+drift gate above, which is green.
+
+=== RESULT ===
+TEST_EXIT=0 (suites + coverage floor)  DRIFT_EXIT=0 (contract)  →  gate green.
+
+EXIT=0
+STATUS=DONE

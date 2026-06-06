@@ -1,0 +1,75 @@
+[
+  {
+    "name": "null_sessions_normalises_to_empty",
+    "sessions": null,
+    "expected": { "ids": [], "count": 0 }
+  },
+  {
+    "name": "absent_sessions_normalises_to_empty",
+    "expected": { "ids": [], "count": 0 }
+  },
+  {
+    "name": "empty_sessions_stays_empty",
+    "sessions": [],
+    "expected": { "ids": [], "count": 0 }
+  },
+  {
+    "name": "single_current_session_preserved",
+    "sessions": [
+      {
+        "id": "sess-1",
+        "user_agent": "Mozilla/5.0",
+        "ip": "10.0.0.1",
+        "created_at": "2026-01-01T00:00:00Z",
+        "last_seen_at": "2026-01-02T00:00:00Z",
+        "current": true
+      }
+    ],
+    "expected": { "ids": ["sess-1"], "count": 1 }
+  },
+  {
+    "name": "order_preserved_no_sort",
+    "sessions": [
+      {
+        "id": "sess-z",
+        "user_agent": "ua-z",
+        "ip": "10.0.0.9",
+        "created_at": "2026-01-03T00:00:00Z",
+        "last_seen_at": "2026-01-03T00:00:00Z",
+        "current": false
+      },
+      {
+        "id": "sess-a",
+        "user_agent": "ua-a",
+        "ip": "10.0.0.2",
+        "created_at": "2026-01-01T00:00:00Z",
+        "last_seen_at": "2026-01-01T00:00:00Z",
+        "current": false
+      }
+    ],
+    "expected": { "ids": ["sess-z", "sess-a"], "count": 2 }
+  },
+  {
+    "name": "revoked_rows_not_filtered",
+    "sessions": [
+      {
+        "id": "sess-active",
+        "user_agent": "ua-1",
+        "ip": "10.0.0.3",
+        "created_at": "2026-01-01T00:00:00Z",
+        "last_seen_at": "2026-01-04T00:00:00Z",
+        "current": true
+      },
+      {
+        "id": "sess-revoked",
+        "user_agent": "ua-2",
+        "ip": "10.0.0.4",
+        "created_at": "2026-01-01T00:00:00Z",
+        "last_seen_at": "2026-01-02T00:00:00Z",
+        "revoked_at": "2026-01-03T00:00:00Z",
+        "current": false
+      }
+    ],
+    "expected": { "ids": ["sess-active", "sess-revoked"], "count": 2 }
+  }
+]

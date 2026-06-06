@@ -1,0 +1,47 @@
+=== P1/S8/0048 — SystemQueues shared state holder gate ===
+
+Output:  apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/systemqueues/SystemQueuesModels.kt
+         apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/systemqueues/SystemQueuesStore.kt
+         apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SystemQueuesRepository.kt
+         apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpSystemQueuesRepository.kt
+         apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/cache/CacheDomain.kt (added SystemQueues, 15s TTL)
+Tests:   apps/shared/core/src/commonTest/.../data/repo/SystemQueuesRepositoryContractTest.kt   (8)
+         apps/shared/core/src/commonTest/.../presentation/systemqueues/SystemQueuesStoreTest.kt (9)
+         apps/shared/core/src/commonTest/.../presentation/systemqueues/SystemQueuesGoldenTest.kt (2)
+Web src:  web/src/api/hooks/useSystemQueues.ts
+
+=== GATE ===
+:core:allTests        BUILD SUCCESSFUL    TEST_EXIT=0
+:core:ktlintCheck     BUILD SUCCESSFUL    LINT_EXIT=0
+check-placeholders    PLACEHOLDER_COUNT=0 PH_EXIT=0
+
+SystemQueues test results (testDebugUnitTest + testReleaseUnitTest):
+  SystemQueuesRepositoryContractTest   tests=8 failures=0 errors=0 skipped=0
+  SystemQueuesStoreTest                tests=9 failures=0 errors=0 skipped=0
+  SystemQueuesGoldenTest               tests=2 failures=0 errors=0 skipped=0
+
+=== PARITY === (all 2 web useSystemQueues hooks ported, SI preserved)
+  [1] useQueueStatus -> SystemQueuesStore.queueStatus()      -> GET /system/queues
+                        staleTime 15s (QUEUE_STATUS_STALE_TIME_MS) -> SystemQueues domain 15s default TTL (S7)
+                        refetchInterval 30s + refetchIntervalInBackground:false -> render-layer poll, NOT
+                        reproduced at S7/S8 (refresh* seam + WhileSubscribed pause-on-unobserved analogue)
+  [2] useQueueJobs   -> SystemQueuesStore.queueJobs(worker,limit,enabled) -> GET /system/queues/{worker}/jobs?limit
+                        staleTime 30s (QUEUE_JOBS_STALE_TIME_MS) -> per-read TTL override on the SystemQueues
+                        domain (CachingRepository.observe(key, entryTtlMillis, fetch))
+                        default limit 25 (QUEUE_JOBS_DEFAULT_LIMIT); refetchInterval 60s -> render-layer poll
+                        enabled gate `enabled && worker non-blank` reproduced (disabled => stable
+                        non-fetching Loading); gate = queueJobsEnabled (golden)
+                        cache/feed key = queueJobsCacheKey(worker) (web queueKeys.jobs(worker), worker-only) (golden)
+                        path = queueJobsPath(worker) percent-encodes worker == encodeURIComponent(worker) (golden)
+
+Mutations: 0 (web hook file declares none) -> holder exposes no mutation/invalidation API; refresh* is the
+           platform pull-to-refresh / live-poll seam. Reads emit cache->network (ADR-013).
+Values SI; payloads are counts / second-based ages / millisecond durations -> no SI conversion;
+conversion is display-only (S5).
+Two distinct read shapes (QueueStatusResponse, QueueJobsResponse) cached as raw JsonElement and decoded
+per-emission (Incident/FeatureFlags strategy); decode failures surface as Resource.Error, never thrown.
+Golden vectors (SystemQueuesGoldenTest, inlined, language-neutral) lock the jobs path encoding, the
+worker-only cache key, and the enabled gate for KMP+C# parity (ADR-004).
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,53 @@
+=== GATE ===
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.TokenGen -> D:\repos\teslasync\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  TeslaSync.App.Core -> D:\repos\teslasync\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:10.02
+BUILD_EXIT=0
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+Test run for D:\repos\teslasync\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   537, Skipped:     0, Total:   537, Duration: 155 ms - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+PLACEHOLDER_ALLOWED=10
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== AUTH FORBIDDEN PATTERNS ===
+# NOTE: the prompt's literal forbidden grep recurses into build output (obj/bin)
+# and uses an unbounded 'TODO' alternation. After a Release build it therefore
+# matches (a) generated XamlTypeInfo.g.cs 'NotImplementedException' shims emitted
+# by the WinUI XAML compiler, and (b) the substring 'tOdo' inside the generated
+# model field 'StartOdometerM' (Generated/Api/ChargingSession.cs) — none of which
+# are authored source. Corrected to documented intent: scan authored source only
+# (exclude obj/bin) with word-boundary TODO/FIXME. Auditable evidence below.
+SOURCE_RAW_FORBIDDEN_MATCHES=1
+  RAW ChargingSession.cs:23: [property: JsonPropertyName("start_odometer_m")] double? StartOdometerM = null,
+AUTH_FORBIDDEN_MATCHES=0
+
+=== AUTH MARKERS ===
+# NOTE: the prompt's literal marker check used '$all -notmatch $_', which filters a
+# collection and is tautologically non-empty when >=2 distinct markers match on
+# different lines (it can never reach 0). Corrected to documented intent: a marker
+# is MISSING only when present in NO authored .cs/.xaml line. Evidence below.
+MARKER Pkce => PRESENT OnboardingView.cs:13
+MARKER PasswordVault => PRESENT AppAuth.cs:10
+MARKER ISecureTokenStore => PRESENT PasswordVaultTokenStore.cs:8
+MARKER Refresh => PRESENT ApiEndpoints.cs:172
+MARKER Unauthorized => PRESENT AuthHttpHandler.cs:8
+MARKER WebAuthentication => PRESENT AppAuth.cs:9
+MISSING_AUTH_MARKERS=0
+
+EXIT=0
+STATUS=DONE

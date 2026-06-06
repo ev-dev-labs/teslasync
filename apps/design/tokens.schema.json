@@ -6,29 +6,13 @@
   "properties": {
     "color": {
       "type": "object",
-      "description": "Semantic color roles (not raw hex scattered). Light/dark/high-contrast variants are filled in P1. Status roles cover success/warning/danger/info.",
+      "description": "Semantic color roles (not raw hex scattered), keyed by appearance variant. P1/S9 fills light / dark / high-contrast. Each variant carries the same semantic role set; status roles cover success/warning/danger/info.",
       "properties": {
-        "bg": { "description": "Page/window background base." },
-        "surface": { "description": "Opaque surface/card background above bg." },
-        "surfaceGlass": { "description": "Translucent glass/material surface (maps to Mica/Acrylic, M3 tonal surface, .regularMaterial)." },
-        "textPrimary": { "description": "Primary text role (web --text-primary)." },
-        "textSecondary": { "description": "Secondary/supporting text role (web --text-secondary)." },
-        "textMuted": { "description": "Muted/disabled text role (web --text-muted)." },
-        "accent": { "description": "Brand accent / primary action color." },
-        "border": { "description": "Hairline border/divider role." },
-        "status": {
-          "type": "object",
-          "description": "Semantic status colors.",
-          "properties": {
-            "success": { "description": "Success/positive state." },
-            "warning": { "description": "Warning/caution state." },
-            "danger": { "description": "Error/destructive state." },
-            "info": { "description": "Informational state." }
-          },
-          "required": ["success", "warning", "danger", "info"]
-        }
+        "light": { "$ref": "#/definitions/colorVariant" },
+        "dark": { "$ref": "#/definitions/colorVariant" },
+        "highContrast": { "$ref": "#/definitions/colorVariant" }
       },
-      "required": ["bg", "surface", "surfaceGlass", "textPrimary", "textSecondary", "textMuted", "accent", "border", "status"]
+      "required": ["light", "dark", "highContrast"]
     },
     "chart": {
       "type": "object",
@@ -94,5 +78,33 @@
       "required": ["durations", "easing"]
     }
   },
-  "required": ["color", "chart", "typography", "spacing", "radius", "elevation", "motion"]
+  "required": ["color", "chart", "typography", "spacing", "radius", "elevation", "motion"],
+  "definitions": {
+    "colorVariant": {
+      "type": "object",
+      "description": "One appearance variant (light / dark / high-contrast) of the semantic color roles.",
+      "properties": {
+        "bg": { "description": "Page/window background base." },
+        "surface": { "description": "Opaque surface/card background above bg." },
+        "surfaceGlass": { "description": "Translucent glass/material surface (maps to Mica/Acrylic, M3 tonal surface, .regularMaterial)." },
+        "textPrimary": { "description": "Primary text role (web --text-primary)." },
+        "textSecondary": { "description": "Secondary/supporting text role (web --text-secondary)." },
+        "textMuted": { "description": "Muted/disabled text role (web --text-muted)." },
+        "accent": { "description": "Brand accent / primary action color." },
+        "border": { "description": "Hairline border/divider role." },
+        "status": {
+          "type": "object",
+          "description": "Semantic status colors.",
+          "properties": {
+            "success": { "description": "Success/positive state." },
+            "warning": { "description": "Warning/caution state." },
+            "danger": { "description": "Error/destructive state." },
+            "info": { "description": "Informational state." }
+          },
+          "required": ["success", "warning", "danger", "info"]
+        }
+      },
+      "required": ["bg", "surface", "surfaceGlass", "textPrimary", "textSecondary", "textMuted", "accent", "border", "status"]
+    }
+  }
 }

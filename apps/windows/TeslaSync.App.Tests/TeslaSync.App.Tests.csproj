@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    P2/W2-0001 — headless unit tests for the UI-primitive logic models.
+    Targets plain net10.0 so `dotnet test` runs without a WinUI/UI-thread host.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TeslaSync.App.Core\TeslaSync.App.Core.csproj" />
+  </ItemGroup>
+
+  <!--
+    Language-neutral SI golden vectors (apps/shared/spec/units-golden.json) copied
+    next to the test assembly so the C# behavior port is verified row-for-row
+    against the web truth (ADR-004), exactly as the shared Kotlin port is.
+  -->
+  <ItemGroup>
+    <Content Include="..\..\shared\spec\units-golden.json" Link="units-golden.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

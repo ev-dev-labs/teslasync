@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    P2/W1-0001 — Dark theme dictionary (Default).
+    Maps the generated color/material tokens (Themes/Tokens.xaml) onto Fluent
+    surface and elevation roles. The app root is painted with a Mica backdrop
+    (see MainWindow); raised/transient surfaces use Acrylic; depth uses ThemeShadow.
+-->
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:media="using:Microsoft.UI.Xaml.Media">
+
+    <SolidColorBrush x:Key="TsAppRootBackgroundBrush" Color="{ThemeResource TsColorBgColor}" />
+    <SolidColorBrush x:Key="TsAppContentForegroundBrush" Color="{ThemeResource TsColorTextPrimaryColor}" />
+
+    <media:AcrylicBrush
+        x:Key="TsSurfaceRaisedBrush"
+        TintColor="{ThemeResource TsColorSurfaceColor}"
+        TintOpacity="0.4"
+        FallbackColor="{ThemeResource TsColorSurfaceColor}" />
+    <media:AcrylicBrush
+        x:Key="TsSurfaceOverlayBrush"
+        TintColor="{ThemeResource TsColorSurfaceColor}"
+        TintOpacity="0.7"
+        FallbackColor="{ThemeResource TsColorSurfaceColor}" />
+
+    <ThemeShadow x:Key="TsElevationOverlayShadow" />
+    <ThemeShadow x:Key="TsElevationModalShadow" />
+
+</ResourceDictionary>

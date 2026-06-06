@@ -94,7 +94,7 @@ class RepositoryContractTest {
     @Test
     fun signalsHitsPerVehicleAvailable() =
         runTestBlocking {
-            val url = capture("{}") { SignalsRepository(it, newTestCache().store).snapshot(7) }
+            val url = capture("{}") { HttpSignalsRepository(it, newTestCache().store).availableSignals(7) }
             assertEquals("/api/v1/signals/7/available", url.encodedPath)
         }
 

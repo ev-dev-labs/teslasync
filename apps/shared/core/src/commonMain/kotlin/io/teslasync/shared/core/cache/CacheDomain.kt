@@ -24,6 +24,24 @@ public enum class CacheDomain(
 ) {
     Vehicles("vehicles", 5.minutes),
     VehicleState("vehicle_state", 2.minutes),
+
+    // The Vehicles hook-domain partition (web/src/api/hooks/useVehicles.ts): the enrolled-vehicle
+    // list and per-vehicle detail, the last-known state, the positions track, the
+    // motor/climate/security/tire/charging-telemetry/media/location/config/user-preference "latest"
+    // projections, the motor history, and the Tesla Fleet-API info envelopes (mobile-enabled,
+    // options, specs, subscriptions, upgrades, warranty). One partition keeps every vehicles feed
+    // cached independently under a distinct per-feed key while logout still clears the whole domain
+    // in one call. The web reads the list/detail/state/latest/positions feeds with the default
+    // `staleTime` (0) and poll them via `refetchInterval`, so the 30-second default window keeps the
+    // freshness flag honest while the S8/UI refetch cadence drives the actual live polling and
+    // `cacheThenNetwork` always re-fetches on refresh; the slower info-envelope feeds carry an
+    // explicit per-entry TTL override (the list FAST≈default, mobile-enabled SLOW, options/specs
+    // STATIC, subscriptions/upgrades RARE, warranty DAILY) matching their web `staleTime`s. Payloads
+    // are SI on the wire (ranges in meters, temps in °C, pressures in Pa) and round-trip verbatim —
+    // display conversion is the render boundary's job (S5). A per-vehicle info refresh re-fetches
+    // exactly the affected feed via the S8 store's targeted family refresh (the `invalidateQueries`
+    // analogue).
+    VehicleInfo("vehicle_info", 30.seconds),
     Drives("drives", 5.minutes),
     Charging("charging", 5.minutes),
     Energy("energy", 5.minutes),
@@ -326,6 +344,266 @@ public enum class CacheDomain(
     // (SHA fingerprints, row/byte counts, ms timings, ISO stamps, severity/status strings) and
     // round-trip verbatim with no SI conversion.
     OperatorConfidence("operator_confidence", 1.minutes),
+
+    // The unified pin store (`GET /pinned?type=&context=`). The web `usePinned` hook reads it with
+    // `STALE_TIMES.SLOW` (5 minutes), so the window matches verbatim. Each `(type, context)` bucket
+    // is cached under its own key (mirroring the web `pinnedKeys.list` tuple), so a vehicle-picker
+    // feed and a widget feed cache independently while logout still clears the whole domain in one
+    // call. Pins are plain rows (ids, item ids, integer positions, timestamps) — not
+    // display-unit-bearing — so they round-trip verbatim with no SI conversion. The mutations have
+    // no cache interaction here; invalidation is the S8 store's targeted refresh (the web
+    // `invalidateQueries` analogue — a toggle refreshes every feed via `pinnedKeys.all`, a reorder
+    // only the no-context feed via `pinnedKeys.list(type)`), and `cacheThenNetwork` always hits the
+    // network on refresh so no stale value is ever served as fresh.
+    Pinned("pinned", 5.minutes),
+
+    // The browser/Web-Push subscription surface (`GET /push/public-key`, `GET /push/subscribe`).
+    // The web `usePush` hooks read these with two different staleTimes — the VAPID public key with
+    // `STALE_TIMES.RARE` (1 hour, near-static install config) and the subscription list with
+    // `STALE_TIMES.STANDARD` (60s) — so no single domain window honours both. Each read therefore
+    // passes its own per-entity TTL through the `observe(key, ttlMillis, fetch)` overload (mapping
+    // the web staleTime verbatim via PUSH_PUBLIC_KEY_TTL_MILLIS / PUSH_SUBSCRIPTIONS_TTL_MILLIS);
+    // this default is the 60-second list bound used as the fallback. The two reads share this
+    // partition under distinct keys (mirroring the web `pushKeys.publicKey` / `pushKeys.list`
+    // tuples) so each caches independently while logout still clears the whole domain in one call.
+    // The subscribe/unsubscribe mutations have no cache interaction here; invalidation is the S8
+    // store's targeted refresh of the subscription feed (the web `invalidateQueries(pushKeys.list)`
+    // analogue — neither mutation touches the public-key feed). Payloads are plain rows (ids,
+    // endpoint URLs, opaque key strings, user-agents, ISO stamps) — not display-unit-bearing — so
+    // they round-trip verbatim with no SI conversion; the public key is cached as the derived
+    // `{key}` wrapper (the web `publicKey || null`, with 404/"not configured" ⇒ null).
+    Push("push", 1.minutes),
+
+    // The RBAC admin matrix (`GET /admin/rbac/matrix`). The web `useRbacMatrix` hook reads it with
+    // a 30-second `staleTime` and never polls — the matrix only changes through an explicit admin
+    // edit — so the 30-second window matches verbatim. The single document (roles, permissions,
+    // categories, the role×permission grant map, the caller's effective grants, the caller's roles,
+    // the groups-header name) is cached under one key; an open-mode `501 AUTH_MODE_OPEN` is mapped to
+    // the open sentinel `{ "mode": "open" }` and cached as a successful no-op (the web 501 →
+    // `{ mode: 'open' }` normalisation), never an error. Payloads are plain identity/boolean data —
+    // not display-unit-bearing — so they round-trip verbatim with no SI conversion. The
+    // upsert-cells mutation has no cache interaction here; invalidation is the S8 store's targeted
+    // refresh (the web `invalidateQueries(rbacMatrixKeys.matrix())` analogue), and `cacheThenNetwork`
+    // always hits the network on refresh so no stale value is ever served as fresh while the
+    // last-known matrix stays visible during the reload.
+    Rbac("rbac", 30.seconds),
+
+    // The per-list-page saved-views library (`GET /saved-views?route=`), backing the SavedViewMenu's
+    // "save this filter combo" affordance. The web `useSavedViews` hook reads it with
+    // `STALE_TIMES.STANDARD` (60s), so the 1-minute window matches verbatim. Each list-page `route`
+    // is cached under its own key (mirroring the web `savedViewsKeys.list(route)` tuple); a
+    // create/update/delete/set-default invalidates ONLY that route's key (the web hooks invalidate
+    // `savedViewsKeys.list(route)`, never the whole `all` prefix), so the data-layer eviction is the
+    // single-key `removeQueries` analogue and the S8 store refreshes just that route's feed. Payloads
+    // are plain rows (ids, a route string, an opaque querystring blob, boolean flags, an int sort
+    // order, ISO stamps) — not display-unit-bearing — so they round-trip verbatim with no SI
+    // conversion.
+    SavedViews("saved_views", 1.minutes),
+
+    // The unified entity-search read-model (`GET /search?q=`), backing the command palette and the
+    // full-results search page. The web `useGlobalSearch` hook reads it with `STALE_TIMES.FAST` (30s),
+    // so the 30-second window matches verbatim. Each distinct (query, types, limit) tuple is cached
+    // under its own key (mirroring the web `searchKeys.global` tuple); the domain has no mutations (the
+    // web hook is read-only) so there is no per-key eviction — logout clears the whole partition.
+    // Payloads (titles, urls, scores, ISO stamps) are not display-unit-bearing, so they round-trip
+    // verbatim with no SI conversion.
+    Search("search", 30.seconds),
+
+    // The active-session / device-management list (`GET /auth/sessions`), backing the Settings
+    // sessions section. The web `useSessions` hook reads it with a 30s `staleTime`, so the
+    // 30-second window matches verbatim. There is a single list feed (the web `sessionKeys.list`
+    // tuple `['sessions','list']`), so the whole partition is the one cached entry; a
+    // revoke-one / revoke-all-others mutation evicts that key (the web hooks invalidate
+    // `sessionKeys.list`) and the S8 store refreshes the feed. The `{ mode: 'open' }` path (the
+    // backend's 501 `AUTH_MODE_OPEN` sentinel) is cached as a successful no-session value exactly
+    // as the web hook normalises it. Payloads are plain device rows (ids, user-agent, ip, ISO
+    // stamps, a current flag) — not display-unit-bearing — so they round-trip verbatim with no SI
+    // conversion.
+    Sessions("sessions", 30.seconds),
+
+    // The shareable-drive-reports surface (`GET /drives/{driveID}/shares`, `GET /share/{token}`),
+    // backing the SharedDrivePage owner controls + the public read-only report. The web `useSharing`
+    // hooks read these with two different staleTimes — the owner's link list with NO staleTime
+    // (default 0 ⇒ always stale, refetch on every access) and the public report with
+    // `STALE_TIMES.SLOW` (5 minutes) — so no single domain window honours both. Each read therefore
+    // passes its own per-entity TTL through the `observe(key, ttlMillis, fetch)` overload (mapping
+    // the web staleTime verbatim via SHARE_LINKS_TTL_MILLIS / SHARED_DRIVE_TTL_MILLIS); this default
+    // is the 5-minute report bound used as the fallback. The two reads share this partition under
+    // distinct prefixed keys (mirroring the web `sharingKeys.shares` / `sharingKeys.shared` tuples)
+    // so each caches independently while logout still clears the whole domain in one call. The
+    // create/revoke mutations evict ONLY the affected drive's share-link key (the web hooks
+    // invalidate ONLY `sharingKeys.shares(driveId)`); the public report feed is never invalidated by
+    // a mutation. Share-link rows (ids, tokens, booleans, view counts, ISO stamps) are not
+    // display-unit-bearing; the public report's canonical values are SI on the wire and converted
+    // only at the render boundary (S5), while the legacy v1 variant round-trips verbatim.
+    Sharing("sharing", 5.minutes),
+
+    // The Tesla/API rate-limit budget feed (`GET /system/rate-limits`), backing the Settings
+    // rate-limit panel. The web `useRateLimitStatus` hook reads it with a 15s `staleTime`
+    // (`RATE_LIMIT_STALE_TIME_MS`) and polls it every 30s (`RATE_LIMIT_REFETCH_INTERVAL_MS`) with
+    // `refetchIntervalInBackground:false`, so the 15-second window keeps the freshness flag honest
+    // while the S8/UI refetch cadence drives the actual live polling. There is a single feed (the
+    // web `systemKeys.rateLimits` tuple `['system','rate-limits']`), so the whole partition is the
+    // one cached entry; the web hook file declares no mutations, so the partition has no
+    // invalidation surface (logout clears it). Payloads are budget rows (scope ids/labels, usage
+    // counts, a window-seconds integer, a severity enum, ISO stamps) — not display-unit-bearing —
+    // so they round-trip verbatim with no SI conversion.
+    System("system", 15.seconds),
+
+    // The worker job-queue feeds (`GET /system/queues` and `GET /system/queues/{worker}/jobs`),
+    // backing the admin queue-health panel and its per-worker drawer. The web `useSystemQueues`
+    // domain reads the status feed with a 15s `staleTime` (`QUEUE_STATUS_STALE_TIME_MS`, polled
+    // every 30s) and the per-worker jobs feed with a 30s `staleTime` (`QUEUE_JOBS_STALE_TIME_MS`,
+    // polled every 60s), both with `refetchIntervalInBackground:false`. The two reads live in one
+    // partition under distinct keys (the web `queueKeys.status` / `queueKeys.jobs(worker)` tuples);
+    // because they carry different `staleTime`s, the repository overrides the jobs feed's TTL
+    // per-read rather than compromising on a single domain default — the 15s default here keeps the
+    // status feed's freshness flag web-faithful. The web hook file declares no mutations, so the
+    // partition has no invalidation surface (logout clears it). Payloads are counts, second-based
+    // ages, and millisecond durations — not display-unit-bearing — so they round-trip verbatim with
+    // no SI conversion.
+    SystemQueues("system_queues", 15.seconds),
+
+    // The raw signal-inspector / fleet-telemetry-diagnostics surface (the web `useTelemetry` hook
+    // domain: `GET /signals/{id}/available|live|stats|{sig}/history|snapshot|diff`, `/signals/catalog`,
+    // `/signals/observations`, `/telemetry`, `/tesla/fleet-telemetry/error-vins|errors`). The web hooks
+    // read with a SPREAD of staleTimes — REALTIME/5s (live signals, observations), SLOW/5min (catalog),
+    // and STANDARD/60s or the TanStack default (everything else) — so no single domain window honours
+    // them all. Each read therefore passes its own per-entity TTL through the
+    // `observe(key, ttlMillis, fetch)` overload (mapping the web staleTime verbatim via
+    // TELEMETRY_REALTIME/SLOW/STANDARD_TTL_MILLIS); this 60-second default is the modal STANDARD bound
+    // used as the fallback. The fourteen reads share this partition under distinct keys (mirroring the
+    // web `telemetryKeys` tuples) so each caches independently while logout still clears the whole
+    // domain in one call. Payloads are SI on the wire (signal values, ms ages, second-based uptime) and
+    // are NOT display-converted here — formatting is the render boundary's job (S5). The two
+    // error-refresh mutations have no cache interaction here; invalidation is the S8 store's targeted
+    // re-collection of only the affected feed family (the web `invalidateQueries` analogue), and
+    // `cacheThenNetwork` always hits the network on refresh so no stale value is ever served as fresh.
+    Telemetry("telemetry", 1.minutes),
+
+    // The per-user TOTP enrollment status (`GET /auth/totp`), backing the Settings two-factor
+    // section. The web `useTOTPStatus` hook reads it with a 30s `staleTime`, so the 30-second
+    // window matches verbatim. There is a single status feed (the web `totpKeys.status` tuple
+    // `['totp','status']`), so the whole partition is the one cached entry; the enroll / verify /
+    // revoke / regenerate-backup-codes mutations evict that key (the web hooks invalidate
+    // `totpKeys.status`) and the S8 store refreshes the feed, while the step-up mutation
+    // (`POST /auth/totp/sudo`) performs no invalidation (the web `useTOTPStepUp` declares none).
+    // The `{ mode: 'open' }` path (the backend's 501 `AUTH_MODE_OPEN` sentinel) is cached as a
+    // successful feature-unavailable value exactly as the web hook normalises it. Payloads are
+    // booleans, counts and ISO stamps — not display-unit-bearing — so they round-trip verbatim
+    // with no SI conversion.
+    Totp("totp", 30.seconds),
+
+    // The trip-log read-models (`GET /trips` list, `GET /trips/{id}` detail), backing the Trips
+    // list page, the trip detail page, and the dashboard/sharing trip widgets. The web `useTrips`/
+    // `useTrip` hooks declare no explicit `staleTime`, so they inherit the QueryClient default (60s,
+    // web/src/api/queryClient.ts); the 1-minute window matches that verbatim. The two reads live in
+    // one partition under distinct keys (the web `tripKeys` tuples: the list keyed by its params
+    // object, the detail by id), so each caches independently while logout clears the whole domain in
+    // one call. The list read applies `safeArray` (the web `select: safeArray`) once at the data
+    // layer. The web hook file declares no mutations, so the partition has no invalidation surface
+    // (the family refresh is the S8 store's targeted re-collection of the `['trips']` family, the web
+    // `invalidateQueries` analogue). Payloads carry SI columns (`total_distance_m`, `total_energy_wh`,
+    // `total_duration_s`) and round-trip verbatim — display conversion is the render boundary's job
+    // (S5), never this layer's. The web `useTrip` 404 (the backend registers only `GET /trips`) is a
+    // render-layer error-path concern and surfaces through [Resource.Error] unchanged.
+    Trips("trips", 1.minutes),
+
+    // The per-user account read-models (`GET /users/me`, `GET /users/me/activity`, and the four
+    // account-level Tesla feeds `GET /tesla/user/{feature-config,region,orders,profile}`), backing
+    // the Account / Settings → Profile surfaces. The web `useUser` hooks declare a SPREAD of
+    // `staleTime`s — `useCurrentUser` default-0, `useMyRecentActivity` `STALE_TIMES.STANDARD` (60s),
+    // `useTeslaFeatureConfig` `STALE_TIMES.EXTENDED` (10m), `useTeslaUserRegion` `STALE_TIMES.STATIC`
+    // (never), `useTeslaUserOrders`/`useTeslaUserProfile` `STALE_TIMES.SLOW` (5m) — so each read
+    // overrides this 5-minute domain default with its own web-faithful per-entry TTL rather than a
+    // single lossy window. The six reads live in one partition under distinct keys (the web
+    // `userKeys` tuples; the activity feed keyed by its params object), so each caches independently
+    // while logout clears the whole domain in one call. The five mutations (`PUT /users/me` and the
+    // four `POST .../refresh` actions) call the API directly and never evict the cache — the S8
+    // store re-collects exactly the feed each web hook invalidates (`useUpdateUser` → the `me` feed
+    // via `setQueryData`; each refresh → its matching Tesla feed via `invalidateQueries`), the web
+    // keep-prior-data-during-refetch behaviour. Payloads are account identity / order / region
+    // strings and ISO stamps — not display-unit-bearing telemetry — so they round-trip verbatim with
+    // no SI conversion; display formatting is the render boundary's job (S5).
+    User("user", 5.minutes),
+
+    // The per-vehicle access-control read-models (`GET /vehicles/{id}/drivers`,
+    // `GET /vehicles/{id}/invitations`), backing the VehicleAccess management surface. The web
+    // `useVehicleDrivers` / `useVehicleInvitations` hooks both read with `STALE_TIMES.STANDARD`
+    // (60s), so the 1-minute window matches both verbatim and neither read needs a per-entry TTL
+    // override. The two reads live in one partition under distinct keys (the web
+    // `vehicleAccessKeys.drivers` / `vehicleAccessKeys.invitations` tuples, prefixed so a shared
+    // vehicleId can never collide), so each caches independently while logout still clears the whole
+    // domain in one call. Each list read applies `safeArray` (the web `select: safeArray`) once at
+    // the data layer. The five mutations (drivers refresh/remove, invitations refresh/create/revoke)
+    // call the API directly and on success evict ONLY the affected vehicle's affected feed key — the
+    // driver actions invalidate `vehicleAccessKeys.drivers(id)`, the invitation actions
+    // `vehicleAccessKeys.invitations(id)`, never the sibling feed and never another vehicle — and the
+    // S8 store re-collects that one feed. Payloads are identity/role/url/status strings and ISO
+    // stamps — not display-unit-bearing — so they round-trip verbatim with no SI conversion.
+    VehicleAccess("vehicle_access", 1.minutes),
+
+    // The per-vehicle photo metadata read-model (`GET /vehicles/{id}/photo`), backing the hero card
+    // + upload control. The web `useVehiclePhoto` hook reads with `staleTime: 60_000`, so the
+    // 1-minute window matches it verbatim and the read needs no per-entry TTL override. Each
+    // vehicle's meta lives under its own key (the web `vehiclePhotoKeys.detail` tuple, prefixed
+    // `vehicle-photos:` so a shared partition never collides), so each caches independently while
+    // logout still clears the whole domain in one call. The two mutations (upload/delete) write the
+    // new meta through that key (the web `setQueryData`) and never evict — the S8 store's feed
+    // refresh drives the cache-then-network refetch, the `invalidateQueries` analogue. The payload
+    // is a bool + an ISO stamp + rendered-path strings — not display-unit-bearing — so it
+    // round-trips verbatim with no SI conversion.
+    VehiclePhoto("vehicle_photo", 1.minutes),
+
+    // The per-vehicle resolved-settings read-model (`GET /vehicles/{id}/settings`), backing the
+    // VehicleSettings tab. The web `useVehicleSettings` hook reads with `staleTime: 30_000`, so the
+    // 30-second window matches it verbatim and the read needs no per-entry TTL override. Each
+    // vehicle's payload lives under its own key (the web `vehicleSettingsKeys.detail` tuple, prefixed
+    // `vehicle-settings:` so a shared partition never collides), so each caches independently while
+    // logout still clears the whole domain in one call. The two mutations (upsert/reset) call the API
+    // directly and on success evict ONLY the affected vehicle's settings key — the web
+    // `invalidateQueries(vehicleSettingsKeys.detail(id))` analogue — and the S8 store re-collects
+    // that one feed; the web's SECOND invalidation (`vehicleKeys.detail(id)`, because a nickname
+    // override feeds the display name) is a cross-domain concern the S8 store's injected
+    // vehicle-refresh hook handles. The payload is per-key { key, value, source } rows whose `value`
+    // is arbitrary JSON — not display-unit-bearing — so it round-trips verbatim with no SI conversion.
+    VehicleSettings("vehicle_settings", 30.seconds),
+
+    // The VehicleSystems read-models (web/src/api/hooks/useVehicleSystems.ts): the per-vehicle
+    // climate/tire-pressure/safety/media "latest" snapshots and their history lists, plus the
+    // global maintenance-schedule + service-record catalogs and the per-vehicle software-update
+    // list. The four "latest" reads poll `INTERVALS.STANDARD` (30s) via `refetchInterval` and the
+    // history / software-update reads use the default TanStack `staleTime` (0 = refetch on mount);
+    // the 30-second window keeps the freshness flag honest while the S8/UI refetch cadence drives
+    // the actual live polling and `cacheThenNetwork` always re-fetches on refresh, so no stale value
+    // is ever served as fresh. The global `useMaintenance`/`useServiceRecords` catalogs read with
+    // `STALE_TIMES.STATIC` (never stale — deployment-static reference data); they carry an explicit
+    // per-entry STATIC TTL override ([io.teslasync.shared.core.data.repo.VEHICLE_SYSTEMS_STATIC_TTL_MILLIS])
+    // rather than the domain window. Every feed is cached under its own per-feed key (mirroring the
+    // web `vehicleSystemsKeys` tuples) so each caches independently while logout clears the whole
+    // domain in one call; the many distinct read shapes are each carried verbatim as a raw SI
+    // [kotlinx.serialization.json.JsonElement] (the Driving/Analytics strategy). Payloads are SI on
+    // the wire (temps in °C, pressures in Pa, ranges in meters) and round-trip verbatim — display
+    // conversion is the render boundary's job (S5). The web hook file declares no mutations, so the
+    // partition has no invalidation surface.
+    VehicleSystems("vehicle_systems", 30.seconds),
+
+    // The Watch read-models (web/src/api/hooks/useWatch.ts): the full `GET /watch/summary` glance
+    // payload and the minimal `GET /watch/complication` projection, both optionally scoped by
+    // `?vehicle_id=`. The two reads carry distinct web `staleTime`s — the summary `STALE_TIMES.MODERATE`
+    // (15s) and the complication `STALE_TIMES.FAST` (30s) — so each read applies an explicit per-entry
+    // TTL override ([io.teslasync.shared.core.data.repo.WATCH_SUMMARY_TTL_MILLIS] /
+    // [io.teslasync.shared.core.data.repo.WATCH_COMPLICATION_TTL_MILLIS]) rather than the domain window;
+    // the 15-second default below tracks the faster (summary) read. Each feed is cached under its own
+    // per-feed key (mirroring the web `watchKeys` tuples) so each caches independently while logout
+    // clears the whole domain in one call; the two distinct read shapes are each carried verbatim as a
+    // raw [kotlinx.serialization.json.JsonElement] (the Driving/Analytics strategy). The web
+    // `useWatchCommand` mutation invalidates no query on success (its `onSuccess` only raises a toast),
+    // so the partition has no eviction surface. The summary's numeric fields are backend-rendered
+    // (`range_km` in km, temps in °C) and round-trip verbatim — display formatting is the render
+    // boundary's job (S5). The web's `X-API-Key`/`skipAuthRefresh` transport is a networking-layer
+    // concern wired at the platform boundary, not a cache concern.
+    Watch("watch", 15.seconds),
     ;
 
     /** Default staleness threshold in whole milliseconds, for the freshness math. */

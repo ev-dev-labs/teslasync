@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.sqldelight)
+    alias(libs.plugins.kover)
 }
 
 kotlin {
@@ -123,5 +124,62 @@ ktlint {
     filter {
         // Generated API models/endpoints (P1/S2) are not hand-written source.
         exclude { it.file.path.replace('\\', '/').contains("/generated/") }
+    }
+}
+
+// P1/S12: JVM coverage gate for the shared core. Kover instruments the Android
+// local unit tests (which execute commonTest) and the total report is logged on
+// every `koverVerify`. A line-coverage floor is enforced per critical package —
+// net/auth/cache/units/presentation — so the resilient client, auth, offline
+// cache, SI units and the presentation stores can never silently regress.
+kover {
+    reports {
+        // Coverage scope = the critical packages only (net/auth/cache/units/
+        // presentation). Generated DTOs/endpoints and the generated SQLDelight
+        // database are not hand-written source and are excluded. Per-rule filters
+        // are unavailable in Kover 0.9, so the report scope is the gate scope.
+        filters {
+            includes {
+                classes(
+                    "io.teslasync.shared.core.net.*",
+                    "io.teslasync.shared.core.auth.*",
+                    "io.teslasync.shared.core.cache.*",
+                    "io.teslasync.shared.core.units.*",
+                    "io.teslasync.shared.core.presentation.*",
+                )
+            }
+            excludes {
+                classes(
+                    "io.teslasync.shared.core.api.generated.*",
+                    "io.teslasync.shared.core.cache.db.*",
+                )
+            }
+        }
+
+        total {
+            // Print total coverage of the critical scope to the build log so CI
+            // surfaces the number on every run.
+            log {
+                onCheck.set(true)
+                header.set("shared :core critical-package coverage (total)")
+                format.set("<entity> line coverage: <value>%")
+                coverageUnits.set(kotlinx.kover.gradle.plugin.dsl.CoverageUnit.LINE)
+                aggregationForGroup.set(kotlinx.kover.gradle.plugin.dsl.AggregationType.COVERED_PERCENTAGE)
+            }
+        }
+
+        verify {
+            // Aggregate line-coverage floor across the critical packages, plus a
+            // per-package floor so no single critical package can rot. Floors are
+            // conservative relative to actual coverage so the gate catches real
+            // regressions without rewarding red-as-green.
+            rule("critical packages — aggregate line coverage >= 80%") {
+                minBound(80)
+            }
+            rule("critical packages — per-package line coverage >= 55%") {
+                groupBy.set(kotlinx.kover.gradle.plugin.dsl.GroupingEntityType.PACKAGE)
+                minBound(55)
+            }
+        }
     }
 }

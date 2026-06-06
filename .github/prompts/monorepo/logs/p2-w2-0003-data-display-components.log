@@ -1,0 +1,28 @@
+=== GATE === P2/W2-0003 data-display components
+runner: Windows + dotnet 10.0.300
+BUILD_EXIT=0  (dotnet build apps/windows/TeslaSync.sln -c Release: Build succeeded, 0 Warning(s), 0 Error(s))
+FORMAT_EXIT=0 (dotnet format --verify-no-changes: no changes)
+TEST_EXIT=0   (dotnet test -c Release --no-build: Passed! Failed:0 Passed:199 Skipped:0 Total:199)
+PLACEHOLDER_EXIT=0 (check-placeholders.ps1 -Path apps/windows -Language csharp: PLACEHOLDER_COUNT=0)
+
+--- inventory ---
+NOTE: the prompt's literal check uses '$all -notmatch $_', a PowerShell array-filter tautology
+(a scalar pattern vs an 89-line array always returns a non-empty subset) so it reports all-missing
+regardless of presence. RAW_MISSING below is that spurious number; the corrected per-token check
+(missing = zero files contain the token) is the real result.
+RAW_MISSING_DATA_DISPLAY_COMPONENTS(buggy_script)=11
+  TsStatCard => 13 file-line matches
+  TsMetricCard => 7 file-line matches
+  TsMetricBar => 10 file-line matches
+  TsAnimatedNumber => 11 file-line matches
+  TsKVList => 5 file-line matches
+  TsStatusBadge => 5 file-line matches
+  TsTimeline => 21 file-line matches
+  TsFreshnessIndicator => 8 file-line matches
+  TsLiveIndicator => 7 file-line matches
+  TsDistance => 1 file-line matches
+  TsEnergy => 1 file-line matches
+MISSING_DATA_DISPLAY_COMPONENTS=0
+
+EXIT=0
+STATUS=DONE

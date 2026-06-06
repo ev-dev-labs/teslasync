@@ -1,0 +1,68 @@
+=== P1/S99/0001 SHARED ACCEPTANCE GATE ===
+timestamp=2026-06-05T16:50:03.6605505-07:00
+--- CHECK: parity manifest --check ---
+[OK] manifest up to date (1754 units)
+PARITY_CHECK_EXIT=0
+--- CHECK: client codegen --check ---
+[OK] no drift ΓÇö 20 generated files match the spec.
+CLIENTS_CHECK_EXIT=0
+--- CHECK: design themes --check ---
+OK (no drift): windows/Tokens.xaml
+OK (no drift): android/Theme.kt
+OK (no drift): apple/Tokens.swift
+CHECK PASSED: no drift.
+THEMES_CHECK_EXIT=0
+--- CHECK: i18n --check ---
+web base locale=en leaves=7806 grouped_entries=7772
+locale=en status=base dir=ltr translated=7772 fallback=0 effective=7772
+locale=ar status=placeholder dir=rtl translated=0 fallback=7772 effective=7772
+locale=he status=placeholder dir=rtl translated=0 fallback=7772 effective=7772
+COMPLETE_RESULT=OK files=11 entries=7772
+I18N_CHECK_EXIT=0
+--- CHECK: placeholders apps/shared (kotlin) ---
+PLACEHOLDER_ALLOWED=17
+PLACEHOLDER_COUNT=0
+EXIT=0
+PH_SHARED_EXIT=0
+--- CHECK: placeholders apps/design (all) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PH_DESIGN_EXIT=0
+--- CHECK: S1 OpenAPI conformance (go test ./internal/api -run OpenAPI) ---
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.765s
+OPENAPI_CONFORMANCE_EXIT=0
+--- CHECK: OpenAPI spec drift (regen + git diff) ---
+openapi-gen: wrote api/openapi/teslasync.openapi.json (533 routes)
+OPENAPI_SPEC_DRIFT=NONE (before=D5A43C129ECA after=D5A43C129ECA)
+--- CHECK: core :core:allTests + koverVerify (apps/shared, :core) ---
+BUILD SUCCESSFUL — :core:testDebugUnitTest re-run (--rerun-tasks): HOST_TESTS=2680 FAILURES=0 ERRORS=0 SKIPPED=0 (362 suite files); koverVerify PASS
+NOTE: iosSimulatorArm64Test / macosArm64Test SKIPPED on Windows host (Kotlin/Native Apple link requires macOS); all commonTest sources execute on Android/JVM. Apple xcframework packaging deferred to macOS CI per S3.
+S5_UNITS_GOLDEN=present+green (UnitsGoldenTest, UnitsFormatterTest)
+S8_DERIVATION_GOLDEN=present+green (DlqDerivationGoldenTest, FsmDerivationGoldenTest, SettingsDerivationsGoldenTest, UserDerivationsGoldenTest, + 50 *GoldenTest)
+S11_REDACTION=present+green (RedactionTest, DiagnosticsTest, BufferedDiagnosticsSinkTest)
+CORE_TESTS_EXIT=0
+--- NOTE: page-units.json transparency (Honesty Covenant #9, no silent drift) ---
+page-units.json (.github/prompts/monorepo/parity/) count=143 (certified S0-0002 routed-page set; all 143 carry a route, 0 unrouted)
+parity-manifest.json page-kind units=153; authoritative manifest drift gate (--check) is GREEN (no drift, 1754 units)
+The 143-vs-153 delta is page components present on disk but not in the S0-0002 routed-prompt set; it does not affect the frozen contract.
+=== GATE SUMMARY ===
+PARITY_CHECK_EXIT=0
+CLIENTS_CHECK_EXIT=0
+THEMES_CHECK_EXIT=0
+I18N_CHECK_EXIT=0
+PH_SHARED_EXIT=0
+PH_DESIGN_EXIT=0
+OPENAPI_CONFORMANCE_EXIT=0
+OPENAPI_SPEC_DRIFT=NONE
+CORE_TESTS_EXIT=0
+GATE_FAIL=0
+=== OUTPUTS WRITTEN ===
+apps/parity/shared-ledger.json (14 shared modules enumerated)
+apps/shared/CONTRACT_FROZEN.md (OpenAPI + tokens + units-golden + i18n + manifest SHA-256 frozen)
+OPENAPI_SHA256=D5A43C129ECA946F2234310ECA2835EA702D7FBA3DB593BA84D9E29572DA8BF8
+TOKENS_SHA256=757C670C11EE90F82D2296C8A131EDB5DFBB1634C7D82685554BB83B49BE54D2
+UNITS_GOLDEN_SHA256=AF2DFA0A19B34FBEA2833FD9FF88AE5597EBE9A4BA2D3A31763161033E61A0D7
+PARITY_MANIFEST_SHA256=10311392C8D568136BED4F78D1C51031DF3C32806E052B570598F0EE28A1FA8F
+EXIT=0
+STATUS=DONE

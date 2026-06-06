@@ -14,6 +14,8 @@ kotlinxCoroutines = "1.10.2"
 sqldelight = "2.3.2"
 ktlint = "12.1.2"
 ktlintEngine = "1.5.0"
+# P1/S12: JVM coverage for the shared core (Android local unit tests cover commonTest).
+kover = "0.9.8"
 android-minSdk = "26"
 android-compileSdk = "36"
 
@@ -44,3 +46,4 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 android-library = { id = "com.android.library", version.ref = "agp" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }

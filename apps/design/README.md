@@ -16,6 +16,7 @@ from each platform mapping these tokens onto its own component/material system.
 |---|---|---|
 | `tokens.schema.json` | authored here (P0/0007) | JSON Schema for the neutral token document. Validates the 7 token categories. |
 | `tokens.json` | filled in P1 from web tokens | The neutral token VALUES, extracted from `web/tailwind.config.*`, `web/src/lib/tokens.*`, `web/src/lib/colors.*`, and CSS vars (`--text-primary`, …). Conforms to `tokens.schema.json`. |
+| `generators/**` | authored in P1/S9 | Deterministic emitters: `gen-fluent.mjs` → `generated/windows/Tokens.xaml`, `gen-material.mjs` → `generated/android/Theme.kt`, `gen-apple.mjs` → `generated/apple/Tokens.swift`. Run via `gen-themes.ps1` (`-Check` is the drift gate); `verify-fidelity.mjs` golden-compares sampled tokens against the web values. |
 
 ## Token categories (schema)
 
