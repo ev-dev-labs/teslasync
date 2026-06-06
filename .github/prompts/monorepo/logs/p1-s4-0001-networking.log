@@ -1,26 +1,34 @@
-P1 · S4 · 0001 — Networking foundation (Ktor, resilient)
-Branch: feature/apps  HEAD: 82dd91a95
-Host: Windows (android/JVM commonTest runnable; apple native test EXECUTION deferred to macOS CI matrix per ADR-012; apple test source sets CROSS-COMPILE green here).
+P1 . S4 . 0001 - Networking foundation (Ktor, resilient)
+Branch: feature/apps  HEAD: b9ddf8dae
+Host: Windows (android/JVM commonTest runnable; apple native test EXECUTION deferred to
+macOS CI matrix per ADR-012 via kotlin.native.ignoreDisabledTargets=true; apple test source
+sets CROSS-COMPILE/link tasks are SKIPPED on this host, run on macos-latest).
 
 SCOPE DELIVERED (apps/shared/core/src/commonMain/.../net):
   ApiError.kt          sealed Network|Timeout|Http(status,body,code)|Decode|CircuitOpen
-  TokenProvider.kt     auth seam (token + onUnauthorized); NoopTokenProvider default (S6 fills)
-  Scheduler.kt         clock+sleep seam; RealScheduler (monotonic + coroutines delay)
+  TokenProvider.kt     auth seam (token + onUnauthorized(failedToken)); NoopTokenProvider default (S6 fills)
+  Scheduler.kt         clock+sleep seam; RealScheduler (monotonic TimeSource + coroutines delay)
   CircuitBreaker.kt    consecutive-failure breaker, single-flight HALF_OPEN probe, injected clock
-  ApiClientConfig.kt   HttpMethodKind(idempotency), RequestSpec, ApiClientConfig + builder DSL
-  ApiHttpClient.kt     factory (functional-options) + resilient core: /api/v1-once, snake_case
-                       query, withTimeout-bounded call+decode, exp backoff+jitter (cap), 5xx/
-                       timeout/network retry on idempotent verbs only, 401->onUnauthorized once,
-                       request<T>/safeRequest<T> (Result<T,ApiError>)
-  PlatformEngine.*     expect/actual default engine (OkHttp android / Darwin apple)
-Tests (commonTest/.../net): URL/prefix/snake_case/null-skip, retry+backoff(jitter bounds+cap)+
-  wall-clock guard, error mapping (Http/Network/Timeout/Decode + request-encode->Decode),
+  ApiClientConfig.kt   HttpMethodKind(idempotency), RequestSpec, ApiClientConfig + ApiHttpClientBuilder DSL
+  ApiHttpClient.kt     factory (functional-options) + resilient core: /api/v1-once, snake_case query,
+                       withTimeout-bounded call+decode, exp backoff+jitter (0.75x-1.25x, capped),
+                       5xx/timeout/network retry on idempotent verbs only, 401->onUnauthorized once,
+                       request<T>/safeRequest<T> (Result<T> w/ ApiError failure)
+  PlatformEngine.kt    expect/actual default engine (OkHttp android / Darwin apple)
+Tests (commonTest/.../net): URL prefix-once + snake_case + null-skip, retry+backoff(jitter bounds+cap)
+  + wall-clock guard, error mapping (Http/Network/Timeout/Decode + request-encode->Decode),
   breaker transitions (client-level) + CircuitBreaker unit (single-flight + time-bound recovery),
-  401 hook once+replay/false/at-most-once, bearer attach/no-op. Real network: NONE (MockEngine).
-== GATE: gradlew :core:allTests ==
+  401 hook once+replay/false/at-most-once, bearer attach/no-op. Real network: NONE (Ktor MockEngine).
+
+Re-execution note: this prompt's artifact (net/**) was previously committed (15114011c) and is
+unchanged at this HEAD. The runner cleared the stale artifact log; this log regenerates it by
+re-running the gate against the current tree. No source edits were required.
+
+== GATE 1: gradlew :core:allTests ==
 > Task :core:kmpPartiallyResolvedDependenciesChecker
 > Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :core:downloadKotlinNativeDistribution UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
 > Task :core:compileKotlinIosSimulatorArm64 UP-TO-DATE
 > Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
 > Task :core:iosSimulatorArm64MainKlibrary UP-TO-DATE
@@ -58,34 +66,71 @@ Tests (commonTest/.../net): URL/prefix/snake_case/null-skip, retry+backoff(jitte
 > Task :core:compileDebugUnitTestKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
 > Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:koverFindJar UP-TO-DATE
 > Task :core:processDebugJavaRes UP-TO-DATE
 > Task :core:processDebugUnitTestJavaRes UP-TO-DATE
-> Task :core:testDebugUnitTest UP-TO-DATE
+> Task :core:testDebugUnitTest FROM-CACHE
 > Task :core:preReleaseBuild UP-TO-DATE
 > Task :core:generateReleaseResValues UP-TO-DATE
 > Task :core:generateReleaseResources UP-TO-DATE
 > Task :core:packageReleaseResources UP-TO-DATE
 > Task :core:parseReleaseLocalResources UP-TO-DATE
 > Task :core:generateReleaseRFile UP-TO-DATE
+> Task :core:compileReleaseKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileRelease UP-TO-DATE
+> Task :core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :core:bundleLibCompileToJarRelease UP-TO-DATE
 > Task :core:preReleaseUnitTestBuild UP-TO-DATE
 > Task :core:generateReleaseUnitTestStubRFile UP-TO-DATE
+> Task :core:compileReleaseUnitTestKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileReleaseUnitTest UP-TO-DATE
-> Task :core:compileReleaseKotlinAndroid
-> Task :core:compileReleaseJavaWithJavac NO-SOURCE
-> Task :core:processReleaseJavaRes UP-TO-DATE
-> Task :core:bundleLibRuntimeToJarRelease
-> Task :core:bundleLibCompileToJarRelease
-> Task :core:compileReleaseUnitTestKotlinAndroid
 > Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processReleaseJavaRes UP-TO-DATE
 > Task :core:processReleaseUnitTestJavaRes UP-TO-DATE
-> Task :core:testReleaseUnitTest
+> Task :core:testReleaseUnitTest UP-TO-DATE
 > Task :core:allTests NO-SOURCE
 
-BUILD SUCCESSFUL in 8s
-36 actionable tasks: 6 executed, 30 up-to-date
-TEST_EXIT=0
-== GATE: gradlew :core:ktlintCheck ==
+BUILD SUCCESSFUL in 4s
+38 actionable tasks: 1 executed, 1 from cache, 36 up-to-date
+ALLTESTS_EXIT=0
+
+== GATE 2: fresh execution of net/** tests (--rerun-tasks, --tests io.teslasync.shared.core.net.*) ==
+> Task :core:kmpPartiallyResolvedDependenciesChecker
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:preBuild UP-TO-DATE
+> Task :core:preDebugBuild UP-TO-DATE
+> Task :core:generateDebugResValues
+> Task :core:generateDebugResources
+> Task :core:packageDebugResources
+> Task :core:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:javaPreCompileDebug
+> Task :core:javaPreCompileDebugUnitTest
+> Task :core:parseDebugLocalResources
+> Task :core:koverFindJar
+> Task :core:generateDebugRFile
+> Task :core:generateDebugUnitTestStubRFile
+> Task :core:generateCommonMainTeslaSyncCacheInterface
+
+> Task :core:compileDebugKotlinAndroid
+w: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SettingsBackupRepository.kt:77:19 'val monthNumber: Int' is deprecated. Use the 'month' property instead.
+
+> Task :core:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:processDebugJavaRes
+> Task :core:bundleLibRuntimeToJarDebug
+> Task :core:bundleLibCompileToJarDebug
+> Task :core:compileDebugUnitTestKotlinAndroid
+> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processDebugUnitTestJavaRes
+> Task :core:testDebugUnitTest
+
+[Incubating] Problems report is available at: file:///D:/repos/teslasync/apps/shared/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 1m 1s
+18 actionable tasks: 18 executed
+NETTEST_EXIT=0
+
+== GATE 3: gradlew :core:ktlintCheck ==
 > Task :core:loadKtlintReporters UP-TO-DATE
 > Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
 > Task :core:ktlintAndroidDebugSourceSetCheck SKIPPED
@@ -107,6 +152,11 @@ TEST_EXIT=0
 > Task :core:ktlintAppleMainSourceSetCheck UP-TO-DATE
 > Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
 > Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonMainSourceSet UP-TO-DATE
+> Task :core:ktlintCommonMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonTestSourceSet UP-TO-DATE
+> Task :core:ktlintCommonTestSourceSetCheck UP-TO-DATE
 > Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
 > Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
 > Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
@@ -133,31 +183,40 @@ TEST_EXIT=0
 > Task :core:ktlintNativeMainSourceSetCheck SKIPPED
 > Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
 > Task :core:ktlintNativeTestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverCommonMainSourceSet
-> Task :core:runKtlintCheckOverCommonTestSourceSet
-> Task :core:ktlintCommonMainSourceSetCheck
-> Task :core:ktlintCommonTestSourceSetCheck
-> Task :core:ktlintCheck
+> Task :core:ktlintCheck UP-TO-DATE
 
-BUILD SUCCESSFUL in 6s
-15 actionable tasks: 4 executed, 11 up-to-date
+BUILD SUCCESSFUL in 2s
+16 actionable tasks: 16 up-to-date
 LINT_EXIT=0
-== GATE: check-placeholders.ps1 ==
-PLACEHOLDER_ALLOWED=0
+
+== GATE 4: check-placeholders.ps1 -Path apps/shared/core -Language kotlin ==
+PLACEHOLDER_ALLOWED=17
 PLACEHOLDER_COUNT=0
 EXIT=0
 PH_EXIT=0
 
-== JVM commonTest tally (build/test-results/testDebugUnitTest) ==
-TEST_FILES=7 TESTS=30 FAILURES=0 SKIPPED=0
-Apple test source sets cross-compile: macosArm64 / iosArm64 / iosSimulatorArm64 = OK (link/run on macOS CI).
+== net/** JVM test tally (build/test-results/testDebugUnitTest, fresh from GATE 2) ==
+  io.teslasync.shared.core.net.ApiHttpClientAuthTest   tests=6 failures=0 errors=0 skipped=0 time=2.894s
+  io.teslasync.shared.core.net.ApiHttpClientErrorTest  tests=5 failures=0 errors=0 skipped=0 time=0.359s
+  io.teslasync.shared.core.net.ApiHttpClientRetryTest  tests=6 failures=0 errors=0 skipped=0 time=0.156s
+  io.teslasync.shared.core.net.ApiHttpClientUrlTest    tests=5 failures=0 errors=0 skipped=0 time=0.041s
+  io.teslasync.shared.core.net.CircuitBreakerTest      tests=3 failures=0 errors=0 skipped=0 time=0.067s
+  io.teslasync.shared.core.net.CircuitBreakerUnitTest  tests=4 failures=0 errors=0 skipped=0 time=0.011s
+  io.teslasync.shared.core.net.sse.SseClientTest       tests=7 failures=0 errors=0 skipped=0 time=0.435s
+  io.teslasync.shared.core.net.sse.SseDecodeTest       tests=9 failures=0 errors=0 skipped=0 time=0.025s
+  io.teslasync.shared.core.net.sse.SseFrameParserTest  tests=9 failures=0 errors=0 skipped=0 time=0.004s
+S4-0001 networking classes (ApiHttpClient*/CircuitBreaker*): CLASSES=6 TESTS=29 FAILURES=0 ERRORS=0 SKIPPED=0
+S4-0002 SSE classes (net.sse.*, share the package tree, also green): CLASSES=3 TESTS=25 FAILURES=0 ERRORS=0 SKIPPED=0
+net/** TOTAL: CLASSES=9 TESTS=54 FAILURES=0 ERRORS=0 SKIPPED=0
+Apple test source sets cross-compile: macosArm64 / iosArm64 / iosSimulatorArm64 link+run SKIPPED on Windows; EXECUTION on macOS CI (ADR-012).
 
 == Acceptance Criteria ==
-[x] /api/v1 prefix applied exactly once (web normalizePath parity); snake_case query params; null params skipped.
-[x] Retry + exponential backoff + jitter (bounds 0.75x-1.25x) + delay cap; idempotent verbs only; covered with VirtualScheduler (no real sleeps) + wall-clock guard.
-[x] Circuit-breaker open/half-open/close transitions covered (client-level + CircuitBreaker unit, single-flight probe, injected clock).
-[x] 401 -> onUnauthorized invoked exactly once then replayed; false short-circuits; error mapping complete (Network|Timeout|Http|Decode|CircuitOpen) incl. request-encode -> Decode (no retry).
-[x] No real network (Ktor MockEngine only); ktlint clean; placeholder gate clean.
+[x] /api/v1 prefix applied exactly once (web normalizePath parity); snake_case query params forwarded as-given; null params skipped.
+[x] Retry + exponential backoff + jitter (0.75x-1.25x bounds) + delay cap; idempotent verbs only; VirtualScheduler (no real sleeps) + wall-clock guard.
+[x] Circuit-breaker CLOSED/OPEN/HALF_OPEN transitions covered (client-level + CircuitBreaker unit; single-flight probe; injected clock).
+[x] 401 -> onUnauthorized invoked exactly once then replayed; returning false short-circuits to ApiError.Http(401); failedToken propagated.
+[x] Error mapping complete (Network|Timeout|Http(code,body)|Decode|CircuitOpen); request-encode failure -> Decode without retry/breaker pollution.
+[x] No real network (Ktor MockEngine only); ktlint clean across all source sets; placeholder gate clean (0 violations).
 
 TEST_EXIT=0
 LINT_EXIT=0
