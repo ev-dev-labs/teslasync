@@ -55,6 +55,11 @@ struct TeslaSyncApp: App {
                         _ = pushDelegate.runtime.consumePendingRoute()
                     }
                 }
+                .onOpenURL { url in
+                    if let route = AppRouteParser.parse(url: url) {
+                        selection = route
+                    }
+                }
         }
     }
 

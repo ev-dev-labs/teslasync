@@ -180478,6 +180478,1041 @@
           }
         }
       }
+    },
+    "widget.alerts.allClear": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "All clear"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All clear"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "All clear"
+          }
+        }
+      }
+    },
+    "widget.alerts.critical": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Critical"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Critical"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Critical"
+          }
+        }
+      }
+    },
+    "widget.alerts.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Open alerts that need attention."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open alerts that need attention."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Open alerts that need attention."
+          }
+        }
+      }
+    },
+    "widget.alerts.displayName": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Alerts"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alerts"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Alerts"
+          }
+        }
+      }
+    },
+    "widget.alerts.open": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Open"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Open"
+          }
+        }
+      }
+    },
+    "widget.charging.added": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Added"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Added"
+          }
+        }
+      }
+    },
+    "widget.charging.complete": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Complete"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Complete"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Complete"
+          }
+        }
+      }
+    },
+    "widget.charging.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Live charging progress and time remaining."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live charging progress and time remaining."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Live charging progress and time remaining."
+          }
+        }
+      }
+    },
+    "widget.charging.displayName": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Charging"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Charging"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Charging"
+          }
+        }
+      }
+    },
+    "widget.charging.idle": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Not charging"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not charging"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Not charging"
+          }
+        }
+      }
+    },
+    "widget.charging.power": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Power"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Power"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Power"
+          }
+        }
+      }
+    },
+    "widget.charging.remaining": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Time left"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time left"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Time left"
+          }
+        }
+      }
+    },
+    "widget.energy.charged": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "From charging"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From charging"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "From charging"
+          }
+        }
+      }
+    },
+    "widget.energy.cost": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cost"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cost"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cost"
+          }
+        }
+      }
+    },
+    "widget.energy.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Today's energy use and efficiency."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today's energy use and efficiency."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Today's energy use and efficiency."
+          }
+        }
+      }
+    },
+    "widget.energy.displayName": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Energy"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Energy"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Energy"
+          }
+        }
+      }
+    },
+    "widget.energy.efficiency": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Efficiency"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Efficiency"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Efficiency"
+          }
+        }
+      }
+    },
+    "widget.energy.used": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Used today"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Used today"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Used today"
+          }
+        }
+      }
+    },
+    "widget.freshness.accessibility": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Data freshness"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data freshness"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Data freshness"
+          }
+        }
+      }
+    },
+    "widget.freshness.live": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Live"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Live"
+          }
+        }
+      }
+    },
+    "widget.freshness.offline": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Offline"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offline"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Offline"
+          }
+        }
+      }
+    },
+    "widget.freshness.stale": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Stale"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stale"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Stale"
+          }
+        }
+      }
+    },
+    "widget.freshness.updated": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Updated"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updated"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Updated"
+          }
+        }
+      }
+    },
+    "widget.recentDrive.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Your latest trip at a glance."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your latest trip at a glance."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Your latest trip at a glance."
+          }
+        }
+      }
+    },
+    "widget.recentDrive.displayName": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Recent Drive"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recent Drive"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Recent Drive"
+          }
+        }
+      }
+    },
+    "widget.recentDrive.distance": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Distance"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Distance"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Distance"
+          }
+        }
+      }
+    },
+    "widget.recentDrive.duration": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Duration"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duration"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Duration"
+          }
+        }
+      }
+    },
+    "widget.recentDrive.efficiency": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Efficiency"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Efficiency"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Efficiency"
+          }
+        }
+      }
+    },
+    "widget.recentDrive.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "No recent drives"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No recent drives"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "No recent drives"
+          }
+        }
+      }
+    },
+    "widget.system.degraded": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Degraded"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Degraded"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Degraded"
+          }
+        }
+      }
+    },
+    "widget.system.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "TeslaSync service status at a glance."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TeslaSync service status at a glance."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "TeslaSync service status at a glance."
+          }
+        }
+      }
+    },
+    "widget.system.displayName": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "System Health"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System Health"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "System Health"
+          }
+        }
+      }
+    },
+    "widget.system.down": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Outage"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Outage"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Outage"
+          }
+        }
+      }
+    },
+    "widget.system.operational": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "All systems normal"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All systems normal"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "All systems normal"
+          }
+        }
+      }
+    },
+    "widget.system.services": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Services"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Services"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Services"
+          }
+        }
+      }
+    },
+    "widget.unavailable.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Open TeslaSync to refresh."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open TeslaSync to refresh."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Open TeslaSync to refresh."
+          }
+        }
+      }
+    },
+    "widget.unavailable.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "No recent data"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No recent data"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "No recent data"
+          }
+        }
+      }
+    },
+    "widget.vehicle.battery": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Battery"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battery"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Battery"
+          }
+        }
+      }
+    },
+    "widget.vehicle.charging": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Charging"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Charging"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Charging"
+          }
+        }
+      }
+    },
+    "widget.vehicle.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Battery, range, and where your car is."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battery, range, and where your car is."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Battery, range, and where your car is."
+          }
+        }
+      }
+    },
+    "widget.vehicle.displayName": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Vehicle Status"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vehicle Status"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Vehicle Status"
+          }
+        }
+      }
+    },
+    "widget.vehicle.location.unknown": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Location hidden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Location hidden"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Location hidden"
+          }
+        }
+      }
+    },
+    "widget.vehicle.parked": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Parked"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parked"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Parked"
+          }
+        }
+      }
+    },
+    "widget.vehicle.plugged": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Plugged in"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plugged in"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Plugged in"
+          }
+        }
+      }
+    },
+    "widget.vehicle.range": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Range"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Range"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Range"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

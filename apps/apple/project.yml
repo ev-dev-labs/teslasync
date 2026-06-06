@@ -51,6 +51,7 @@ targets:
       - framework: Frameworks/Shared.xcframework
         embed: false
       - target: TeslaSyncActivities
+      - target: TeslaSyncWidgets
     preBuildScripts:
       - path: Scripts/build-shared-xcframework.sh
         name: "Build KMP Shared.xcframework"
@@ -74,10 +75,12 @@ targets:
         CODE_SIGN_ENTITLEMENTS: Resources/TeslaSync-macOS.entitlements
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
         INFOPLIST_KEY_NSHumanReadableCopyright: ""
+        INFOPLIST_FILE: Resources/Info-macOS.plist
         ENABLE_HARDENED_RUNTIME: YES
     dependencies:
       - framework: Frameworks/Shared.xcframework
         embed: false
+      - target: TeslaSyncWidgets-macOS
     preBuildScripts:
       - path: Scripts/build-shared-xcframework.sh
         name: "Build KMP Shared.xcframework"
@@ -104,6 +107,53 @@ targets:
         INFOPLIST_FILE: Resources/Info-Activities.plist
         INFOPLIST_KEY_CFBundleDisplayName: TeslaSync Activities
         INFOPLIST_KEY_NSHumanReadableCopyright: ""
+
+  # ---- iOS WidgetKit extension ----
+  # Home Screen / Lock Screen / StandBy widgets. Reads cached summaries from the App
+  # Group store the app writes to; no networking lives here. The shared snapshot
+  # layer (Sources/Widgets/Shared) is compiled into both the app and this extension
+  # via file membership, the same way the Live Activity attributes are.
+  TeslaSyncWidgets:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: TeslaSyncWidgets
+      - path: Sources/Widgets/Shared
+      - path: Localization
+      - path: ../design/generated/apple
+        name: DesignTokens
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.teslasync.app.widgets
+        PRODUCT_MODULE_NAME: TeslaSyncWidgets
+        INFOPLIST_FILE: Resources/Info-Widgets.plist
+        CODE_SIGN_ENTITLEMENTS: Resources/TeslaSyncWidgets.entitlements
+        INFOPLIST_KEY_CFBundleDisplayName: TeslaSync
+        INFOPLIST_KEY_NSHumanReadableCopyright: ""
+
+  # ---- macOS WidgetKit extension ----
+  # Same widget sources, delivered through the macOS app. Accessory (Lock Screen)
+  # families are compiled out on macOS via `#if os(iOS)`.
+  TeslaSyncWidgets-macOS:
+    type: app-extension
+    platform: macOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: TeslaSyncWidgets
+      - path: Sources/Widgets/Shared
+      - path: Localization
+      - path: ../design/generated/apple
+        name: DesignTokens
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.teslasync.app.macos.widgets
+        PRODUCT_MODULE_NAME: TeslaSyncWidgets
+        INFOPLIST_FILE: Resources/Info-Widgets.plist
+        CODE_SIGN_ENTITLEMENTS: Resources/TeslaSyncWidgets-macOS.entitlements
+        INFOPLIST_KEY_CFBundleDisplayName: TeslaSync
+        INFOPLIST_KEY_NSHumanReadableCopyright: ""
+        ENABLE_HARDENED_RUNTIME: YES
 
   # ---- iOS test bundles ----
   TeslaSyncTests:
