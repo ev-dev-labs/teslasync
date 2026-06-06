@@ -1,0 +1,4 @@
+# UI automation failure artifacts (screenshots, UIA trees, run logs, TRX) — not tracked.
+*
+!.gitignore
+!.gitkeep

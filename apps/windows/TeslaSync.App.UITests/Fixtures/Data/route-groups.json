@@ -1,0 +1,23 @@
+{
+  "generated_by": "TeslaSync.App.UITests FakeApiServer",
+  "note": "Deterministic, seeded responses keyed by route group and requested state. Never a real backend.",
+  "groups": {
+    "DashboardExplore": { "endpoint": "/api/v1/dashboard", "success_count": 6 },
+    "Vehicles": { "endpoint": "/api/v1/vehicles", "success_count": 2 },
+    "Charging": { "endpoint": "/api/v1/charging", "success_count": 3 },
+    "TripsDriving": { "endpoint": "/api/v1/drives", "success_count": 4 },
+    "BatteryEnergy": { "endpoint": "/api/v1/vehicles/1/battery", "success_count": 1 },
+    "Analytics": { "endpoint": "/api/v1/analytics/fleet", "success_count": 5 },
+    "MapsLocation": { "endpoint": "/api/v1/locations", "success_count": 3 },
+    "VehicleSystems": { "endpoint": "/api/v1/climate/latest", "success_count": 1 },
+    "Automations": { "endpoint": "/api/v1/alerts/rules", "success_count": 2 },
+    "Notifications": { "endpoint": "/api/v1/notifications", "success_count": 3 },
+    "TelemetrySignals": { "endpoint": "/api/v1/signals/1/available", "success_count": 8 },
+    "Diagnostics": { "endpoint": "/api/v1/analytics/battery-degradation", "success_count": 1 },
+    "AdminDevTools": { "endpoint": "/api/v1/system/audit", "success_count": 4 },
+    "PowerUser": { "endpoint": "/api/v1/system/status", "success_count": 1 },
+    "SystemOps": { "endpoint": "/api/v1/system/health", "success_count": 1 },
+    "SettingsAccountIntegrations": { "endpoint": "/api/v1/user", "success_count": 1 },
+    "Sharing": { "endpoint": "/api/v1/drives/1", "success_count": 1 }
+  }
+}

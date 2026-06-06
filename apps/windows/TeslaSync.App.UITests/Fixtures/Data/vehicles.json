@@ -1,0 +1,28 @@
+{
+  "vehicles": [
+    {
+      "id": 1,
+      "display_name": "Fixture Model 3",
+      "vin": "5YJ3FIXTURE00001",
+      "state": "online",
+      "battery_level": 72,
+      "battery_range_m": 386243.0,
+      "charging_state": "Disconnected",
+      "inside_temp_c": 21.5,
+      "speed_mps": 0.0,
+      "odometer_m": 41842918.0
+    },
+    {
+      "id": 2,
+      "display_name": "Fixture Model Y",
+      "vin": "5YJYFIXTURE00002",
+      "state": "asleep",
+      "battery_level": 54,
+      "battery_range_m": 281635.0,
+      "charging_state": "Charging",
+      "inside_temp_c": 19.0,
+      "speed_mps": 0.0,
+      "odometer_m": 22310544.0
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    P2/W9-0002 — end-to-end UI automation for the packaged TeslaSync WinUI app via WinAppDriver.
+
+    Targets plain net10.0 (not net10.0-windows): every test drives the app *out of process* over the
+    W3C WebDriver HTTP protocol exposed by WinAppDriver, so the test host itself needs no WinUI/UI
+    thread and no Windows App SDK reference. The driver client is dependency-free (System.Net.Http +
+    System.Text.Json) on purpose — no Appium/WinAppDriver client package is pinned in
+    apps/versions.lock.md, and a self-contained client keeps `dotnet build` deterministic and green
+    even on an offline runner. The runner binary (WinAppDriver.exe / Appium) and a deployed packaged
+    app are supplied by the environment / run-ui-automation.ps1; when they are absent the suite fails
+    fast with an explicit reason (it is never silently skipped).
+
+    Every test carries [Trait("Category","UIAutomation")] so the W9-0002 gate can run the headless
+    unit suite (Category!=UIAutomation) and this suite (Category=UIAutomation) independently.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The route table / groups are the structural source of truth the UI tree is asserted against. -->
+    <ProjectReference Include="..\TeslaSync.App.Core\TeslaSync.App.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Deterministic, seeded API fixtures served by the in-test fake server (never a real backend). -->
+    <Content Include="Fixtures\Data\**\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Fixtures\Data\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </Content>
+  </ItemGroup>
+
+</Project>

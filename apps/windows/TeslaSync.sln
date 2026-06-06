@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TeslaSync.App.Tests", "Tesl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TeslaSync.App.Platform", "TeslaSync.App.Platform\TeslaSync.App.Platform.csproj", "{8659CEE7-99BC-449E-BF5C-F7F0762EDE9B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TeslaSync.App.UITests", "TeslaSync.App.UITests\TeslaSync.App.UITests.csproj", "{6581B6B5-C6B1-43E9-B808-AB9B7E7EDFF5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -105,6 +107,22 @@ Global
 		{8659CEE7-99BC-449E-BF5C-F7F0762EDE9B}.Release|x64.Build.0 = Release|Any CPU
 		{8659CEE7-99BC-449E-BF5C-F7F0762EDE9B}.Release|x86.ActiveCfg = Release|Any CPU
 		{8659CEE7-99BC-449E-BF5C-F7F0762EDE9B}.Release|x86.Build.0 = Release|Any CPU
+		{6581B6B5-C6B1-43E9-B808-AB9B7E7EDFF5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6581B6B5-C6B1-43E9-B808-AB9B7E7EDFF5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6581B6B5-C6B1-43E9-B808-AB9B7E7EDFF5}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{6581B6B5-C6B1-43E9-B808-AB9B7E7EDFF5}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{6581B6B5-C6B1-43E9-B808-AB9B7E7EDFF5}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6581B6B5-C6B1-43E9-B808-AB9B7E7EDFF5}.Debug|x64.Build.0 = Debug|Any CPU
+		{6581B6B5-C6B1-43E9-B808-AB9B7E7EDFF5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6581B6B5-C6B1-43E9-B808-AB9B7E7EDFF5}.Debug|x86.Build.0 = Debug|Any CPU
+		{6581B6B5-C6B1-43E9-B808-AB9B7E7EDFF5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6581B6B5-C6B1-43E9-B808-AB9B7E7EDFF5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6581B6B5-C6B1-43E9-B808-AB9B7E7EDFF5}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{6581B6B5-C6B1-43E9-B808-AB9B7E7EDFF5}.Release|ARM64.Build.0 = Release|Any CPU
+		{6581B6B5-C6B1-43E9-B808-AB9B7E7EDFF5}.Release|x64.ActiveCfg = Release|Any CPU
+		{6581B6B5-C6B1-43E9-B808-AB9B7E7EDFF5}.Release|x64.Build.0 = Release|Any CPU
+		{6581B6B5-C6B1-43E9-B808-AB9B7E7EDFF5}.Release|x86.ActiveCfg = Release|Any CPU
+		{6581B6B5-C6B1-43E9-B808-AB9B7E7EDFF5}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
