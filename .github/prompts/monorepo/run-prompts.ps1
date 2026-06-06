@@ -38,6 +38,11 @@
   .\run-prompts.ps1 -Single "0001-apps-skeleton.prompt.md"
                                                        # Run one prompt by filename (recursive search)
   .\run-prompts.ps1 -Reset                           # Wipe done.txt and start fresh
+  .\run-prompts.ps1 -AllowDeferredBlocked            # Auto-advance past sanctioned env-deferred BLOCKEDs
+                                                       # (macOS-only, WinAppDriver-absent, emulator-absent).
+                                                       # Records each to logs/deferred-blocked.csv for later
+                                                       # verification on a capable host.
+  .\run-prompts.ps1 -SelfTest                        # Run the log-gate self-tests and exit
 #>
 
 param(
@@ -51,7 +56,12 @@ param(
     [int]$DelaySeconds    = 10,
     [int]$TimeoutMinutes  = 600,              # Platform UI prompts often need more than schema work
     [switch]$ContinueOnRed = $false,         # Do not STOP after a red prompt (default: STOP on red)
-    [switch]$SelfTest      = $false          # Run Test-LogSaysRed self-test and exit
+    [switch]$AllowDeferredBlocked = $false,  # Auto-record + advance past sanctioned env-deferred BLOCKEDs
+                                              # (macOS-only, WinAppDriver-absent, emulator-absent, etc.)
+                                              # Recognized via BLOCKED_REASON sentinel patterns or an explicit
+                                              # DEFERRED_VERIFICATION=true marker. Predecessor-bypass and
+                                              # other unsanctioned BLOCKEDs still STOP hard.
+    [switch]$SelfTest      = $false          # Run Test-LogSaysRed + Test-LogIsDeferredBlocked self-test and exit
 )
 
 $ErrorActionPreference = "Stop"
@@ -262,6 +272,69 @@ function Test-LogSaysRed {
 }
 
 # ---------------------------------------------------------------------------
+# Deferred-BLOCKED detector: distinguish sanctioned host/runner-absence
+# BLOCKEDs (which the agent legitimately exited per the prompt's capability
+# note) from real red BLOCKEDs (predecessor bypass, broken gates, etc).
+#
+# A BLOCKED is "deferred" only if ALL of these are true:
+#   1. Final STATUS=BLOCKED
+#   2. A BLOCKED_REASON= line exists (the author explicitly documented why)
+#   3. EITHER an explicit `DEFERRED_VERIFICATION=true` marker is present,
+#      OR the BLOCKED_REASON text matches one of the host-deferral sentinels:
+#        - macOS / Xcode / Kotlin-Native-Apple    -> 'macos-deferred'
+#        - WinAppDriver / Appium / UI-automation  -> 'windows-ui-deferred'
+#        - Android emulator / adb / androidTest    -> 'android-deferred'
+#        - physical device / specific hardware     -> 'hardware-deferred'
+#        - generic "runner is (absent|not installed)" -> 'generic-runner'
+#
+# Note: EXIT= is intentionally NOT required to be non-zero. Real-world agents
+# emit `EXIT=0` + `STATUS=BLOCKED` when every host-runnable step was green and
+# only the cross-host verification is deferred (e.g. P1/S3 KMP scaffold).
+# Final-STATUS + sentinel-matched BLOCKED_REASON together are the contract.
+#
+# Returns: @($isDeferred, $reason, $category)
+# Category 'unrecognized' means BLOCKED_REASON exists but matched no sentinel
+# (treat as real red so we never silently swallow a predecessor-bypass).
+function Test-LogIsDeferredBlocked {
+    param([string]$LogPath)
+    if (-not (Test-Path $LogPath)) { return @($false, '', '') }
+    $content = Get-Content $LogPath -Raw
+
+    $statusMatches = [regex]::Matches($content, '(?m)^STATUS=(\w+)\s*$')
+    if ($statusMatches.Count -eq 0) { return @($false, '', '') }
+    if ($statusMatches[$statusMatches.Count - 1].Groups[1].Value -ne 'BLOCKED') { return @($false, '', '') }
+
+    # Capture BLOCKED_REASON= as a multi-line block (until next bare KEY= line or EOF).
+    # Authors typically soft-wrap reasons across several physical lines.
+    $reasonMatch = [regex]::Match($content,
+        '(?ms)^BLOCKED_REASON\s*=\s*(.+?)(?=^[A-Z][A-Z_0-9]*\s*=|^==+|\z)')
+    if (-not $reasonMatch.Success) { return @($false, '', 'no-reason') }
+    $reason = $reasonMatch.Groups[1].Value.Trim()
+    if ($reason.Length -eq 0) { return @($false, '', 'no-reason') }
+
+    # Explicit opt-in marker: prompt author or agent declared the BLOCKED
+    # is environmentally deferred. Wins over sentinel matching.
+    if ($content -match '(?im)^\s*DEFERRED_VERIFICATION\s*=\s*true\s*$') {
+        return @($true, $reason, 'explicit')
+    }
+
+    $sentinels = @(
+        @{ Cat='macos-deferred';      Pat='macos|mac\s*os|xcode|kotlin[/-]?native.*apple|apple\s*framework.*requires|requires\s+(?:a\s+)?macos' },
+        @{ Cat='windows-ui-deferred'; Pat='winappdriver|appium.*runner|ui[\s-]*automation\s*runner.*(?:absent|not\s*installed)' },
+        @{ Cat='android-deferred';    Pat='android.*emulator|androidtest|adb.*not\s*(?:available|installed)|no.*android.*device' },
+        @{ Cat='hardware-deferred';   Pat='physical\s*device.*required|hardware.*required|hololens|vision\s*pro' },
+        @{ Cat='generic-runner';      Pat='runner\s+is\s+(?:not\s*installed|absent)|automation\s*runner.*absent' }
+    )
+    foreach ($s in $sentinels) {
+        if ($reason -match "(?i)$($s.Pat)") {
+            return @($true, $reason, $s.Cat)
+        }
+    }
+
+    return @($false, $reason, 'unrecognized')
+}
+
+# ---------------------------------------------------------------------------
 # Self-test (-SelfTest): prove Test-LogSaysRed flags red logs and passes green.
 # This is the gate required by P0/0005 — a runner that records a BLOCKED prompt
 # as DONE is the exact failure mode we must never reproduce.
@@ -294,6 +367,56 @@ if ($SelfTest) {
     $mOk = ($missingRes[0] -eq $true)
     Write-Host ("  [{0}] log-missing -> isRed={1} (expected True)" -f $(if ($mOk) {'PASS'} else {'FAIL'}), $missingRes[0])
     if (-not $mOk) { $stFails++ }
+
+    # -----------------------------------------------------------------------
+    # Test-LogIsDeferredBlocked self-test
+    # -----------------------------------------------------------------------
+    Write-Host ""
+    Write-Host "Test-LogIsDeferredBlocked self-test:" -ForegroundColor Cyan
+
+    function Assert-Deferred([string]$name, [string]$body, [bool]$expectDeferred, [string]$expectCat) {
+        $f = Join-Path $tmp ($name + '.log')
+        Set-Content -Path $f -Value $body -Encoding UTF8
+        $res = Test-LogIsDeferredBlocked $f
+        $ok = ($res[0] -eq $expectDeferred)
+        if ($ok -and $expectDeferred -and $expectCat) { $ok = ($res[2] -eq $expectCat) }
+        $verdict = if ($ok) { 'PASS' } else { 'FAIL' }
+        Write-Host ("  [{0}] {1} -> isDeferred={2} cat='{3}' (expected isDeferred={4} cat='{5}')" -f `
+            $verdict, $name, $res[0], $res[2], $expectDeferred, $expectCat)
+        if (-not $ok) { $script:stFails++ }
+    }
+
+    Assert-Deferred 'macos-xcframework' `
+        "EXIT=1`nSTATUS=BLOCKED`nBLOCKED_REASON=Shared.xcframework packaging requires a macOS runner." `
+        $true 'macos-deferred'
+
+    Assert-Deferred 'winappdriver-absent' `
+        "EXIT=1`nSTATUS=BLOCKED`nBLOCKED_REASON=WinAppDriver/Appium UI-automation runner is not installed in this environment." `
+        $true 'windows-ui-deferred'
+
+    Assert-Deferred 'android-emulator' `
+        "EXIT=1`nSTATUS=BLOCKED`nBLOCKED_REASON=No Android emulator running; adb returned no devices." `
+        $true 'android-deferred'
+
+    Assert-Deferred 'explicit-marker' `
+        "EXIT=1`nSTATUS=BLOCKED`nBLOCKED_REASON=requires special test rig`nDEFERRED_VERIFICATION=true" `
+        $true 'explicit'
+
+    Assert-Deferred 'predecessor-bypass' `
+        "EXIT=1`nSTATUS=BLOCKED`nBLOCKED_REASON=predecessor P1/S3 has not run; no apps/shared/core directory exists." `
+        $false 'unrecognized'
+
+    Assert-Deferred 'no-reason' `
+        "EXIT=1`nSTATUS=BLOCKED" `
+        $false 'no-reason'
+
+    Assert-Deferred 'green-status-not-blocked' `
+        "EXIT=0`nSTATUS=DONE" `
+        $false ''
+
+    Assert-Deferred 'blocked-but-exit-zero-macos' `
+        "EXIT=0`nSTATUS=BLOCKED`nBLOCKED_REASON=macOS runner required (Kotlin/Native links Apple frameworks on macOS only)." `
+        $true 'macos-deferred'
 
     Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
 
@@ -352,6 +475,7 @@ Write-Host "  Model         : $(if ($Model) { $Model } else { '(default)' })"
 Write-Host "  Timeout       : $TimeoutMinutes min per prompt"
 Write-Host "  Dry run       : $DryRun"
 Write-Host "  Log-gate      : EXIT!=0 / STATUS=BLOCKED / [FAIL] / UNEXPECTED_COUNT → RED" -ForegroundColor Yellow
+Write-Host "  Deferred-OK   : $AllowDeferredBlocked $(if ($AllowDeferredBlocked) { '(macOS / WinAppDriver / emulator / hardware / explicit sentinels auto-advance)' } else { '(off — sanctioned BLOCKEDs will STOP; pass -AllowDeferredBlocked to auto-advance)' })" -ForegroundColor $(if ($AllowDeferredBlocked) { 'Yellow' } else { 'DarkGray' })
 Write-Host "  Run log       : $runLog"
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host ""
@@ -565,23 +689,77 @@ foreach ($p in $prompts) {
         }
 
         if ($gateFailures.Count -gt 0) {
-            $failCount++
-            $results += [PSCustomObject]@{ Id = $p.RelPath; Red = $true; Reason = ($gateFailures -join '; ') }
-            Log "$tag LOG-GATE FAILED ($($gateFailures -join '; ')) after $mins min"
-            Write-Host ""
-            Write-Host "  LOG-GATE FAILED after $mins min" -ForegroundColor Red
-            Write-Host "  Reason: $($gateFailures -join '; ')" -ForegroundColor Red
-            Write-Host "  CLI exited 0 but child log contains red markers." -ForegroundColor Red
-            Write-Host "  Log: $logFile" -ForegroundColor Red
-            Write-Host ""
-            # NEVER append a red prompt to done.txt — STOP unless -ContinueOnRed.
-            if ($ContinueOnRed) {
-                Log "$tag CONTINUE-ON-RED set; advancing past red prompt (log-gate)"
-                Write-Host "  -ContinueOnRed set; advancing past red prompt." -ForegroundColor Yellow
-            } else {
-                Log "STOPPED at red prompt $($p.Index) (log-gate). Resume with: -StartFrom $($p.Index)"
-                Write-Host "  STOP: red prompt. Pass -ContinueOnRed to override. Resume with: -StartFrom $($p.Index)" -ForegroundColor Yellow
-                break
+            # Check if this is a sanctioned host/runner-deferred BLOCKED that we can auto-handle.
+            $isDeferred  = $false
+            $deferReason = ''
+            $deferCat    = ''
+            if ($AllowDeferredBlocked -and $artifactLog -and (Test-Path $artifactLog)) {
+                $deferRes = Test-LogIsDeferredBlocked $artifactLog
+                if ($deferRes[0]) {
+                    $isDeferred  = $true
+                    $deferReason = $deferRes[1]
+                    $deferCat    = $deferRes[2]
+                }
+            }
+
+            if ($isDeferred) {
+                # Sanctioned environment-deferred BLOCKED: record + continue.
+                # Counts as success (sanctioned by prompt contract) but is also tracked
+                # in deferred-blocked.csv so a CI matrix lane on the capable host can re-verify.
+                $successCount++
+                $results += [PSCustomObject]@{ Id = $p.RelPath; Red = $false; Reason = "deferred ($deferCat)" }
+
+                # Append to done.txt so resume skips it
+                Add-Content -Path $doneFile -Value $p.RelPath
+                $doneSet.Add($p.RelPath) | Out-Null
+
+                # Append a machine-readable row to deferred-blocked.csv
+                $csvPath = Join-Path $logDir "deferred-blocked.csv"
+                if (-not (Test-Path $csvPath)) {
+                    Set-Content -Path $csvPath -Value 'timestamp,prompt_relpath,commit_sha,sentinel_category,artifact_log,blocked_reason' -Encoding UTF8
+                }
+                $sha = ''
+                try { $sha = (& git -C $RepoRoot rev-parse --short HEAD 2>$null) } catch {}
+                if (-not $sha) { $sha = 'unknown' }
+                $ts = Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ"
+                $artifactRelForCsv = $artifactLog
+                if ($artifactLog -and $artifactLog.StartsWith($RepoRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+                    $artifactRelForCsv = $artifactLog.Substring($RepoRoot.Length).TrimStart('\').Replace('\','/')
+                }
+                $reasonCsv = '"' + ($deferReason -replace '"', '""' -replace "`r?`n", ' ') + '"'
+                Add-Content -Path $csvPath -Value ("$ts,$($p.RelPath),$sha,$deferCat,$artifactRelForCsv,$reasonCsv")
+
+                Log "$tag DEFERRED [$deferCat] after $mins min — auto-recorded, advancing"
+                Write-Host ""
+                Write-Host "  DEFERRED [$deferCat] after $mins min — sanctioned by prompt contract" -ForegroundColor Yellow
+                $reasonPreview = if ($deferReason.Length -gt 180) { $deferReason.Substring(0, 180) + '...' } else { $deferReason }
+                Write-Host "  Reason : $reasonPreview" -ForegroundColor DarkYellow
+                Write-Host "  Action : appended to done.txt + deferred-blocked.csv; advancing" -ForegroundColor Yellow
+                Write-Host ""
+            }
+            else {
+                $failCount++
+                $results += [PSCustomObject]@{ Id = $p.RelPath; Red = $true; Reason = ($gateFailures -join '; ') }
+                Log "$tag LOG-GATE FAILED ($($gateFailures -join '; ')) after $mins min"
+                Write-Host ""
+                Write-Host "  LOG-GATE FAILED after $mins min" -ForegroundColor Red
+                Write-Host "  Reason: $($gateFailures -join '; ')" -ForegroundColor Red
+                Write-Host "  CLI exited 0 but child log contains red markers." -ForegroundColor Red
+                Write-Host "  Log: $logFile" -ForegroundColor Red
+                Write-Host ""
+                # NEVER append a red prompt to done.txt — STOP unless -ContinueOnRed.
+                if ($ContinueOnRed) {
+                    Log "$tag CONTINUE-ON-RED set; advancing past red prompt (log-gate)"
+                    Write-Host "  -ContinueOnRed set; advancing past red prompt." -ForegroundColor Yellow
+                } else {
+                    Log "STOPPED at red prompt $($p.Index) (log-gate). Resume with: -StartFrom $($p.Index)"
+                    Write-Host "  STOP: red prompt. Pass -ContinueOnRed to override. Resume with: -StartFrom $($p.Index)" -ForegroundColor Yellow
+                    if (-not $AllowDeferredBlocked) {
+                        Write-Host "  Hint : if this BLOCKED is environmentally deferred (macOS/WinAppDriver/emulator/etc)," -ForegroundColor DarkYellow
+                        Write-Host "         re-run with -AllowDeferredBlocked to auto-record + advance on sanctioned BLOCKEDs." -ForegroundColor DarkYellow
+                    }
+                    break
+                }
             }
         }
         else {
@@ -613,6 +791,10 @@ Write-Host "================================================================" -F
 Write-Host "  Succeeded : $successCount" -ForegroundColor Green
 Write-Host "  Failed    : $failCount" -ForegroundColor $(if ($failCount -gt 0) { "Red" } else { "Green" })
 Write-Host "  Skipped   : $skipCount" -ForegroundColor DarkGray
+$deferredCount = ($results | Where-Object { $_.Reason -like 'deferred*' }).Count
+if ($deferredCount -gt 0) {
+    Write-Host "  Deferred  : $deferredCount (env-pending; see logs/deferred-blocked.csv)" -ForegroundColor Yellow
+}
 Write-Host "  Run log   : $runLog"
 Write-Host "  Done file : $doneFile"
 Write-Host "================================================================" -ForegroundColor Cyan
