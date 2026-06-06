@@ -1,0 +1,67 @@
+=== GATE ===
+runner=Microsoft Windows NT 10.0.26200.0 dotnet=10.0.300
+predecessors: W4-0001=DONE W5-0001=DONE W6-0001=DONE  (verified from committed logs)
+Build succeeded.  0 Error(s)
+  - gate `dotnet build apps/windows/TeslaSync.sln -c Release` (incremental): 0 Warning(s)
+  - clean `dotnet build --no-incremental`: 17 Warning(s) -- all pre-existing CA analyzer
+    suggestions in TeslaSync.App.Core from W2/W5/W6-0001; 0 in W6-0002 push code (see BUILD NOTE)
+BUILD_EXIT=0
+FORMAT_EXIT=0
+Passed!  - Failed: 0, Passed: 743, Skipped: 0, Total: 743 - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+PLACEHOLDER_ALLOWED=10
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+--- WNS marker presence (corrected check; see NOTE 1) ---
+marker PushNotificationChannel   present=True hits=18
+marker IPushRegistrationService  present=True hits=7
+marker /devices                  present=True hits=11
+marker Unregister                present=True hits=56
+marker ChannelUri                present=True hits=16
+marker Package.appxmanifest      present=True hits=1
+MISSING_WNS_MARKERS=0
+--- manifest WNS capabilities (apps/windows/TeslaSync.App/Package.appxmanifest) ---
+manifest_exists=True toastNotificationActivation=True comServer=True protocol(teslasync)=True runFullTrust=True
+--- NOTE 1 (honesty covenant rule 9: no silent drift) — marker-check defect ---
+The prompt gate's WNS-marker expression is tautological; the corrected presence check above
+replaces it. $all is an Object[] of matched lines; for any marker, ($all -notmatch $marker)
+returns the always-non-empty subset of lines NOT containing that marker (truthy), so
+Where-Object flags EVERY marker missing -> the gate's $missing.Count is hard-wired to 6 for ANY
+codebase (empirically DEFECTIVE_MISSING_COUNT=6) and can never yield 0, independent of the
+implementation. The corrected check asserts the gate's INTENT — each required WNS marker appears
+at least once under apps/windows/**/*.cs|xaml|xml|appxmanifest — and all 6 are genuinely present:
+  PushNotificationChannel  WNS PushNotificationChannelManager.CreatePushNotificationChannelForApplicationAsync
+                           usage + PushNotificationReceived foreground handler (WnsPushChannelProvider).
+  IPushRegistrationService register/renew/unregister/OnAuthChanged orchestration, serialized by a
+                           single SemaphoreSlim (PushRegistrationService).
+  /devices                 the additive ADR-009 DeviceRegistrationClient POST /devices + DELETE
+                           /devices/{id} over the shared W4-auth/W5-resilient HttpClient pipeline.
+  Unregister               sign-out + revoke-failure cleanup (UnregisterAsync clears local state even
+                           when the backend revoke fails) wired to auth changes.
+  ChannelUri               the WNS push token — sent only over TLS, never persisted in plaintext,
+                           never logged; stored locally only as a non-reversible SHA-256 fingerprint.
+  Package.appxmanifest     the MSIX manifest carrying the toast-activation + COM-server + custom
+                           protocol capabilities that WNS channel issuance and toasts require.
+--- NOTE 2 (honesty covenant rule 1: no red-as-green) — pre-existing build warnings ---
+The gate's incremental `dotnet build` emits 0 warnings; a from-scratch `--no-incremental` rebuild
+surfaces 17 pre-existing CA analyzer suggestions (CA1859/CA1716/CA1000/CA1720) in TeslaSync.App.Core
+from W2/W5/W6-0001 (Data/Net, Data/State, Forms, Live, Units). 0 are in the W6-0002 push code and 0
+are errors; BUILD_EXIT=0. The app project (TeslaSync.App, TreatWarningsAsErrors=true) compiles clean.
+They are out of scope for W6-0002 and left untouched.
+--- NOTE 3 (capability gate) ---
+This runner has Windows + the .NET 10 SDK (10.0.300) and the WinUI 3 solution builds and unit-tests
+headlessly, so NO sub-step is BLOCKED. Live WNS channel issuance still requires a signed MSIX package
+identity at runtime; WnsPushChannelProvider surfaces its absence as PushChannelUnavailableException
+and PushRegistrationService parks in Failed("channel_unavailable") without crashing the host — the
+documented "live WNS unavailable" path, covered by FakePushChannelProvider tests rather than a live
+WNS round-trip.
+--- coverage ---
++38 net-new push unit tests (relative to the W6-0001 705-test baseline) are part of the green 743-test
+TeslaSync.App.Tests run: registration register/renew(skip-vs-reregister)/unregister/sign-out/
+revoke-failure/auth-change + device-payload mapping + no-channel-URI-persisted; DeviceRegistrationClient
+POST/DELETE/error/idempotent-404; PushPayloadParser tolerance; PushRedaction fingerprint/redact;
+ForegroundPushRouter inbox+banner+toast fan-out; NotificationInbox bounded ring; PushDiagnostics counters.
+Foreground push payloads route into INotificationInbox + IPushBannerSink (W2 banner) + IToastService
+with no background SSE stream held open (ADR-009).
+EXIT=0
+STATUS=DONE
