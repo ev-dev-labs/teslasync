@@ -69,6 +69,8 @@ private struct LaunchSurface: View {
     }
 }
 
-#Preview {
-    ContentView()
-}
+#if DEBUG
+    #Preview {
+        ContentView()
+    }
+#endif

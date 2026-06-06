@@ -1,0 +1,85 @@
+P4 · P3 · 0001 — SwiftUI UI component library
+prompt: .github/prompts/monorepo/p4-apple/P3-0001-ui-components.prompt.md
+mode:   code-complete + DEFERRED Xcode gate (user-approved). NEW: added a real macOS
+        `swiftc -typecheck` host gate, so the components are COMPILE-validated here (not just lint).
+        Design reviewed by the rubber-duck agent (per user workflow preference).
+
+=== PREFLIGHT ===
+Predecessors (Rule 7): P4/P1-0001 facade DONE (43d600e5), P4/P2-0001 tokens DONE (b40c9d6b).
+Clean-tree: all changes under apps/apple/** (Components/UI/** + Tests + 4 preview #if DEBUG wraps).
+Gates available: swiftc -typecheck (macOS SDK), swiftformat, swiftlint, placeholder. xcodebuild/iOS-sim DEFERRED.
+
+=== SURVEY ===
+- Mapped the web `components/ui` surface (per the prompt's explicit list + repo Copilot instructions:
+  Button/Badge/Card/Input/Modal/Select/Tabs/GlassPanel/Toggle/Tooltip/DataTable/Textarea, typography roles,
+  data primitives, utility). 54 components total.
+- Consumed existing tokens: Color.TS.*, Font.TS.*, TSSpacing/TSRadius/TSMotion, TSMaterial/TSChartPalette/TSAnimation.
+- rubber-duck review (gpt-5.5) raised the key risks acted on below.
+
+=== REASONING (incl. rubber-duck course-corrections) ===
+- VERIFICATION: rubber-duck flagged that lint can't catch unavailable/iOS-only SwiftUI APIs. FIX: CLT ships
+  swiftc + the macOS SDK (with SwiftUI), and the component layer does NOT import the Shared xcframework, so
+  `xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macosx15.0` REALLY compiles the components here.
+  Ran it after every batch — all clean. (#Preview needs Xcode's macro plugin → wrapped every preview in
+  `#if DEBUG` so the swiftc gate skips them and Xcode Debug still builds them.)
+- CROSS-PLATFORM: one source group builds both macOS + iOS targets. Used `#if os(iOS)/#elseif os(macOS)`
+  (not bare canImport) for platform services + the iOS-only horizontalSizeClass. Clipboard is os-gated
+  (UIPasteboard/NSPasteboard, @MainActor). Print + Fullscreen are CALLER-action/binding (window/context
+  dependent — not faked).
+- HONEST WRAPPERS: Modal/Drawer/Popover/Tooltip/Lightbox/ContextMenu are binding/action/content View
+  modifiers over native presentation (the idiomatic, non-app-context-assuming pattern).
+- ADAPTIVE: TSDataTable is hand-rolled (SwiftUI Table is poor on iPhone): columnar grid on macOS/regular,
+  card list on compact iPhone (horizontalSizeClass-gated); stable sort (offset tie-break), Set<ID> selection
+  + select-all, expansion, density, per-column Menu, bulk bar. TSRangeSlider = two native Sliders (accessible).
+- A11Y: custom controls carry .isButton/.isSelected/.isHeader + accessibilityLabel/Value; no hardcoded
+  user-facing strings (components take LocalizedStringKey; values rendered verbatim).
+- TESTABILITY: extracted pure helpers (TSTableSort.sorted, TSCommandFilter.filter, TSCommandNavigation.move,
+  TSMaskedValue.mask, TSAppearance.colorScheme) and unit-tested them.
+
+=== CHANGES === (apps/apple/Sources/Components/UI/** — 13 files, ~54 components)
+  + Typography.swift   TSHeading,TSPageTitle,TSSectionTitle,TSPanelTitle,TSSubhead,TSText,TSCaption,TSHelperText,TSErrorText,TSLabel,TSMetricValue,TSMetricLabel,TSCode
+  + Buttons.swift      TSButton(+Variant/Size, loading), TSButtonStyle
+  + Badges.swift       TSTone, TSBadge, TSStatusPill, TSIconBox
+  + Cards.swift        TSGlassPanel, TSCard, TSCardHeader, TSCardFooter
+  + Fields.swift       TSTextField, TSSecureField, TSTextArea, TSCheckbox, TSToggle (TSFieldChrome)
+  + Pickers.swift      TSSelect, TSPickerMenu, TSStepper, TSDatePickerBridge, TSThemePicker(+TSAppearance)
+  + Sliders.swift      TSSlider, TSRangeSlider (two native sliders)
+  + Tabs.swift         TSTab, TSTabs (scrollable, .isSelected)
+  + Overlays.swift     tsModal/tsPopover/tsTooltip/tsDrawer/tsLightbox (View modifiers), TSHelpTooltip, TSDrawerEdge
+  + Disclosure.swift   TSAccordion (DisclosureGroup), TSPagination
+  + Utility.swift      TSCopyButton (os-gated clipboard), TSPrintButton, TSFullscreenButton, TSMaskedValue, TSEditableText, TSLogo
+  + DataTable.swift    TSTableDensity, TSColumn, TSTableSort (pure), TSDataTable (adaptive, sort/select/expand/density/menu/bulk)
+  + CommandPalette.swift  TSCommand, TSCommandFilter (pure), TSCommandNavigation (pure), TSCommandPalette, tsContextMenu
+  + Tests/Unit/Components/ComponentLogicTests.swift  sort stability, command filter/nav, masking, appearance mapping
+  ~ Sources/ContentView.swift  wrapped #Preview in #if DEBUG (swiftc-gate compatibility)
+
+=== PARITY ===
+Component-library prompt (no page-manifest unit). Coverage = every listed web `components/ui` export has a
+native SwiftUI equivalent or an explicit native-wrapper modifier (enumerated in CHANGES). No PARITY_COVERED/REQUIRED emitted.
+
+=== GATE (host-runnable, executed on this machine) ===
+$ xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macosx15.0 <Tokens + all non-Shared sources>
+TYPECHECK_EXIT=0      # REAL macOS compile of the entire component + token + design + shell layer
+$ swiftformat --lint apps/apple apps/design/generated/apple → 0 require formatting
+SWIFTFORMAT_EXIT=0
+$ swiftlint --strict → 0 violations, 0 serious in 33 files
+SWIFTLINT_EXIT=0
+$ placeholder scan (.swift; common+swift; case-insensitive)
+PLACEHOLDER_COUNT=0
+$ xcodegen generate → Created project
+XCODEGEN_EXIT=0
+
+=== GATE (Xcode-only — DEFERRED to macos-latest CI, NOT run here; not faked) ===
+# swiftc -typecheck validates the macOS-active code paths; still deferred: full iOS+macOS app build/test on a
+# simulator/runner, #Preview macro expansion, and the iOS-only `#if os(iOS)` branches (not compiled on macOS here).
+#   xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+#   xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync-macOS build test
+IOS_BUILD_TEST=DEFERRED-macOS-pending
+MAC_BUILD_TEST=DEFERRED-macOS-pending
+
+=== COMMIT ===
+  git add apps/apple .github/prompts/monorepo/logs/p4-p3-0001-ui-components.log
+  git commit -m "feat(apps/apple): add SwiftUI UI component library (P4/P3)"
+
+EXIT=0
+STATUS=DONE
