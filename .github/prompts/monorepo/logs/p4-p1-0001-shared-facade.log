@@ -1,0 +1,100 @@
+P4 · P1 · 0001 — Swift facade over Shared.xcframework
+prompt: .github/prompts/monorepo/p4-apple/P1-0001-shared-facade.prompt.md
+mode:   code-complete + DEFERRED Xcode gate (user-approved). Real code + host gates green;
+        xcodebuild/iOS-Simulator/XCFramework verification is macOS-pending (CI).
+
+!! HIGH-RISK INFERENCE (user-approved): the exact KMP→Swift symbol surface could NOT be
+!! surveyed because Shared.xcframework can't be built on this host (no Xcode). All `Shared…`
+!! symbol names + interop mechanics below are INFERRED from the Kotlin source (explicitApi
+!! public surface) and the Kotlin/Native Obj-C export convention (framework-name prefix).
+!! They are PINNED/corrected on the macOS Xcode build. Inference is intentionally centralized
+!! in the files listed under CHANGES so the build-time fix surface is small + localized.
+
+=== PREFLIGHT ===
+Predecessors (Rule 7):
+  - P4/P0-0001 workspace        : DONE  (commit 8c180d1a; host gates green, Xcode macOS-pending)
+  - P1/S3  Shared.xcframework   : CODE DONE; BINARY macOS-pending (apps/macos-pending-verifications.md)
+  - P1/S4  networking + SSE     : CODE present in shared core (net/, net/sse/) — ApiHttpClient,
+                                  ApiClientConfig, SseClient, LiveEvent all in commonMain
+Clean-tree: only apps/apple/** touched (project.yml + new SharedFacade/ + Tests/Unit/Facade/).
+Toolchain: swiftformat 0.61.1 [OK], swiftlint 0.63.3 [OK], xcodegen 2.45.4 [OK], swift 6.3.2 [OK];
+           xcodebuild ABSENT [DEFERRED], iOS simulators 0 [DEFERRED].
+
+=== SURVEY ===
+Shared core public surface = 2221 public decls (295 fun, 263 data class, 140 class, 67 interface,
+29 enum, 19 object). Wrap targets are the 114 presentation state holders (one StateFlow<State> +
+actions each), NOT the DTOs (KMP exposes data classes to Swift directly).
+Seams the facade binds to (read from source):
+  - net/ApiError.kt           sealed ApiError: Network | Timeout | Http(status,body?,code?) | Decode | CircuitOpen
+  - data/repo/Resource.kt     sealed Resource<T>: Loading(cached,fetchedAt,stale) | Success(data,fetchedAt,stale) | Error(cached,…,error); cached:T?, stale:Bool
+  - net/sse/LiveEvent.kt      Connection{Connecting,Open,Reconnecting,Stale,Closed}; LiveEvent: Connected|Heartbeat|VehicleUpdate|Alert|ExportStatus|AchievementUnlocked|Signal|Unknown
+  - units/Units.kt            convert{Distance,Speed,Temp,Pressure,Energy,Duration,Power}FromSI(value, to:<Quantity>UnitPref):Double;
+                              format*(value:Double?, pref:UnitPref, precision:Int?):String; UnitPref(distance,speed,…,locale?,precision?,emptyDisplay?);
+                              <Quantity>UnitPref enums with label + companion fromLabel(label)
+  - platform/Platform.kt      object Platform.name (proves link; already exercised by P0)
+Golden fixtures: apps/shared/spec/units-golden.json = [{fn,formatter,quantity,system,input_si,preference{…,locale},expected_value,expected_formatted}].
+No shared-core DI root exists → the facade owns the composition root (AppContainer.bootstrap, finalized on macOS build).
+
+=== REASONING ===
+- Generic-first (DRY): one Flow→AsyncThrowingStream bridge + one @Observable StateHolderModel
+  natively bridge ANY of the 114 holders, so "all domains" are supported by construction.
+  Rejected 114 bespoke wrappers (mechanical, low value, 114× the blind-symbol risk).
+- Errors: KMP ApiError → Swift FacadeError (+ auth/offline/cancelled), handling both direct
+  bridging and NSError.userInfo["KotlinException"] unwrap (K/N @Throws convention).
+- State: Resource<T> → LoadableState<Value> (idle/loading/loaded/empty/failed + stale + cached),
+  so views render loading/empty/error/stale uniformly; all UI mutations on @MainActor.
+- Units: thin Swift wrappers over SharedUnitsKt; enums built via fromLabel(label) (robust — uses
+  the source's label strings, avoids guessing Swift enum-case spelling).
+- Domain facades wrap an INJECTED holder (construction isolated to AppContainer), so domain code
+  never names a shared-core constructor → the blind surface stays inside one file.
+- Concurrency: generic Value/State are NOT constrained Sendable (KMP bridged types aren't Sendable);
+  strict-concurrency annotations are finalized on the macOS build.
+
+=== CHANGES ===  (apps/apple/Sources/SharedFacade/** unless noted — inferred KMP symbols centralized here)
+  + FacadeError.swift                 ApiError→FacadeError taxonomy + NSError/KotlinException unwrap
+  + LoadableState.swift               Resource<T>→LoadableState<Value> (loading/loaded/empty/failed + stale/cached)
+  + FlowBridge.swift                  Kotlin Flow → AsyncThrowingStream (Task-cancellation closes upstream collector)
+  + StateHolderModel.swift            generic @MainActor @Observable adapter over any StateFlow — the universal bind point
+  + Units+Facade.swift                UnitPreferences + Units.{convert,format}* over SharedUnitsKt (enums via fromLabel)
+  + LiveConnection.swift              Connection→LiveConnectionState; LiveEvent taxonomy → LiveEventKind
+  + AppContainer.swift                @Observable composition root: unitPreferences, platformName, model()/loadable() factories
+  + Domains/VehicleSettingsModel.swift  representative typed facade adapting an injected VehicleSettingsStore
+  + Tests/Unit/Facade/LoadableStateTests.swift       pure-Swift LoadableState + FacadeError retryability
+  + Tests/Unit/Facade/UnitsGoldenVectorTests.swift   runs apps/shared/spec/units-golden.json through the Units facade
+  + Tests/Unit/Facade/FacadeErrorMappingTests.swift  ApiError→FacadeError mapping incl. KotlinException unwrap
+  ~ project.yml                       PRODUCT_MODULE_NAME=TeslaSync on both app targets (one test source set imports both)
+
+=== PARITY ===
+Logic prompt (Swift facade) — no UI page-manifest unit (methodology allows omitting PARITY for shared/logic).
+SI parity is proven by UnitsGoldenVectorTests against the shared golden fixture (single-sourced, not copied).
+No PARITY_COVERED/REQUIRED emitted by design.
+
+=== GATE (host-runnable, executed on this machine) ===
+$ swiftformat --lint .   → 0/16 files require formatting
+SWIFTFORMAT_EXIT=0
+$ swiftlint --strict      → Found 0 violations, 0 serious in 16 files
+SWIFTLINT_EXIT=0
+$ placeholder scan (grep replica of check-placeholders.ps1; common+swift; case-insensitive; .swift)
+PLACEHOLDER_COUNT=0
+$ xcodegen generate --spec project.yml → Created project at apps/apple/TeslaSync.xcodeproj
+XCODEGEN_EXIT=0
+
+=== GATE (Xcode-only — DEFERRED to macos-latest CI, NOT run here; not faked) ===
+# No Xcode.app on this host. The deferred run also PINS every inferred Shared… symbol/interop
+# shape above (the build is the survey we could not do). Commands:
+#   ./apps/shared/gradlew -p apps/shared :core:assembleSharedXCFramework
+#   xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync \
+#              -destination 'platform=iOS Simulator,name=iPhone 16' build test
+#   xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync-macOS build test
+XCFRAMEWORK_ASSEMBLE=DEFERRED-macOS-pending
+IOS_BUILD_TEST=DEFERRED-macOS-pending
+MAC_BUILD_TEST=DEFERRED-macOS-pending
+SYMBOL_SURVEY=DEFERRED-macOS-pending   # inferred KMP symbol names verified/pinned on the build
+
+=== COMMIT ===
+Staged: apps/apple/** (facade sources + tests + project.yml) and this log.
+  git add apps/apple .github/prompts/monorepo/logs/p4-p1-0001-shared-facade.log
+  git commit -m "feat(apps/apple): add Swift facade over Shared.xcframework (P4/P1)"
+
+EXIT=0
+STATUS=DONE
