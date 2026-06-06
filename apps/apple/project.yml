@@ -1,0 +1,147 @@
+name: TeslaSync
+
+# XcodeGen spec (checked in for reproducibility — the generated `.xcodeproj` is
+# git-ignored and rebuilt with `xcodegen generate`). One SwiftUI source group
+# (`Sources/`) is shared by the iOS/iPadOS and macOS app targets (ADR-002);
+# both consume the KMP shared core as the static `Shared.xcframework` (ADR-004).
+options:
+  bundleIdPrefix: io.teslasync
+  deploymentTarget:
+    iOS: "18.0"
+    macOS: "15.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    GENERATE_INFOPLIST_FILE: YES
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+
+targets:
+  # ---- iOS / iPadOS app ----
+  TeslaSync:
+    type: application
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: Sources
+      - path: Localization
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.teslasync.app
+        TARGETED_DEVICE_FAMILY: "1,2"
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations~ipad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+    dependencies:
+      - framework: Frameworks/Shared.xcframework
+        embed: false
+    preBuildScripts:
+      - path: Scripts/build-shared-xcframework.sh
+        name: "Build KMP Shared.xcframework"
+        basedOnDependencyAnalysis: false
+
+  # ---- macOS app ----
+  TeslaSync-macOS:
+    type: application
+    platform: macOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: Sources
+      - path: Localization
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.teslasync.app.macos
+        PRODUCT_NAME: TeslaSync
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
+        INFOPLIST_KEY_NSHumanReadableCopyright: ""
+        ENABLE_HARDENED_RUNTIME: YES
+    dependencies:
+      - framework: Frameworks/Shared.xcframework
+        embed: false
+    preBuildScripts:
+      - path: Scripts/build-shared-xcframework.sh
+        name: "Build KMP Shared.xcframework"
+        basedOnDependencyAnalysis: false
+
+  # ---- iOS test bundles ----
+  TeslaSyncTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/Unit
+    dependencies:
+      - target: TeslaSync
+      - framework: Frameworks/Shared.xcframework
+        embed: false
+
+  TeslaSyncUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/UI
+    dependencies:
+      - target: TeslaSync
+
+  # ---- macOS test bundles ----
+  TeslaSync-macOSTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/Unit
+    dependencies:
+      - target: TeslaSync-macOS
+      - framework: Frameworks/Shared.xcframework
+        embed: false
+
+  TeslaSync-macOSUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: Tests/UI
+    dependencies:
+      - target: TeslaSync-macOS
+
+schemes:
+  TeslaSync:
+    build:
+      targets:
+        TeslaSync: all
+    test:
+      targets:
+        - TeslaSyncTests
+        - TeslaSyncUITests
+    run:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
+  TeslaSync-macOS:
+    build:
+      targets:
+        TeslaSync-macOS: all
+    test:
+      targets:
+        - TeslaSync-macOSTests
+        - TeslaSync-macOSUITests
+    run:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

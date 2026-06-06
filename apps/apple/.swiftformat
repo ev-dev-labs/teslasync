@@ -1,0 +1,12 @@
+# SwiftFormat — TeslaSync Apple app (run: `swiftformat --lint apps/apple`)
+--swiftversion 6.0
+--exclude Frameworks,build,DerivedData
+
+# Rule tweaks aligned with SwiftLint above.
+--self remove
+--importgrouping testable-bottom
+--commas always
+--trimwhitespace always
+--wraparguments before-first
+--wrapparameters before-first
+--wrapcollections before-first

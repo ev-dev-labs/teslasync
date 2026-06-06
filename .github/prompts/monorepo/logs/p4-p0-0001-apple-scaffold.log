@@ -1,0 +1,113 @@
+P4 · P0 · 0001 — Apple Xcode workspace scaffold
+prompt: .github/prompts/monorepo/p4-apple/P0-0001-workspace-scaffold.prompt.md
+mode:   code-complete + DEFERRED Xcode gate (user-approved). Real code + host-runnable
+        gates green; xcodebuild/iOS-Simulator/XCFramework verification is macOS-pending (CI).
+
+=== PREFLIGHT ===
+Predecessors (Rule 7):
+  - P0/0003 version lock      : DONE  (apps/versions.lock.md + apps/apple/versions.lock.md present; Swift 6.0.1 / Xcode 26)
+  - P0/0001 apps skeleton     : DONE  (apps/ tree present: shared, apple, design, parity, tools)
+  - P1/S3  Shared.xcframework : CODE DONE; BINARY macOS-pending
+        (apps/shared/core builds host gates green; the .xcframework binary itself is listed in
+         apps/macos-pending-verifications.md as a deferred macos-latest artifact. Same deferral class.)
+Clean-tree: working tree contained only this prompt's intended changes (apps/apple/**, the log,
+        and one documented root .gitignore addition — see CHANGES / scope note).
+
+Toolchain on this dev host (Darwin, arm64):
+  swiftformat 0.61.1            [OK]
+  swiftlint   0.63.3 (portable) [OK]  wrapped: DYLD_FRAMEWORK_PATH=$(xcode-select -p)/usr/lib so the
+                                       CLT-bundled sourcekitdInProc.framework loads (no full Xcode)
+  xcodegen    2.45.4            [OK]
+  swift       6.3.2 (CLT)       [OK]
+  xcodebuild  ABSENT            [DEFERRED]  only Command Line Tools installed (no Xcode.app)
+  iOS sims    0 available       [DEFERRED]  simulators ship with full Xcode
+
+=== SURVEY ===
+Web/source-of-truth & contracts inspected:
+  - p4-apple/README.md (phase map; macOS+iOS adaptive; consumes KMP core as Shared.xcframework)
+  - 0000-methodology.prompt.md (Honesty Covenant, gate + parity contract)
+  - apps/versions.lock.md, apps/apple/versions.lock.md (Swift 6.0.1, Xcode 26, SDK-bundled SwiftUI/Charts/MapKit)
+KMP shared core (the dependency this scaffold links):
+  - XCFramework baseName "Shared" (static), targets iosArm64 / iosSimulatorArm64 / macosArm64
+    (apps/shared/core/build.gradle.kts → XCFramework("Shared") → task assembleSharedXCFramework)
+  - Platform seam: io.teslasync.shared.core.platform.Platform.name
+    (commonMain expect; appleMain actual → NSProcessInfo.operatingSystemVersionString)
+Existing apple files: Localization/Localizable.xcstrings (en/ar/he), versions.lock.md, .gitkeep (placeholder).
+Design tokens: apps/design/generated/apple/Tokens.swift does NOT exist yet (produced by the later P2 prompt).
+Placeholder gate tool: apps/tools/check-placeholders.ps1 (+ placeholder-patterns.json). No pwsh on host →
+    replicated faithfully via grep (case-insensitive, common+swift patterns, .swift only).
+
+=== REASONING ===
+Chosen approach:
+  - XcodeGen spec (apps/apple/project.yml) checked in for reproducibility; generated .xcodeproj git-ignored.
+    Rejected hand-maintained .pbxproj (merge-hostile) and Tuist (extra toolchain not in the version lock).
+  - One shared SwiftUI source group (Sources/) built by both app targets (TeslaSync iOS, TeslaSync-macOS),
+    adaptive at runtime (NavigationSplitView on macOS/iPad regular width, NavigationStack on iPhone compact).
+    Rejected two separate source trees (violates ADR-002 "adaptive layout counts, not two codebases").
+  - Shared.xcframework linked as a static framework dependency + a pre-build Run Script
+    (Scripts/build-shared-xcframework.sh) that assembles it from the KMP core and stages it into Frameworks/.
+    Rejected an SPM binaryTarget (the xcframework is produced by Gradle, not released as a versioned zip yet).
+  - Theme.swift ships a system-driven theme (light/dark + Dynamic Type) with stable call sites
+    (Theme.accent / Theme.background / .teslaSyncTheme()). P2 swaps in the generated Tokens.swift behind the
+    same API → no view churn. This is real (not a stub): the shell honors appearance + Dynamic Type today.
+  - Tests: SharedCoreReachableTests (XCTest reads Platform.name to prove the xcframework links) +
+    AppLaunchUITests (XCUITest asserts foreground launch). Compiled into per-platform unit/UI test bundles.
+  - Brand name rendered with Text(verbatim:) (brand names are not localized); no new string-catalog keys are
+    invented here (the 4.4 MB translation.* catalog is Xcode-managed; real UI strings arrive with pages).
+
+=== CHANGES ===
+New (apps/apple/**):
+  + project.yml                              XcodeGen spec: 2 app + 4 test targets, 2 schemes, shared Sources/+Localization/
+  + .swiftlint.yml                           SwiftLint config (included Sources,Tests)
+  + .swiftformat                             SwiftFormat config (--swiftversion 6.0)
+  + Sources/TeslaSyncApp.swift               @main App (WindowGroup; macOS titleBar/unified toolbar)
+  + Sources/ContentView.swift                Adaptive NavigationSplitView/NavigationStack shell + LaunchSurface
+  + Sources/Theme.swift                      Theme seam (accent/background) + .teslaSyncTheme() (Dynamic Type)
+  + Tests/Unit/SharedCoreReachableTests.swift  XCTest: Platform.name reachable + non-blank (proves link)
+  + Tests/UI/AppLaunchUITests.swift          XCUITest: app launches to foreground
+  + Scripts/build-shared-xcframework.sh      Pre-build: gradle :core:assembleSharedXCFramework → stage Frameworks/Shared.xcframework
+  + Frameworks/.gitkeep                      preserves the (otherwise git-ignored) staging dir
+Removed:
+  - apps/apple/.gitkeep                       redundant once the dir is populated
+Scope note (outside apps/apple/** — documented, not silent drift, Rule 9):
+  ~ .gitignore (repo root)                    repo convention centralizes ignores in root and ignores nested
+                                              .gitignore files (root :281). Added apps/apple Xcode build-artifact
+                                              rules: **/*.xcodeproj/, Frameworks/*.xcframework/, **/build/.
+                                              Required so the generated project + staged binary are never committed.
+
+=== PARITY ===
+N/A — infra/scaffold prompt (no page-manifest unit). First UI parity begins at P3 components / P7 pages.
+(No PARITY_COVERED/REQUIRED emitted by design.)
+
+=== GATE (host-runnable, executed on this machine) ===
+$ xcodegen generate --spec project.yml
+  Created project at apps/apple/TeslaSync.xcodeproj
+XCODEGEN_EXIT=0
+$ swiftformat --lint .
+  0/5 files require formatting
+SWIFTFORMAT_EXIT=0
+$ swiftlint --strict        # via DYLD-wrapped portable swiftlint
+  Done linting! Found 0 violations, 0 serious in 5 files.
+SWIFTLINT_EXIT=0
+$ placeholder scan (grep replica of check-placeholders.ps1: common+swift patterns, case-insensitive, .swift)
+PLACEHOLDER_COUNT=0
+
+=== GATE (Xcode-only — DEFERRED to macos-latest CI, NOT run here; not faked) ===
+# Reason: no Xcode.app on this dev host (Command Line Tools only); 0 iOS simulators.
+# Run on a macOS+Xcode runner to complete verification:
+#   ./apps/shared/gradlew -p apps/shared :core:assembleSharedXCFramework
+#   xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync \
+#              -destination 'platform=iOS Simulator,name=iPhone 16' build test
+#   xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync-macOS build test
+XCFRAMEWORK_ASSEMBLE=DEFERRED-macOS-pending
+IOS_BUILD_TEST=DEFERRED-macOS-pending
+MAC_BUILD_TEST=DEFERRED-macOS-pending
+
+=== COMMIT ===
+Staged: apps/apple/** (10 files, + deletion of redundant .gitkeep), root .gitignore, this log.
+Conventional-commit `feat(apps/apple): …` with Co-authored-by trailer (command below).
+  git add apps/apple .gitignore .github/prompts/monorepo/logs/p4-p0-0001-apple-scaffold.log
+  git commit -m "feat(apps/apple): scaffold SwiftUI app (macOS+iOS) consuming Shared.xcframework (P4/P0)"
+
+EXIT=0
+STATUS=DONE

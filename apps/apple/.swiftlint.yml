@@ -1,0 +1,36 @@
+# SwiftLint — TeslaSync Apple app (run: `cd apps/apple && swiftlint --strict`)
+included:
+  - Sources
+  - Tests
+
+excluded:
+  - Frameworks
+  - build
+  - DerivedData
+
+opt_in_rules:
+  - closure_spacing
+  - empty_count
+  - explicit_init
+  - first_where
+  - sorted_first_last
+  - toggle_bool
+  - unneeded_parentheses_in_closure_argument
+
+line_length:
+  warning: 120
+  error: 160
+  ignores_comments: true
+  ignores_urls: true
+
+identifier_name:
+  min_length:
+    warning: 2
+  excluded:
+    - id
+    - ok
+
+type_name:
+  max_length:
+    warning: 50
+    error: 60
