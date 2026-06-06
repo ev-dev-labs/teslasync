@@ -1,12 +1,8 @@
-=== p1-s8-0008-anomalies 2026-06-05T02:27:40.1059981-07:00 ===
+=== p1-s8-0008-anomalies 2026-06-06T16:38:27.5911335-07:00 ===
 > Task :core:kmpPartiallyResolvedDependenciesChecker
 > Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
-> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
-> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
-> Task :core:compileKotlinIosSimulatorArm64
+> Task :core:downloadKotlinNativeDistribution
 > Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
-> Task :core:iosSimulatorArm64MainKlibrary
-> Task :core:compileTestKotlinIosSimulatorArm64
 > Task :core:computeLocalPackageDependencyInputFiles SKIPPED
 > Task :core:generateSyntheticLinkageSwiftPMImportProjectForCinteropsAndLdDump SKIPPED
 > Task :core:generateUmbrellaPackageIdentifierBasedResolutionForDefault SKIPPED
@@ -14,58 +10,76 @@
 > Task :core:syncPersistedPackageResolvedToSynthetic SKIPPED
 > Task :core:fetchSyntheticImportProjectPackages SKIPPED
 > Task :core:convertSyntheticImportProjectIntoDefFileIphonesimulator SKIPPED
-> Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
-> Task :core:iosSimulatorArm64Test SKIPPED
-> Task :core:compileKotlinMacosArm64
 > Task :core:macosArm64ProcessResources NO-SOURCE
-> Task :core:macosArm64MainKlibrary
-> Task :core:compileTestKotlinMacosArm64
 > Task :core:convertSyntheticImportProjectIntoDefFileMacosx SKIPPED
-> Task :core:linkDebugTestMacosArm64 SKIPPED
-> Task :core:macosArm64Test SKIPPED
 > Task :core:preBuild UP-TO-DATE
 > Task :core:preDebugBuild UP-TO-DATE
-> Task :core:generateDebugResValues UP-TO-DATE
-> Task :core:generateDebugResources UP-TO-DATE
-> Task :core:packageDebugResources UP-TO-DATE
-> Task :core:parseDebugLocalResources UP-TO-DATE
-> Task :core:generateDebugRFile UP-TO-DATE
-> Task :core:javaPreCompileDebug UP-TO-DATE
+> Task :core:generateDebugResValues
+> Task :core:generateDebugResources
+> Task :core:packageDebugResources
 > Task :core:preDebugUnitTestBuild UP-TO-DATE
-> Task :core:generateDebugUnitTestStubRFile UP-TO-DATE
-> Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :core:javaPreCompileDebug
+> Task :core:javaPreCompileDebugUnitTest
+> Task :core:parseDebugLocalResources
+> Task :core:koverFindJar
 > Task :core:preReleaseBuild UP-TO-DATE
-> Task :core:generateReleaseResValues UP-TO-DATE
-> Task :core:generateReleaseResources UP-TO-DATE
-> Task :core:packageReleaseResources UP-TO-DATE
-> Task :core:parseReleaseLocalResources UP-TO-DATE
-> Task :core:generateReleaseRFile UP-TO-DATE
-> Task :core:javaPreCompileRelease UP-TO-DATE
+> Task :core:generateReleaseResValues
+> Task :core:generateDebugRFile
+> Task :core:generateReleaseResources
+> Task :core:generateDebugUnitTestStubRFile
+> Task :core:packageReleaseResources
 > Task :core:preReleaseUnitTestBuild UP-TO-DATE
-> Task :core:generateReleaseUnitTestStubRFile UP-TO-DATE
-> Task :core:javaPreCompileReleaseUnitTest UP-TO-DATE
+> Task :core:parseReleaseLocalResources
+> Task :core:javaPreCompileRelease
+> Task :core:javaPreCompileReleaseUnitTest
+> Task :core:generateReleaseRFile
+> Task :core:generateReleaseUnitTestStubRFile
+> Task :core:generateCommonMainTeslaSyncCacheInterface
+> Task :core:compileKotlinIosSimulatorArm64
+w: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SettingsBackupRepository.kt:77:19 'val monthNumber: Int' is deprecated. Use the 'month' property instead.
+
+> Task :core:iosSimulatorArm64MainKlibrary
+> Task :core:compileTestKotlinIosSimulatorArm64
+> Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
+> Task :core:iosSimulatorArm64Test SKIPPED
+
+> Task :core:compileKotlinMacosArm64
+w: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SettingsBackupRepository.kt:77:19 'val monthNumber: Int' is deprecated. Use the 'month' property instead.
+
+> Task :core:macosArm64MainKlibrary
+> Task :core:compileTestKotlinMacosArm64
+> Task :core:linkDebugTestMacosArm64 SKIPPED
+> Task :core:macosArm64Test SKIPPED
+
 > Task :core:compileDebugKotlinAndroid
+w: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SettingsBackupRepository.kt:77:19 'val monthNumber: Int' is deprecated. Use the 'month' property instead.
+
 > Task :core:compileDebugJavaWithJavac NO-SOURCE
+
 > Task :core:compileReleaseKotlinAndroid
+w: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SettingsBackupRepository.kt:77:19 'val monthNumber: Int' is deprecated. Use the 'month' property instead.
+
 > Task :core:processDebugJavaRes
-> Task :core:compileReleaseJavaWithJavac NO-SOURCE
-> Task :core:bundleLibRuntimeToJarDebug
 > Task :core:bundleLibCompileToJarDebug
+> Task :core:bundleLibRuntimeToJarDebug
+> Task :core:compileReleaseJavaWithJavac NO-SOURCE
 > Task :core:processReleaseJavaRes
-> Task :core:bundleLibRuntimeToJarRelease
 > Task :core:bundleLibCompileToJarRelease
+> Task :core:bundleLibRuntimeToJarRelease
 > Task :core:compileDebugUnitTestKotlinAndroid
 > Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
-> Task :core:compileReleaseUnitTestKotlinAndroid
 > Task :core:processDebugUnitTestJavaRes
+> Task :core:compileReleaseUnitTestKotlinAndroid
 > Task :core:testDebugUnitTest
 > Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
 > Task :core:processReleaseUnitTestJavaRes
 > Task :core:testReleaseUnitTest
 > Task :core:allTests NO-SOURCE
 
-BUILD SUCCESSFUL in 28s
-37 actionable tasks: 19 executed, 18 up-to-date
+[Incubating] Problems report is available at: file:///D:/repos/teslasync/apps/shared/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 2m 49s
+38 actionable tasks: 38 executed
 TEST_EXIT=0
 > Task :core:loadKtlintReporters UP-TO-DATE
 > Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
@@ -89,6 +103,10 @@ TEST_EXIT=0
 > Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
 > Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
 > Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonMainSourceSet UP-TO-DATE
+> Task :core:ktlintCommonMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonTestSourceSet UP-TO-DATE
+> Task :core:ktlintCommonTestSourceSetCheck UP-TO-DATE
 > Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
 > Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
 > Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
@@ -115,32 +133,72 @@ TEST_EXIT=0
 > Task :core:ktlintNativeMainSourceSetCheck SKIPPED
 > Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
 > Task :core:ktlintNativeTestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverCommonMainSourceSet
-> Task :core:ktlintCommonMainSourceSetCheck
-> Task :core:runKtlintCheckOverCommonTestSourceSet
-> Task :core:ktlintCommonTestSourceSetCheck
-> Task :core:ktlintCheck
+> Task :core:ktlintCheck UP-TO-DATE
 
-BUILD SUCCESSFUL in 10s
-16 actionable tasks: 4 executed, 12 up-to-date
+BUILD SUCCESSFUL in 5s
+16 actionable tasks: 16 up-to-date
 LINT_EXIT=0
 PH_EXIT=0
+
+GATE SUMMARY: TEST_EXIT=0 LINT_EXIT=0 PH_EXIT=0
+
+Test breakdown (freshly executed via :core:allTests --rerun-tasks; testDebugUnitTest and
+testReleaseUnitTest both ran and are identical/green):
+  AnomaliesRepositoryContractTest  tests=4  failures=0 errors=0   (data/repo)
+  AnomaliesStoreTest               tests=7  failures=0 errors=0   (presentation/anomalies)
+  TOTAL                            tests=11 failures=0 errors=0
+Native targets (iosSimulatorArm64Test / macosArm64Test) are SKIPPED on the Windows host;
+the JVM/Android unit-test source set is the common-code coverage surface and is green.
+The only compiler warning (SettingsBackupRepository.kt:77 monthNumber deprecation) is
+pre-existing and unrelated to this slice.
+Placeholder gate clean (PH_EXIT=0): no TODO/FIXME/"coming soon"/stub markers under apps/shared/core.
+
 === PARITY ===
-Web source: web/src/api/hooks/useAnomalies.ts (1 hook, 0 mutations)
-Reads ported (1/1):
-  [x] useAnomalies -> AnomaliesStore.anomalies(vehicleId, days=7)
-        endpoint: GET /analytics/anomalies?vehicle_id={id}&days={days} (snake_case)
-        enabled: vehicleId !== null -> disabled non-fetching Loading feed when null
-        staleTime: STALE_TIMES.SLOW (5m) -> CacheDomain.Anomalies defaultTtl 5.minutes
-        derivation: none (no web select) -> no golden vectors required
-Mutations ported (0/0): none
-Files:
-  apps/shared/core/.../cache/CacheDomain.kt (Anomalies entry)
-  apps/shared/core/.../data/repo/AnomaliesRepository.kt
-  apps/shared/core/.../data/repo/HttpAnomaliesRepository.kt
-  apps/shared/core/.../presentation/anomalies/AnomaliesStore.kt
-  apps/shared/core/.../commonTest/.../data/repo/AnomaliesRepositoryContractTest.kt
-  apps/shared/core/.../commonTest/.../presentation/anomalies/AnomaliesStoreTest.kt
-Gate: TEST_EXIT=0 LINT_EXIT=0 PH_EXIT=0
+Ported web/src/api/hooks/useAnomalies.ts (1 read + 0 mutations = 1 hook) ->
+AnomaliesRepository (S7) + HttpAnomaliesRepository + AnomaliesStore (S8). UI-free; SI preserved.
+
+Reads (1):
+ 1. useAnomalies(vehicleId, days=7)  -> AnomaliesStore.anomalies(vehicleId, days=7) : StateFlow<Resource<JsonElement>>
+        GET /analytics/anomalies?vehicle_id={vehicleId}&days={days}  (snake_case params, default days=7,
+        matching the web template literal exactly). Verified against internal/api/router.go:3316
+        r.Get("/analytics/anomalies", anomalyHandler.GetAnomalies).
+        Cache-then-network (ADR-013): the JsonElement envelope ({anomalies, health_summary,
+        signals_monitored, anomalies_last_7d, anomalies_last_24h}) is cached under key "{vehicleId}:{days}"
+        in CacheDomain.Anomalies, emitting cache slot (Loading) then refreshed network value (Success).
+        TTL = CacheDomain.Anomalies 5.minutes == web STALE_TIMES.SLOW (5 * 60_000 ms) — verified in
+        web/src/lib/constants.ts:48-60. The web queryKey ['anomalies', vehicleId, days] maps onto the
+        per-(vehicle,window) feed identity in the store (one shared upstream per (vehicleId, days) tuple).
+        enabled: vehicleId !== null reproduced as the disabled-feed gate: a null vehicleId returns a
+        stable shared feed that never touches the repository and stays at the initial Loading slot
+        (asserted: disabledFeedNeverFetchesAndStaysLoading, refreshIsNoOpForADisabledFeed).
+
+Mutations (0): the web hook file contains exactly one useQuery and no mutations, so there is no
+invalidation surface — neither the S7 port nor the S8 holder exposes a write/refresh-all path.
+refreshAnomalies(vehicleId, days) re-collects an OBSERVED feed (asserted:
+refreshReFetchesTheObservedFeed); it is a no-op for an unobserved or disabled feed (asserted:
+refreshIsNoOpForAnUnobservedFeed, refreshIsNoOpForADisabledFeed).
+
+Derivations (0): useAnomalies applies no select/transform — it returns the raw query result — so
+there is NO client-side derivation to golden-lock. Consequently no AnomaliesGoldenTest is added
+(golden vectors are only required "for any non-trivial derivation"; there are none here). The
+payload is carried verbatim as JsonElement and round-trips through the cache unchanged
+(asserted: cachedPayloadKeepsSiValuesVerbatim — z_score/baseline preserved, no _mph/_kwh leakage).
+
+SI: anomaly value/baseline/z_score are raw signal magnitudes, SI on the wire, kept SI through the
+cache; display conversion is the S5 render-boundary's job, never this layer's.
+
+Reads emit cache->network (asserted in BOTH layers: AnomaliesRepositoryContractTest
+.readEmitsCacheThenNetworkSuccess and AnomaliesStoreTest.readEmitsCacheThenNetwork).
+Endpoint/params locked at build time (AnomaliesRepositoryContractTest: snake_case vehicle_id,
+explicit + default days, no double /api/v1 prefix, no camelCase vehicleId).
+
+Files (apps/shared/core/**):
+  commonMain data/repo/AnomaliesRepository.kt        (interface: anomalies(vehicleId, days=7))
+  commonMain data/repo/HttpAnomaliesRepository.kt    (CachingRepository<JsonElement>, CacheDomain.Anomalies)
+  commonMain presentation/anomalies/AnomaliesStore.kt (shared StateFlow feed + enabled-gate + refresh)
+  commonMain cache/CacheDomain.kt                    (Anomalies = "anomalies", 5.minutes)
+  commonTest data/repo/AnomaliesRepositoryContractTest.kt
+  commonTest presentation/anomalies/AnomaliesStoreTest.kt
+
 EXIT=0
 STATUS=DONE
