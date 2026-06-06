@@ -1,17 +1,28 @@
-=== p1-s8-0009-apihealth 2026-06-05T02:40:00-07:00 ===
+=== p1-s8-0009-apihealth 2026-06-06T16:55:31-07:00 ===
+host: Windows (apple targets skip via kotlin.native.ignoreDisabledTargets=true;
+      iosSimulatorArm64Test / macosArm64Test SKIPPED exactly as on the macOS run —
+      the ApiHealth tests are pure commonTest, executed under the Android JVM unit-test
+      target, so host choice does not change coverage).
+gate run from apps/shared (gradlew root; `:core:` task paths), forced fresh re-execution.
+
+> ./gradlew :core:allTests --rerun-tasks --console=plain
+> Task :core:compileKotlinIosSimulatorArm64
 > Task :core:compileTestKotlinIosSimulatorArm64
+> Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
 > Task :core:iosSimulatorArm64Test SKIPPED
+> Task :core:compileKotlinMacosArm64
 > Task :core:compileTestKotlinMacosArm64
+> Task :core:linkDebugTestMacosArm64 SKIPPED
 > Task :core:macosArm64Test SKIPPED
 > Task :core:compileDebugKotlinAndroid
 > Task :core:compileReleaseKotlinAndroid
 > Task :core:compileDebugUnitTestKotlinAndroid
 > Task :core:testDebugUnitTest
+> Task :core:compileReleaseUnitTestKotlinAndroid
 > Task :core:testReleaseUnitTest
 > Task :core:allTests NO-SOURCE
-
-BUILD SUCCESSFUL in 29s
-37 actionable tasks: 19 executed, 18 up-to-date
+BUILD SUCCESSFUL in 2m 25s
+38 actionable tasks: 38 executed
 TEST_EXIT=0
 
 --- ApiHealth test results (core/build/test-results/testDebugUnitTest) ---
@@ -28,18 +39,21 @@ TEST_EXIT=0
   reProbesOnEachPollInterval
   bucketsDegradedAndOfflineFromProbe
   doesNotProbeWithoutASubscriber
+ApiHealth totals: 10 tests, 0 failures, 0 errors, 0 skipped.
 
+> ./gradlew :core:ktlintCheck --console=plain
 > Task :core:ktlintCommonMainSourceSetCheck
 > Task :core:ktlintCommonTestSourceSetCheck
 > Task :core:ktlintAndroidUnitTestSourceSetCheck
+> Task :core:ktlintAppleMainSourceSetCheck
 > Task :core:ktlintAppleTestSourceSetCheck
 > Task :core:ktlintCheck
-
-BUILD SUCCESSFUL in 11s
-16 actionable tasks: 8 executed, 8 up-to-date
+BUILD SUCCESSFUL in 6s
+16 actionable tasks: 16 up-to-date
 LINT_EXIT=0
 
-PLACEHOLDER_ALLOWED=13
+> ./apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
+PLACEHOLDER_ALLOWED=17
 PLACEHOLDER_COUNT=0
 PH_EXIT=0
 
@@ -53,6 +67,9 @@ Reads ported (1/1):
         poll: web refetchInterval POLL_INTERVAL_MS=15s -> ApiHealthStore.pollIntervalMillis=15000
               (SharingStarted.WhileSubscribed mirrors refetchIntervalInBackground:false +
                remount-refetch); no cache/staleTime surface because the web hook never caches.
+        timeout/failure: web 5s PROBE_TIMEOUT_MS + try/catch -> HttpApiHealthRepository.probe()
+              routes through the resilient S4 client and swallows every transport/non-2xx into
+              ok=false (offline) rather than throwing (coroutine cancellation still propagates).
         derivation: bucket() + `if (!data) unknown` -> ApiHealth.bucket()/deriveState()
               ok (2xx <500ms) | degraded (2xx >=500ms) | offline (!ok) | unknown (no probe)
               -> golden vectors apps/shared/core/spec/api-health-golden.json (10 scenarios:
