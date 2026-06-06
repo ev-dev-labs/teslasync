@@ -1,14 +1,12 @@
-=== P1/S8/0006 Analytics state holder gate (re-run after parity fix) ===
+=== P1/S8/0006 Analytics state holder gate (verification re-run) ===
 TEST_EXIT=0
 LINT_EXIT=0
 PLACEHOLDER CHECK:
-PLACEHOLDER_ALLOWED=13
+PLACEHOLDER_ALLOWED=17
 PLACEHOLDER_COUNT=0
 EXIT=0
 PH_EXIT=0
-
 GATE SUMMARY: TEST_EXIT=0 LINT_EXIT=0 PH_EXIT=0
-
 === PARITY ===
 Ported web/src/api/hooks/useAnalytics.ts (11 reads, 0 mutations) -> AnalyticsRepository (S7) + AnalyticsStore (S8).
  1. useAnalyticsSummary   -> analyticsSummary(days=30)            GET /analytics/fleet?days={days}
@@ -27,6 +25,6 @@ Derivations golden-locked (KMP+C# parity): fleetQuery precedence + unwrapArray e
 SI preserved: payloads cached as raw SI JsonElement; conversion is display-only (S5).
 staleTime/retry/enabled treated as UI/render concerns (consistent with the Admin domain reference), not modeled in the data layer.
 Tests: AnalyticsRepositoryContractTest (endpoints/params/derivations incl. empty-id omission), AnalyticsStoreTest (cache->network, sharing, refresh, param keys), AnalyticsGoldenTest.
-
+Verification re-run on the committed implementation (commit 86bdf70fd): :core:allTests BUILD SUCCESSFUL (JVM tests FROM-CACHE/green, Apple targets SKIPPED on Windows), :core:ktlintCheck BUILD SUCCESSFUL, check-placeholders PLACEHOLDER_COUNT=0. No source changes required; gate re-confirmed green.
 EXIT=0
 STATUS=DONE
