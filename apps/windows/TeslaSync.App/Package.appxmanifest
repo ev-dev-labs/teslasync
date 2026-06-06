@@ -35,6 +35,18 @@
         <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
       </uap:VisualElements>
+      <Extensions>
+        <!--
+          Custom URI scheme used for OIDC PKCE auth callbacks
+          (teslasync://oauth/callback) and shareable deep links
+          (teslasync://app/<route>). ADR-008 / authentik-native-clients runbook §1.1.
+        -->
+        <uap:Extension Category="windows.protocol">
+          <uap:Protocol Name="teslasync">
+            <uap:DisplayName>TeslaSync</uap:DisplayName>
+          </uap:Protocol>
+        </uap:Extension>
+      </Extensions>
     </Application>
   </Applications>
 

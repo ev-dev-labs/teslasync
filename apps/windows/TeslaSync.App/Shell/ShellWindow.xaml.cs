@@ -4,6 +4,10 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using TeslaSync.App.Auth;
+using TeslaSync.App.Auth.Onboarding;
+using TeslaSync.App.Components.Feedback;
+using TeslaSync.App.Core.Auth;
 using TeslaSync.App.Core.Navigation;
 using Windows.Graphics;
 using Windows.System;
@@ -24,9 +28,11 @@ public sealed partial class ShellWindow : Window
     private readonly ShellViewModel _viewModel = new();
     private readonly WindowStateService _windowState = new();
     private readonly Dictionary<string, NavigationViewItem> _navItems = new(StringComparer.Ordinal);
+    private readonly TsTeslaReauthBanner _authBanner = new();
 
     private ElementTheme _theme = ElementTheme.Default;
     private bool _navigating;
+    private string? _pendingProtectedPath;
 
     public ShellWindow()
     {
@@ -38,6 +44,12 @@ public sealed partial class ShellWindow : Window
 
         ShellBreadcrumbs.ItemsSource = _viewModel.Breadcrumbs;
         SearchBox.PlaceholderText = Localization.Get("shell.search.placeholder", "Search"); // parity:allow PlaceholderText is the WinUI hint API
+
+        // Onboarding / sign-in surface (P2/W4-0001) for the public onboarding route.
+        _viewModel.PageFactory.Register("Onboarding", static () => new OnboardingView());
+        ReauthBannerHost.Content = _authBanner;
+        AppAuth.Service.StateChanged += OnAuthStateChanged;
+        Closed += OnShellClosed;
 
         ConfigureWindow();
         BuildNavigation();
@@ -240,6 +252,21 @@ public sealed partial class ShellWindow : Window
             }
 
             var match = _viewModel.Registry.Resolve(path);
+
+            // Auth gating (P2/W4-0001, ADR-008): protected routes require a live session.
+            // When signed out, redirect to the public onboarding surface and surface the
+            // re-authentication banner rather than rendering authenticated chrome.
+            if (match.Route.AuthRequired && !AppAuth.IsAuthenticated)
+            {
+                _pendingProtectedPath = match.MatchedPath;
+                ShowAuthBanner();
+                match = _viewModel.Registry.Resolve("onboarding");
+            }
+            else
+            {
+                HideAuthBanner();
+            }
+
             if (pushHistory)
             {
                 _viewModel.History.Push(match.MatchedPath);
@@ -366,4 +393,51 @@ public sealed partial class ShellWindow : Window
             root.RequestedTheme = theme;
         }
     }
+
+    private void OnAuthStateChanged(object? sender, AuthState state)
+    {
+        if (DispatcherQueue.HasThreadAccess)
+        {
+            ApplyAuthState(state);
+        }
+        else
+        {
+            DispatcherQueue.TryEnqueue(() => ApplyAuthState(state));
+        }
+    }
+
+    private void ApplyAuthState(AuthState state)
+    {
+        if (state.IsAuthenticated)
+        {
+            var target = _pendingProtectedPath ?? string.Empty;
+            _pendingProtectedPath = null;
+            HideAuthBanner();
+            NavigateTo(target);
+        }
+        else if (state is AuthState.SignedOut)
+        {
+            // A sign-out (or expired session) must re-gate the current route immediately.
+            NavigateTo(_viewModel.CurrentPath);
+        }
+    }
+
+    private void ShowAuthBanner()
+    {
+        _authBanner.Title = Localization.Get("auth.reauth.title", "Sign in required");
+        _authBanner.Message = Localization.Get(
+            "auth.reauth.message",
+            "Your session has ended. Sign in to access this page.");
+        _authBanner.IsOpen = true;
+        ReauthBannerHost.Visibility = Visibility.Visible;
+    }
+
+    private void HideAuthBanner()
+    {
+        _authBanner.IsOpen = false;
+        ReauthBannerHost.Visibility = Visibility.Collapsed;
+    }
+
+    private void OnShellClosed(object sender, WindowEventArgs args) =>
+        AppAuth.Service.StateChanged -= OnAuthStateChanged;
 }

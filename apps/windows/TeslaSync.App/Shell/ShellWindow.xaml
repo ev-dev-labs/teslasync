@@ -109,6 +109,14 @@
                         x:Name="HeaderTitle"
                         FontSize="28"
                         FontWeight="SemiBold" />
+
+                    <!-- Re-authentication / sign-in-required notice (P2/W4-0001). -->
+                    <ContentControl
+                        x:Name="ReauthBannerHost"
+                        Margin="0,8,0,0"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch"
+                        Visibility="Collapsed" />
                 </StackPanel>
 
                 <Frame x:Name="ContentFrame" Grid.Row="1" />
