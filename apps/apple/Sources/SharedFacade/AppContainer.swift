@@ -20,6 +20,18 @@ public final class AppContainer {
         self.unitPreferences = unitPreferences
     }
 
+    /// The app's auth provider once connected (P4/P5). The auth coordinator
+    /// implements the `AuthTokenProviding` (bearer header) + `AuthChallengeHandling`
+    /// (single-flight 401 refresh) seams; the future `bootstrap(baseURL:)` hands
+    /// this to the KMP `ApiHttpClient` and the SSE `LiveConnection` so networking
+    /// and live reconnect re-authenticate centrally (ADR-008/ADR-009).
+    @ObservationIgnored public private(set) var auth: (any AuthTokenProviding & AuthChallengeHandling)?
+
+    /// Connects the auth coordinator's networking/SSE seams to the container.
+    public func connectAuth(_ provider: any AuthTokenProviding & AuthChallengeHandling) {
+        auth = provider
+    }
+
     /// Host platform identity from the shared core — also proves the link works.
     public var platformName: String {
         SharedPlatform.shared.name

@@ -1,0 +1,120 @@
+prompt: .github/prompts/monorepo/p4-apple/P5-0001-auth-onboarding.prompt.md
+mode:   code-complete + DEFERRED Xcode build/test gate (user-approved, predecessor-consistent).
+        Host-runnable gates executed here: macOS swiftc -typecheck, swiftlint --strict,
+        swiftformat --lint, placeholder scan, xcodegen generate, PLUS a test-vs-source
+        typecheck (XCTest shim) and a Sources/Auth Swift-6 strict-concurrency check.
+
+=== CAPABILITY ===
+Host = Darwin with Command Line Tools only (no full Xcode, no iOS Simulator, no `simctl`,
+no iphonesimulator SDK, XCTest module unavailable). The prompt's Gate
+(`xcodebuild ... build test` on iOS Simulator + macOS) therefore CANNOT run here. Per
+ADR-010/ADR-012 + the established P4/P0..P4/P4 convention (apps/macos-pending-verifications.md),
+the code is complete + all host-runnable gates are green; the Xcode-only build/test is
+DEFERRED to a macos-latest runner (recorded below + in macos-pending-verifications.md).
+NOT faked.
+
+=== PREFLIGHT ===
+Predecessors present: P4/P0 scaffold (8c180d1a), P4/P1 facade (43d600e5), P4/P2 tokens
+(b40c9d6b), P4/P3 components (cf1190cb..0cf825ba), P4/P4 app shell + AppRoute (b414508d).
+Shared.xcframework is NOT built on this host (Frameworks/.gitkeep only) → every
+Sources/SharedFacade/** file imports the unbuilt `Shared` and is excluded from host
+typecheck (verified on the macOS build, as the predecessor did). Baseline host gates GREEN
+before any change (49 non-Shared sources typecheck; swiftlint 0; swiftformat 0; placeholder 0).
+
+=== SURVEY ===
+ADR-008 (OIDC Auth-Code+PKCE via ASWebAuthenticationSession; Keychain; biometric LAContext;
+centralized 401 refresh), ADR-004 (KMP core owns auth, Apple wraps in a Swift facade),
+ADR-009 (SSE reconnect must re-auth), ADR-011/014/015/016 (no-stub DoD, i18n, a11y,
+redacted logging). The KMP shared core already implements PKCE/AuthService/Keychain-actual/
+single-flight refresh (p1-s6), but THIS prompt is scoped to apps/apple/** only — so the
+Apple-native auth stack is implemented in Swift and exposes seams the facade hands to KMP
+networking. Reused design-system components (TSButton/TSEmptyState/TSAlertBanner/TSSpinner/
+TSPageLoader) + tokens (Color.TS/Font.TS/TSSpacing/TSRadius) + AppShell/AppRoute.
+
+=== REASONING / ARCHITECTURE ===
+- To maximize host-verified coverage, the ENTIRE auth stack lives in Sources/Auth/** with
+  NO `import Shared` → fully host-typechecked. The facade hand-off is a thin, minimal seam
+  on AppContainer (deferred bucket).
+- Crypto/flow is pure Foundation/Security/CryptoKit/LocalAuthentication/AuthenticationServices.
+  PKCE is S256-only (RFC 7636); verifier/state/nonce from SecRandomCopyBytes; challenge =
+  base64url(SHA256(verifier)).
+- Tokens persist ONLY in Keychain (generic-password, access-group capable, AfterFirstUnlock-
+  ThisDeviceOnly default, optional biometric SecAccessControl). Never UserDefaults/files/logs.
+  Only the biometric on/off *flag* is in UserDefaults.
+- AuthCoordinator is @MainActor @Observable. Refresh is single-flight (concurrent 401s await
+  one in-flight Task). Failed refresh clears secrets and routes to reauth. It conforms to
+  AuthTokenProviding (bearer header) + AuthChallengeHandling (centralized 401), and exposes
+  authStateStream() as the SSE re-auth seam.
+- RootView is the onboarding gate: one real surface per state (splash / onboarding+sign-in /
+  biometric unlock / reauth / AppShell + expiring banner + reauth overlay). No blank screens.
+- Logging goes through AuthLog, which redacts tokens, VINs, and precise coordinates (ADR-016).
+
+=== CHANGES ===
+  Sources/Auth/ (20 files, 1829 lines):
+    Base64URL, Entropy, PKCE, OIDCConfiguration, AuthTokens, AuthError, AuthState,
+    KeychainTokenStore (+InMemory), Biometrics (gate+availability+pref store), AuthLog,
+    AppleAuthSession (+anchor provider), TokenEndpointClient, OIDCAuthorizationRequest,
+    AuthSeams (AuthTokenProviding/AuthChallengeHandling), AuthCoordinator, AuthPreviewSupport
+    (doubles + preview() + bootstrap()/uiTesting()), UI/{RootView, OnboardingView,
+    BiometricUnlockView, ReauthView (in BiometricUnlockView.swift), AuthSupportViews}.
+  ~ Sources/TeslaSyncApp.swift        root now RootView(coordinator: .bootstrap(), selection:)
+  ~ Sources/SharedFacade/AppContainer.swift   + connectAuth(_:) facade seam (deferred bucket)
+  + Tests/Unit/Auth/ (8 files, 682 lines): PKCE KAT, AuthTokens, OIDC authz/redirect,
+    Keychain round-trip (+InMemory), TokenEndpoint (URLProtocol mock), AuthCoordinator
+    (restore/sign-in/single-flight/401/sign-out/biometric), AuthLog redaction, + test support.
+  + Tests/UI/AuthOnboardingUITests.swift   first-run sign-in shell, cancelled auth, locked seam.
+  ~ Localization/Localizable.xcstrings  +42 auth.* keys (en translated; ar/he needs_review).
+
+=== FACADE / SSE WIRING (what is wired vs deferred) ===
+WIRED + host-typechecked: AuthCoordinator implements the AuthTokenProviding +
+AuthChallengeHandling seams; RootView mounts the gate and owns the coordinator; AppContainer
+gains connectAuth(_:). DEFERRED (with the rest of the KMP-networking facade, which has no
+bootstrap on this host): the literal hand-off of the provider to the KMP ApiHttpClient
+Authorization header / onUnauthorized and the SSE LiveConnection re-auth — these attach in
+the future AppContainer.bootstrap(baseURL:) on the macOS build. No KMP symbol names were
+fabricated. (Covenant 1/9: stated, not green-washed.)
+
+=== GATE (host-runnable, executed on this machine) ===
+$ swiftc -typecheck -sdk macosx -target arm64-apple-macosx15.0 <tokens + 69 non-Shared sources + facade shim>
+TYPECHECK_EXIT=0
+$ swiftlint --strict            → Found 0 violations, 0 serious in 98 files     LINT_EXIT=0
+$ swiftformat --lint .          → 0/98 files require formatting                 FORMAT_EXIT=0
+$ placeholder scan (apps/apple, swift) → PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0   PH_EXIT=0
+$ xcodegen generate            → Created project (auth files referenced 30x)    XCODEGEN_EXIT=0
+
+  Extra rigor (XCTest is Xcode-only, so the test target cannot run here):
+$ swiftc -typecheck <69 sources + 9 test files (XCTest shim, @testable stripped)>
+TEST_TYPECHECK_EXIT=0      # caught + fixed a real async-in-autoclosure bug and a Swift-6
+                          # NSLock-in-async warning before they could reach CI
+$ swiftc -typecheck -swift-version 6 -strict-concurrency=complete <tokens + non-Shared sources>
+AUTH_S6_ERRORS=0          # Sources/Auth/** is Swift-6 strict-concurrency clean. (Pre-existing
+                          # P4/P4 strict-mode items in AppRoute/RouteHostRegistry are NOT from
+                          # this prompt and are part of the macOS-pending app-target build;
+                          # a bare swiftc strict run also does not model the app target's
+                          # SwiftUI MainActor default isolation, so it is informational only.)
+
+=== GATE (Xcode-only — DEFERRED to macos-latest CI, NOT run here; not faked) ===
+#   xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+#   xcodebuild -scheme TeslaSync-macOS build test
+IOS_BUILD_TEST=DEFERRED-macOS-pending
+MAC_BUILD_TEST=DEFERRED-macOS-pending
+Reason: no full Xcode / no iOS Simulator / no XCTest module on this Command Line Tools host.
+Recorded in apps/macos-pending-verifications.md for the macos-latest runner.
+
+=== ACCEPTANCE CRITERIA ===
+[x] OIDC PKCE via ASWebAuthenticationSession; Universal-Link + custom-scheme callbacks;
+    redirect + cancellation handled (AppleAuthSession, OIDCAuthorizationRequest, AuthError.cancelled).
+[x] Tokens stored only in Keychain; optional biometrics (LAContext) with disable/recovery
+    (sign out); logout clears secrets + best-effort revoke.
+[x] 401 refresh centralized + single-flight + redacted; connected via AuthTokenProviding /
+    AuthChallengeHandling seams + authStateStream() (SSE) + AppContainer.connectAuth.
+[x] SwiftLint/SwiftFormat + placeholder gates clean; host typecheck green; tests authored +
+    type-verified against real sources. iOS+macOS xcodebuild build/test DEFERRED (no runner).
+[~] EXIT=0 / STATUS=DONE for all host-runnable gates; Xcode build/test DEFERRED-macOS-pending.
+
+=== COMMIT ===
+  git add apps/apple .github/prompts/monorepo/logs/p4-p5-0001-auth-onboarding.log
+  git commit -m "feat(apps/apple): add OIDC PKCE auth and Keychain storage (P4/P5)"
+
+EXIT=0
+STATUS=DONE
