@@ -1,10 +1,14 @@
-=== P1/S6/0001 Auth (OIDC PKCE) + secure token store — gate run ===
-DATE=2026-06-04T23:58:31.5662194-07:00
-HOST=Windows; JDK=21.0.8; Apple targets cross-COMPILED (iosSimulatorArm64 + macosArm64) but NATIVE TESTS not executable on Windows (macosArm64Test SKIPPED).
+=== P1/S6/0001 — Auth (OIDC PKCE) + secure token store ===
+Gate re-run after S4 networking foundation re-commit (TokenProvider/onUnauthorized seam).
+Host: Windows; JDK 21 (Temurin); Gradle 8.14.5. Apple unit tests cannot EXECUTE on Windows
+(Kotlin/Native cross-compiles, macos/ios *Test tasks SKIPPED); Android local JVM tests run commonTest.
+Date: 2026-06-06T14:47:03.6456830-07:00
 
+----- STEP 1: ./gradlew :core:allTests -----
 > Task :core:kmpPartiallyResolvedDependenciesChecker
 > Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :core:downloadKotlinNativeDistribution UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
 > Task :core:compileKotlinIosSimulatorArm64 UP-TO-DATE
 > Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
 > Task :core:iosSimulatorArm64MainKlibrary UP-TO-DATE
@@ -42,9 +46,10 @@ HOST=Windows; JDK=21.0.8; Apple targets cross-COMPILED (iosSimulatorArm64 + maco
 > Task :core:compileDebugUnitTestKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
 > Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:koverFindJar UP-TO-DATE
 > Task :core:processDebugJavaRes UP-TO-DATE
 > Task :core:processDebugUnitTestJavaRes UP-TO-DATE
-> Task :core:testDebugUnitTest UP-TO-DATE
+> Task :core:testDebugUnitTest FROM-CACHE
 > Task :core:preReleaseBuild UP-TO-DATE
 > Task :core:generateReleaseResValues UP-TO-DATE
 > Task :core:generateReleaseResources UP-TO-DATE
@@ -66,9 +71,47 @@ HOST=Windows; JDK=21.0.8; Apple targets cross-COMPILED (iosSimulatorArm64 + maco
 > Task :core:testReleaseUnitTest UP-TO-DATE
 > Task :core:allTests NO-SOURCE
 
-BUILD SUCCESSFUL in 3s
-36 actionable tasks: 1 executed, 35 up-to-date
+BUILD SUCCESSFUL in 5s
+38 actionable tasks: 1 executed, 1 from cache, 36 up-to-date
 TEST_EXIT=0
+
+----- STEP 1b: forced fresh JVM test execution (cleanTestDebugUnitTest + testDebugUnitTest --rerun-tasks) -----
+> Task :core:cleanTestDebugUnitTest
+> Task :core:kmpPartiallyResolvedDependenciesChecker
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:preBuild UP-TO-DATE
+> Task :core:preDebugBuild UP-TO-DATE
+> Task :core:generateDebugResValues
+> Task :core:generateDebugResources
+> Task :core:packageDebugResources
+> Task :core:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:javaPreCompileDebug
+> Task :core:javaPreCompileDebugUnitTest
+> Task :core:koverFindJar
+> Task :core:parseDebugLocalResources
+> Task :core:generateDebugRFile
+> Task :core:generateDebugUnitTestStubRFile
+> Task :core:generateCommonMainTeslaSyncCacheInterface
+
+> Task :core:compileDebugKotlinAndroid
+w: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SettingsBackupRepository.kt:77:19 'val monthNumber: Int' is deprecated. Use the 'month' property instead.
+
+> Task :core:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:processDebugJavaRes
+> Task :core:bundleLibRuntimeToJarDebug
+> Task :core:bundleLibCompileToJarDebug
+> Task :core:compileDebugUnitTestKotlinAndroid
+> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processDebugUnitTestJavaRes
+> Task :core:testDebugUnitTest
+
+[Incubating] Problems report is available at: file:///D:/repos/teslasync/apps/shared/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 58s
+19 actionable tasks: 19 executed
+TEST_RERUN_EXIT=0
+
+----- STEP 2: ./gradlew ktlintCheck -----
 > Task :core:loadKtlintReporters UP-TO-DATE
 > Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
 > Task :core:ktlintAndroidDebugSourceSetCheck SKIPPED
@@ -90,6 +133,7 @@ TEST_EXIT=0
 > Task :core:ktlintAppleMainSourceSetCheck UP-TO-DATE
 > Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
 > Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
 > Task :core:runKtlintCheckOverCommonMainSourceSet UP-TO-DATE
 > Task :core:ktlintCommonMainSourceSetCheck UP-TO-DATE
 > Task :core:runKtlintCheckOverCommonTestSourceSet UP-TO-DATE
@@ -122,30 +166,61 @@ TEST_EXIT=0
 > Task :core:ktlintNativeTestSourceSetCheck SKIPPED
 > Task :core:ktlintCheck UP-TO-DATE
 
-BUILD SUCCESSFUL in 2s
-15 actionable tasks: 15 up-to-date
+BUILD SUCCESSFUL in 3s
+16 actionable tasks: 16 up-to-date
 LINT_EXIT=0
+
+----- STEP 3: check-placeholders.ps1 -Path apps/shared/core -Language kotlin -----
+PLACEHOLDER_ALLOWED=17
+PLACEHOLDER_COUNT=0
+EXIT=0
 PH_EXIT=0
 
-=== Android unit test summary (testDebugUnitTest) ===
-TOTAL: 109 tests, 0 failures, 0 errors, 0 skipped
-Auth suites:
-  - io.teslasync.shared.core.auth.AuthCryptoTest: 7 tests, 0 failures
-  - io.teslasync.shared.core.auth.AuthServiceIntegrationTest: 1 tests, 0 failures
-  - io.teslasync.shared.core.auth.AuthServiceTest: 13 tests, 0 failures
-  - io.teslasync.shared.core.auth.PkceTest: 10 tests, 0 failures
-  - io.teslasync.shared.core.auth.SecureTokenStoreTest: 4 tests, 0 failures
-  - io.teslasync.shared.core.auth.TokenEndpointClientTest: 7 tests, 0 failures
-  - io.teslasync.shared.core.net.ApiHttpClientAuthTest: 6 tests, 0 failures
+===================== GATE SUMMARY =====================
+TEST_EXIT=0  ./gradlew :core:allTests — BUILD SUCCESSFUL (Apple iosSimulatorArm64Test/macosArm64Test SKIPPED: require macOS host)
+TEST_RERUN_EXIT=0  forced fresh JVM execution: :core:cleanTestDebugUnitTest :core:testDebugUnitTest --rerun-tasks (19 tasks executed, not from cache)
+LINT_EXIT=0  ./gradlew ktlintCheck — common/android/apple main+test source sets clean
+PH_EXIT=0  check-placeholders.ps1 -Path apps/shared/core -Language kotlin — PLACEHOLDER_COUNT=0 (17 allowed)
+
+=== Android unit test summary (testDebugUnitTest, freshly executed) ===
+TOTAL: 1340 tests, 0 failures, 0 errors, 0 skipped (181 suites)
+Auth + auth-seam suites (48 tests, all green):
+  - io.teslasync.shared.core.auth.AuthCryptoTest .............. 7 tests  (SHA-256 NIST KAT abc/empty/two-block/boundary; base64url no-pad; RFC 7636 PKCE KAT)
+  - io.teslasync.shared.core.auth.PkceTest .................... 10 tests (S256 pair derivation; deterministic verifier; authorize-URL state+nonce+challenge params; redirect parse/validate/reject)
+  - io.teslasync.shared.core.auth.TokenEndpointClientTest ..... 7 tests  (PKCE code exchange form; refresh grant form; revoke; invalid_grant -> OAuth error)
+  - io.teslasync.shared.core.auth.AuthServiceTest ............. 13 tests (sign-in persist; state-mismatch error; restore; proactive refresh; reactive 401 refresh; single-flight; invalid_grant wipe; transient keep; persist-fail sign-out; sign-out revoke)
+  - io.teslasync.shared.core.auth.AuthServiceIntegrationTest .. 1 test   (end-to-end 401 refresh-and-retry through ApiHttpClient)
+  - io.teslasync.shared.core.auth.SecureTokenStoreTest ........ 4 tests  (in-memory fake round-trip: save/load equal, load-null, clear, overwrite)
+  - io.teslasync.shared.core.net.ApiHttpClientAuthTest ........ 6 tests  (bearer attach; noop no-header; 401 single retry+replay; false->surface 401; at-most-once; failedToken passthrough)
 
 === Acceptance criteria ===
-[x] PKCE (S256, state, nonce) verified; code exchange + refresh + revoke covered (AuthCryptoTest RFC7636 KAT, PkceTest, TokenEndpointClientTest, AuthServiceTest).
-[x] Single-flight 401 refresh-and-retry proven; 5 concurrent onUnauthorized share one refresh (AuthServiceTest.concurrentUnauthorizedCallsShareASingleRefresh; AuthServiceIntegrationTest end-to-end via ApiHttpClient).
-[x] android Keystore (AndroidKeystoreTokenStore, AES/GCM + SharedPreferences) + apple Keychain (AppleKeychainTokenStore, AfterFirstUnlock) actuals implemented; fake-store round-trip green (SecureTokenStoreTest).
-[x] No real browser/network in tests (Ktor MockEngine + AuthBrowser fake + in-memory store); ktlint + placeholder clean.
+[x] PKCE (S256, state, nonce) verified; code exchange + refresh + revoke covered.
+      AuthCryptoTest.pkceChallengeMatchesRfc7636KnownAnswer + sha256MatchesNistVector{Abc,EmptyInput,TwoBlockMessage};
+      PkceTest.generatePkceProducesAnS256PairDerivedFromTheVerifier + buildAuthorizeUrlIncludesAllRequiredPkceParameters (state & nonce) + randomUrlTokenIsUrlSafeAndPaddingFree;
+      TokenEndpointClientTest.exchangePostsTheCorrectPkceFormAndParsesTokens / refreshPostsTheRefreshGrantForm / revokePostsToTheRevocationEndpoint.
+[x] Single-flight 401 refresh-and-retry proven; concurrent 401s share one refresh.
+      AuthServiceTest.concurrentUnauthorizedCallsShareASingleRefresh (5 concurrent onUnauthorized -> exactly one refresh network call);
+      AuthServiceTest.onUnauthorizedRefreshesOnceAndReportsSuccess; AuthServiceIntegrationTest (end-to-end via ApiHttpClient onUnauthorized seam);
+      ApiHttpClientAuthTest.unauthorizedHookIsInvokedAtMostOncePerRequest / unauthorizedHookReceivesTheTokenFromTheFailedAttempt.
+[x] android Keystore + apple Keychain actuals implemented; fake-store round-trip green.
+      AndroidKeystoreTokenStore (AES-256/GCM key in AndroidKeyStore, IV-prefixed ciphertext in private SharedPreferences);
+      AppleKeychainTokenStore (kSecClassGenericPassword, kSecAttrAccessibleAfterFirstUnlock, delete-then-add);
+      SecureTokenStore expect + InMemorySecureTokenStore fake; SecureTokenStoreTest round-trip (save/load/clear/overwrite) green.
+[x] No real browser/network in tests; ktlint + placeholder clean.
+      Ktor MockEngine token endpoint + AuthBrowser fake + in-memory store throughout; LINT_EXIT=0; PH_EXIT=0 (PLACEHOLDER_COUNT=0).
 
 === Honesty note ===
-Apple sources COMPILE on this Windows host (compileKotlinIosSimulatorArm64 + compileTestKotlinMacosArm64 SUCCESSFUL) via Kotlin/Native cross-compilation, but Apple unit tests cannot be EXECUTED on Windows (macosArm64Test SKIPPED). Keychain runtime behaviour must be validated on macOS CI.
+Apple sources cross-compile on this Windows host (compileKotlin/compileTestKotlin for iosSimulatorArm64 + macosArm64 SUCCESSFUL),
+but Apple unit tests cannot EXECUTE on Windows: iosSimulatorArm64Test / macosArm64Test are SKIPPED (Kotlin/Native test execution
+requires a macOS host). The Keychain RUNTIME behaviour of AppleKeychainTokenStore must therefore be validated on macOS CI. All
+shared/auth logic that can run on Windows is exercised by the Android local JVM run of commonTest (MockEngine + AuthBrowser fake +
+in-memory SecureTokenStore), which is green. The Android Keystore actual likewise needs on-device/instrumented validation; its
+commonTest coverage uses the in-memory fake. AuthBrowser has no shared implementation by design (platform W4/A4/P5 own the redirect UI).
+Design realization: the spec's "SecureTokenStore expect/actual" is realized as a commonMain INTERFACE with
+platform implementations (AndroidKeystoreTokenStore, AppleKeychainTokenStore) injected from the platform app
+modules, rather than a literal `expect class` + `actual` factory — the Android Keystore store needs a Context that
+a parameterless actual factory cannot supply. Same secure-enclave contract, same {common,android,apple}Main/auth
+file layout the spec specifies; commonTest uses the in-memory fake (InMemorySecureTokenStore) as required.
 
 EXIT=0
 STATUS=DONE
