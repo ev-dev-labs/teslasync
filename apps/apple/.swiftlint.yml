@@ -31,6 +31,7 @@ identifier_name:
     - ok
     - x
     - y
+    - t
 
 type_name:
   max_length:
