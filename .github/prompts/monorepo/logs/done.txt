@@ -49,3 +49,9 @@ p2-windows/W3-0001-navigation-shell.prompt.md
 p2-windows/W4-0001-auth-oidc-secure-storage.prompt.md
 p2-windows/W5-0001-data-layer-client-cache.prompt.md
 p2-windows/W6-0001-live-data-sse.prompt.md
+p2-windows/W6-0002-push-wns.prompt.md
+p2-windows/W8-0001-notifications-taskbar-jumplist.prompt.md
+p2-windows/W8-0002-settings-lifecycle-msix.prompt.md
+p2-windows/W8-0003-widgets-live-tiles.prompt.md
+p2-windows/W9-0001-unit-tests.prompt.md
+p2-windows/W9-0002-ui-automation-winappdriver.prompt.md

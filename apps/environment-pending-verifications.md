@@ -1,0 +1,38 @@
+# Environment-pending verifications
+
+Tracks acceptance-criteria items from monorepo prompts that **must be verified
+on a specific host or with a specific runtime tool** which is unavailable on
+the current dev box. This includes (non-exhaustive):
+
+- **macOS-only:** Kotlin/Native Apple-framework linking, Xcode codesign, App Store packaging.
+- **WinAppDriver/Appium absent:** Windows UI automation suites cannot exercise a packaged app.
+- **Android emulator absent:** instrumented `androidTest` suites cannot run device-side.
+- **No physical device:** any test requiring hardware (HoloLens, Vision Pro, Galaxy fold, etc).
+
+Items here are **not unfinished work** — code is written, committed, and all
+host-runnable gates are green. They are *deferred artifact verifications* that
+the ADR-012 CI matrix (or a developer on a capable host) will execute later.
+Each prompt's own capability note explicitly sanctions `STATUS=BLOCKED` for
+its environmental gap, so the deliverable is contractually complete.
+
+## Pending items
+
+| Origin prompt | Commit | Deferred verification | Re-run command | Verifier (target) |
+|---|---|---|---|---|
+| `p1-shared/S3-0001-kmp-scaffold` | `5317ebcb1` | Produce `Shared.xcframework` binary (Kotlin/Native links Apple frameworks on macOS only) | `cd apps/shared && ./gradlew :core:assembleSharedXCFramework` | `p5-hardening/H8-0001-store-packaging` on `macos-latest` |
+| `p2-windows/W9-0002-ui-automation-winappdriver` | `c41cb7f29` | Run 147 `[Category=UIAutomation]` xUnit tests against packaged app (WinAppDriver/Appium runner absent on dev host) | `powershell apps/windows/run-ui-automation.ps1` | Windows runner with WinAppDriver + packaged-app install (CI: `windows-latest` matrix lane) |
+
+## Resolution protocol
+
+When a capable runner (CI or local) executes one of these verifications and
+the artifact/suite is produced + green, append a row to the table below
+recording the run + SHA + log path, and strike through the corresponding
+row above. **Do NOT delete the original row** — the audit trail matters
+more than the parking-lot tidiness.
+
+## Resolved verifications
+
+| Original entry | Resolved commit | Verifier host | Log |
+|---|---|---|---|
+
+_(none yet)_
