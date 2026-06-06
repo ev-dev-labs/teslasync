@@ -1,0 +1,57 @@
+P4 · P3 · 0004 — feedback + forms component library
+prompt: .github/prompts/monorepo/p4-apple/P3-0004-feedback-forms-components.prompt.md
+mode:   code-complete + DEFERRED Xcode gate (user-approved). Real macOS swiftc -typecheck gate.
+
+=== PREFLIGHT ===
+Predecessors: P3-0001 UI (cf1190cb), P1 facade (43d600e5), P2 tokens (b40c9d6b). Clean-tree: apps/apple/Sources/Components/{Feedback,Forms}/** + tests.
+
+=== SURVEY ===
+Mapped web `components/feedback` + `forms`. Reused tokens + P3-0001 UI (TSCard/TSButton/TSBadge/TSDatePickerBridge/
+TSRangeSlider) + P3-0003 (TSMetricBar/TSInlineCallout). EmptyState→ContentUnavailableView; skeletons→redacted shimmer.
+
+=== REASONING ===
+- DRY banners: TSAlertBanner base (tone/icon/title/message/action/dismiss); the 12 named banners (Offline,
+  LiveStaleData, TeslaReauth, RateLimit, Maintenance, Impersonation, DraftRecovery/Restore, EditConflict,
+  TimeMachine, CookieConsent, BrowserCompat) are thin presets — every web export maps to a named component.
+- Error boundaries: SwiftUI has no render-time catch, so TSErrorBoundary/Section/Page render a fallback when the
+  caller supplies hasError (honest equivalent, not a fake try/catch). Take no FacadeError (stays non-Shared).
+- Reduce Motion: skeleton shimmer, TSTopProgress, achievement toast gate animation on accessibilityReduceMotion.
+- Forms stay non-Shared: TSUnitInput is a plain numeric+unit-label input (SI conversion is the page's job via the
+  facade), TSVehicleSelect/Multi are generic over (id, localized label, searchText) → fully typechecked.
+- Combobox/Multi: real popover with TSSearchInput + filtered list + selection; TreeSelect over native List(children:).
+- All visible strings are LocalizedStringKey (catalog-resolved); inputs carry accessibility labels/traits.
+
+=== CHANGES === (apps/apple/Sources/Components/{Feedback,Forms}/** — 7 files, ~57 components)
+  + Feedback/Banners.swift          TSAlertBanner + InlineCallout + 12 named banners
+  + Feedback/States.swift           TSSpinner/PageLoader/EmptyState/ErrorDisplay/QueryError/ErrorBoundary(×3)/RequiresAuth/TopProgress/SkipToContent/GotoIndicator
+  + Feedback/Skeletons.swift        TSSkeleton + Stat/Chart/PageHeader/StatGrid/ChartBlock/Table/PageLoad skeletons
+  + Feedback/FeedbackOverlays.swift TSKeyboardShortcutsModal/TourOverlay/JobProgressDrawer/AchievementUnlockedToast/ChangelogModal
+  + Forms/Inputs.swift              TSFormField/FormSection/SearchInput/TagInput/Combobox/ComboboxMulti/CurrencyInput/UnitInput/TreeSelect
+  + Forms/Filters.swift            TSActiveFilterChips/DatePresetChips/DateRangeFilter/RangePicker/FilterBar/PillFilterBar/VehicleSelect/VehicleMultiSelect
+  + Tests/Unit/Forms/FormsLogicTests.swift
+  ~ .swiftformat                    --maxwidth 120 (auto-wrap long lines to satisfy SwiftLint line_length)
+
+=== PARITY ===
+Component-library prompt (no page manifest). Coverage = every listed web feedback/forms export has a native
+equivalent (enumerated in CHANGES). No PARITY_COVERED/REQUIRED emitted.
+
+=== GATE (host-runnable, executed on this machine) ===
+$ xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macosx15.0 <Tokens + non-Shared sources>
+TYPECHECK_EXIT=0
+$ swiftformat --lint → 0 require formatting    SWIFTFORMAT_EXIT=0
+$ swiftlint --strict → 0 violations in 57 files SWIFTLINT_EXIT=0
+$ placeholder scan → PLACEHOLDER_COUNT=0
+$ xcodegen generate → Created project          XCODEGEN_EXIT=0
+
+=== GATE (Xcode-only — DEFERRED to macos-latest CI, NOT run here; not faked) ===
+#   xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+#   xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync-macOS build test
+IOS_BUILD_TEST=DEFERRED-macOS-pending
+MAC_BUILD_TEST=DEFERRED-macOS-pending
+
+=== COMMIT ===
+  git add apps/apple .github/prompts/monorepo/logs/p4-p3-0004-feedback-forms-components.log
+  git commit -m "feat(apps/apple): add feedback + forms component library (P4/P3)"
+
+EXIT=0
+STATUS=DONE

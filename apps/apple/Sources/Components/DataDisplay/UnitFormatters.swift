@@ -1,7 +1,7 @@
 import SwiftUI
 
 public extension EnvironmentValues {
-    // The active display-unit preferences used by the SI formatter components.
+    /// The active display-unit preferences used by the SI formatter components.
     @Entry var tsUnits: UnitPreferences = .metric
 }
 
