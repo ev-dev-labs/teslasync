@@ -23,6 +23,14 @@ public static partial class Program
     {
         global::WinRT.ComWrappersSupport.InitializeComWrappers();
 
+        // P2/W8-0003: when the Windows Widgets Board launches us to service the widget-provider COM
+        // server, run the headless provider host instead of the interactive shell (no window, no SSE).
+        if (Widgets.WidgetComServer.IsWidgetActivation(args))
+        {
+            Widgets.WidgetComServer.Run();
+            return 0;
+        }
+
         if (!ShouldStartThisInstance())
         {
             return 0;

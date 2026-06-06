@@ -1,0 +1,45 @@
+{
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "type": "AdaptiveCard",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "ColumnSet",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            { "type": "TextBlock", "text": "${displayName}", "weight": "Bolder", "size": "Medium", "wrap": true },
+            { "type": "TextBlock", "text": "${statusLabel}", "isSubtle": true, "spacing": "None", "wrap": true }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "auto",
+          "items": [
+            { "type": "TextBlock", "text": "${freshnessLabel}", "weight": "Bolder", "horizontalAlignment": "Right" },
+            { "type": "TextBlock", "text": "${lastUpdatedText}", "isSubtle": true, "spacing": "None", "horizontalAlignment": "Right" }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "${batteryTitle}", "value": "${batteryText}" },
+        { "title": "${rangeTitle}", "value": "${rangeText}" },
+        { "title": "${chargeTitle}", "value": "${chargeStateText}" },
+        { "title": "${lockTitle}", "value": "${lockStateText}" }
+      ]
+    },
+    { "type": "TextBlock", "text": "${vinText}", "isSubtle": true, "wrap": true, "$when": "${showVin}" },
+    { "type": "TextBlock", "text": "${locationText}", "isSubtle": true, "wrap": true, "$when": "${showLocation}" }
+  ],
+  "actions": [
+    { "type": "Action.OpenUrl", "title": "${openVehicleTitle}", "url": "${openVehicleUrl}", "$when": "${hasOpenVehicle}" },
+    { "type": "Action.OpenUrl", "title": "${openChargingTitle}", "url": "${openChargingUrl}", "$when": "${hasOpenCharging}" },
+    { "type": "Action.OpenUrl", "title": "${openLiveMapTitle}", "url": "${openLiveMapUrl}", "$when": "${hasOpenLiveMap}" },
+    { "type": "Action.OpenUrl", "title": "${openCommandsTitle}", "url": "${openCommandsUrl}", "$when": "${hasOpenCommands}" }
+  ]
+}

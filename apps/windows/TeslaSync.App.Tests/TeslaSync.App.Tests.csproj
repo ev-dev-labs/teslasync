@@ -46,4 +46,14 @@
     </Content>
   </ItemGroup>
 
+  <!--
+    P2/W8-0003 — copy the packaged widget Adaptive Card template next to the tests so the drift test can
+    assert it matches the canonical Core template constant.
+  -->
+  <ItemGroup>
+    <Content Include="..\TeslaSync.App\Platform\Widgets\Public\VehicleStatusTemplate.json" Link="VehicleStatusTemplate.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

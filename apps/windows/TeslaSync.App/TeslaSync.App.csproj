@@ -90,4 +90,16 @@
     <ProjectReference Include="..\TeslaSync.App.Platform\TeslaSync.App.Platform.csproj" />
   </ItemGroup>
 
+  <!--
+    P2/W8-0003 — the widget Adaptive Card template is exposed through the AppExtension PublicFolder
+    (Platform\Widgets\Public) and packaged with the app. Reclassify it from the default None glob to
+    Content so it is included in the MSIX payload and copied next to the executable.
+  -->
+  <ItemGroup>
+    <None Remove="Platform\Widgets\Public\VehicleStatusTemplate.json" />
+    <Content Include="Platform\Widgets\Public\VehicleStatusTemplate.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

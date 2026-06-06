@@ -2,10 +2,11 @@
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
-  IgnorableNamespaces="uap rescap com desktop">
+  IgnorableNamespaces="uap uap3 rescap com desktop">
 
   <Identity
     Name="EvDevLabs.TeslaSync"
@@ -78,6 +79,62 @@
             </uap:SupportedFileTypes>
           </uap:FileTypeAssociation>
         </uap:Extension>
+        <!--
+          P2/W8-0003 — Windows Widgets provider. The Widgets Board activates the provider
+          out-of-process through this COM ExeServer (launched with -RegisterProcessAsComServer and
+          handled in Program.Main), and the windows.appExtension below declares the vehicle-status
+          widget the board offers. Classic Live Tiles are intentionally absent — Windows 11 Start
+          dropped them (LiveTileUnsupportedByWindows11), so that sub-scope is not applicable.
+        -->
+        <com:Extension Category="windows.comServer">
+          <com:ComServer>
+            <com:ExeServer Executable="TeslaSync.App.exe" Arguments="-RegisterProcessAsComServer" DisplayName="TeslaSync Widgets">
+              <com:Class Id="B7E6D2A1-4C3F-4A5E-9D8B-1F2A3C4D5E60" DisplayName="TeslaSync Widget Provider" />
+            </com:ExeServer>
+          </com:ComServer>
+        </com:Extension>
+        <uap3:Extension Category="windows.appExtension">
+          <uap3:AppExtension
+            Name="com.microsoft.windows.widgets"
+            Id="TeslaSyncWidgetProvider"
+            PublicFolder="Platform\Widgets\Public"
+            DisplayName="TeslaSync widgets">
+            <uap3:Properties>
+              <WidgetProvider>
+                <ProviderIcons>
+                  <Icon Path="Assets\Square44x44Logo.png" />
+                </ProviderIcons>
+                <Activation>
+                  <CreateInstance ClassId="B7E6D2A1-4C3F-4A5E-9D8B-1F2A3C4D5E60" />
+                </Activation>
+                <Definitions>
+                  <Definition
+                    Id="TeslaSync_VehicleStatus"
+                    DisplayName="Vehicle status"
+                    Description="Battery, range and charge status for your Tesla, with quick links into TeslaSync."
+                    AllowMultiple="false">
+                    <Capabilities>
+                      <Capability>
+                        <Size Name="medium" />
+                      </Capability>
+                      <Capability>
+                        <Size Name="large" />
+                      </Capability>
+                    </Capabilities>
+                    <ThemeResources>
+                      <Icons>
+                        <Icon Path="Assets\Square44x44Logo.png" />
+                      </Icons>
+                      <Screenshots>
+                        <Screenshot Path="Assets\Wide310x150Logo.png" DisplayAltText="TeslaSync vehicle status widget" />
+                      </Screenshots>
+                    </ThemeResources>
+                  </Definition>
+                </Definitions>
+              </WidgetProvider>
+            </uap3:Properties>
+          </uap3:AppExtension>
+        </uap3:Extension>
       </Extensions>
     </Application>
   </Applications>
