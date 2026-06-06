@@ -1,7 +1,6 @@
-=== P1/S8/0002 — Admin state holder — gate run 2026-06-05T01:03:42.6532073-07:00 ===
+=== P1/S8/0002 — Admin state holder — gate run 2026-06-06T15:23:34.3361808-07:00 ===
 HOST=Windows; NOTE: :core:allTests aggregates Apple/native test targets that cannot link/run on a Windows host.
 Executed the identical commonTest sources via the JVM/Android-unit path (:core:testDebugUnitTest), the runnable gate on this host.
-
 > Task :core:kmpPartiallyResolvedDependenciesChecker
 > Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
@@ -22,12 +21,13 @@ Executed the identical commonTest sources via the JVM/Android-unit path (:core:t
 > Task :core:compileDebugUnitTestKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
 > Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:koverFindJar UP-TO-DATE
 > Task :core:processDebugJavaRes UP-TO-DATE
 > Task :core:processDebugUnitTestJavaRes UP-TO-DATE
-> Task :core:testDebugUnitTest UP-TO-DATE
+> Task :core:testDebugUnitTest FROM-CACHE
 
-BUILD SUCCESSFUL in 2s
-17 actionable tasks: 1 executed, 16 up-to-date
+BUILD SUCCESSFUL in 3s
+18 actionable tasks: 1 executed, 1 from cache, 16 up-to-date
 TEST_EXIT=0
 > Task :core:loadKtlintReporters UP-TO-DATE
 > Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
@@ -86,62 +86,71 @@ TEST_EXIT=0
 BUILD SUCCESSFUL in 2s
 16 actionable tasks: 16 up-to-date
 LINT_EXIT=0
-PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_ALLOWED=17
 PLACEHOLDER_COUNT=0
 EXIT=0
 PH_EXIT=0
 
 === PARITY ===
 Source of truth: web/src/api/hooks/useAdmin.ts (21 hooks). Port: presentation/admin/AdminStore.kt
-(S8 holder) over data/repo/AdminRepository.kt + HttpAdminRepository.kt (S7). Payloads raw SI
-JsonElement (no conversion); list reads array-guarded via ported safeArray (golden-locked).
+(S8 holder) over data/repo/AdminRepository.kt + HttpAdminRepository.kt (S7). Payloads are raw SI
+JsonElement (no display conversion in the shared core; convert at the platform render boundary per
+S5). List reads array-guarded via the ported safeArray (golden-locked, shared with the C# port).
 
-Reads (15) — hook -> endpoint(method, params) -> store API:
- 1  useApiKeys            GET /api-keys                                      -> apiKeys()
- 2  useApiLogs            GET /api-logs?page&limit=25                        -> apiLogs(page)
- 3  useApiLogStats        GET /api-logs/stats                                -> apiLogStats()
- 4  useBackupConfigs      GET /backup/configs                                -> backupConfigs()
- 5  useBackupRuns         GET /backup/runs                                   -> backupRuns()
- 6  useSystemHealth       GET /system/health                                 -> systemHealth()
- 7  useMaintenanceState   GET /admin/maintenance                             -> maintenanceState()
- 8  useAuditLogs          GET /system/audit                                  -> auditLogs()
- 9  useWebErrorsSummary   GET /admin/web-errors/summary                      -> webErrorsSummary()
-10  useSecurityEvents     GET /security?vehicle_id                           -> securityEvents(vehicleId)
-11  useDBStats            GET /dev-tools/db-stats                            -> dbStats()
-12  useMigrations         GET /dev-tools/migration-status                    -> migrations()
-13  useConnectionPool     GET /dev-tools/runtime-info                        -> connectionPool()
-14  useExportJobs         GET /export/jobs                                   -> exportJobs()
-15  useVehicleStateMachine GET /vehicles/{id}/state                          -> vehicleStateMachine(vehicleId)
-(15b) useStateTimeline   GET /vehicle-states/timeline?vehicle_id&days       -> stateTimeline(vehicleId,days)
-                          [web hook is @deprecated/404; error surfaces via Resource.Error, as web]
+Reads (16) — hook -> endpoint(method, params) -> store API:
+ 1  useApiKeys             GET /api-keys                                 -> apiKeys()                 [safeArray]
+ 2  useApiLogs             GET /api-logs?page&limit=25                   -> apiLogs(page)             [safeArray]
+ 3  useApiLogStats         GET /api-logs/stats                           -> apiLogStats()
+ 4  useBackupConfigs       GET /backup/configs                          -> backupConfigs()           [safeArray]
+ 5  useBackupRuns          GET /backup/runs                             -> backupRuns()              [safeArray]
+ 6  useSystemHealth        GET /system/health                          -> systemHealth()
+ 7  useMaintenanceState    GET /admin/maintenance                      -> maintenanceState()
+ 8  useAuditLogs           GET /system/audit                           -> auditLogs()               [safeArray]
+ 9  useWebErrorsSummary    GET /admin/web-errors/summary               -> webErrorsSummary()
+10  useSecurityEvents      GET /security?vehicle_id                    -> securityEvents(vehicleId)  [safeArray]
+11  useDBStats             GET /dev-tools/db-stats                     -> dbStats()
+12  useMigrations          GET /dev-tools/migration-status            -> migrations()
+13  useConnectionPool      GET /dev-tools/runtime-info                -> connectionPool()
+14  useExportJobs          GET /export/jobs                           -> exportJobs()              [safeArray]
+                           [prompt lists this under "Mutations/actions"; it is a GET query, ported as a read]
+15  useVehicleStateMachine GET /vehicles/{id}/state                   -> vehicleStateMachine(vehicleId)
+16  useStateTimeline       GET /vehicle-states/timeline?vehicle_id&days -> stateTimeline(vehicleId,days)
+                           [web hook is @deprecated/404 post Phase-42 vehicle_states drop; the error
+                            surfaces gracefully via Resource.Error, exactly as the web useQuery surfaces it]
 
-Mutations (6) — hook -> endpoint(method, body) -> invalidates:
-16  useCreateApiKey       POST /api-keys {name,permissions}                  -> createApiKey()  inv: api-keys
-17  useDeleteApiKey       DELETE /api-keys/{id}                              -> deleteApiKey()  inv: api-keys
-18  useRevokeApiKey       POST /api-keys/{id}/revoke                         -> revokeApiKey()  inv: api-keys
-19  useUpdateMaintenance  POST /admin/maintenance {mode,message,until}       -> updateMaintenance() inv: maintenance + system-health
-20  useExportJobs (query) GET /export/jobs                                   -> exportJobs()    [listed under mutations in prompt; it is a query, ported as read #14]
-21  useCreateExport       POST /exports {type,format,vehicleId?}             -> createExport()  inv: export-jobs
-                          [body key camelCase 'vehicleId', omitted when null — verbatim web JSON.stringify parity]
+Mutations (5) — hook -> endpoint(method, body) -> invalidates:
+17  useCreateApiKey        POST /api-keys {name,permissions}          -> createApiKey()       inv: api-keys
+18  useDeleteApiKey        DELETE /api-keys/{id}                      -> deleteApiKey()       inv: api-keys
+19  useRevokeApiKey        POST /api-keys/{id}/revoke                 -> revokeApiKey()       inv: api-keys
+20  useUpdateMaintenance   POST /admin/maintenance {mode,message,until} -> updateMaintenance() inv: maintenance + system-health
+21  useCreateExport        POST /exports {type,format,vehicleId?}     -> createExport()       inv: export-jobs
+                           [body key camelCase 'vehicleId', omitted when null — verbatim web JSON.stringify parity]
 
-Count: 21/21 hooks ported. Reads emit cache->network (ADR-013 Resource). Mutations are non-throwing
-Result; on success refresh exactly the web-invalidated feeds. No direct Ktor in the holder (repo-injected).
+Count: 21/21 hooks ported (16 reads + 5 mutations; the prompt's "15 reads + 6 mutations" split counts
+the useExportJobs GET under mutations). Reads emit cache->network (ADR-013 Resource). Mutations are
+non-throwing Result; on success each refreshes exactly the feeds the matching web hook invalidates.
+No direct Ktor in the holder — it delegates entirely to the injected AdminRepository (S7), which evicts
+the affected cache keys so a refresh re-fetches rather than replaying a stale entry. SI is preserved
+end-to-end; there is no unit-bearing conversion in this domain.
 
-Derivation parity: safeArray (web select: safeArray) -> data/repo/AdminRepository.safeArray;
-golden-locked in commonTest/.../admin/AdminSafeArrayGoldenTest.kt (8 language-neutral vectors;
-C# Windows port mirrors the identical rows). No other client-side derivation exists in useAdmin.
+Derivation parity: safeArray (web `select: safeArray`, web/src/lib/safeArray.ts) ->
+data/repo/AdminRepository.safeArray; golden-locked in commonTest/.../admin/AdminSafeArrayGoldenTest.kt
+(8 language-neutral vectors covering empty/non-empty/object-array arrays + null/object/number/string/
+boolean collapse-to-[]; the C# Windows port mirrors the identical rows so KMP and C# cannot drift,
+ADR-004). No other client-side derivation exists in useAdmin.
 
-Tests:
- - AdminRepositoryContractTest  (endpoints/params/methods/bodies + cache-key invalidation, MockEngine)
- - AdminStoreTest               (cache->network emission, mutation delegation + feed refresh, fake repo)
- - AdminSafeArrayGoldenTest     (safeArray golden vectors)
+Tests (executed this run; --rerun-tasks --no-build-cache, JUnit XML verified):
+ - AdminRepositoryContractTest  tests=21 failures=0  (endpoints/methods/params/bodies + cache-key invalidation, MockEngine)
+ - AdminStoreTest               tests=8  failures=0  (cache->network emission, mutation delegation + feed refresh, fake repo)
+ - AdminSafeArrayGoldenTest     tests=2  failures=0  (safeArray golden vectors)
+ module-wide: 181 suites, 1340 tests, 0 failures, 0 errors, 0 skipped.
 
 Files (allowed scope: apps/shared/core/**):
- + cache/CacheDomain.kt (+Admin domain)
- + data/repo/AdminRepository.kt        (port interface + safeArray)
- + data/repo/HttpAdminRepository.kt    (S7 impl)
+ + cache/CacheDomain.kt                                  (+Admin domain)
+ + data/repo/AdminRepository.kt                          (port interface + safeArray)
+ + data/repo/HttpAdminRepository.kt                      (S7 impl)
  + presentation/admin/MaintenanceUpdateInput.kt
- + presentation/admin/AdminStore.kt    (S8 holder)
+ + presentation/admin/AdminStore.kt                      (S8 holder)
  + commonTest/.../data/repo/AdminRepositoryContractTest.kt
  + commonTest/.../presentation/admin/AdminStoreTest.kt
  + commonTest/.../presentation/admin/AdminSafeArrayGoldenTest.kt
