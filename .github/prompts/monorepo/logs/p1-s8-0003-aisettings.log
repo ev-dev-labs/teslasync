@@ -1,13 +1,9 @@
 === P1/S8/0003 AiSettings state holder gate ===
-date=2026-06-05T01:16:14.5974961-07:00
+date=2026-06-06T15:35:30.3771651-07:00
 > Task :core:kmpPartiallyResolvedDependenciesChecker
 > Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
-> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
-> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
-> Task :core:compileKotlinIosSimulatorArm64
+> Task :core:downloadKotlinNativeDistribution
 > Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
-> Task :core:iosSimulatorArm64MainKlibrary
-> Task :core:compileTestKotlinIosSimulatorArm64
 > Task :core:computeLocalPackageDependencyInputFiles SKIPPED
 > Task :core:generateSyntheticLinkageSwiftPMImportProjectForCinteropsAndLdDump SKIPPED
 > Task :core:generateUmbrellaPackageIdentifierBasedResolutionForDefault SKIPPED
@@ -15,58 +11,74 @@ date=2026-06-05T01:16:14.5974961-07:00
 > Task :core:syncPersistedPackageResolvedToSynthetic SKIPPED
 > Task :core:fetchSyntheticImportProjectPackages SKIPPED
 > Task :core:convertSyntheticImportProjectIntoDefFileIphonesimulator SKIPPED
-> Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
-> Task :core:iosSimulatorArm64Test SKIPPED
-> Task :core:compileKotlinMacosArm64
 > Task :core:macosArm64ProcessResources NO-SOURCE
-> Task :core:macosArm64MainKlibrary
-> Task :core:compileTestKotlinMacosArm64
 > Task :core:convertSyntheticImportProjectIntoDefFileMacosx SKIPPED
-> Task :core:linkDebugTestMacosArm64 SKIPPED
-> Task :core:macosArm64Test SKIPPED
 > Task :core:preBuild UP-TO-DATE
 > Task :core:preDebugBuild UP-TO-DATE
-> Task :core:generateDebugResValues UP-TO-DATE
-> Task :core:generateDebugResources UP-TO-DATE
-> Task :core:packageDebugResources UP-TO-DATE
-> Task :core:parseDebugLocalResources UP-TO-DATE
-> Task :core:generateDebugRFile UP-TO-DATE
-> Task :core:javaPreCompileDebug UP-TO-DATE
+> Task :core:generateDebugResValues
+> Task :core:generateDebugResources
+> Task :core:packageDebugResources
 > Task :core:preDebugUnitTestBuild UP-TO-DATE
-> Task :core:generateDebugUnitTestStubRFile UP-TO-DATE
-> Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :core:javaPreCompileDebug
+> Task :core:parseDebugLocalResources
+> Task :core:javaPreCompileDebugUnitTest
+> Task :core:koverFindJar
 > Task :core:preReleaseBuild UP-TO-DATE
-> Task :core:generateReleaseResValues UP-TO-DATE
-> Task :core:generateReleaseResources UP-TO-DATE
-> Task :core:packageReleaseResources UP-TO-DATE
-> Task :core:parseReleaseLocalResources UP-TO-DATE
-> Task :core:generateReleaseRFile UP-TO-DATE
-> Task :core:javaPreCompileRelease UP-TO-DATE
+> Task :core:generateReleaseResValues
+> Task :core:generateDebugRFile
+> Task :core:generateReleaseResources
+> Task :core:generateDebugUnitTestStubRFile
+> Task :core:packageReleaseResources
 > Task :core:preReleaseUnitTestBuild UP-TO-DATE
-> Task :core:generateReleaseUnitTestStubRFile UP-TO-DATE
-> Task :core:javaPreCompileReleaseUnitTest UP-TO-DATE
-> Task :core:compileReleaseKotlinAndroid
+> Task :core:javaPreCompileRelease
+> Task :core:parseReleaseLocalResources
+> Task :core:javaPreCompileReleaseUnitTest
+> Task :core:generateReleaseRFile
+> Task :core:generateReleaseUnitTestStubRFile
+> Task :core:generateCommonMainTeslaSyncCacheInterface
+> Task :core:compileKotlinIosSimulatorArm64
+w: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SettingsBackupRepository.kt:77:19 'val monthNumber: Int' is deprecated. Use the 'month' property instead.
+
+> Task :core:iosSimulatorArm64MainKlibrary
+> Task :core:compileTestKotlinIosSimulatorArm64
+> Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
+> Task :core:iosSimulatorArm64Test SKIPPED
+
+> Task :core:compileKotlinMacosArm64
+w: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SettingsBackupRepository.kt:77:19 'val monthNumber: Int' is deprecated. Use the 'month' property instead.
+
+> Task :core:macosArm64MainKlibrary
+> Task :core:compileTestKotlinMacosArm64
+> Task :core:linkDebugTestMacosArm64 SKIPPED
+> Task :core:macosArm64Test SKIPPED
 > Task :core:compileDebugKotlinAndroid
+w: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SettingsBackupRepository.kt:77:19 'val monthNumber: Int' is deprecated. Use the 'month' property instead.
+
+> Task :core:compileReleaseKotlinAndroid
+w: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SettingsBackupRepository.kt:77:19 'val monthNumber: Int' is deprecated. Use the 'month' property instead.
+
 > Task :core:compileDebugJavaWithJavac NO-SOURCE
-> Task :core:processDebugJavaRes UP-TO-DATE
+> Task :core:processDebugJavaRes
 > Task :core:compileReleaseJavaWithJavac NO-SOURCE
-> Task :core:processReleaseJavaRes UP-TO-DATE
+> Task :core:processReleaseJavaRes
 > Task :core:bundleLibCompileToJarDebug
 > Task :core:bundleLibRuntimeToJarDebug
 > Task :core:bundleLibRuntimeToJarRelease
 > Task :core:bundleLibCompileToJarRelease
 > Task :core:compileDebugUnitTestKotlinAndroid
 > Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
-> Task :core:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :core:processDebugUnitTestJavaRes
 > Task :core:compileReleaseUnitTestKotlinAndroid
 > Task :core:testDebugUnitTest
 > Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
-> Task :core:processReleaseUnitTestJavaRes UP-TO-DATE
+> Task :core:processReleaseUnitTestJavaRes
 > Task :core:testReleaseUnitTest
 > Task :core:allTests NO-SOURCE
 
-BUILD SUCCESSFUL in 25s
-37 actionable tasks: 15 executed, 22 up-to-date
+[Incubating] Problems report is available at: file:///D:/repos/teslasync/apps/shared/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 3m 17s
+38 actionable tasks: 38 executed
 TEST_EXIT=0
 > Task :core:loadKtlintReporters UP-TO-DATE
 > Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
@@ -90,6 +102,10 @@ TEST_EXIT=0
 > Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
 > Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
 > Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonMainSourceSet UP-TO-DATE
+> Task :core:ktlintCommonMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonTestSourceSet UP-TO-DATE
+> Task :core:ktlintCommonTestSourceSetCheck UP-TO-DATE
 > Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
 > Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
 > Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
@@ -116,35 +132,56 @@ TEST_EXIT=0
 > Task :core:ktlintNativeMainSourceSetCheck SKIPPED
 > Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
 > Task :core:ktlintNativeTestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverCommonTestSourceSet
-> Task :core:ktlintCommonTestSourceSetCheck
-> Task :core:runKtlintCheckOverCommonMainSourceSet
-> Task :core:ktlintCommonMainSourceSetCheck
-> Task :core:ktlintCheck
+> Task :core:ktlintCheck UP-TO-DATE
 
-BUILD SUCCESSFUL in 9s
-16 actionable tasks: 4 executed, 12 up-to-date
+BUILD SUCCESSFUL in 5s
+16 actionable tasks: 16 up-to-date
 LINT_EXIT=0
-PLACEHOLDER_ALLOWED=1
-PLACEHOLDER_COUNT=0
-EXIT=0
 PH_EXIT=0
 
 === PARITY ===
-web source: web/src/api/hooks/useAiSettings.ts (2 hooks; both useMutation, 0 useQuery reads)
-[1/2] useSaveAiSettings  -> AiSettingsStore.saveAiSettings / HttpAiSettingsRepository.saveAiSettings
-       PUT /settings; reads cached settings doc (CacheDomain.Settings/"settings"),
-       shallow-merge {...current,...patch} (patch wins), fail-closed on cache miss,
-       invalidate settings cache on success. COVERED.
-[2/2] useValidateAiProvider -> AiSettingsStore.validateAiProvider / HttpAiSettingsRepository.validateAiProvider
-       POST /settings/ai/validate-config; snake_case body, nulls omitted; 2xx->Success,
-       422->Failure(reasonFromCode(code), body.error) as Result.success, other->Result.failure. COVERED.
-derivation: reasonFromCode ported verbatim; golden vectors (16 rows) in ValidateReasonGoldenTest
-            (KMP+C# parity per ADR-004; inlined to stay within allowed file scope).
-SI: settings/validate payloads are not unit-bearing; carried as raw JsonElement/JsonObject, no conversion.
-tests: AiSettingsStoreTest (delegation), AiSettingsRepositoryContractTest (endpoint/method/body/merge/
-       invalidation/422-map/non-422-fail), ValidateReasonGoldenTest (derivation parity). All green.
-clock: not injected — this domain has no time-based derivation.
+Web source: web/src/api/hooks/useAiSettings.ts (2 hooks: 0 reads + 2 mutations)
+
+Reads (0) -- useAiSettings.ts declares no useQuery, so there are no cache-then-network
+feeds in this domain (acceptance "reads emit cache->network" is vacuous here).
+
+Mutations (2) -- hook -> endpoint(method, body) -> store API -> invalidates:
+1  useSaveAiSettings      PUT /settings (full-replace)                              -> AiSettingsStore.saveAiSettings(patch)        inv: settings
+                          [reads cached AppSettings doc (CacheDomain.Settings key "settings" == SETTINGS_DOCUMENT_KEY),
+                           shallow-merges JsonObject(current + patch) == verbatim { ...current, ...patch } (patch keys win),
+                           re-submits the whole document; fail-closed with the verbatim cache-empty message on a cache miss;
+                           on success deletes the settings key == web invalidateAndBroadcast(qc, settingsKeys.settings)]
+2  useValidateAiProvider  POST /settings/ai/validate-config {mode + cloud fields}   -> AiSettingsStore.validateAiProvider(req)      inv: (none)
+                          [body uses snake_case wire names; every null field omitted == JSON.stringify dropping undefined;
+                           2xx -> Success(mode, base_url, pinned_ip?, probed_model?, note?); 422 -> Failure(reasonFromCode(code), error)
+                           surfaced as Result.success (a validation OUTCOME); any other status/transport -> Result.failure so onError fires]
+
+Count: 2/2 hooks ported. SI preserved end-to-end -- the settings document is not unit-bearing,
+so there is no display conversion (S5) to do; the exact server shape round-trips verbatim.
+No direct Ktor in the holder -- it delegates entirely to the injected AiSettingsRepository (S7).
+
+Derivation parity: reasonFromCode (web/src/api/hooks/useAiSettings.ts) ->
+presentation/aisettings/ValidateAiProvider.reasonFromCode; golden-locked in
+commonTest/.../presentation/aisettings/ValidateReasonGoldenTest.kt (16 language-neutral vectors:
+12 known backend codes map to themselves + 4 fallbacks (literal "unknown", garbage code, blank,
+null) collapse to unknown). The C# Windows port mirrors the identical rows so KMP and C# cannot
+drift (ADR-004). No other client-side derivation exists in useAiSettings.
+
+Tests (executed this run; :core:allTests --rerun-tasks, 38 tasks executed, JUnit XML verified):
+ - AiSettingsRepositoryContractTest  tests=8 failures=0 errors=0  (endpoint/method/path/body/merge/invalidate + 422-vs-other split, MockEngine)
+ - AiSettingsStoreTest               tests=4 failures=0 errors=0  (mutation delegation + Result pass-through, fake repo)
+ - ValidateReasonGoldenTest          tests=3 failures=0 errors=0  (reasonFromCode golden vectors + enum round-trip)
+ module-wide: 181 suites, 1340 tests, 0 failures, 0 errors, 0 skipped (testDebugUnitTest; iOS/macOS targets SKIPPED on Windows host).
+
+Files (allowed scope: apps/shared/core/**):
+ + cache/CacheDomain.kt                                        (+Settings domain "settings", 5m)
+ + data/repo/AiSettingsRepository.kt                           (S7 port interface)
+ + data/repo/HttpAiSettingsRepository.kt                       (S7 HTTP impl: merge/PUT/invalidate + validate/422)
+ + presentation/aisettings/ValidateAiProvider.kt              (models + reasonFromCode derivation)
+ + presentation/aisettings/AiSettingsStore.kt                 (S8 state holder)
+ + commonTest/.../data/repo/AiSettingsRepositoryContractTest.kt
+ + commonTest/.../presentation/aisettings/AiSettingsStoreTest.kt
+ + commonTest/.../presentation/aisettings/ValidateReasonGoldenTest.kt
 
 EXIT=0
 STATUS=DONE
