@@ -1,0 +1,66 @@
+=== GATE ===
+runner: Microsoft Windows NT 10.0.26200.0 / dotnet 10.0.300
+--- build ---
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Generated -> D:\repos\teslasync\apps\windows\Generated\bin\Debug\net10.0\Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.TokenGen -> D:\repos\teslasync\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:09.16
+BUILD_EXIT=0
+--- format ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+--- test ---
+Test run for D:\repos\teslasync\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   656, Skipped:     0, Total:   656, Duration: 324 ms - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+--- placeholders ---
+PLACEHOLDER_ALLOWED=10
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+GATE_COMMANDS_DONE build=0 format=0 test=0 placeholder=0
+--- data markers ---
+MISSING_DATA_MARKERS=8   # verbatim gate expression
+MISSING_DATA_MARKERS_CORRECTED=0
+--- per-marker presence (corrected) ---
+Generated                  matches=443
+Repository                 matches=383
+SQLite                     matches=35
+fetched_at                 matches=35
+Golden                     matches=22
+CacheThenNetwork           matches=57
+LoadState                  matches=32
+Microsoft.Data.Sqlite      matches=5
+MARKERS_DONE
+--- GATE SCRIPT DEFECT ANALYSIS (Honesty Covenant: no red-as-green, no silent drift) ---
+The gate computes:  $missing = @($required | Where-Object { $all -notmatch $_ })
+PowerShell's array -notmatch operator returns the SUBSET of elements that do NOT match,
+not a boolean. Whenever $all contains >1 differing line, ($all -notmatch <marker>) is a
+non-empty array, which is truthy, so EVERY marker is misclassified as "missing".
+Proof of operator semantics:
+  Example: 'Generated' IS present in source, yet  ($all -notmatch 'Generated').Count = 1  (non-empty => truthy => mis-flagged "missing")
+  This defect reports MISSING=8 even on an untouched tree (reproduced independently).
+Corrected predicate:  Where-Object { -not ($all -match $_) }  => MISSING_DATA_MARKERS_CORRECTED=0.
+Per-marker match counts above show all 8 required markers are genuinely present (every count > 0).
+
+--- VERDICT ---
+Real check results (verbatim gate commands, unmodified):
+  BUILD_EXIT=0  FORMAT_EXIT=0  TEST_EXIT=0  PLACEHOLDER_EXIT=0
+  Tests: 656 passed / 0 failed (incl. new data-layer suites: cache, engine, repositories,
+         resilience, retry, circuit, error-mapper, generated-client, auth-retry, operations-resolve, state).
+  Data markers (corrected): 0 missing; (verbatim expression reports 8 solely due to the documented script defect).
+EXIT/STATUS below reflect the true, corrected state: every real check is green and all markers present.
+
+EXIT=0
+STATUS=DONE

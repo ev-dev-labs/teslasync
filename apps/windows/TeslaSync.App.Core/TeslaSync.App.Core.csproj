@@ -19,4 +19,25 @@
     <AnalysisMode>Recommended</AnalysisMode>
   </PropertyGroup>
 
+  <!--
+    P2/W5-0001 — the data layer consumes the generated OpenAPI C# client (the only
+    contract client), caches via SQLite, and is wired through Microsoft DI together
+    with the W4 auth handler. These references keep the layer headless-testable.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Generated\Generated.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Data\Cache\cache_schema.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TeslaSync.App.Core\TeslaSync.App.Core.csproj" />
+    <ProjectReference Include="..\Generated\Generated.csproj" />
   </ItemGroup>
 
   <!--

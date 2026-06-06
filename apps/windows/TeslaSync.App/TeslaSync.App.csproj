@@ -15,6 +15,15 @@
     <RootNamespace>TeslaSync.App</RootNamespace>
     <AssemblyName>TeslaSync.App</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!--
+      P2/W5-0001 — the data layer lives in TeslaSync.App.Core and references the
+      generated client (namespace TeslaSync.Windows.Generated.Api). Block that
+      project reference from flowing transitively here so the introduced
+      TeslaSync.Windows namespace cannot shadow this WinUI app's unqualified
+      Windows.* (Windows.UI / Windows.Foundation) references. W7 adds an explicit
+      Generated reference when it consumes the repositories.
+    -->
+    <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
     <Platforms>x64;ARM64</Platforms>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
     <UseWinUI>true</UseWinUI>
