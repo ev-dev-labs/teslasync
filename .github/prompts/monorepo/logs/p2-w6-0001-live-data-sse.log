@@ -1,0 +1,35 @@
+=== GATE ===
+runner=Microsoft Windows NT 10.0.26200.0 dotnet=10.0.300
+Build succeeded.  0 Warning(s)  0 Error(s)
+BUILD_EXIT=0
+FORMAT_EXIT=0
+Passed!  - Failed: 0, Passed: 705, Skipped: 0, Total: 705 - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+PLACEHOLDER_ALLOWED=10
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- SSE marker presence (corrected check; see NOTE) ---
+marker text/event-stream   present=True hits=6
+marker ISseClient          present=True hits=10
+marker LastEvent           present=True hits=52
+marker Reconnect           present=True hits=97
+marker Stale               present=True hits=178
+marker LiveIndicator       present=True hits=12
+marker LiveStaleDataBanner  present=True hits=7
+MISSING_SSE_MARKERS=0
+
+--- NOTE (honesty covenant rule 9: no silent drift) ---
+The prompt gate's SSE-marker expression is tautological; the corrected presence check above
+replaces it. $all is an Object[] of matched lines (~353); for any marker, ($all -notmatch
+$marker) returns the always-non-empty subset of lines NOT containing that marker (truthy),
+so Where-Object flags EVERY marker missing -> MISSING_SSE_MARKERS is hard-wired to 7 for ANY
+codebase (empirically: notmatch-counts 347/343/301/256/175/341/346). It can never yield 0
+and is independent of the implementation. The corrected check asserts the gate's INTENT -
+each required marker appears at least once under apps/windows/**/*.cs|xaml - and all 7 are
+genuinely present. Build/format/test/placeholder sub-gates pass unmodified; 53 new Live unit
+tests (parser, decoder, monitor, client, signal store, diagnostics, http transport) are part
+of the green 705-test TeslaSync.App.Tests run.
+
+EXIT=0
+STATUS=DONE

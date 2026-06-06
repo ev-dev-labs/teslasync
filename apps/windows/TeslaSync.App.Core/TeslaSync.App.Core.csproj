@@ -34,6 +34,20 @@
     <ProjectReference Include="..\Generated\Generated.csproj" />
   </ItemGroup>
 
+  <!--
+    P2/W6-0001 — the live (SSE) state holders expose internal driver methods
+    (LiveConnectionMonitor.SetState/MarkEvent/EvaluateStaleness) that only SseClient
+    drives in production; the headless test project asserts them directly.
+  -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="TeslaSync.App.Tests" />
+  </ItemGroup>
+
+  <!-- P2/W6-0001 — expose the internal live-connection state mutators (driven by SseClient) to the headless test project. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="TeslaSync.App.Tests" />
+  </ItemGroup>
+
   <ItemGroup>
     <None Update="Data\Cache\cache_schema.sql">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
