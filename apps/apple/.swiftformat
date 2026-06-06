@@ -5,7 +5,7 @@
 # Rule tweaks aligned with SwiftLint above.
 --self remove
 --importgrouping testable-bottom
---commas always
+--commas inline
 --trimwhitespace always
 --wraparguments before-first
 --wrapparameters before-first

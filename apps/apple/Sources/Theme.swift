@@ -1,24 +1,18 @@
 import SwiftUI
 
-/// App theme seam.
-///
-/// P0 ships a minimal, system-driven theme so the shell honors light/dark and
-/// Dynamic Type out of the box. P2 (design system) replaces these accessors
-/// with the generated `apps/design/generated/apple/Tokens.swift` values — the
-/// call sites (`Theme.accent`, `Theme.background`, `.teslaSyncTheme()`) stay
-/// stable so no view code changes when tokens land.
+/// App theme seam, backed by the generated design tokens
+/// (`apps/design/generated/apple/Tokens.swift`, P2). Call sites use these stable
+/// accessors; the values resolve light / dark / high-contrast at runtime via the
+/// generated `Color.TS` palette.
 enum Theme {
     /// Primary tint used for interactive + brand elements.
-    static let accent: Color = .accentColor
+    static let accent: Color = .TS.accent
 
     /// Adaptive window/background fill.
-    static var background: Color {
-        #if os(iOS)
-            Color(uiColor: .systemBackground)
-        #else
-            Color(nsColor: .windowBackgroundColor)
-        #endif
-    }
+    static let background: Color = .TS.bg
+
+    /// Elevated surface fill (cards, panels).
+    static let surface: Color = .TS.surface
 }
 
 private struct TeslaSyncThemeModifier: ViewModifier {

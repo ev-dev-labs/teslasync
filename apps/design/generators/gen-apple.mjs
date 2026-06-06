@@ -14,23 +14,70 @@ function srgb(value) {
   return `red: ${c.red}, green: ${c.green}, blue: ${c.blue}, opacity: ${c.opacity}`;
 }
 
+// Semantic color: resolves light / dark / high-contrast at runtime via the
+// cross-platform `tsDynamicColor` shim emitted below (UIKit on iOS, AppKit on
+// macOS). Indented for `extension Color { enum TS { … } }` (8 spaces).
 function dynamicColor(name, light, dark, hc) {
-  const L = [];
-  L.push(`    static let ${name} = Color(UIColor { traits in`);
-  L.push('        if traits.accessibilityContrast == .high {');
-  L.push(`            return UIColor(${uiColor(hc)})`);
-  L.push('        }');
-  L.push('        return traits.userInterfaceStyle == .dark');
-  L.push(`            ? UIColor(${uiColor(dark)})`);
-  L.push(`            : UIColor(${uiColor(light)})`);
-  L.push('    })');
-  return L.join('\n');
+  return [
+    `        static let ${name} = tsDynamicColor(`,
+    `            light: ${comps(light)},`,
+    `            dark: ${comps(dark)},`,
+    `            highContrast: ${comps(hc)}`,
+    '        )',
+  ].join('\n');
 }
 
-function uiColor(value) {
+// Named-tuple sRGB components consumed by `tsDynamicColor`.
+function comps(value) {
   const c = toSwiftComponents(value);
-  return `red: ${c.red}, green: ${c.green}, blue: ${c.blue}, alpha: ${c.opacity}`;
+  return `(red: ${c.red}, green: ${c.green}, blue: ${c.blue}, alpha: ${c.opacity})`;
 }
+
+// Cross-platform appearance-aware color shim. macOS + iOS share one SwiftUI
+// layer (ADR-002), so the generated tokens must compile on AppKit and UIKit.
+const DYNAMIC_COLOR_HELPER = [
+  'private typealias TSColorComponents = (red: Double, green: Double, blue: Double, alpha: Double)',
+  '',
+  'private func tsDynamicColor(',
+  '    light: TSColorComponents,',
+  '    dark: TSColorComponents,',
+  '    highContrast: TSColorComponents',
+  ') -> Color {',
+  '    #if canImport(UIKit)',
+  '    return Color(UIColor { traits in',
+  '        let resolved: TSColorComponents',
+  '        if traits.accessibilityContrast == .high {',
+  '            resolved = highContrast',
+  '        } else {',
+  '            resolved = traits.userInterfaceStyle == .dark ? dark : light',
+  '        }',
+  '        return UIColor(red: resolved.red, green: resolved.green, blue: resolved.blue, alpha: resolved.alpha)',
+  '    })',
+  '    #elseif canImport(AppKit)',
+  '    return Color(nsColor: NSColor(name: nil) { appearance in',
+  '        let highContrastNames: Set<NSAppearance.Name> = [',
+  '            .accessibilityHighContrastAqua, .accessibilityHighContrastDarkAqua,',
+  '            .accessibilityHighContrastVibrantLight, .accessibilityHighContrastVibrantDark,',
+  '        ]',
+  '        let darkNames: Set<NSAppearance.Name> = [',
+  '            .darkAqua, .vibrantDark,',
+  '            .accessibilityHighContrastDarkAqua, .accessibilityHighContrastVibrantDark,',
+  '        ]',
+  '        let resolved: TSColorComponents',
+  '        if highContrastNames.contains(appearance.name) {',
+  '            resolved = highContrast',
+  '        } else if darkNames.contains(appearance.name) {',
+  '            resolved = dark',
+  '        } else {',
+  '            resolved = light',
+  '        }',
+  '        return NSColor(srgbRed: resolved.red, green: resolved.green, blue: resolved.blue, alpha: resolved.alpha)',
+  '    })',
+  '    #else',
+  '    return Color(.sRGB, red: light.red, green: light.green, blue: light.blue, opacity: light.alpha)',
+  '    #endif',
+  '}',
+];
 
 const SWIFT_WEIGHT = { regular: 'regular', medium: 'medium', semibold: 'semibold', bold: 'bold' };
 
@@ -38,8 +85,18 @@ export function generateApple(tokens = loadTokens()) {
   const out = [];
   for (const l of BANNER_LINES) out.push(`// ${l}`);
   out.push('');
+  // Generated file: exempt from formatter/linter (hand-formatted, deterministic).
+  out.push('// swiftformat:disable all');
+  out.push('// swiftlint:disable all');
+  out.push('');
   out.push('import SwiftUI');
+  out.push('#if canImport(UIKit)');
   out.push('import UIKit');
+  out.push('#elseif canImport(AppKit)');
+  out.push('import AppKit');
+  out.push('#endif');
+  out.push('');
+  for (const l of DYNAMIC_COLOR_HELPER) out.push(l);
   out.push('');
 
   // Semantic colors (light/dark/high-contrast resolved at runtime).

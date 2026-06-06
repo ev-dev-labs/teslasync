@@ -1,0 +1,81 @@
+P4 · P2 · 0001 — Design tokens to Tokens.swift
+prompt: .github/prompts/monorepo/p4-apple/P2-0001-design-tokens.prompt.md
+mode:   code-complete + DEFERRED Xcode gate (user-approved). Generator is host-runnable (Node),
+        so Tokens.swift is REALLY generated + drift-checked here; only xcodebuild is deferred.
+
+=== PREFLIGHT ===
+Predecessors (Rule 7):
+  - P4/P0-0001 workspace : DONE (8c180d1a)   - design token source apps/design/tokens.json : present
+  - P4/P1-0001 facade    : DONE (43d600e5)
+Tooling installed this prompt: node v26.0.0 (brew) — required to run the deterministic generator.
+Clean-tree: changes confined to apps/apple/**, apps/design/generated/apple/**, and ONE sanctioned
+            out-of-scope generator fix (apps/design/generators/gen-apple.mjs) — see SCOPE NOTE.
+
+=== SURVEY ===
+- apps/design/generators/gen-apple.mjs emits Tokens.swift from tokens.json (deterministic; index.mjs --check is the drift gate).
+- DEFECT FOUND: the emitter was iOS-only — `import UIKit` + `Color(UIColor { traits in … })` with NO macOS
+  guard. That file cannot compile on the macOS target of this macOS+iOS app (AppKit has no UIColor).
+- Existing precedent: apps/design/generated/windows/Tokens.xaml is tracked despite the root
+  `apps/**/generated/` ignore (force-added). The Apple token follows the same precedent.
+- Generated symbol surface: Color.TS.{bg,surface,surfaceGlass,textPrimary,textSecondary,textMuted,accent,border,
+  status*}, Color.TS.chartCategorical/chartSeries*, Font.TS.{display…label}, TSTypeMetrics, TSSpacing, TSRadius, TSMotion.
+
+=== REASONING ===
+- Fixed the GENERATOR (not the generated file) so the token output is the single source of truth and the
+  drift gate still holds. The fix centralizes the platform split in ONE emitted `tsDynamicColor` shim
+  (`#if canImport(UIKit)` UIColor trait provider / `#elseif canImport(AppKit)` NSColor dynamicProvider
+  resolving light/dark/high-contrast via NSAppearance.name), so every color stays a clean cross-platform call.
+- Marked the generated file `// swiftformat:disable all` + `// swiftlint:disable all` (standard for generated
+  code) so the formatter/linter gate passes without fighting hand-formatted deterministic output.
+- Apple Design layer (apps/apple/Sources/Design/) adds what the emitter doesn't: TSMaterial (glass/elevation →
+  .regularMaterial/.thinMaterial/.bar + tsGlassPanel), TSChartPalette (index-stable wrapper), TSAnimation
+  (TSMotion durations as SwiftUI animations honoring Reduce Motion). No hand-copied token values.
+- Wired the generated Tokens.swift into both app targets via XcodeGen (`../design/generated/apple`), and
+  updated Theme.swift to consume Color.TS.accent/bg/surface (P0's stable seam → tokens, zero view churn).
+
+=== CHANGES ===
+  ~ apps/design/generators/gen-apple.mjs   cross-platform emitter: conditional imports + tsDynamicColor (UIKit/AppKit) + disable-all banner + fixed nested indentation   [SCOPE NOTE below]
+  + apps/design/generated/apple/Tokens.swift  GENERATED (node) — colors/typography/spacing/radius/motion/chart; force-added (git-ignored, windows precedent)
+  + apps/apple/Sources/Design/TSMaterial.swift   materials + tsGlassPanel modifier
+  + apps/apple/Sources/Design/TSDesign.swift      TSChartPalette + TSAnimation (Reduce-Motion aware)
+  ~ apps/apple/Sources/Theme.swift               Theme.accent/background/surface → Color.TS tokens (removed iOS-only #if)
+  ~ apps/apple/project.yml                        both app targets include ../design/generated/apple (DesignTokens group)
+  ~ apps/apple/.swiftformat                       --commas inline (align with SwiftLint trailing_comma default; resolves a format↔lint conflict)
+  + apps/apple/Tests/Unit/Design/TSDesignTokensTests.swift   palette↔tokens.json drift, spacing monotonic, motion ordered, Reduce-Motion nil
+
+SCOPE NOTE (Rule 9 — out of declared Allowed-files, user-approved): gen-apple.mjs lives in
+apps/design/generators/ (not apps/apple/** or apps/design/generated/apple/**). Editing it was necessary
+and correct — the generated file is downstream of it, and hand-editing generated output would break the
+deterministic drift gate. The user explicitly approved this fix.
+
+=== PARITY ===
+Design-substrate prompt (no page-manifest unit). Token↔source parity is enforced by the deterministic
+generator + the apple drift check (regenerate in-memory == on-disk) and TSDesignTokensTests. No PARITY_COVERED/REQUIRED emitted.
+
+=== GATE (host-runnable, executed on this machine) ===
+$ node (apple emitter)                         → wrote apple/Tokens.swift (deterministic)
+$ apple drift check (regenerate == on-disk)    → NO DRIFT
+TOKEN_DRIFT=0
+$ swiftformat --lint apps/apple ../design/generated/apple → 0 require formatting
+SWIFTFORMAT_EXIT=0
+$ swiftlint --strict                            → 0 violations, 0 serious
+SWIFTLINT_EXIT=0
+$ placeholder scan (.swift; common+swift; case-insensitive)
+PLACEHOLDER_COUNT=0
+$ xcodegen generate --spec project.yml          → Created project
+XCODEGEN_EXIT=0
+
+=== GATE (Xcode-only — DEFERRED to macos-latest CI, NOT run here; not faked) ===
+#   xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+#   xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync-macOS build test
+# The deferred build also confirms the AppKit branch of tsDynamicColor (NSColor dynamicProvider) compiles.
+IOS_BUILD_TEST=DEFERRED-macOS-pending
+MAC_BUILD_TEST=DEFERRED-macOS-pending
+
+=== COMMIT ===
+  git add apps/apple apps/design/generators/gen-apple.mjs <log>
+  git add -f apps/design/generated/apple/Tokens.swift     # git-ignored; tracked like windows Tokens.xaml
+  git commit -m "feat(apps/apple): generate SwiftUI design tokens (P4/P2)"
+
+EXIT=0
+STATUS=DONE
