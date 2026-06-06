@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    P2/W1-0001 — token resolution verification view.
+    A non-navigated control that references representative tokens from every
+    category so the XAML compiler and runtime prove they resolve. Two nested
+    panels force Light and Dark; the high-contrast dictionary is exercised by
+    FindMissingTokens() in the code-behind.
+-->
+<UserControl
+    x:Class="TeslaSync.App.Themes.TokenVerification"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid Background="{ThemeResource TsColorBgBrush}" Padding="{StaticResource TsSpaceLg}">
+        <StackPanel Spacing="{StaticResource TsSpaceSm}">
+
+            <TextBlock
+                Text="Design tokens"
+                FontFamily="{StaticResource TsTypeFontFamilySans}"
+                FontSize="{StaticResource TsTypeTitleFontSize}"
+                Foreground="{ThemeResource TsColorTextPrimaryBrush}" />
+
+            <Border
+                CornerRadius="{StaticResource TsRadiusMd}"
+                Background="{ThemeResource TsMaterialOverlayBrush}"
+                BorderBrush="{ThemeResource TsColorBorderBrush}"
+                BorderThickness="1"
+                Padding="{StaticResource TsSpaceMd}">
+                <TextBlock
+                    Text="Overlay surface"
+                    FontSize="{StaticResource TsTypeBodyFontSize}"
+                    Foreground="{ThemeResource TsColorTextSecondaryBrush}" />
+            </Border>
+
+            <Border
+                Height="8"
+                CornerRadius="{StaticResource TsRadiusSm}"
+                Background="{StaticResource TsChart01Brush}" />
+
+            <Border Background="{ThemeResource TsSurfaceOverlayBrush}" Padding="{StaticResource TsSpaceSm}">
+                <TextBlock
+                    Text="Status"
+                    Foreground="{ThemeResource TsColorSuccessBrush}"
+                    FontSize="{StaticResource TsTypeBodySmFontSize}" />
+            </Border>
+
+            <StackPanel RequestedTheme="Light">
+                <TextBlock Text="Light accent" Foreground="{ThemeResource TsColorAccentBrush}" />
+            </StackPanel>
+
+            <StackPanel RequestedTheme="Dark">
+                <TextBlock Text="Dark accent" Foreground="{ThemeResource TsColorAccentBrush}" />
+            </StackPanel>
+
+        </StackPanel>
+    </Grid>
+</UserControl>

@@ -7,7 +7,14 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+                <!-- Generated design tokens (apps/design/generated/windows/Tokens.xaml). -->
+                <ResourceDictionary Source="ms-appx:///Themes/Tokens.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Default" Source="ms-appx:///Themes/Dark.xaml" />
+                <ResourceDictionary x:Key="Light" Source="ms-appx:///Themes/Light.xaml" />
+                <ResourceDictionary x:Key="HighContrast" Source="ms-appx:///Themes/HighContrast.xaml" />
+            </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

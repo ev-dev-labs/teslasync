@@ -33,6 +33,15 @@
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>
 
+  <!--
+    The token dictionary is generated outside the project cone
+    (apps/design/generated/windows/Tokens.xaml by TeslaSync.TokenGen) and linked
+    in as a compiled Page so it resolves at ms-appx:///Themes/Tokens.xaml.
+  -->
+  <ItemGroup>
+    <Page Include="..\..\design\generated\windows\Tokens.xaml" Link="Themes\Tokens.xaml" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
