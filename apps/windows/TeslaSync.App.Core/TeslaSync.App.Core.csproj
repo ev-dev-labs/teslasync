@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    P2/W2-0001 — pure, UI-thread-free logic backing the Fluent UI primitives.
+    Kept WinUI-free so it can be unit-tested headlessly via `dotnet test`
+    (the WinUI controls in TeslaSync.App reference these models for their
+    sorting, pagination, selection, masking and command-filter behaviour).
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>TeslaSync.App.Core</RootNamespace>
+    <AssemblyName>TeslaSync.App.Core</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <AnalysisMode>Recommended</AnalysisMode>
+  </PropertyGroup>
+
+</Project>
