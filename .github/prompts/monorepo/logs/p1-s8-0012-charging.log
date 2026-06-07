@@ -50,18 +50,20 @@ Phase-48 SI-canonical rule (DB columns / Go struct fields) does not apply. Conve
 display-only (S5). The request() client auto-adds /api/v1; hooks carry no double prefix.
 
 === GATE ===
-./gradlew :core:allTests
-  testDebugUnitTest + testReleaseUnitTest: BUILD SUCCESSFUL in 33s
-  Charging suites: ChargingStoreTest=8, ChargingRepositoryContractTest=21,
-                   ChargingGoldenTest=9  (38 tests, failures=0 errors=0 skipped=0)
+./gradlew :core:allTests --rerun-tasks
+  38 actionable tasks executed; testDebugUnitTest + testReleaseUnitTest: BUILD SUCCESSFUL in 2m 14s
+  iosSimulatorArm64Test + macosArm64Test SKIPPED (Apple targets unavailable on Windows host)
+  Charging suites (per Debug+Release variant): ChargingStoreTest=8,
+                   ChargingRepositoryContractTest=21, ChargingGoldenTest=9
+                   (38 tests, failures=0 errors=0 skipped=0)
 TEST_EXIT=0
 
-./gradlew :core:ktlintCheck
-  ktlintCommonMainSourceSetCheck + ktlintCommonTestSourceSetCheck: BUILD SUCCESSFUL
+./gradlew :core:ktlintCheck   (forced rerun of ktlintCommonMainSourceSetCheck +
+                               ktlintCommonTestSourceSetCheck) : BUILD SUCCESSFUL
 LINT_EXIT=0
 
 apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
-  PLACEHOLDER_ALLOWED=13  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_ALLOWED=17  PLACEHOLDER_COUNT=0
 PH_EXIT=0
 
 EXIT=0
