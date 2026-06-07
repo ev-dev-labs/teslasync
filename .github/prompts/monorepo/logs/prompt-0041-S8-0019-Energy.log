@@ -1,91 +1,76 @@
-Let me explore the repository structure and the key files first.
+I'll start by exploring the repository structure to understand the task scope and dependencies.
 
-This is a substantial KMP porting task. Let me explore the existing shared core structure, especially the presentation layer and repositories from prior slices.
+The web hook file is clear. Now let me understand the existing KMP shared core structure, especially existing presentation holders, repos (S7), and patterns.
 
-The pattern is clear. There's already an `EnergyRepository.kt` from S7. Let me study a complete analogous domain (driving) and the energy repo + web types.
+Now let me explore the existing KMP source structure ΓÇö presentation patterns, repos, networking, and a reference holder.
 
-This is a large port. Let me check the existing `EnergyRepository` usages, the cache domain enum, web types, constants, and the golden test infrastructure for an analogous domain (charging).
+There's already an `energy` presentation dir. Let me check its current contents and study reference patterns from similar domains (charging, driving) plus the repo layer.
 
-Let me check how the existing `EnergyRepository` is used in tests, the constants/STALE_TIMES web reference, and look at the golden test + store test pattern for charging.
+Substantial code already exists: `EnergyStore.kt`, `EnergyRepository.kt`, `HttpEnergyRepository.kt`, plus tests. This looks like a partially-complete or prior execution. Let me read the existing deliverables and check git status to understand current state.
 
-The concrete `EnergyRepository` (stub hitting `/analytics/energy`) coexists like `DriveRepository` does alongside the `DrivingRepository` domain interface. I'll create a new domain interface without colliding. Let me check what hook `/analytics/energy` maps to, the spec dir, golden infra, and the charging tests.
+Key findings: the `EnergyStore.kt` already exists and looks complete (17 reads + 7 mutations), but the log file `p1-s8-0019-energy.log` shows as **deleted** in the working tree. Let me check git history to understand whether this work was already committed and what the prior log contained.
 
-Now let me read the golden test infrastructure, the charging repo interface/keys, and supporting helpers.
+The Driving holder (S8-0018) is HEAD; Energy (0019) is the next in sequence and has no feat commit yet. Yet `EnergyStore.kt` is tracked and the log file shows deleted. Let me find exactly which commit introduced these energy files.
 
-I have the full pattern. Let me read the remaining helper signatures: `ApiHttpClient` request/safeRequest, `safeArray`, `CachingRepository`, and the existing concrete `EnergyRepository` references for renaming.
+There's an existing commit `96bdf8f84` for Energy that isn't in HEAD's first-parent history, yet the files are tracked. Let me resolve this apparent contradiction definitively.
 
-Let me find `safeArray` and confirm `HttpMethodKind` and the `jsonHeaders`/`MapCacheStore` test helpers, plus check the golden loader pattern for whether I need platform actuals (inline approach avoids them).
+`96bdf8f84` (Energy) is confirmed an ancestor of HEAD, and `EnergyStore.kt` is in HEAD's tree ΓÇö so the source deliverables are already committed. Only the log file was deleted from the working tree. Let me pin down `96bdf8f84`'s position and recover the deleted log to understand the prior run.
 
-`safeArray` returns `JsonArray`. I need the `AS_OF_QUERY_PARAM` value for battery-health. Let me check it and confirm `HttpMethodKind` values, then write a plan.
+Now it's clear: the Energy prompt was **already fully executed and committed** in `96bdf8f84` (2026-06-05, 90 commits back) ΓÇö `EnergyStore.kt`, repos, and both tests are all in HEAD and identical. The only working-tree change is the **deleted log file**. 
 
-I have a complete understanding. Key insight: all 17 energy reads carry raw `JsonElement` (no generated DTOs), simplifying the store. Let me set up tracking and write a plan.
+Per the honesty covenant, I must not claim green without verifying. Let me recover the prior log, then read the repo + tests to confirm parity myself.
 
-Now the rename. Create the renamed file, delete the old, and update the contract test:
+The recovered prior log is thorough and honest ΓÇö notably it documents that on Windows, `:core:allTests` can't link Apple/Native targets, so the JVM-equivalent `:core:testDebugUnitTest` (which exercises all commonTest code) is the runnable gate. The `HttpEnergyRepository` is complete: all 17 reads + 7 mutations, `safeArray` on the correct 6 list reads.
 
-Now the new `EnergyRepository` interface with query builders and keys:
+Let me locate the Gradle wrapper and tooling, then start the gate build (slow) while I verify parity in the repo + tests.
 
-Now the `HttpEnergyRepository`:
+Implementation is thorough and well-documented. Let me read the build config (to confirm the right test task), the rest of `EnergyRepository.kt` (query builders + cache keys + family helpers), and the test files to fully verify parity.
 
-Now the `EnergyStore` state holder:
+Build config confirms KMP with `androidTarget()` + Apple targets. On Windows the Apple link can't run, so `:core:testDebugUnitTest` (all commonTest on JVM) is the host-runnable gate ΓÇö matching the prior log. Parity is verified: all 24 hooks, correct endpoints, snake_case params, `safeArray` on the right 6 reads, web-faithful truthy guards.
 
-Now the tests. First the `EnergyStoreTest` with a fake repo:
+Let me launch the gate build (slow) and read the remaining repo lines + tests while it runs.
 
-Now the golden test for query/key/family derivations:
+Implementation and tests are comprehensive ΓÇö `EnergyStoreTest` has 9 tests covering cacheΓåÆnetwork reads, feed sharing, and exact per-mutation family invalidation. Parity is fully confirmed across all 24 hooks. Let me check the gate build progress and read the golden + HTTP contract tests.
 
-Now the HTTP URL contract test:
+Gate test passed (`BUILD SUCCESSFUL`, exit 0) ΓÇö but it was `FROM-CACHE`. Per the honesty covenant (no red-as-green via stale cache), I'll force a fresh re-run to actually execute the Energy tests, plus run ktlint and the placeholder check. The golden test locks all the query/key/family derivations with language-neutral vectors for C# parity.
 
-Let me verify `runTestBlocking` signature and `newTestCache` import before running.
+Let me run the full gate for real, capturing fresh output.
 
-`runTestBlocking` returns `Unit`. Let me fix the `capture` helper and add the `newTestCache` import.
+The `HttpEnergyRepositoryTest` has 24 tests pinning every read + mutation to exact path, method, and snake_case params ΓÇö confirming no double `/api/v1` prefix and correct verbs. Parity is airtight. Let me check the fresh test run and inspect the placeholder tool's output contract.
 
-Now let me run the gate. First check the gradle setup and log path.
+Fresh re-run executed all commonTest on JVM (18 tasks executed, not cached): **BUILD SUCCESSFUL in 53s, TEST_EXIT=0**. Only an unrelated deprecation warning. Now let me run ktlint (async) plus the placeholder check and read the actual Energy test counts in parallel.
 
-Gradle root is `apps/shared` (module `:core`). On Windows I can't build Apple targets, so I'll run the JVM-executable common tests via `testDebugUnitTest` plus ktlint. Let me start (first run compiles + downloads ΓÇö long wait):
+Real Energy test counts confirmed: **HttpEnergyRepositoryTest 24, EnergyGoldenTest 13, EnergyStoreTest 9 ΓÇö 46 tests, 0 failures/errors/skipped**. Placeholder gate: **COUNT=0, EXIT=0**. Let me read the ktlint result.
 
-Tests pass. Now ktlint:
+All three gate checks are **green and real**:
+- **TEST_EXIT=0** ΓÇö `:core:testDebugUnitTest --rerun-tasks` (18 tasks executed, 53s); Energy = 24+13+9 = 46 tests, 0 failures
+- **LINT_EXIT=0** ΓÇö `:core:ktlintCheck`, commonMain + commonTest clean
+- **PH_EXIT=0** ΓÇö PLACEHOLDER_COUNT=0
 
-ktlint has formatting issues. Let me auto-format:
+To honestly document why I used the JVM-equivalent instead of the literal `:core:allTests`, let me enumerate what `allTests` would pull in on this Windows host (Apple link tasks can't run).
 
-One line (165) couldn't be auto-corrected. Let me re-run check and view that line:
+`:core:allTests` dry-run confirms it aggregates `iosSimulatorArm64Test` + `macosArm64Test` (require Apple/Native linking ΓÇö impossible on Windows), plus `testDebugUnitTest` (the JVM path I ran, covering all commonTest). This is the documented host limitation.
 
-ktlint clean. Now placeholder check + re-run tests to confirm formatting didn't break anything:
+All gate checks are green and verified. The deliverables are already committed (`96bdf8f84`); only the log was removed from the working tree. Let me regenerate it with this run's real output, then commit.
 
-All green. Let me confirm my new test classes actually executed:
+Now let me commit following the prompt's exact `git add` scope (which keeps unrelated runner log files out), verifying what gets staged before committing.
 
-All three Energy test classes ran (24+13+9 tests, all pass). Now writing the gate log:
+Only the regenerated log is staged (source already committed). Let me commit with the prompt's exact message.
 
-Let me verify the log's endpoint claims match the actual implementation and the web source before committing:
+Committed as `893e89ebb`. Let me do a final verification that the working tree is clean of this task's changes and the log ends correctly.
 
-The log's enumerated endpoints don't match the actual implementation ΓÇö I wrote them from memory. I must correct the log to reflect the real code. Let me read both the implementation and the web source to get accurate paths:
+All clean and verified. The task is complete.
 
-Now let me verify the implementation matches the web source exactly:
+**Situation:** The P1/S8/0019 Energy state holder was already authored and committed in `96bdf8f84` (an ancestor of HEAD) ΓÇö `EnergyStore.kt`, the `EnergyRepository`/`HttpEnergyRepository`/`EnergySummaryRepository` ports, and 3 test files. Only the gate log had been removed from the working tree.
 
-The implementation faithfully matches the web source. My log's PARITY endpoints were wrong ΓÇö let me correct them to the real paths:
-
-Log now accurate. Let me update todos and check git status before committing:
-
-Everything green and accurate. Committing exactly the allowed files:
-
-Done. P1/S8/0019 complete.
-
-## Summary
-
-Ported all **24 `useEnergy.ts` hooks** (17 reads + 7 mutations) into UI-free KMP shared-core state holders, mirroring the existing Driving/Charging slices.
-
-**Deliverables** (`apps/shared/core`):
-- `data/repo/EnergyRepository.kt` ΓÇö interface + snake_case query builders + cache/feed keys + family helpers
-- `data/repo/HttpEnergyRepository.kt` ΓÇö HTTP+cache impl (verbatim-SI `JsonElement`; `safeArray` on the 6 list reads)
-- `presentation/energy/EnergyStore.kt` ΓÇö `StateFlow<Resource<JsonElement>>` reads + suspend `Result` mutations with web-faithful invalidation
-- Renamed the pre-existing concrete `EnergyRepository` ΓåÆ `EnergySummaryRepository` to free the canonical name
-- Tests: `EnergyStoreTest` (9), `EnergyGoldenTest` (13), `HttpEnergyRepositoryTest` (24 ΓÇö one URL/param contract per hook)
-
-**Gate (all green):**
-- `:core:testDebugUnitTest` ΓåÆ BUILD SUCCESSFUL (all 3 Energy test classes ran; 46 Energy tests pass)
-- `:core:ktlintCheck` ΓåÆ clean (after `ktlintFormat`)
-- `check-placeholders.ps1` ΓåÆ `PLACEHOLDER_COUNT=0`, EXIT=0
-
-Note: `allTests` aggregate links Apple targets, which can't build on Windows, so I ran the JVM-executable `testDebugUnitTest` (executes all commonTest) ΓÇö documented honestly in the log. I also caught and corrected an inaccuracy in my first log draft: the enumerated endpoints were rewritten to match the actual implementation, verified byte-for-byte against `useEnergy.ts`.
-
-Committed as `96bdf8f84` with the `=== PARITY ===` enumeration and `EXIT=0`/`STATUS=DONE`.
+**What I did (re-verification run):**
+1. **Verified parity myself** ΓÇö cross-checked all 24 hooks in `useEnergy.ts` (17 reads + 7 mutations) against the committed KMP code: exact endpoints, snake_case params, `safeArray` on the correct 6 list reads, web-faithful truthy guards (`as_of`, paired `start/end`, `limit==0` falsy, WC-refresh has no `period`), exact `invalidateQueries` family semantics, SI preserved.
+2. **Ran the full gate for real** at current HEAD (freshly executed, not cached):
+   - `:core:testDebugUnitTest --rerun-tasks` ΓåÆ BUILD SUCCESSFUL (53s); Energy = **46 tests, 0 failures** (HttpEnergyRepositoryTest 24, EnergyGoldenTest 13, EnergyStoreTest 9) ΓåÆ TEST_EXIT=0
+   - `:core:ktlintCheck` ΓåÆ clean ΓåÆ LINT_EXIT=0
+   - `check-placeholders.ps1` ΓåÆ PLACEHOLDER_COUNT=0 ΓåÆ PH_EXIT=0
+   - Documented the `:core:allTests` Windows limitation (Apple/Native link tasks unrunnable on non-Apple host) via `--dry-run`.
+3. **Regenerated the log** with this run's real output + full 24-hook PARITY enumeration, ending `EXIT=0`/`STATUS=DONE`.
+4. **Committed** (`893e89ebb`) using the prompt's exact `git add` scope (kept unrelated runner logs out).
 
 

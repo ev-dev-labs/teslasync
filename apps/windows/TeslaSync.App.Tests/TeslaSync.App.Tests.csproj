@@ -46,6 +46,44 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AuditLogWidget\AuditLogWidget.Model.cs" Link="Widgets\AuditLogWidget\AuditLogWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AuditLogWidget\AuditLogWidget.ViewModel.cs" Link="Widgets\AuditLogWidget\AuditLogWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AuditLogWidget\AuditLogWidget.Source.cs" Link="Widgets\AuditLogWidget\AuditLogWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\AutomationHistoryWidget\AutomationHistoryWidget.Model.cs" Link="Widgets\AutomationHistoryWidget\AutomationHistoryWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\AutomationHistoryWidget\AutomationHistoryWidget.ViewModel.cs" Link="Widgets\AutomationHistoryWidget\AutomationHistoryWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\AutomationStatusWidget\AutomationStatusWidget.Model.cs" Link="Widgets\AutomationStatusWidget\AutomationStatusWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\AutomationStatusWidget\AutomationStatusWidget.ViewModel.cs" Link="Widgets\AutomationStatusWidget\AutomationStatusWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BackupHistoryWidget\BackupHistoryWidget.Model.cs" Link="Widgets\BackupHistoryWidget\BackupHistoryWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BackupHistoryWidget\BackupHistoryWidget.ViewModel.cs" Link="Widgets\BackupHistoryWidget\BackupHistoryWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BackupHistoryWidget\BackupHistoryWidget.Source.cs" Link="Widgets\BackupHistoryWidget\BackupHistoryWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BackupMonitorWidget\BackupMonitorWidget.Model.cs" Link="Widgets\BackupMonitorWidget\BackupMonitorWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BackupMonitorWidget\BackupMonitorWidget.ViewModel.cs" Link="Widgets\BackupMonitorWidget\BackupMonitorWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BackupMonitorWidget\BackupMonitorWidget.Source.cs" Link="Widgets\BackupMonitorWidget\BackupMonitorWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BatteryCellsWidget\BatteryCellsWidget.Model.cs" Link="Widgets\BatteryCellsWidget\BatteryCellsWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BatteryCellsWidget\BatteryCellsWidget.ViewModel.cs" Link="Widgets\BatteryCellsWidget\BatteryCellsWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BatteryCellsWidget\BatteryCellsWidget.Source.cs" Link="Widgets\BatteryCellsWidget\BatteryCellsWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BatteryDegradationForecastWidget\BatteryDegradationForecastWidget.Model.cs" Link="Widgets\BatteryDegradationForecastWidget\BatteryDegradationForecastWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BatteryDegradationForecastWidget\BatteryDegradationForecastWidget.ViewModel.cs" Link="Widgets\BatteryDegradationForecastWidget\BatteryDegradationForecastWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BatteryDegradationForecastWidget\BatteryDegradationForecastWidget.Source.cs" Link="Widgets\BatteryDegradationForecastWidget\BatteryDegradationForecastWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BatteryDegradationTrendWidget\BatteryDegradationTrendWidget.Model.cs" Link="Widgets\BatteryDegradationTrendWidget\BatteryDegradationTrendWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BatteryDegradationTrendWidget\BatteryDegradationTrendWidget.ViewModel.cs" Link="Widgets\BatteryDegradationTrendWidget\BatteryDegradationTrendWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BatteryDegradationTrendWidget\BatteryDegradationTrendWidget.Source.cs" Link="Widgets\BatteryDegradationTrendWidget\BatteryDegradationTrendWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BatteryGaugeWidget\BatteryGaugeWidget.Model.cs" Link="Widgets\BatteryGaugeWidget\BatteryGaugeWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BatteryGaugeWidget\BatteryGaugeWidget.ViewModel.cs" Link="Widgets\BatteryGaugeWidget\BatteryGaugeWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BatteryGaugeWidget\BatteryGaugeWidget.Source.cs" Link="Widgets\BatteryGaugeWidget\BatteryGaugeWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BatteryHealthAnalyticsWidget\BatteryHealthAnalyticsWidget.Model.cs" Link="Widgets\BatteryHealthAnalyticsWidget\BatteryHealthAnalyticsWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BatteryHealthAnalyticsWidget\BatteryHealthAnalyticsWidget.ViewModel.cs" Link="Widgets\BatteryHealthAnalyticsWidget\BatteryHealthAnalyticsWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BatteryHealthAnalyticsWidget\BatteryHealthAnalyticsWidget.Source.cs" Link="Widgets\BatteryHealthAnalyticsWidget\BatteryHealthAnalyticsWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BatteryRadialGaugeWidget\BatteryRadialGaugeWidget.Model.cs" Link="Widgets\BatteryRadialGaugeWidget\BatteryRadialGaugeWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BatteryRadialGaugeWidget\BatteryRadialGaugeWidget.ViewModel.cs" Link="Widgets\BatteryRadialGaugeWidget\BatteryRadialGaugeWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\BatteryRadialGaugeWidget\BatteryRadialGaugeWidget.Source.cs" Link="Widgets\BatteryRadialGaugeWidget\BatteryRadialGaugeWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargeCostTrackerWidget\ChargeCostTrackerWidget.Model.cs" Link="Widgets\ChargeCostTrackerWidget\ChargeCostTrackerWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargeCostTrackerWidget\ChargeCostTrackerWidget.ViewModel.cs" Link="Widgets\ChargeCostTrackerWidget\ChargeCostTrackerWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargeHistoryWidget\ChargeHistoryWidget.Model.cs" Link="Widgets\ChargeHistoryWidget\ChargeHistoryWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargeHistoryWidget\ChargeHistoryWidget.ViewModel.cs" Link="Widgets\ChargeHistoryWidget\ChargeHistoryWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargeHistoryWidget\ChargeHistoryWidget.Source.cs" Link="Widgets\ChargeHistoryWidget\ChargeHistoryWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargePlansWidget\ChargePlansWidget.Model.cs" Link="Widgets\ChargePlansWidget\ChargePlansWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargePlansWidget\ChargePlansWidget.ViewModel.cs" Link="Widgets\ChargePlansWidget\ChargePlansWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargeSessionChartWidget\ChargeSessionChartWidget.Model.cs" Link="Widgets\ChargeSessionChartWidget\ChargeSessionChartWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargeSessionChartWidget\ChargeSessionChartWidget.ViewModel.cs" Link="Widgets\ChargeSessionChartWidget\ChargeSessionChartWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargeSessionChartWidget\ChargeSessionChartWidget.Source.cs" Link="Widgets\ChargeSessionChartWidget\ChargeSessionChartWidget.Source.cs" />
   </ItemGroup>
 
   <!--

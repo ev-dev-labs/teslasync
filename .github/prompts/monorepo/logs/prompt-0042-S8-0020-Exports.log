@@ -1,65 +1,78 @@
-I'll start by exploring the structure and reading the key files.
+I'll start by exploring the repository structure and the key files needed for this task.
 
-Let me explore the existing shared core structure to find patterns for state holders, repositories, and other ported hook domains.
+The web source is clear. Now let me examine the existing KMP structure to understand the established patterns. Let me look at existing presentation domains and the repository layer.
 
-Let me study an existing domain with CRUD mutations (automations) as the reference pattern.
+An `exports` presentation directory already exists. Let me inspect it and study a complete analogous domain (notifications) to learn the established patterns.
 
-Now let me look at the test patterns, CacheDomain, and supporting infra.
+Existing exports files are present. Let me read all of them to understand the current state.
 
-Let me examine the golden test pattern, contract test, CachingRepository, and supporting helpers.
+Substantial implementation already exists. Let me read the repository layer and the tests.
 
-Let me read the web export types, safeArray, the request/safeRequest API, and check the logs dir + placeholders script.
+The implementation looks complete. Let me read the test files and check the log/golden vectors status.
 
-Let me check the generic RepositoryContractTest and whether repos are registered in any factory/DI.
+The log file shows as deleted (`D`) but the implementation `.kt` files aren't in git status ΓÇö meaning they're already committed. Let me check git history to understand the state.
 
-Let me check an existing S8 log format and the ktlint config to match conventions.
+A commit `f8eb18e6f` for Exports exists but isn't in recent history. Let me investigate the relationship between that commit and HEAD.
 
-I have enough context. Let me write a plan and create the SQL todos, then implement.
+The Exports implementation is fully committed in ancestor `f8eb18e6f`. But the log file is now deleted in the working tree. Let me understand the position of that commit and why the log is deleted.
 
-Now let me create the model file.
+Now I understand: the Exports implementation is fully committed in ancestor `f8eb18e6f`, but the log file `p1-s8-0020-exports.log` was deleted from the working tree. My job is to verify the implementation against all 13 hooks, run the gate, and regenerate the log. Let me recover the old log and read the tests + golden vectors.
 
-Now the repository interface with key builders and derivations.
+The implementation is complete and was previously verified (old log showed `EXIT=0 STATUS=DONE`). Per the Honesty Covenant, I must actually re-run the gate rather than trust the old log. Let me read the remaining tests + CacheDomain, and kick off the test build (slow) in parallel.
 
-Now the store. Let me add the CacheDomain entry first.
+Everything is in place including `CacheDomain.Exports("exports", 5.seconds)`. The implementation is complete and comprehensive (13 hooks, 3 test files, golden vectors). Now I'll run the authoritative gate. Let me start the test build (slow) async and read the contract test while it runs.
 
-Now the tests. Store test first.
+No gradlew in `apps/shared/core`. Let me locate the gradle wrapper and the settings to understand the build layout.
 
-Now the contract test and golden test.
+Gradlew is at `apps/shared`. Let me check the settings to confirm the `:core` module, then run the gate from the correct root.
 
-Let me simplify the golden test's value extraction to use `jsonPrimitive.content`.
+Build root is `apps/shared`, module `:core`. Let me kick off the authoritative test gate (slow) async, and read the contract test while it runs.
 
-Now let me run the gate. First locate gradlew.
+The contract test confirms 16 tests covering all endpoints. All 13 hooks are ported. The implementation is complete and faithful. Let me monitor the gate build.
 
-Let me run the gate (tests + ktlint).
+`:core:allTests` passed (TEST_EXIT=0) but tasks were UP-TO-DATE ΓÇö no fresh execution. Per the Honesty Covenant I want genuine evidence for my deliverable, so I'll force a fresh re-run of the Exports test classes and capture real counts.
 
-Let me auto-fix with ktlintFormat.
+Fresh execution succeeded (3 tasks executed, BUILD SUCCESSFUL). Let me extract the exact per-class test counts from the JUnit XML results.
 
-Let me verify the auto-formatted changes look correct, then run the full gate.
+Genuine fresh counts confirmed: 16 + 9 + 7 = 32 Exports tests, all passing. Now the lint and placeholder gates.
 
-Now run the full gate.
+ktlint passed (LINT_EXIT=0). Now the placeholder check.
 
-Build succeeded. Let me confirm my new test classes ran and passed.
+All three gate components pass with genuine evidence:
+- **TEST_EXIT=0** ΓÇö `:core:allTests` BUILD SUCCESSFUL; forced-fresh Exports run: 16 + 9 + 7 = 32 tests, 0 failures
+- **LINT_EXIT=0** ΓÇö `:core:ktlintCheck` BUILD SUCCESSFUL
+- **PH_EXIT=0** ΓÇö PLACEHOLDER_COUNT=0
 
-All 32 export tests pass. Now the placeholder check.
+The implementation (committed in ancestor `f8eb18e6f`) is complete and verified. Now I'll regenerate the deleted log with honest output. Let me confirm the working-tree state of the relevant paths first.
 
-All gates green. Let me write the log file.
+Confirmed: `apps/shared/core` is fully committed and intact; only the log is missing. I'll regenerate it with honest, verified gate output reflecting my actual runs.
 
-Now commit per the prompt.
+Now I'll stage the allowed paths and commit per the prompt's Commit step.
 
-Only my intended files are staged (done.txt and other logs remain unstaged). Committing per the prompt.
+Only the log differs (apps/shared/core already committed). Committing with the prescribed message.
 
-Done. P1/S8/0020 ΓÇö Exports shared state holder is complete, gated, and committed (`f8eb18e6f`).
+Committed as `55e1714f4`. Let me verify the final state and clean up the temp capture file.
 
-**All 13 web `useExports` hooks ported** to UI-free KMP state holders (6 reads + 7 mutations), plus the `exportDownloadUrl` derivation:
-- `ExportsRepository` (S7 port) + `HttpExportsRepository` (cache-then-network, ADR-013) + `ExportsStore` (S8 shared `StateFlow` feeds) + `ExportModels` + `CacheDomain.Exports` (5s TTL).
-- Endpoints/methods/params/bodies, query keys, `enabled` gates (`!!id`/`!!type`), and TanStack prefix-invalidation (`['export-jobs']`+`['exports']` for job mutations, `['scheduled-exports']` for schedule mutations) all match the web verbatim. Values stay SI/raw; conversion deferred to display (S5).
-- Faithfully reproduced the web's loose `request<ExportJob[]>` typing by making `ExportJob` fields nullable/defaulted so a real `ExportJobSummary` payload degrades gracefully instead of failing decode.
+All verified. Final state is clean and committed.
 
-**Gate (all green, real output):**
-- `:core:allTests` ΓåÆ BUILD SUCCESSFUL, **TEST_EXIT=0** (ExportsRepositoryContractTest 16, ExportsStoreTest 7, ExportsGoldenTest 9 ΓÇö 32 tests, 0 failures)
-- `:core:ktlintCheck` ΓåÆ **LINT_EXIT=0**
-- `check-placeholders` ΓåÆ **PLACEHOLDER_COUNT=0, PH_EXIT=0**
+## Summary
 
-Golden vectors (language-neutral, inlined) lock the query builder, key builders, download URL, bulk-delete body, and JSON.stringify body parity for KMPΓåöC# (ADR-004). Log written; `EXIT=0 / STATUS=DONE`.
+The **P1/S8/0020 Exports state holder** was already fully implemented and committed in ancestor `f8eb18e6f`, but its gate log had been deleted from the working tree. I verified the implementation against the web source, re-ran the gate with **genuine fresh evidence** (not cached), regenerated the honest log, and committed it (`55e1714f4`).
+
+**Verification (real runs, not trusted from the old log):**
+| Gate | Result |
+|---|---|
+| `:core:allTests` | BUILD SUCCESSFUL ┬╖ TEST_EXIT=0 |
+| Forced-fresh Exports tests (`cleanTestDebugUnitTest`) | 16 + 9 + 7 = **32 tests, 0 failures** |
+| `:core:ktlintCheck` | BUILD SUCCESSFUL ┬╖ LINT_EXIT=0 |
+| `check-placeholders` | PLACEHOLDER_COUNT=0 ┬╖ PH_EXIT=0 |
+
+**Parity confirmed ΓÇö all 13 `useExports.ts` hooks** ported as UI-free KMP state holders:
+- 6 reads ΓåÆ `ExportsStore` cacheΓåÆnetwork `StateFlow<Resource<T>>` feeds, with the `enabled:!!id`/`!!type` gates reproduced as stable non-fetching feeds.
+- 7 mutations ΓåÆ non-throwing `suspend Result`, each refreshing exactly the web's `invalidateQueries` prefixes (`['export-jobs']`+`['exports']` for job mutations; `['scheduled-exports']` for schedule mutations).
+- Repositories injected (S7); no direct Ktor in the holder; SI/raw preserved (display conversion deferred to S5).
+- Golden vectors (`ExportsGoldenTest`) lock query/key builders, download URL, bulk-delete body, and `JSON.stringify` parity for KMPΓåöC# (ADR-004).
+
+Log ends with `EXIT=0` / `STATUS=DONE`. Temp capture file cleaned up.
 
 

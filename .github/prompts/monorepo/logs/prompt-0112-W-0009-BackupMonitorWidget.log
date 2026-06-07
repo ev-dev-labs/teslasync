@@ -1,0 +1,149 @@
+I'll start by investigating the environment capability (critical gate) and the existing codebase structure in parallel.
+
+.NET 10 + MAUI workloads are present. Let me read the web source and explore the existing native widget structure. There are already widget tests (BackupHistoryWidget, etc.) but no BackupMonitorWidget yet.
+
+The native pattern is a 4-file structure per widget (`.cs` view, `.ViewModel.cs`, `.Source.cs`, `.Model.cs`) in a subdirectory. `BackupHistoryWidget` is the closest analog (same `useBackupRuns`/admin domain). Let me study it thoroughly as the template.
+
+Excellent ΓÇö very clear, rigorous pattern. Now let me study the test pattern, the web data hook (`useBackupRuns`), the registry entry, the WidgetShell, and the WidgetProps types in parallel.
+
+Let me read the web data hook, the registry entry, and the test file (in sections since it's large).
+
+Now let me read the data types, the hook, and the registry entry:
+
+Now let me examine the native shared components (`TsBadge`/`StatusKind`, formatters, status-dot rendering) and the test conventions. Let me locate them:
+
+There's a shared `DateTimeFormatting.Format(..., DateTimeVariant.Relative, now)` and per-widget relative formatters. Let me read the key shared components and formatters to map them precisely.
+
+`DateTimeFormatting`/`DateTimeVariant`/`StatusKind`/`ScalarFormatters` live in core. Let me locate and read them, plus the relevant section of Cards.cs and the states/freshness components.
+
+These live in the Core project. Let me locate the core source files:
+
+Now let me check the relative-time precedent (AnomalyDetector), the web date hook, a possible shared byte formatter, the data-layer types, and the generated endpoints for the `/backup/runs` operation id.
+
+`ApiEndpoints.cs` is in the `Generated` project. Let me confirm the backup-runs operation id and read the data-layer types, freshness constant, and remaining shared components.
+
+Operation id confirmed: `get_api_v1_backup_runs`. Now let me read the remaining data-layer types and visual components I'll use.
+
+Let me read the test conventions (full file) and the remaining visual primitives in parallel.
+
+Now let me read the test helpers, the cache engine, and the remaining visual primitives (`TsDataFreshness`, `DisplayTokens`, `TsSkeleton`, the status-dot helper).
+
+Let me read the freshness component, localizer interface, cache engine signature, and the StatCard definition.
+
+I have the full pattern. Let me verify how sibling widgets handle the i18n catalog (.resw) ΓÇö this determines whether I add resource entries.
+
+20 matches exist ΓÇö siblings have `.resw` entries. Let me check whether `widget.backupMonitor.*` keys already exist in the catalog (possibly seeded by the P1/S10 step):
+
+All 11 `widget.backupMonitor.*` keys already exist in the catalog (seeded by P1/S10). No `.resw` edits needed ΓÇö staying within allowed files. Let me confirm the values match the source fallbacks:
+
+All 11 keys exist with exact-match values. Now let me start a baseline build (WinUI builds are slow) while I check the csproj globbing, central registration needs, and the closest single-source sibling (AnomalyDetector) for structure.
+
+SDK-style globbing auto-includes my new files; no central registry to modify ΓÇö each widget is self-contained. Let me study the single-source sibling (AnomalyDetector) Source + view + test, plus a stat-grid `system` widget (APIUsage) view, to model the simpler single-source shape and the compact/standard/wide layout split.
+
+Baseline build finished. Let me confirm it's clean (this validates the WinUI 3 + .NET 10 capability gate).
+
+Baseline is green (0/0) in ~10s ΓÇö the WinUI 3 + .NET 10 capability gate is satisfied. Now let me resolve two implementation details: the canonical HardDrive glyph for this widget, and whether sibling `.description` keys are catalogued.
+
+No central glyph map and sibling `.description` keys aren't catalogued (fallback-only is the norm). Let me pick the correct Segoe Fluent glyph by checking what the system-category siblings and nav use for storage/backup.
+
+Glyph convention: each widget defines its own constants mapped to the web lucide icon. For lucide `HardDrive` I'll use Segoe Fluent `\uEDA2` (MapDrive/hard-drive). Let me confirm the danger color/soft-tint tokens available for the "failed" status cell background.
+
+The capability gate is satisfied (clean WinUI 3 + .NET 10 build). I have full understanding of the pattern. Let me set up tracking and start the log, then write the four widget files + test.
+
+Now I'll create the Model file (state enum, JSON readers, models, size, projection):
+
+Model created. Now the Source (single-source data adapter):
+
+Source created. Now the ViewModel file (registration, diagnostics, state holder):
+
+ViewModel created. Now the WinUI view (the longest file ΓÇö all states + compact/standard/wide layouts):
+
+View created. Let me write the test file (mirroring the sibling test conventions) and check the radius token key in parallel:
+
+The real token is `TsRadiusMd` (used by most widgets); `TsRadiusMdCornerRadius` doesn't exist (BackupHistory silently uses the fallback). Let me fix my run-row to use the correct token:
+
+Now the test file:
+
+Let me verify the `EndpointDescriptor` shape (property name for the path) so my registration test compiles:
+
+The property is `Path`, not `PathTemplate`. Let me fix the test:
+
+Following the sibling precedent (pure builders are `static` to satisfy CA1822), let me make the four pure layout builders static:
+
+Files created. Let me update tracking and run the build to catch compile errors early:
+
+Root cause: the App project's 2 CA1859 analyzer errors (treated as errors) blocked the App build, so the test project resolved against the stale DLL (hence the cascade of "BackupMonitor type not found"). Let me fix the two CA1859 issues ΓÇö return concrete types:
+
+Now rebuild the full solution:
+
+App project now builds cleanly. The test project can't see my types ΓÇö it must link the widget logic files via the csproj (since it's `net10.0` and can't reference the WinUI app). Let me inspect how siblings are wired:
+
+The test project links each widget's UI-free logic files (`.Model.cs`, `.ViewModel.cs`, `.Source.cs`) since it targets `net10.0` and can't reference the WinUI app. Every sibling added its entries here ΓÇö I must do the same for the tests to compile (required by the acceptance criteria + gate). Adding mine in alphabetical order after BackupHistory:
+
+Now rebuild ΓÇö the test project should compile:
+
+Build succeeds (0 errors; the warnings are pre-existing in `TeslaSync.App.Core`, not my code). Let me run my new test class to verify the logic before the full gate:
+
+All 79 test cases pass. Let me verify the gate tooling exists (placeholder script, log dir) and run `dotnet format` on my files to catch style issues early:
+
+Format check found CRLF line endings (repo requires LF) ΓÇö the `create` tool wrote CRLF on Windows. Let me auto-fix formatting on my new files with `dotnet format`, then re-verify:
+
+Let me re-verify formatting on my files (including the csproj edit):
+
+My files verify clean (VERIFY_EXIT=0). The gate runs `dotnet test` on the whole solution, which includes `TeslaSync.App.UITests` (UI automation). Let me check whether those run headlessly or skip, so I know what to expect from the gate:
+
+The UITests use WinAppDriver. Let me confirm they skip gracefully when the driver isn't present (so the gate's `dotnet test` won't fail on environment):
+
+The UITests deliberately **fail** (not skip) without a WinAppDriver runner + deployed MSIX ΓÇö a separate harness absent in this CLI env. Let me check how the predecessor sibling widgets recorded the gate (their logs) to follow the established, honest convention:
+
+The direct predecessor is `0008-BackupHistoryWidget.log`. Let me read it to follow the exact, established gate-logging convention:
+
+The predecessor (0008) ended **STATUS=BLOCKED** ΓÇö `TEST_EXIT=1` because the `TeslaSync.App.UITests` (WinAppDriver) harness is absent, while unit tests pass 100% and build/format/placeholder are clean. This is the honest, canonical outcome. Let me read the predecessor's log structure (header + the blocked/root-cause sections) to produce an equivalent honest log:
+
+Now let me read the predecessor's summary/root-cause/BLOCKED rationale tail so I produce an equivalently rigorous, honest log:
+
+I have the complete canonical pattern. The predecessor ended `EXIT=1 / STATUS=BLOCKED` ΓÇö purely because the `TeslaSync.App.UITests` (WinAppDriver E2E) runner is absent, while unit tests pass and build/format/placeholder are clean. My csproj edit is also the established approach (the predecessor lists it under FILES DELIVERED). Let me run the full gate, capturing to the log:
+
+BUILD_EXIT=0. Now the test step (full solution ΓÇö unit tests pass, UITests fail on absent WinAppDriver):
+
+Test step done. Let me extract the key result lines (unit pass count, UITest fail count, TEST_EXIT):
+
+Perfect parity with the predecessor: **unit tests pass 1490/0/0** (baseline 1411 + my 79 new cases), and the **147 UITest failures are all `UiAutomationUnavailableException`** (WinAppDriver runner absent ΓÇö not my code). Now the format + placeholder steps:
+
+All gate steps recorded: **BUILD_EXIT=0, TEST_EXIT=1** (WinAppDriver-only), **FORMAT_EXIT=0** (whole-solution clean ΓÇö no regressions), **PLACEHOLDER_EXIT=0** (COUNT=0). Let me gather the WinAppDriver-absence probe evidence and append the honest verdict to the log:
+
+WinAppDriver confirmed absent on all four checks. Let me append the honest verdict to the log (mirroring the predecessor's rigorous structure):
+
+Log now ends with `EXIT=1 / STATUS=BLOCKED` (covenant rule 10 satisfied). Let me verify the log tail, update tracking, and review exactly what changed before committing:
+
+The working tree has substantial **pre-existing uncommitted work from sibling prompts** (0006ΓÇô0008 widget dirs are untracked, many logs modified). Critically, my gate is **red (EXIT=1)** due to the absent WinAppDriver runner ΓÇö and Honesty Covenant **rule 8 ("No commit on red")** forbids committing. The predecessor siblings confirm this: their widget dirs are also untracked (`??`) ΓÇö BLOCKED prompts deliver files + log but do **not** commit. So I will not commit.
+
+Let me do a final verification of my deliverables and the log:
+
+All deliverables are in place and verified. The task is complete with an honest **STATUS=BLOCKED** outcome (the only acceptable terminal states per the prompt are DONE or BLOCKED-with-evidence).
+
+## Summary
+
+I shipped the native Windows **`BackupMonitorWidget`** surface as a full parity port of `web/src/features/dashboard/widgets/BackupMonitorWidget.tsx`, following the established sibling architecture exactly.
+
+**Files delivered** (4 widget files + test, mirroring `BackupHistoryWidget`):
+- `dashboard-widgets/BackupMonitorWidget/BackupMonitorWidget.Model.cs` ΓÇö tolerant `/backup/runs` JSON adapter, `BackupMonitorSnapshot`/`BackupRun`, size/footprint flags, and the pure projection (ports of web `fmtBytes`, `fmtRelativeTime`, `statusVariant`/`statusDotColor`/`statusLabel`).
+- `ΓÇªSource.cs` ΓÇö single cache-then-network read (`get_api_v1_backup_runs`) through the shared P1/S8 engine; no HTTP in the view.
+- `ΓÇªViewModel.cs` ΓÇö registration (id `backup-monitor`, 2├ù2 / 1├ù2 / 4├ù40), PII-safe `view.opened` diagnostics, and the loading/loaded/empty/error/stale/offline state holder.
+- `ΓÇªBackupMonitorWidget.cs` ΓÇö WinUI 3 view: compact status line, 2├ù2 stat grid (+ failed-status red tint), wide "Recent Runs" feed, every state, Narrator labels, all 11 i18n keys (which already exist in the P1/S10 catalog).
+- `BackupMonitorWidgetTests.cs` (+ 3 linked logic files in the test `.csproj`, per the established pattern).
+
+**Gate results** (`ΓÇªlogs/p2-windows-dashboard-widgets-0009-BackupMonitorWidget.log`):
+- `BUILD_EXIT=0` ΓÇö WinUI 3 + .NET 10 view compiles clean (0/0).
+- `FORMAT_EXIT=0` ΓÇö whole-solution `dotnet format --verify-no-changes` clean.
+- `PLACEHOLDER_EXIT=0` ΓÇö no stubs/TODO/placeholder.
+- Headless unit tests: **1490 passed / 0 failed** (incl. my **79** new BackupMonitor cases).
+- `TEST_EXIT=1`, `EXIT=1`, **`STATUS=BLOCKED`** ΓÇö solely from the 147 `TeslaSync.App.UITests` (WinAppDriver E2E) throwing `UiAutomationUnavailableException` because the WinAppDriver runner is absent (probe: all four checks `False`). This is a platform-capability absence, not a surface defect ΓÇö identical to siblings 0006/0007/0008.
+
+**Not committed**, per Honesty Covenant rule 8 ("No commit on red") ΓÇö the gate is red on the absent WinAppDriver harness, and the predecessor BLOCKED prompts likewise left their work uncommitted (their widget dirs are untracked). The work is fully delivered on disk and evidenced in the log.
+
+
+
+The task is fully implemented and verified ΓÇö all 6 todos are done. I'll mark it complete.
+
+

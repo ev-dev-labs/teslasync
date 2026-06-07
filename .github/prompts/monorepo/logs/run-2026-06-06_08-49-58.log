@@ -1,2 +1,19 @@
 [2026-06-06 08:49:58] [98/2734] START  p2-windows/W6-0002-push-wns.prompt.md
 [2026-06-06 08:49:58] [98/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p2-w6-0002-push-wns.log
+[2026-06-06 09:10:39] [98/2734] Cleaning up stale copilot PID 85688
+[2026-06-06 09:10:39] [98/2734] Cleaning up stale copilot PID 25460
+[2026-06-06 09:10:39] [98/2734] DONE in 20.7 min
+[2026-06-06 09:10:49] [99/2734] START  p2-windows/W8-0001-notifications-taskbar-jumplist.prompt.md
+[2026-06-06 10:04:17] [99/2734] DONE in 53.5 min
+[2026-06-06 10:04:27] [100/2734] START  p2-windows/W8-0002-settings-lifecycle-msix.prompt.md
+[2026-06-06 11:00:06] [100/2734] Cleaning up stale copilot PID 73644
+[2026-06-06 11:00:06] [100/2734] DONE in 55.6 min
+[2026-06-06 11:00:16] [101/2734] START  p2-windows/W8-0003-widgets-live-tiles.prompt.md
+[2026-06-06 11:54:24] [101/2734] DONE in 54.1 min
+[2026-06-06 11:54:34] [102/2734] START  p2-windows/W9-0001-unit-tests.prompt.md
+[2026-06-06 12:22:40] [102/2734] Cleaning up stale copilot PID 80708
+[2026-06-06 12:22:40] [102/2734] DONE in 28.1 min
+[2026-06-06 12:22:50] [103/2734] START  p2-windows/W9-0002-ui-automation-winappdriver.prompt.md
+[2026-06-06 13:01:52] [103/2734] Cleaning up stale copilot PID 53544
+[2026-06-06 13:01:53] [103/2734] LOG-GATE FAILED (artifact log .github\prompts\monorepo\logs\p2-w9-0002-ui-automation-winappdriver.log: final EXIT=1, final STATUS=BLOCKED) after 39 min
+[2026-06-06 13:01:53] STOPPED at red prompt 103 (log-gate). Resume with: -StartFrom 103

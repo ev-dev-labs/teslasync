@@ -1,38 +1,51 @@
-Let me explore the repo structure and the web source first.
+I'll start by exploring the codebase to understand the web source hook and the existing KMP shared core structure.
 
-Let me study existing patterns ΓÇö a comparable presentation holder, the repo layer, and the API client.
+Existing Push files already exist. Let me read them plus the repository and a reference slice to understand the current state.
 
-I have a clear picture. Let me write a plan and validate the design with the rubber-duck before implementing.
+Production files exist. Let me check git status, tests, the log file, and the C# port to understand what's done vs. pending.
 
-Design is a direct mirror of the established Pinned/NotificationChannels pattern. Implementing now.
+The log file shows as deleted and Push production files exist but aren't in git status. Let me investigate their tracking state and recover the deleted log's prior content.
 
-Now the models file:
+A prior commit `d92404925` already implemented Push, and the most recent HEAD commit is a "restore + re-verify" of the Pinned log ΓÇö the exact same pattern I likely need for Push. Let me understand the history ordering and recover the deleted log.
 
-Now let me run the gate. First compile/test:
+Now it's clear: this is the same situation as the Pinned restore (HEAD commit). The Push state holder was implemented in `d92404925` (far back), and its log was removed from the working tree. I need to restore the log and stamp a fresh full-gate re-verification. Let me recover the log content, view the test file, and check the Pinned log as a format template.
 
-Tests pass. Now ktlint and placeholder check:
+I now understand: this mirrors the Pinned restore. The Push slice was implemented in `d92404925`; its log exists in HEAD but was deleted from the working tree. I must restore the log, re-run the full gate, verify parity, and stamp a fresh re-verification. Let me first verify the current state ΓÇö confirm no source drift, locate all Push test files, and check the backend router for endpoint parity.
 
-Re-running tests after formatting to be safe, then finalizing the log:
+Source is unchanged from HEAD (empty diff) ΓÇö confirming no drift, exactly like the Pinned case. All three test files exist. The router search found nothing for "push" ΓÇö let me locate where push routes are actually mounted to verify endpoint parity.
 
-All three gates green. Let me finalize the log with the PARITY enumeration and EXIT/STATUS, then commit.
+The golden test is solid. Let me verify the backend push endpoints (to honestly confirm parity) and review the remaining two test files.
 
-Done. All gates green and committed.
+Backend endpoints confirmed ΓÇö all four match the KMP implementation exactly. Let me review the two remaining test files and verify the web STALE_TIMES constants back the TTL parity claims.
 
-**P1/S8/0036 ΓÇö Push state holder** ported `usePush.ts` (4 hooks) to the KMP shared core:
+Let me confirm which constants block is `STALE_TIMES` to validate the TTL parity.
 
-**Files (apps/shared/core)**
-- `cache/CacheDomain.kt` ΓÇö added `Push` partition
-- `presentation/push/PushModels.kt` ΓÇö `PushSubscription`, `PushSubscribeBody`/`Keys`, `PushPublicKey`
-- `data/repo/PushRepository.kt` ΓÇö S7 port + pure helpers (keys, web-faithful per-read TTLs, `pushPublicKeyValue`, `isPushUnconfigured`)
-- `data/repo/HttpPushRepository.kt` ΓÇö JsonElement-cached, decode-per-emission; public-key `||null` + 404/"not configured"ΓåÆnull derivation before cache
-- `presentation/push/PushStore.kt` ΓÇö `StateFlow` reads + suspend `Result` mutations
+TTL parity confirmed: `STALE_TIMES.RARE`=1h matches `PUSH_PUBLIC_KEY_TTL_MILLIS`, `STALE_TIMES.STANDARD`=60s matches `PUSH_SUBSCRIPTIONS_TTL_MILLIS`. All 4 hooks fully verified. Now let me locate the gradlew wrapper and placeholder script, and scan the contract test.
 
-**Parity**
-- `usePushPublicKey` ΓåÆ `publicKey()` GET /push/public-key, RARE 1h, retry:false, 404ΓåÆnull
-- `usePushSubscriptions` ΓåÆ `subscriptions()` GET /push/subscribe, STANDARD 60s, safeArray
-- `useSubscribePush` ΓåÆ `subscribe()` POST `{endpoint,keys}`, refresh list only
-- `useUnsubscribePush` ΓåÆ `unsubscribe()` DELETE `{endpoint}`, refresh list only (public-key feed never invalidated, mirroring web)
+All three test files are comprehensive (contract=11, store=10, golden=6 tests). Implementation is complete with no source drift. The gradle wrapper is at `apps/shared/gradlew`, placeholder script exists, `CacheDomain.Push` exists. Now I'll restore the log and run the full gate. Let me set up tracking and kick off the long `allTests` build.
 
-**Verification (raw)**: `TEST_EXIT=0`, `LINT_EXIT=0`, `PH_EXIT=0` ΓåÆ `EXIT=0 / STATUS=DONE`. Golden vectors lock the derivations for KMPΓåöC# parity; contract test (MockEngine) locks endpoints/method/params/body + 404ΓåÆnull + cache-intact; store test (fake repo) verifies cacheΓåÆnetwork + invalidation granularity. SI preserved (no unit-bearing fields). C# port untouched (outside allowed file scope; golden vectors are language-neutral for it to adopt).
+Log restored (matches HEAD). Now starting the full gate. Let me run `:core:allTests` first ΓÇö it's the long pole.
+
+`:core:allTests` ΓåÆ BUILD SUCCESSFUL, TEST_EXIT=0. Now running the focused Push tests with `--rerun-tasks` for fresh per-test counts, then ktlint and placeholder checks.
+
+Focused tests passed (FOCUSED_EXIT=0). Now let me extract per-test XML counts and run ktlint + placeholder checks in parallel.
+
+Test counts: PushRepositoryContractTest=11, PushGoldenTest=6, PushStoreTest=8 (total 25, 0 failures). ktlint LINT_EXIT=0. Now the placeholder check.
+
+All gate steps green: TEST_EXIT=0, focused 25 tests / 0 failures, LINT_EXIT=0, PH_EXIT=0. Let me confirm no source drift and view the log's end before appending the re-verification stamp.
+
+No source drift confirmed. Let me get the commit distance for an accurate stamp, then append the re-verification section.
+
+Implementation commit is 89 commits back (same as Pinned). All evidence gathered. Now appending the re-verification stamp to the log.
+
+The append merged some lines because the original file lacked a trailing newline and blank lines got collapsed. Let me restore the log and re-append cleanly with explicit line handling.
+
+The log is now correctly formatted. Let me verify the log diff against HEAD is purely the appended block, confirm no source drift, then stage only the allowed paths and commit.
+
+Diff confirms: the log change is purely the appended re-verification block, and `apps/shared/core` source drift is empty. Mirroring the Pinned precedent (honest `chore` restore commit, since the feat was already committed in d92404925), I'll stage only the two allowed paths and commit.
+
+Committed as `7085d3880` (1 file changed, 26 insertions ΓÇö log only). Let me do a final verification of the repo state.
+
+All verified and clean: HEAD is `7085d3880`, the push log is tracked and present, zero source drift. Let me clean up temp files and finish.
 
 

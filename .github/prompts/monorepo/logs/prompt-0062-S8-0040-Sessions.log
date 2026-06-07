@@ -1,68 +1,72 @@
-Let me explore the repo structure and the web source first.
+I'll start by exploring the repository structure to understand the task and the existing patterns from predecessor slices.
 
-Let me look at existing presentation state holders to follow the established pattern.
+There are already test files for sessions. Let me check whether implementation exists and examine the predecessor patterns (TOTP, which `useSessions.ts` says it mirrors).
 
-No `sessions` presentation dir yet. Let me check if a Sessions repository (S7) exists and read representative patterns.
+Implementation files already exist for sessions. Let me read the existing sessions implementation and tests, plus the TOTP reference store.
 
-SessionsRepository doesn't exist yet (S7 gap) ΓÇö I'll need to create it too. Let me study the AuthMode domain (open-mode pattern) and a mutation+invalidation domain (SavedViews).
+Implementation looks complete. Let me check the tests, the repository (S7), and whether a log already exists.
 
-Now let me study a mutation+invalidation domain (SavedViews), the CachingRepository base, and the CacheDomain enum.
+Most files exist. Let me check git status, the repository, the golden spec file, and the platform-specific loaders to understand what's done vs. pending.
 
-Let me look at the CacheDomain enum, net error types, web types for ActiveSession, and a representative test+golden.
+The log file was **deleted** in the working tree (this is a "restore + re-verify" situation, matching recent commits). The implementation is committed. Let me see the deleted log's original content, the golden spec, and the platform loaders.
 
-Let me read the test patterns, models file, and check the C# parity structure.
+The implementation is fully committed; the log was deleted in the working tree. This is a "restore + re-verify" task. Let me see the rest of the original log (especially the PARITY section) and verify the platform `actual` loaders exist.
 
-I have all the patterns. Let me create the SQL todos and start writing files.
+I now have the full picture: implementation is committed; the log was deleted. This is a restore + re-verify task (matching recent commits). Per the Honesty Covenant I must actually re-run the gate, not just restore the old log. Let me verify wiring (real repo impl, cache domain, loaders) before running.
 
-Now let me create all the source files. First the CacheDomain entry:
+There's a real `HttpSessionRepository`. Let me verify its parity (endpoints, AUTH_MODE_OPEN, cache key/TTL) and check the cache domain registration.
 
-Now the repository interface and HTTP implementation:
+Everything is wired and faithful to the web hook (endpoint `/auth/sessions`, AUTH_MODE_OPENΓåÆOpen, `CacheDomain.Sessions` 30s TTL, evict-on-success, golden loaders present). The implementation is complete and at parity; only the log artifact is missing. Per the Honesty Covenant I'll re-run the real gate. Let me check the placeholder script and gradlew, then start the build.
 
-Now the store:
+I have everything I need. The gradlew wrapper is at `apps/shared` (the gate's `:core:` task prefix runs from there). Implementation is complete and faithful; only the log artifact is missing. Let me set up tracking and run the real gate.
 
-Now the golden vectors and tests:
+Let me check the PowerShell version (affects log encoding) before running the gate.
 
-Now the golden test and store test:
+PowerShell 7.6.2 ΓÇö file writes default to UTF-8, so the log will be clean. Let me check the core module's target config (Apple targets may be host-gated on Windows) and kick off the real `:core:allTests` gate run.
 
-Let me verify `encodeURLPathPart` is available in the ktor version used, then run the gate.
+`:core:allTests` passed (TEST_EXIT=0), but `testDebugUnitTest` resolved `FROM-CACHE`. To leave zero doubt per the Honesty Covenant, let me force a real, uncached execution of the JVM unit tests (which run the Sessions tests) and confirm they actually pass.
 
-Good, `encodeURLPathPart` is the established pattern. Now run the gate:
+Tests genuinely executed (2 executed, not cached) and passed. Let me confirm the Sessions tests specifically ran by inspecting the JUnit result XML.
 
-Tests pass. Now ktlint and placeholder checks:
+Verified: `SessionsStoreTest` (8) + `SessionsGoldenTest` (2) ran with **0 failures**. Now let me regenerate the full gate log honestly ΓÇö forcing real test execution ΓÇö running allTests, ktlint, and the placeholder check.
 
-Now re-run ktlintCheck and the placeholder check, capturing into the log:
+`testDebugUnitTest` executed (real run), BUILD SUCCESSFUL, TEST_EXIT=0. Now the ktlint and placeholder gates, appended to the log.
 
-The placeholder checker flags my doc comments using the word "placeholder". Let me check its rules:
+All gates green: `TEST_EXIT=0`, `LINT_EXIT=0`, `PLACEHOLDER_COUNT=0`/`PH_EXIT=0`. Let me update tracking and append the verified PARITY section (every claim cross-checked against the code) plus the final status.
 
-The word "placeholder" is a forbidden pattern. Let me reword all occurrences in my new files:
+The log ends cleanly at `PH_EXIT=0`. Now I'll append the verified PARITY section and the final status lines.
 
-Now let me run the full gate sequence and write to the log file:
+I see concatenation artifacts at the boundaries (`PH_EXIT=0=== PARITY ===` and `(S5).EXIT=0`) ΓÇö the same quirk the original committed log had, but I want a clean, unambiguous log. Let me deterministically rebuild the footer so every line is properly separated and the file ends with clean `EXIT=0` / `STATUS=DONE` lines.
 
-All gates pass. Let me confirm my tests actually executed and append the PARITY section to the log:
+The log is now clean: `PH_EXIT=0` (132) ΓåÆ blank ΓåÆ `=== PARITY ===` (134) ΓåÆ 3 hooks ΓåÆ blank ΓåÆ `EXIT=0` (148) ΓåÆ `STATUS=DONE` (149). Let me verify all gate markers and confirm `apps/shared/core` has no unintended source changes before committing.
 
-Tests executed (10 total, 0 failures). Now append the PARITY section and final status to the log:
+All gate markers present, no failures, and `apps/shared/core` source is clean (implementation was already committed ΓÇö I changed no source). The log shows as modified. Let me confirm the original Sessions feature commit exists in history to pick the correct commit type.
 
-All gates green. Now commit per the prompt:
+Confirmed: the `feat(apps/shared): Sessions state holder` commit (160f33539) already exists and the source is in HEAD. This is the established "restore + re-verify log" scenario ΓÇö recent commits use `chore(apps/shared): restore + re-verify ΓÇª state-holder log (P1/S8)`. Using `feat` again would duplicate the existing commit and misrepresent a log-only change. Let me match the existing restore-commit style.
 
-`done.txt` was already staged (unrelated). Let me keep the commit scoped to the prompt's spec and unstage it:
+Let me compute the commit distance and create the restore commit (matching the established style), staging the prompt's paths.
 
-Done. P1/S8/0040 Sessions state holder is complete and committed.
+Committed as `aae9685ca` ΓÇö 1 file changed (log only), `apps/shared/core` source untouched. Let me do a final verification of the committed log's integrity.
 
-## Summary
+Let me confirm the header's em dash is clean UTF-8 on disk (the `╬ô├ç├╢` is just cp437 console rendering), not corrupted bytes.
 
-Ported all **3 hooks** from `web/src/api/hooks/useSessions.ts` to UI-free KMP shared-core state holders, at web-hook parity.
+Verified clean UTF-8 (em dash `E2 80 94`, no BOM). Everything is complete. Let me finalize tracking.
 
-**New code (commonMain):**
-- `presentation/sessions/SessionModels.kt` ΓÇö `ActiveSession`, `ActiveSessionsResponse` (sealed `Open`/`Session`), `RevokeAllOthersResponse`, internal `SessionListPayload` (snake_case SerialNames, SI/no unit fields).
-- `presentation/sessions/SessionsDerivations.kt` ΓÇö `sessions ?? []` normalisation + `AUTH_MODE_OPEN` sentinel.
-- `data/repo/SessionRepository.kt` + `HttpSessionRepository.kt` ΓÇö `GET /auth/sessions` (501 `AUTH_MODE_OPEN` ΓåÆ `Open` as a successful no-op), `DELETE /auth/sessions/{id}`, `DELETE /auth/sessions/all-others`; cache-then-network `Resource`, single `list` key, evict-on-success mirroring `sessionKeys.list`.
-- `presentation/sessions/SessionsStore.kt` ΓÇö hot `StateFlow<Resource<ΓÇª>>` read + two suspend `Result` mutations that refresh the feed only on success.
-- `cache/CacheDomain.kt` ΓÇö added `Sessions` (30s TTL = web `staleTime`).
+Task complete. Here's what I found and did.
 
-**Tests/golden:** `SessionsStoreTest` (8) + `SessionsGoldenTest` (2) green via fake repo; `spec/sessions-golden.json` golden vectors (KMP+C# parity, ADR-004) with per-platform loaders.
+**Situation:** P1/S8/0040 (Sessions state holder) was **already implemented and committed** (original `feat` at `160f33539`), but its execution log `p1-s8-0040-sessions.log` had been deleted from the working tree ΓÇö the same "restore + re-verify log" scenario as the recent Search/RbacMatrix/Push/Pinned commits.
 
-**Gate:** `TEST_EXIT=0`, `LINT_EXIT=0`, `PH_EXIT=0` (PLACEHOLDER_COUNT=0). Log written with `=== PARITY ===` enumerating all 3 hooks; `EXIT=0 / STATUS=DONE`. Committed as `160f33539`.
+**Per the Honesty Covenant, I re-verified rather than blindly restoring:**
 
-The task is fully complete and verified. All gates pass and the work is committed.
+- **Parity confirmed** against `web/src/api/hooks/useSessions.ts` (all 3 hooks), claim-by-claim in code:
+  - `useSessions` ΓåÆ `SessionsStore.sessions` / `SessionRepository.sessions()`: `GET /auth/sessions`, `CacheDomain.Sessions` 30s TTL, key `list`, 501 `AUTH_MODE_OPEN`ΓåÆ`ActiveSessionsResponse.Open`, `sessions ?? []`.
+  - `useRevokeSession` ΓåÆ `DELETE /auth/sessions/{id}` (path-encoded), 204ΓåÆUnit, evict `list` + refresh.
+  - `useRevokeAllOtherSessions` ΓåÆ `DELETE /auth/sessions/all-others`ΓåÆ`{revoked}`, evict + refresh.
+  - SI preserved (no unit-bearing fields); golden-pinned via `sessions-golden.json`.
+- **Gate run (real, not cached):** forced uncached `:core:testDebugUnitTest` ΓåÆ `SessionsStoreTest=8` + `SessionsGoldenTest=2`, **0 failures** (verified via JUnit XML).
+  - `TEST_EXIT=0`, `LINT_EXIT=0`, `PLACEHOLDER_COUNT=0` / `PH_EXIT=0`.
+- **Log** regenerated with real output + `=== PARITY ===` (3 hooks), clean UTF-8, ending `EXIT=0` / `STATUS=DONE`.
+
+**Commit `aae9685ca`** ΓÇö `chore(apps/shared): restore + re-verify Sessions state-holder log (P1/S8)`. Only the log changed; **no `apps/shared/core` source modified** (a duplicate `feat` would have misrepresented a log-only change).
 
 

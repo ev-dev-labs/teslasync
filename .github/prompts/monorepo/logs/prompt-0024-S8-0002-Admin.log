@@ -1,39 +1,62 @@
-I'll start by exploring the repository structure and reading the key source files.
+I'll start by exploring the codebase to understand the task scope, the web source hook file, and the existing KMP shared core architecture.
 
-I need to understand existing patterns. Let me explore an existing state holder (achievementunlocks) and the repo/networking layers.
+The web hook file has 21 hooks. Now let me understand the KMP shared core structure, especially how existing state holders are built (dependencies S4-S7).
 
-I'll examine the existing repository patterns and the achievementunlocks state holder to mirror the conventions.
+Now let me explore the KMP core structure and existing patterns (existing state holders, repositories, networking).
 
-Now I have a complete picture. Let me set up tracking and start implementing.
+There's already a `presentation/admin` directory. Let me examine it and study existing patterns from a similar domain with mutations.
 
-Now I'll implement. First the CacheDomain addition and models:
+Existing `AdminStore.kt`, `AdminRepository.kt`, and `HttpAdminRepository.kt` already exist. Let me read them plus reference patterns.
 
-Now the repository interface with the `safeArray` derivation helper:
+The implementation files already exist. Let me check git status, whether tests and the log file exist, and the overall state of this work.
 
-Now the state holder:
+The implementation and test files exist, but the log file `p1-s8-0002-admin.log` shows as **deleted**. Let me understand the true git state ΓÇö whether the Admin files are committed and what the deleted log contained.
 
-Now the tests. First the repository contract test (endpoints, params, bodies, invalidation):
+There's a prior commit `be10a9f1c` that created the Admin implementation, tests, and log ΓÇö and it's reachable from HEAD. The working tree currently has the log file **deleted**. Let me understand the topology and read the existing tests + the committed log content.
 
-Now the state-holder test with a fake repository:
+Now the picture is clear: commit `be10a9f1c` already implemented the complete Admin state holder (impl + 3 test files + log), and it's an ancestor of HEAD. The only working-tree change is the **deleted** `p1-s8-0002-admin.log`. The harness wants this prompt re-run: I must verify the gate genuinely passes and regenerate the log honestly.
 
-Now the golden-vector test for the `safeArray` derivation:
+Let me read the committed log (to see prior results/format) and the test files to verify coverage.
 
-Now let me run the gate. First, gradle tests:
+Implementation and tests are comprehensive, and the prior gate was green. Now I'll verify the remaining pieces and then honestly re-run the gate. Let me read the other two test files, the CacheDomain entry, and the placeholder-check tooling.
 
-The mutation bodies (JsonObject passed as `Any?`) fail serialization because `setBody` loses the type. I'll wrap them as `TextContent` (an `OutgoingContent` passes through untouched with exact bytes). Let me fix:
+All 21 hooks are ported (16 reads + 5 mutations = 21), with comprehensive contract/store/golden tests. Let me verify the CacheDomain entry and locate the gate tooling (gradlew, check-placeholders.ps1), then run the gate.
 
-Now clean up the test warnings (unnecessary `!!` and cast):
+CacheDomain has `Admin("admin", 1.minutes)` ΓÇö implementation is complete. The gradle wrapper is at `apps/shared/gradlew` and the placeholder script at `apps/tools/check-placeholders.ps1`. 
 
-Now run the full module test suite + ktlint to confirm no regressions:
+Since the harness deleted the log (signaling re-execution) and later commits (S5ΓÇôS8/0001) changed shared infra the Admin code depends on, I'll honestly re-run the gate now against current HEAD. On Windows, `:core:allTests` can't link Apple/native targets, so I follow the committed precedent using the JVM-runnable `:core:testDebugUnitTest` (compiles + runs the identical commonTest sources), documented in the log header.
 
-Tests pass. Now fix ktlint style ΓÇö rename the models file (single-class rule) and auto-format:
+Tests pass (`TEST_EXIT=0`), but the result was `FROM-CACHE`. To honestly verify the Admin tests actually execute and pass against current HEAD (not just trust the cache), I'll force a real re-run and confirm the specific Admin tests run.
 
-Both green with no regressions. Now the placeholder gate:
+Forced re-run (no cache) compiled and executed the tests ΓÇö `BUILD SUCCESSFUL`, exit 0. Let me confirm the Admin test classes actually executed by checking the JUnit XML reports.
 
-All gates pass. Now I'll generate the log file with real gate output plus the parity enumeration:
+Confirmed ΓÇö Admin tests genuinely ran: ContractTest 21, GoldenTest 2, StoreTest 8 (all 0 failures); module-wide 1340 tests, 0 failures. Now the remaining gate steps: ktlint and the placeholder check, appended to the log.
 
-Now let me verify git status and commit (excluding the gitignored local.properties):
+ktlint passes (`LINT_EXIT=0`). Now the placeholder check ΓÇö let me read the script to capture its output correctly, then run it.
 
-All gates green and committed. Task complete.
+The placeholder script emits `PLACEHOLDER_ALLOWED/COUNT/EXIT` then exits with that code. I'll capture its output to the log (matching prior precedent), then record `PH_EXIT`.
+
+All three gate steps pass: `TEST_EXIT=0`, `LINT_EXIT=0`, `PH_EXIT=0` (PLACEHOLDER_COUNT=0). Now I'll append the required `=== PARITY ===` enumeration of all 21 hooks plus the actual test counts, and close with `EXIT=0` / `STATUS=DONE`.
+
+The log is complete with gate results, full 21-hook parity enumeration, and `EXIT=0`/`STATUS=DONE`. Let me view the full log for coherence and confirm the git state before committing exactly the scoped paths.
+
+Exactly as expected: `apps/shared/core` is unchanged (implementation already committed in ancestor `be10a9f1c`), and only the regenerated gate log (`p1-s8-0002-admin.log`, 159 lines) is modified. Now I'll commit the scoped paths per the prompt's commit step.
+
+Committed as `8961437bf`. Let me do a final verification that the admin log is now clean in the working tree and the commit contents are correct.
+
+All verified. The task is complete.
+
+**Summary**
+
+The P1/S8/0002 Admin state holder was already implemented and committed (ancestor `be10a9f1c`), but its gate log `p1-s8-0002-admin.log` had been deleted from the working tree ΓÇö signaling a required re-verification. I honestly re-ran the full gate against current HEAD and regenerated the log.
+
+**Verification (all genuinely executed, not trusted from cache):**
+- **Tests** ΓÇö forced `--rerun-tasks --no-build-cache`; JUnit XML confirms `AdminRepositoryContractTest` (21), `AdminStoreTest` (8), `AdminSafeArrayGoldenTest` (2), all 0 failures. Module-wide: **1340 tests, 0 failures/errors/skipped**. `TEST_EXIT=0`
+- **ktlint** ΓÇö `:core:ktlintCheck` ΓåÆ `LINT_EXIT=0`
+- **Placeholders** ΓÇö `check-placeholders.ps1` over `apps/shared/core` ΓåÆ `PLACEHOLDER_COUNT=0`, `PH_EXIT=0`
+
+**Parity confirmed** ΓÇö all **21/21** `useAdmin.ts` hooks ported (16 reads + 5 mutations): same endpoints, snake_case params, raw-SI `JsonElement` payloads (no conversion in shared core), `safeArray` derivation golden-locked (8 vectors), reads emit cacheΓåÆnetwork, mutations invalidate exactly the web-invalidated keys (`api-keys`; `maintenance`+`system-health`; `export-jobs`). The `useStateTimeline` @deprecated/404 behavior surfaces via `Resource.Error` as on web.
+
+Committed as `8961437bf` ΓÇö the regenerated, green gate log; the (already-committed) `apps/shared/core/**` code is unchanged. Log ends `EXIT=0` / `STATUS=DONE`.
 
 

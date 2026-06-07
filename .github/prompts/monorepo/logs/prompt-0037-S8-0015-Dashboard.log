@@ -1,47 +1,81 @@
-I'll start by exploring the structure to understand the task. Let me read the key files.
+I'll start by exploring the repository structure and understanding the task dependencies. Let me look at the web source, the KMP shared core structure, and related instruction files.
 
-Let me study an existing simple read-only domain to mirror the pattern. ApiHealth looks like a good single-read template.
+The web hook is simple ΓÇö one read query `useDashboardStats` hitting `/dashboard/stats`. Let me explore the existing KMP presentation patterns and dependencies to follow the established conventions.
 
-Dashboard is a standard cache-then-network read. Let me study a cache-then-network read domain and supporting infrastructure.
+`STALE_TIMES.STANDARD` = 60s. Now let me examine the existing KMP presentation structure to find a similar single-read-hook domain to use as a template.
 
-Now let me check the backend dashboard endpoint wire shape and look at test patterns (contract test, store test, golden test).
+There's already a `dashboard\DashboardStore.kt`. Let me examine it along with reference patterns (a similar read-only store with golden tests) and the repository/Resource infrastructure.
 
-The wire shape is camelCase. Let me check how a typed-model cache-then-network domain is structured (VehicleRepository) to decide typed vs JsonElement.
+A `DashboardStore.kt` already exists and looks complete. I need to verify the full picture: the repository (S7), the model, tests, golden vectors, the C# port, and whether this is committed or in-progress. Let me investigate.
 
-AuthMode is the ideal template (single typed read, no params/mutations). Let me read its tests and check for any DI wiring I must extend, plus the cache JSON unknown-keys config.
+This is a re-run scenario. The dashboard code files already exist and appear committed, but the log `p1-s8-0015-dashboard.log` shows as deleted. Let me understand the true state of the git history for these files.
 
-All clear. `STALE_TIMES.STANDARD = 60_000` (1 min). No central DI to wire. Now I'll create the artifacts. First, the cache domain entry.
+There's a commit `a57d27a23` titled "Dashboard state holder at web-hook parity (P1/S8)" that already contains the store, repo, and log. But the log is now deleted in the working tree. Let me understand this re-run context fully before acting.
 
-Now the repository interface + typed model:
+The committed log shows a passing gate from a prior run. The output is large; let me read the rest.
 
-Now the store (mirrors AuthModeStore ΓÇö single read, no derivations, no mutations):
+The pager is blocking. Let me stop it and use a non-paged approach.
 
-Now the tests:
+Now I understand: the dashboard task was completed 90 commits ago in `a57d27a23`, but the log file was deleted in the working tree ΓÇö this is a re-run/verification request. I'll review the existing code, run the actual gate, regenerate the log, and commit. Let me review all dashboard artifacts and the repository infrastructure.
 
-Now let me run the gate. First, verify the log dir and tooling exist.
+The existing code is complete and at parity: the `DashboardStats` model matches the web interface exactly, the repository exposes a single `stats()` read hitting `/dashboard/stats` with a 60s TTL (mirroring `STALE_TIMES.STANDARD`), and there are thorough tests. The committed log's warning was from an earlier iteration (current line 59 `url!!` on a `Url?` is necessary). 
 
-Module `:core`, gradlew at `apps/shared`. Running the test gate (this will take a while):
+Let me verify the build tooling and environment before running the gate.
 
-Tests pass (TEST_EXIT=0). Let me fix the compiler warning (redundant `!!`) and run ktlint + placeholder checks.
+Output ordering was jumbled. Let me get unambiguous answers on the gradle wrapper and project layout.
 
-ktlint passes. Now the placeholder check and a re-run of tests (test file was edited):
+Gradle wrapper is at `apps/shared` (the `core` is a `:core` subproject). Let me check the tail of the committed log to see the exact gate format (TEST_EXIT/LINT_EXIT/PH_EXIT, PARITY section) that was previously used, plus the build config.
 
-All gates green (TEST=0, LINT=0, PH=0). Let me finalize the log with the PARITY enumeration and EXIT/STATUS, then commit.
+I have the exact PARITY format from the committed log. Note: the committed log claimed "5 fake-repo tests" but the current file has 4 ΓÇö I'll report the accurate count. Let me check the build setup and placeholder script, then start the gate (the long pole).
 
-`done.txt` got staged but isn't part of my commit spec. Let me unstage it and commit only the intended files.
+`core` is the only subproject, so `ktlintCheck` == `:core:ktlintCheck`. The placeholder script scans the whole core tree. Now let me run the actual gate. I'll start with `:core:allTests` (the long pole), capturing real output to a temp file.
 
-Staging is clean now. Committing:
+`:core:allTests` passed (TEST_EXIT=0) ΓÇö everything UP-TO-DATE from build cache since the code is unchanged. To produce genuine "no red-as-green" execution evidence for the dashboard tests, let me force the unit-test task to actually re-run, then run ktlint and the placeholder check.
 
-P1/S8/0015 complete. Committed as `a57d27a23`.
+Dashboard tests genuinely re-ran and passed (DASH_TEST_EXIT=0). Let me run ktlint and confirm the test-result XMLs in parallel.
 
-**What I built** ΓÇö ported the web `useDashboard` hook (`useDashboardStats`, 1 read, 0 mutations) to a UI-free KMP shared state holder, mirroring the existing `AuthMode` single-read pattern:
+ktlint passed (LINT_EXIT=0). Let me locate the dashboard test-result XMLs (different naming) and run the placeholder check.
 
-- **`DashboardRepository.kt`** ΓÇö S7 port + typed `@Serializable DashboardStats` DTO (camelCase SI fields: `totalM`=meters, `totalEnergyWh`=Wh, `totalCostCents`=cents), all defaulted for safe partial decode.
-- **`HttpDashboardRepository.kt`** ΓÇö cache-then-network impl, `GET /dashboard/stats`, `CacheDomain.Dashboard`.
-- **`CacheDomain.kt`** ΓÇö added `Dashboard` domain, TTL `1.minutes` matching web `STALE_TIMES.STANDARD` (60s).
-- **`DashboardStore.kt`** ΓÇö hot `StateFlow<Resource<DashboardStats>>` via `trigger Γû╕ flatMapLatest Γû╕ stateIn`, with `refresh()`. No derivation (web applies no `select`), no invalidation surface.
-- **Tests** ΓÇö `DashboardStoreTest` (5 fake-repo tests: initial Loading, cacheΓåÆnetwork, SI passthrough, refresh re-fetch, no-op refresh) + `DashboardRepositoryContractTest` (endpoint/no-params, typed round-trip, partial-payload defaults, SI serial-names/no legacy suffixes).
+All three gate steps pass: TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0 (PLACEHOLDER_COUNT=0). Both dashboard test-result XMLs exist. Let me read them to capture exact test counts for the log.
 
-**Gate:** `TEST_EXIT=0`, `LINT_EXIT=0`, `PH_EXIT=0` ΓåÆ `EXIT=0 / STATUS=DONE`. Log at `.github/prompts/monorepo/logs/p1-s8-0015-dashboard.log` with the `=== PARITY ===` enumeration (1/1 hooks). SI preserved throughout; conversion deferred to the S5 display boundary. No central DI required (stores are constructed at the platform layer).
+All 8 dashboard tests pass (4 + 4, zero failures). Let me verify the `CacheDomain.Dashboard` TTL to confirm the 60s parity claim, then assemble the log.
+
+Everything passes: TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0; both dashboard test classes 4/4 green; `CacheDomain.Dashboard` TTL is `1.minutes` (matches `STALE_TIMES.STANDARD` 60s). The committed log's "5 fake-repo tests" claim was inaccurate ΓÇö the real count is 4, which I'll report honestly.
+
+Now let me assemble the regenerated log from the real captured gate output.
+
+Now let me append the PARITY section and the EXIT/STATUS footer.
+
+Let me verify the assembled log's head and tail.
+
+The content is all present and the log correctly ends with `EXIT=0`/`STATUS=DONE`, but there are cosmetic line-join artifacts from `Tee-Object`/`Add-Content` newline handling (e.g., `LINT_EXIT=0=== STEP 3:`). The Gradle `UP-TO-DATEBUILD SUCCESSFUL` joins are authentic Gradle CR-output (also present in the original committed log), but my marker lines should be clean. Let me rebuild the log in one pass with explicit newline joining, preserving the original GATE START timestamp.
+
+Let me verify the rebuilt log's critical marker lines are clean.
+
+All marker lines are clean; the log ends with `EXIT=0` / `STATUS=DONE`. I only modified the log (dashboard code is untouched and already committed). Let me verify the staging scope is clean before committing ΓÇö confirming no stray build artifacts or unintended changes under `apps/shared/core`.
+
+`apps/shared/core` is clean (build/ is gitignored), and the log shows as modified (restored from its deleted state). All gates are green, so committing is permitted (no commit-on-red). Let me stage exactly the two prescribed paths and commit with the prescribed message.
+
+Commit `2931bfa6a` created ΓÇö only the log file changed (90 insertions, 59 deletions), exactly as intended. Let me do a final verification of the commit and working-tree state.
+
+Everything is verified and complete. Let me clean up the temporary files I created.
+
+Task complete. 
+
+**P1/S8/0015 ΓÇö Dashboard state holder** was already implemented and committed (90 commits back in `a57d27a23`), but its gate log `p1-s8-0015-dashboard.log` had been deleted in the working tree ΓÇö the re-run trigger. I verified parity, re-ran the real gate, regenerated the log with honest output, and committed it.
+
+**Verification (all real, all green):**
+| Gate step | Result |
+|---|---|
+| `:core:allTests` | BUILD SUCCESSFUL ΓÇö `TEST_EXIT=0` |
+| Forced dashboard test re-run | 8/8 pass (DashboardStoreTest 4/4 + DashboardRepositoryContractTest 4/4, 0 failures) |
+| `:core:ktlintCheck` | BUILD SUCCESSFUL ΓÇö `LINT_EXIT=0` |
+| `check-placeholders.ps1` | `PLACEHOLDER_COUNT=0` ΓÇö `PH_EXIT=0` |
+
+**Parity confirmed** (1 hook, 0 mutations): `useDashboardStats` ΓåÆ `DashboardStore.stats` / `DashboardRepository.stats()`; `GET /api/v1/dashboard/stats` (no params); `STALE_TIMES.STANDARD` 60s ΓåÆ `CacheDomain.Dashboard` TTL `1.minutes`; SI fields (`totalM` m, `totalEnergyWh` Wh, `totalCostCents` cents) preserved; no derivation ΓåÆ no golden vector required; no invalidation surface.
+
+**Honesty note:** the old committed log claimed "5 fake-repo tests" ΓÇö the actual count is 4, which I report accurately (verified from JUnit XML).
+
+Commit `2931bfa6a` ΓÇö only the log changed (`apps/shared/core` was clean, `build/` ignored); log ends with `EXIT=0` / `STATUS=DONE`.
 
 

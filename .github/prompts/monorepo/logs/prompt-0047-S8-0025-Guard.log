@@ -1,49 +1,68 @@
-I'll start by exploring the structure and reading the web source hook and relevant predecessor artifacts.
+I'll start by exploring the codebase structure and reading the key files to understand the task.
 
-Let me examine an existing presentation domain that has both reads and mutations to mirror the established pattern, plus the repo/net/cache infrastructure.
+Guard files already exist. Let me check whether they're stubs or implemented, and look at the repository layer plus a reference domain.
 
-Commands has no mutations. Let me find a domain with mutations to mirror invalidation, plus core infra (CacheDomain, CachingRepository, Resource).
+Guard Kotlin files already exist and look complete. Let me check the repository layer, tests, C# port, golden vectors, and git status to understand what's done vs. pending.
 
-Now let me look at the models, CacheDomain, CachingRepository/Resource, and existing tests structure.
+The log file was deleted and there's no C# port yet. Let me investigate the git history of the Guard files and recover the deleted log to understand prior state.
 
-Let me examine the test structure and check for any DI registry plus the net layer helpers.
+This slice was already implemented and committed previously (`00651a5ba`). The log file was deleted from the working tree. Let me clarify the exact git topology.
 
-Let me look at the Chat store/repo for the targeted (per-key) invalidation pattern, since Guard mutations invalidate specific config/events keys.
+Now I understand: the Guard slice is **already committed at HEAD** (commit `00651a5ba`, ancestor of HEAD). The working tree only has the log file deleted. This is a re-run. Per the Honesty Covenant ("No red-as-green", "No commit on red"), I must verify the real implementation passes the gate before restoring the log. Let me review the remaining implementation files and the CacheDomain partition.
 
-Let me verify the backend routes for guard to confirm the endpoint paths match the web hooks.
+Implementation is complete and committed. Let me verify the test files are real (not stubs), then run the gate.
 
-Let me check the web constants for the guard staleTimes/intervals and view the FSM store + golden test for the JsonElement vs typed approach reference.
+Implementation and tests are complete and committed at HEAD. The only working-tree change is the deleted log. Per the Honesty Covenant, I'll run the real gate before restoring the log. Let me set up tracking and verify tooling.
 
-Guard has two different cached shapes (config vs events). Let me see how HttpChatRepository handles multiple typed shapes in one CachingRepository.
+All implementation, tests (8 store + golden + 11 contract), and tooling are present and committed at HEAD. Now I'll run the real gate. Starting the test run (Gradle, may take several minutes).
 
-Let me confirm the Automations convention (cache-intact mutation + store-side targeted refresh) which best matches Guard's `invalidateQueries` semantics.
+The gradlew wrapper isn't in `core`. Let me locate it.
 
-Pattern is fully clear (Automations/Chat conventions). Let me set up tracking and create the implementation files.
+Wrapper is at `apps/shared/`. Running the test gate from there.
 
-Now the repository interface and HTTP implementation:
+Test gate passed (`BUILD SUCCESSFUL`, `TEST_EXIT=0`). Native Apple targets are correctly skipped on Windows; the commonTest suite runs via `testDebugUnitTest` (cached pass). To get genuine fresh evidence for the guard tests specifically, let me force a re-run of just the guard test classes.
 
-Now the CacheDomain entry and the store:
+Fresh guard test run passed (`BUILD SUCCESSFUL`, exit 0, task actually executed). Let me confirm the exact guard test counts from the report.
 
-Now the three test files. Let me view FsmStoreTest briefly for the disabled-gate assertion idiom and the contract test helpers.
+All 24 guard tests pass (Contract=9, Golden=7, Store=8; 0 failures). Now the lint gate.
 
-Now I'll create the three test files:
+ktlint passed (`LINT_EXIT=0`, clean). Let me force a fresh ktlint rerun for genuine evidence and inspect the placeholder tool before running it.
 
-Now the repository contract test:
+Fresh ktlint passed (`FRESH_LINT_EXIT=0`); common source-set checks ran fresh and clean. Now the placeholder gate.
 
-Now let me run the gate. First verify the gradle setup, then run tests.
+All three gates pass: **TEST_EXIT=0** (24 guard tests + full `:core:allTests` SUCCESSFUL), **LINT_EXIT=0** (ktlint clean, fresh rerun), **PH_EXIT=0** (0 placeholders). Now I'll write the slice log (using ASCII to avoid the mojibake the prior log had).
 
-The gradle wrapper is at `apps/shared`. Let me run the test gate from there.
+All gates green and log written. Before committing, let me verify exactly what changed under my allowed scope (`apps/shared/core/**` and the log), so I don't sweep in the out-of-scope log files modified by the harness.
 
-Tests pass. Now ktlint and the placeholder check:
+Confirmed: `apps/shared/core` is already correct and committed at HEAD (no source changes); the only working-tree change in my scope is the restored guard log. All gates are green, so committing is permitted (Honesty Covenant rule 8). Committing per the prompt.
 
-ktlint wants the single-expression body on the same line as the signature (matching ChatStore style). Fix:
+Commit `c4beb5061` created (1 file: the log). Let me do a final verification of the committed state and log tail.
 
-ktlint clean. Re-run tests (test file changed) and the placeholder check:
+Let me confirm the final marker lines are correctly separated (the display concatenated them).
 
-All gates green. Now write the parity log and commit.
+All verification complete. The committed log has `EXIT=0` and `STATUS=DONE` on their own lines. Let me finalize tracking and clean up temp files.
 
-Staged set matches the prompt scope (guard files + CacheDomain + the log). `done.txt` and other logs are pre-existing unrelated changes, left untouched. Committing:
+Task complete.
 
-P1/S8/0025 ΓÇö Guard state holder ΓÇö complete and committed (`00651a5ba`).
+## Summary
+
+**P1/S8/0025 ΓÇö Guard state holder** is verified and finalized on `feature/apps` (commit `c4beb5061`).
+
+The Guard implementation was already committed at HEAD (`apps/shared/core/**`), but the slice's log had been deleted from the working tree. Per the Honesty Covenant ("no red-as-green", "no commit on red"), I re-ran the **real gate** rather than rubber-stamping it:
+
+| Gate | Result |
+|---|---|
+| `:core:allTests` | **BUILD SUCCESSFUL** ΓÇö fresh guard run: Contract **9**, Golden **7**, Store **8** = **24 tests, 0 failures** (Apple targets correctly skipped on Windows) ΓåÆ `TEST_EXIT=0` |
+| `:core:ktlintCheck` | fresh `--rerun-tasks` over CommonMain+CommonTest, **BUILD SUCCESSFUL** ΓåÆ `LINT_EXIT=0` |
+| `check-placeholders.ps1` | `PLACEHOLDER_COUNT=0` ΓåÆ `PH_EXIT=0` |
+
+**Parity confirmed ΓÇö all 5 `useGuard.ts` hooks ported** (UI-free, repo-injected, SI preserved):
+- Reads: `useGuardConfig` ΓåÆ `GET /vehicles/{id}/guard`; `useGuardEvents` ΓåÆ `GET ΓÇª/guard/events` with `safeArray(data?.events)` unwrap (`guardEventsOf`).
+- Mutations: `useSetGuardConfig` ΓåÆ `POST ΓÇª/guard` (invalidates config+events); `useGuardPanic` ΓåÆ `POST ΓÇª/guard/panic` (invalidates events); `useAcknowledgeGuardEvent` ΓåÆ `POST ΓÇª/guard/events/{id}/acknowledge` (invalidates events).
+- Golden-locked derivations (KMP+C# parity, ADR-004): `isGuardEventAcknowledged`, `guardEventsOf`, `guardVehicleEnabled`, `guardConfigKey`, `guardEventsKey`.
+
+Note: the prompt's table listed `useGuardPanic` under "reads"; the actual web file implements it as a POST mutation, so it was ported faithfully as a mutation (web file is the contract source of truth).
+
+The restored log (cleaned to ASCII, fixing the prior mojibake) ends with `EXIT=0` / `STATUS=DONE`. Temp files cleaned up; scoped working tree is clean.
 
 

@@ -1,39 +1,63 @@
-Now I have full context. Let me set up tracking and the plan, then implement.
+I'll start by exploring the codebase to understand the web hook source and the existing KMP shared core patterns.
 
-Just an unused import. Let me fix it.
+The web hook is clear. Now let me study the existing KMP shared core patterns. Let me look at the directory structure and find a comparable domain with both reads and mutations.
 
-ktlint passes. Now run the tests.
+There's already an `annotations` directory. Let me examine the existing files and find comparable reference domains (reads + mutations + derivations).
 
-All new tests pass (11+7+7). Now the placeholder gate.
+The store and models already exist. Let me check the repository layer (S7), tests, golden vectors, C# port, git status, and whether a log already exists.
 
-All three gates pass. Let me write the parity log and commit.
+The implementation files exist but the last commit is "Analytics" (the alphabetically-previous domain). And the log file shows as **deleted**. Let me investigate the actual tracked state of these files.
 
-All gates green. Let me commit.
+A commit `8f85cac03` already created the Annotations work. Let me understand its relationship to HEAD and why the log file shows as deleted.
 
-Staged set is clean. Committing.
+Let me definitively resolve where `8f85cac03` sits relative to HEAD.
 
-P1/S8/0007 complete and committed.
+This is a critical finding. The repo has a **rebuilt history**: HEAD (`027f33156` Analytics) is a fresh chain that re-did S4ΓÇôS7 and is redoing S8 alphabetically (AchievementUnlocksΓåÆΓÇªΓåÆAnalytics). **Annotations is next (0007).** The annotation `.kt` files physically exist in the tree (inherited from an older ancestor `8f85cac03`), and the log shows as deleted. I must verify the existing implementation compiles/tests against the **current** S4ΓÇôS7 foundation, regenerate the log, and commit.
 
-## Summary
+Let me read the existing implementation, the S7 foundation it depends on, and a recent reference domain (Analytics) in parallel.
 
-Ported `web/src/api/hooks/useAnnotations.ts` (5 hooks) to UI-free KMP shared-core state holders at exact web parity. All gates green: **`EXIT=0` / `STATUS=DONE`**.
+The existing implementation references the current foundation APIs (`CachingRepository`, `CacheDomain.Annotations`, `observe()`, `clear()`, `Resource`) ΓÇö same patterns as the just-committed Analytics. Let me verify `CacheDomain.Annotations` is registered, read the tests, check `done.txt`, and locate the prompt file.
 
-**Gates**
-- `:core:allTests` ΓåÆ 0 failures (25 new tests: 11 contract + 7 store + 7 golden, on debug+release)
-- `:core:ktlintCheck` ΓåÆ BUILD SUCCESSFUL
-- `check-placeholders` ΓåÆ `PH_EXIT=0`, count 0
+The implementation is complete and consistent with the current foundation. Now let me verify `CacheDomain.Annotations` is registered, check the C# port parity, review `done.txt`, find the prompt file, and recover the previous log format (the deleted file exists at HEAD).
 
-**The 5 hooks ported**
-- Reads: `useChartAnnotations` ΓåÆ `AnnotationsStore.chartAnnotations(params)` (GET `/annotations/`, snake_case query); `useChartAnnotationsAsData` ΓåÆ `chartAnnotationsAsData(params)`, the **same shared upstream** re-projected via `toDataAnnotation` (single fetch, like the web wrapper reusing one query key).
-- Mutations: `useCreateAnnotation`/`useUpdateAnnotation`/`useDeleteAnnotation` ΓåÆ POST/PATCH/DELETE, each invalidating `annotationKeys.all` ΓåÆ repo evicts the whole `CacheDomain.Annotations` partition + store `refreshAll()` re-collects every observed feed.
+Now I understand the full picture. There's both the task's referenced log (`p1-s8-0007-annotations.log`, recoverable from HEAD) and a newer `prompt-0029-S8-0007-Annotations.log`. Let me read the on-disk prompt spec, check the prompt-0029 log, and confirm `CacheDomain.Annotations` exists.
 
-**Parity details locked**
-- Golden vectors (KMP+C# parity, ADR-004) for `toDataAnnotation`, `annotationQuery` (blank scope/from/to dropped), and `annotationCacheKey` ΓÇö including the subtle edge where an empty scope stays `''` in the cache key but is omitted from the query.
-- SI preserved (annotation fields aren't unit-bearing; cached as typed `ChartAnnotationRow` JSON); new domain TTL = 5 min matching web `STALE_TIMES.SLOW`.
-- Endpoints verified against generated `ApiEndpoints.cs`, `router.go`, and the Go handler.
+The `prompt-0029` log confirms a prior run already implemented and committed this as `8f85cac03` (now an ancestor of HEAD), so the code is present in HEAD and compiles against the current foundation (else the Analytics gate couldn't have passed). My job: honestly re-run the gate, regenerate the deleted `p1-s8-0007-annotations.log`, and commit. Let me verify `CacheDomain.Annotations` and the gradle project name, then start the gate.
 
-Files: 5 commonMain (models, repo interface+helpers, Http repo, store, CacheDomain) + 3 commonTest. Committed as `8f85cac03`.
+Gradle root is `apps/shared` (wrapper there; `:core` is the module). The prompt's `Push-Location apps/shared/core` is a minor inaccuracy ΓÇö I'll run gradle from `apps/shared` (the actual gradle root) to honor the gate's intent. `CacheDomain.Annotations` is already referenced by the committed `HttpAnnotationRepository` and compiles at HEAD. Let me set up tracking, create the plan, and kick off the gate (the long pole).
 
-The task is fully complete and verified. All 8 todos are done.
+`CacheDomain.Annotations("annotations", 5.minutes)` confirmed (matches web `STALE_TIMES.SLOW`). Let me create the plan and kick off the gate (long-running).
+
+`CacheDomain.Annotations("annotations", 5.minutes)` confirmed. Now starting the gate ΓÇö gradle `:core:allTests` from the real gradle root (`apps/shared`), writing real output to the log. This is the long pole, so I'll run it async and monitor.
+
+Gate running in background. While it compiles, let me verify the derivation parity against the web source of truth ΓÇö `web/src/types/annotations.ts` (the `toDataAnnotation` projection and `ChartAnnotationRow`/`DataAnnotation` shapes).
+
+Derivation parity confirmed ΓÇö the KMP `toDataAnnotation` exactly mirrors the web `toDataAnnotation` (id stringified, `context = scope[0] ?? ''`, null-preserving description/vehicleId). Let me read the gate output.
+
+`:core:allTests` ΓåÆ `TEST_EXIT=0` (native targets SKIPPED on Windows host, as expected), but JVM/Android tests were `UP-TO-DATE` (reused prior result). For honest, fresh evidence with real test counts, I'll force a clean re-run of the unit tests and run ktlint. This is the long pole ΓÇö running async.
+
+While tests run, let me verify the `staleTime` intent matches the cache TTL ΓÇö checking `STALE_TIMES.SLOW` in the web constants against `CacheDomain.Annotations = 5.minutes`.
+
+Confirmed: `STALE_TIMES.SLOW = 5 min` = `CacheDomain.Annotations("annotations", 5.minutes)`. Parity holds. Let me wait for the test + ktlint run to complete.
+
+Both green: `RERUN_TEST_EXIT=0` (forced fresh re-run, 18 tasks executed, 59s) and `LINT_EXIT=0`. The deprecation `w:` is a pre-existing warning in `SettingsBackupRepository.kt` (unrelated, out of scope). Now the placeholder check plus parsing the actual annotation test XML counts.
+
+All gates green with fresh evidence: tests **25/0/0** (Contract 11, Store 7, Golden 7), ktlint 0, placeholder `PH_EXIT=0`. Let me verify the backend route registration to honestly back the endpoint-parity claim (the KMP repo uses `/annotations/` with a trailing slash vs web's `/annotations`).
+
+Backend routes confirmed exactly: `GET/POST /annotations/`, `PATCH/DELETE /annotations/{id}` ΓÇö matching the KMP repo paths precisely. All parity verified. Now finalizing the log with the gate summary, test breakdown, and the `=== PARITY ===` section.
+
+Log finalized, ending with `EXIT=0` / `STATUS=DONE`. Now let me stage exactly the prompt's paths and verify what gets staged (ensuring no `build/` artifacts leak in, and confirming the code is already in HEAD so only the log changes).
+
+Confirmed: `build/` is git-ignored, the annotation code is already in HEAD (no working-tree changes), and only the regenerated log shows as modified. Let me check what the prior new-chain S8 commits contained (e.g., Analytics) to follow the established rebuild pattern.
+
+This confirms the established rebuild pattern exactly: the prior new-chain S8 commits (Analytics, AchievementUnlocks) each contain **only** their `p1-s8-000X-name.log` file ΓÇö the domain code already lives in HEAD from the ancestor, so each commit just regenerates the gate log. My Annotations commit will follow the same pattern. Let me stage the prompt's exact paths and verify the staged set.
+
+Staged set is exactly the one log file (matching the Analytics/AchievementUnlocks pattern). `git add apps/shared/core` correctly staged nothing since the code is already in HEAD. Committing now with the prompt's exact message.
+
+Committed as `7fe9cb448` ΓÇö HEAD now contains the Annotations gate log, matching the rebuild pattern exactly. Working tree clean for the scoped paths. Let me confirm the C# port mirrors the derivations (read-only, to ground the KMP+C# parity claim ΓÇö the C# file is out of my allowed edit scope) and update tracking.
+
+The C# port is a separate INotifyPropertyChanged ViewModel and is outside my allowed edit scope (Windows P2 concern); my log claims only what I verified ΓÇö the golden vectors are language-neutral by design for KMP+C# parity, and endpoints match `router.go` + the web wire shape. All todos done. Final integrity check of the committed log's gate markers:
+
+All gate markers are `=0`, `EXIT=0` / `STATUS=DONE`, the `=== PARITY ===` section enumerates all 5 hooks, and the commit is clean. Task complete.
 
 

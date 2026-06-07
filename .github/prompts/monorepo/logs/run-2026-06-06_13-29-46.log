@@ -1,0 +1,4 @@
+[2026-06-06 13:29:46] [104/2734] START  p2-windows/W99-0001-windows-acceptance-gate.prompt.md
+[2026-06-06 13:41:46] [104/2734] Cleaning up stale copilot PID 82900
+[2026-06-06 13:41:46] [104/2734] LOG-GATE FAILED (artifact log .github\prompts\monorepo\logs\p2-w99-0001-windows-acceptance-gate.log: final EXIT=1, final STATUS=BLOCKED, parity gap (COVERED=0 < REQUIRED=1754)) after 12 min
+[2026-06-06 13:41:46] STOPPED at red prompt 104 (log-gate). Resume with: -StartFrom 104

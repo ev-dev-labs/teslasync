@@ -1,0 +1,110 @@
+I'll start by exploring the repository structure and checking platform prerequisites, since this task has a hard capability requirement (WinUI 3 + .NET 10).
+
+.NET 10 SDK and the `apps/windows` solution exist. Now let me locate the web source spec and examine the existing Windows app structure to understand the established patterns.
+
+Clear pattern established: each widget = 4 files (`.cs`, `.Model.cs`, `.Source.cs`, `.ViewModel.cs`). Let me read the web source spec and the closest analog (`ChargeHistoryWidget` ΓÇö same charging category, chart-based).
+
+Now I understand the established pattern well. `ChargeSessionChartWidget` differs from `ChargeHistory` in key ways: **bar chart color-coded by charger type**, **3 stats** (Total/Avg/Sessions), `hasData = length > 0`, `isCompact = colsΓëñ1 && rowsΓëñ1`, plus a **legend** and uses `useDateFormat`. Let me examine the chart components, colors, date formatting, tests, and registry.
+
+No existing native `ChargeSessionChart`. Charger colors: supercharger=`#ef4444`, dc=`#f59e0b`, home=`#10b981`. Now let me examine the bar chart component variants, the `ChargeCostTrackerWidget` (likely uses bars), and the test patterns.
+
+`TsBarChart` exists. Now I need the chart model (`ChartSeries`, `ChartPoint`, `ChartRole`, per-bar coloring) and the full test pattern. Let me read these.
+
+Test pattern is clear. Now I need the chart model (`ChartSeries`, `ChartPoint`, `ChartRole`, per-category coloring), the date formatter, the i18n catalog location, and whether a central widget registry exists.
+
+Let me read the chart model, the cartesian chart API (to understand per-bar coloring and category labels), and how date formatting was ported.
+
+Found the i18n catalogs: `Strings\{en,he,ar}\Resources.resw`. Key finding: the native `ChartSeries` colors a whole series via `ColorIndex`/`Role`, not per-bar. The web color-codes each bar by charger type. I need to understand the cartesian chart's rendering capabilities to achieve parity. Let me read the chart renderer and the resw catalog structure.
+
+Now I understand the chart system: it's **series-colored with a numeric axis** ΓÇö it can't color individual bars by category like the web's `<Cell fill>`. The defining feature of THIS widget (vs ChargeHistory's plain area chart) is **per-bar charger-type coloring + a legend**. So I'll build a faithful colored bar strip from a pure projection, following the established "projection ΓåÆ bespoke view" idiom. Let me gather the remaining primitives: resw structure, date formatting, semantic color tokens, and the registration pattern.
+
+Now I have the resw key format (`translation.widget.chargeCost.title`). Registry values for this widget: default 2├ù4, min 1├ù2, max 4├ù40. Let me read the resw XML structure, the date formatter, the color tokens, and the scalar formatter.
+
+`DateTimeVariant.Short` = "MMM d" ΓÇö exactly the web `formatDateShort`. Now let me find the semantic color brush keys (success/warning/danger) for charger types, and verify the web registry entry.
+
+Registry confirmed (default 2├ù4, min 1├ù2, max 4├ù40). Semantic brushes exist: `TsColorSuccessBrush`, `TsColorDangerBrush`. Let me confirm the warning brush + the charger-color hex values, and find the lightning ("Zap") glyph used by charging widgets.
+
+I now have all the primitives:
+- Charger colors ΓåÆ semantic brushes: home=`TsColorSuccessBrush`, supercharger=`TsColorDangerBrush`, dc=`TsColorWarningBrush`
+- Lightning/energy glyph = `\uE945` (web `Zap`)
+- Date label = `DateTimeVariant.Short` ("MMM d")
+
+Let me verify the exact `ChargingSession` JSON field names and the kWh conversion factor before writing code.
+
+All confirmed: `started_at`, `total_energy_added_wh`, `charger_type` fields exist; `convertEnergyFromSI(wh,'kWh') = wh/1000`. Let me confirm the `ScalarFormatters.FormatNumber` signature, then I have everything to build.
+
+I have everything needed. Let me set up tracking, kick off a baseline build (to understand the starting state), and start writing the widget.
+
+Baseline build is running. Let me write the plan and start creating the widget files while it builds.
+
+Now let me create the widget files, starting with the Model (the pure, testable core).
+
+Need to create the directory first. Let me also check the baseline build result.
+
+Baseline builds clean (0 errors). Directory created. Now let me write all four widget files.
+
+Now the Source file (data adapter):
+
+Now the ViewModel file (Registration + Diagnostics + state-holder). Note the web distinguishes the registry display name ("Charge Session Chart") from the in-widget header title ("Charge Sessions") ΓÇö I'll honor both.
+
+Now the WinUI view with the custom color-coded bar strip, stat row, legend, and all states:
+
+Now the i18n catalogs. Let me first check whether there's a localization parity/ordering test I must satisfy, and find the exact insertion anchors in all three resw files.
+
+The en catalog already has 5 core keys (`title, total, avg, sessions, empty`). Let me view their exact values and check he/ar so I add the remaining keys (type.*, name, description, error/loading/refresh/retry) consistently across all three.
+
+All three files have the same 5 core keys at identical lines, matching my fallbacks. Let me check whether he/ar use English placeholders or real translations for these widget keys, so I add the remaining keys consistently.
+
+Both he/ar use English placeholders for these widget keys, so I'll add the remaining keys with English values consistently across all three. Now I'll insert the missing keys (`description`, `error*`, `loading`, `name`, `refresh`, `retry`, `type.*`) in alphabetical order into each file.
+
+Let me verify the en resw block is well-formed and correctly ordered, then write the tests.
+
+en resw is well-formed and alphabetically sorted (16 keys). Now the comprehensive test suite, mirroring the established `ChargeHistoryWidgetTests` pattern:
+
+`PassthroughLocalizer` lives in `TeslaSync.App.Core.Notifications`. Now writing the full test suite:
+
+Now let me verify the test project's settings (ImplicitUsings affects whether I need `using System.Linq`), then build.
+
+Two key findings: ImplicitUsings is enabled (so my `.Select()` works), and ΓÇö critically ΓÇö the test project **links widget Model/ViewModel/Source files via `<Compile Include>`** (lines 77-83). I must add my three WinUI-free files there for the tests to compile. Let me also read the placeholder checker before running the gate.
+
+The placeholder checker uses `placeholder-patterns.json`. Let me check the patterns and scan my widget files for any forbidden tokens before running the gate.
+
+Patterns are minimal (`TODO`, `FIXME`, `XXX`, `Coming soon`, `Placeholder`, `Lorem ipsum`, `not implemented`, `NotImplementedException`, `// stub`) ΓÇö my widget files are clean. Let me make a couple of defensive numeric-literal tweaks (avoid `Math.Clamp`/`Math.Max` int/double overload ambiguity), then run the full gate.
+
+Numeric literals hardened. Now let me build the solution to catch any compile errors before running the full gate.
+
+Build failed on one analyzer error: CA1859 is treated as an **error** in the App project (stricter than Core). My `BuildStats` takes `IReadOnlyList` but is always called with a `List`. Let me fix it and check for similar issues.
+
+CA1859 is enforced as an error in the App project. `BuildStats` is always called with a `List`, so I'll use the concrete type. Let me fix and rebuild to surface any other analyzer errors.
+
+Build succeeds (0 errors). Now let me run my test class to verify the logic passes before the full gate.
+
+All 66 ChargeSessionChart tests pass. Now let me verify formatting on my new files (the gate runs `dotnet format --verify-no-changes` on the whole solution).
+
+The `create` tool wrote CRLF line endings, but the repo's `.editorconfig` requires LF. Let me run `dotnet format` (fix mode) on my files to normalize, then re-verify.
+
+Format fix applied (exit 0). Let me confirm my files now pass `--verify-no-changes` and that the resw files don't have mixed line endings.
+
+`VERIFY_EXIT=0` ΓÇö my files are now format-clean, and the resw files are pure LF (no CRLF). Let me ensure the log directory exists and run the **full gate** exactly as specified, capturing all exit codes.
+
+Gate results: **BUILD=0, FORMAT=0, PLACEHOLDER=0** all pass. **TEST=1** ΓÇö but the failures are 147 `TeslaSync.App.UITests` tests failing with `UiAutomationUnavailableException` (WinAppDriver/Appium runner absent), which is environmental and unrelated to my widget. Let me confirm my headless tests passed and understand how the UITests are meant to be gated.
+
+Decisive findings: **`TeslaSync.App.Tests` passed 2057/2057** (including my 66 ChargeSessionChart tests). The **only** failures are 147 `TeslaSync.App.UITests` tests, **all 147** throwing `UiAutomationUnavailableException` (WinAppDriver absent) ΓÇö purely environmental, and git confirms I touched no UITests. Sibling widget prompts (0001, 0006-0009ΓÇª) face the identical situation. Let me check how a completed sibling log recorded its status to match convention.
+
+This is the established, expected situation. The sibling completed logs (0001, 0008) show the **identical** pattern: `BUILD_EXIT=0`, `TEST_EXIT=1` (147 UITests failing solely on `UiAutomationUnavailableException`), `FORMAT_EXIT=0`, `PLACEHOLDER_EXIT=0`, with the headless `App.Tests` suite fully passing ΓÇö and they conclude `EXIT=1` / `STATUS=BLOCKED` (platform-capability block for the absent WinAppDriver runner, tracked separately by W9-0002).
+
+My widget is complete and green on everything in scope: build, **66/66 headless tests** (part of the 2057-passing suite), format, and placeholder. Let me append the convention-matching analysis to the log.
+
+The log now correctly ends with `EXIT=1` / `STATUS=BLOCKED`, fully documenting that the block is the absent WinAppDriver UI-automation runner (tracked by W9-0002), while the widget itself is green on build, headless tests, format, and placeholders.
+
+Per Honesty Covenant **rule 8 ("No commit on red")**, I will not run the commit while the gate `EXIT=1` ΓÇö consistent with every sibling widget prompt (their work sits untracked with a BLOCKED log). Let me do a final verification of my deliverables.
+
+All deliverables are verified and in place:
+
+- **4 widget files** (1,275 lines total ΓÇö comparable to the `ChargeHistoryWidget` reference): `ChargeSessionChartWidget.cs` (view), `.Model.cs`, `.Source.cs`, `.ViewModel.cs`
+- **66-test headless suite** (part of the 2,057-passing `App.Tests` run)
+- **16 i18n keys** consistently in `en`/`he`/`ar` catalogs
+
+The work is complete and green on every in-scope check. The gate's `TEST_EXIT=1` is solely the absent WinAppDriver runner (out of scope, tracked by W9-0002), so per the capability clause and Honesty Covenant the log records `STATUS=BLOCKED`, and per rule 8 ("no commit on red") I have not committed.
+
+

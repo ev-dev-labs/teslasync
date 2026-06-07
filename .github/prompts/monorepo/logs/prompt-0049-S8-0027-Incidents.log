@@ -1,25 +1,62 @@
-I need to understand the existing patterns. Let me find a sibling domain already ported (likely from S7/earlier prompts).
+I'll start by exploring the task requirements. Let me read the web source hook and understand the existing KMP shared core structure.
 
-All patterns confirmed. Let me create a plan and start implementing.
+The web hook is clear. Now let me understand the existing KMP shared core structure ΓÇö particularly the presentation state holders and repositories from prior slices.
 
-Now add the CacheDomain entry:
+Let me look directly at the presentation and repository directories to find an existing domain to use as a template.
 
-Now let me run the gate. First the tests:
+Incidents files already exist. Let me examine their current state to determine if they're stubs or complete implementations.
 
-Metadata compile passed. Now run the full test gate, capturing to the log:
+All four Kotlin files exist and look complete. This suggests prior work. Let me check git status, tests, the C# port, golden vectors, and the log file to find what's missing.
 
-Tests passed. Let me verify my new test classes actually executed:
+Let me understand the situation better ΓÇö the implementation and tests exist, but the log file shows as deleted. Let me check git history for these files.
 
-All 27 incident tests pass (12 contract + 7 golden + 8 store). Now ktlint and placeholder gates:
+Commit `43a9901d7` (Incidents) exists and the files are in HEAD, but it didn't appear in the last-10 log. Let me clarify the history structure.
 
-ktlint passes. Now re-run tests (since I edited test files) and the placeholder check:
+The history shows Incidents was committed (`43a9901d7`, ancestor of HEAD) but the log file was deleted from the working tree. Let me verify the full implementation ΓÇö tests, golden vectors, cache domain ΓÇö and check what's between the Incidents commit and HEAD.
 
-All three gates pass. Now finalize the log with the parity enumeration and status:
+Now I understand the full picture. The history shows a **second-pass redo**: foundation (S4ΓÇôS7) and S8 (AchievementUnlocksΓåÆImpersonation) were re-committed as fresh commits leading to HEAD, while the **Incidents files remain from the first pass** (`43a9901d7`, an ancestor). The implementation + 3 test files are complete and committed; only the **log file was deleted** from the working tree to trigger this task.
 
-All gates green. Let me commit per the prompt's commit spec:
+Let me verify the gate tooling, the cache domain, the contract test, and the prior log structure before running tests.
 
-Many unrelated untracked files exist. Per the commit spec, I'll stage only `apps/shared/core` and my log file:
+Implementation, 3 test files (Store/Golden/Contract ΓÇö ~30 test methods), and the `CacheDomain.Incidents("incidents", 30.seconds)` entry (mapping the web `refetchInterval: 30_000`) are all complete and committed. Only the log file is missing. The prior log confirms the gate runs JVM+Android (native SKIPPED on Windows).
 
-Committed. P1/S8/0027 is complete.
+Let me locate the gradle wrapper and build structure.
+
+Gradle wrapper is at `apps/shared/` (root of the KMP build), with `:core` as the subproject. Let me run the gate exactly as specified, writing real output to the log. I'll start the heavyweight `:core:allTests` build first.
+
+Build is running in the background. Let me check the exact format of the prior log's PARITY section and footer so my regenerated log matches the expected structure.
+
+Build finished. Let me read the gate output.
+
+`:core:allTests` ΓåÆ **BUILD SUCCESSFUL, TEST_EXIT=0** (Java 21 / Temurin; native iOS/macOS SKIPPED on Windows as expected). Tests were cached green from the committed state. To satisfy the honesty covenant (no red-as-green via stale cache), let me **force a real rerun** of the Incident tests to get actual execution counts, then run ktlint and the placeholder check.
+
+Forced rerun (after `cleanTestDebugUnitTest`) ΓåÆ **BUILD SUCCESSFUL**, so the Incident tests genuinely execute and pass now. Let me read the JUnit XML reports to confirm exact per-class test counts for a truthful log.
+
+Confirmed: **27 Incident tests, 0 failures** (Contract 12 / Golden 7 / Store 8). Now the remaining gate steps ΓÇö ktlint and the placeholder check ΓÇö appended to the log.
+
+ktlint ΓåÆ **BUILD SUCCESSFUL, LINT_EXIT=0** (all source sets clean/up-to-date). Now the placeholder gate over `apps/shared/core`.
+
+All three gate steps are green: **TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0** (PLACEHOLDER_COUNT=0). Let me update tracking and append the `=== PARITY ===` enumeration plus the `EXIT=0 / STATUS=DONE` footer.
+
+All gate steps green. Now I'll append the `=== PARITY ===` enumeration (all 6 hooks + derivations + real test counts) and the footer.
+
+Let me verify the actual line structure of the log tail ΓÇö the console display looked like some line breaks may have collapsed.
+
+The file structure is correct ΓÇö the console display was just a rendering artifact. Let me confirm the final lines.
+
+The log is complete and correctly ends with `EXIT=0` / `STATUS=DONE`. 
+
+Now I'll commit exactly as the prompt specifies ΓÇö staging only `apps/shared/core` (already clean/committed) and the regenerated log, leaving the unrelated pre-existing working-tree log noise unstaged.
+
+Exactly as intended: only the regenerated log is staged (core is already clean). Committing with the prompt's message and the Co-authored-by trailer.
+
+Commit created: `55fc13401`. Let me run a final verification that the commit message carries the trailer and all implementation + test files are present in HEAD.
+
+All verifications pass. Final state confirmed:
+
+- **Commit** `55fc13401` ΓÇö `feat(apps/shared): Incidents state holder at web-hook parity (P1/S8)` with the Co-authored-by trailer (two `-m` flags ΓåÆ subject + blank line + trailer).
+- **All 7 Incident core files in HEAD**: `IncidentsStore.kt`, `IncidentModels.kt`, `IncidentRepository.kt`, `HttpIncidentRepository.kt` + `IncidentsStoreTest.kt`, `IncidentsGoldenTest.kt`, `IncidentRepositoryContractTest.kt`.
+- **Working tree clean** for `apps/shared/core`; log committed clean.
+- Unrelated pre-existing log noise left unstaged (outside allowed files), exactly per the prompt's scoped commit.
 
 

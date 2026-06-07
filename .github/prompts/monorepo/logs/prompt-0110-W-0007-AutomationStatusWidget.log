@@ -1,0 +1,81 @@
+I'll start by exploring the repository structure to understand what exists and whether the Windows platform capability is available.
+
+.NET 10 SDK and WindowsDesktop runtime are present, and the solution exists. Let me examine the Windows app structure and the web source.
+
+Now let me explore the existing Windows app structure to understand the established patterns.
+
+There are several existing widgets. `AutomationHistoryWidget` is the closest analog. Let me examine its full structure to learn the established pattern.
+
+This is a comprehensive, well-established 4-file pattern. Now let me study the web hooks, types, the registry, the toggle/mutation pattern, and existing tests.
+
+Now let me examine the test pattern, the `Automation` web type, the `Operations` registry, and how mutations (toggle) are handled natively.
+
+Found the generated toggle endpoint `patch_api_v1_automations_id_toggle`. Let me examine the test helpers/fakes, the data-layer primitives, the `Operations` registry, and the native Toggle/Badge components.
+
+Let me examine the data-layer primitives (`IApiClient`, `ApiRequest`, `RepositoryBase`) and look for any existing native mutation/command pattern.
+
+The data layer supports PATCH mutations via `ApiRequest.Body`. Now let me confirm the base `Automation` model fields and read the shared component signatures I'll use.
+
+Let me locate the feedback components and read the key shared utilities and components I'll be using.
+
+Let me read the remaining shared pieces (Skeletons, Freshness, LiveRegion, ScalarFormatters, RepositoryResult) and confirm the base `Automation` model fields.
+
+I now understand the shared components. Let me check whether there's a central widget registry/manifest I must satisfy, read the remaining data primitives, and confirm the base `Automation` fields.
+
+Key finding: the test project links the widget's `.Model.cs` and `.ViewModel.cs` via `<Compile Include>` (WinUI app project can't be referenced by the plain test project). I'll follow that precedent. Let me read the remaining primitives and confirm the `Automation` JSON shape from the Go model.
+
+Let me confirm the exact automation JSON shape from the canonical Go model and verify the app project uses default file globbing.
+
+App project uses default globbingΓÇönew files auto-compile. Now let me read the i18n facade, the cache engine signature, and the full test csproj.
+
+I have the full architecture. Let me check the placeholder gate, i18n catalog approach, and whether any widget already does a mutation, before writing code.
+
+The i18n catalog already contains `translation.widget.*` keys. Let me confirm all 11 source keys exist and read the placeholder checker.
+
+All 11 i18n keys exist in the catalog. The placeholder gate forbids words like "Placeholder"/"TODO"/"not implemented"/"NotImplementedException" in my files. Let me check for `Directory.Build.props`, analyzers (StyleCop?), and the `.editorconfig` that `dotnet format` enforces.
+
+The environment has the SDK and the `.editorconfig` only mandates LF + 4-space indent (no StyleCop). Let me kick off a baseline solution build to confirm the WinUI platform capability is actually buildable here, and write a plan while it runs.
+
+Baseline build passes (0 warnings/errors, 16s) ΓÇö platform capability confirmed. Let me check the JSON options, error-mapping, and existing exception-handling conventions so my toggle command stays analyzer-clean.
+
+Baseline confirmed and conventions clear (general-exception catches with a `when` filter are used in-repo, so analyzer-clean; JSON is Web-defaults snake/camel-insensitive). Now I'll create the widget. First the directory and the `Model.cs`.
+
+Now the WinUI view ΓÇö the largest file. It renders the header, compact hero, full/wide views with toggles, all six states, and the toggle-error banner.
+
+Now let me wire the test project to compile the UI-free Model + ViewModel, and write the comprehensive test file.
+
+Now let me normalize line endings to LF (the `.editorconfig` mandates LF and `dotnet format` enforces it), then build.
+
+LF normalization done. Now the full Release build (compiles the WinUI view in the app + linked Model/ViewModel in tests).
+
+Four helper methods need to be `static` (CA1822). Let me fix them.
+
+Build is clean. Let me run my new test class first, then the full suite.
+
+53/53 of my tests pass. The Core warnings shown are pre-existing (that project doesn't treat warnings as errors). Now let me verify how the full solution test behaves ΓÇö particularly the UITests project ΓÇö since the gate runs the whole solution.
+
+Let me run the full solution test (as the gate does) to confirm no regressions and observe how UITests behave headlessly.
+
+The 147 UITests fail because WinAppDriver/Appium isn't running on this box ΓÇö a pre-existing environment gap unrelated to my widget (I added no UITests). Let me check whether these tests are meant to skip when the driver is absent.
+
+The UITests are *designed* to fail (never skip) when WinAppDriver is absent ΓÇö a pre-existing, repo-wide environment gap, not from my change. Let me check how sibling widget prompts logged this to follow the established convention.
+
+The sibling 0006 (same tier) concluded `EXIT=1 / STATUS=BLOCKED` due to the identical absent-WinAppDriver gap, while documenting "Non-UITests failures: 0" with build/format/placeholder green. That's the established, honest convention. Let me verify my controllable gates are green: format (scoped to my files), placeholder, and the full headless test project.
+
+Formatting clean. Now the placeholder gate and the full headless test project.
+
+All controllable gates are green: placeholder `EXIT=0`, and the full headless suite is **1342/1342 passing** (0 failures ΓÇö confirming Non-UITests failures: 0). Now let me run the official gate script verbatim to produce the real log.
+
+Gate ran. Let me extract the key exit markers from the log.
+
+Results mirror the sibling 0006 exactly: build 0 errors, headless tests **1342/0**, format clean, placeholder clean; only the 147 WinAppDriver UITests fail. Let me confirm no warning references my files, and gather the WinAppDriver-absence evidence for the verdict.
+
+No warnings in my files; all 147 UITest failures are `UiAutomationUnavailableException` with WinAppDriver confirmed absent (no exe at either path, not on PATH, nothing on :4723). Let me append the honest verdict section to the log, mirroring the 0006 convention.
+
+Log finalized with `EXIT=1 / STATUS=BLOCKED`. Let me confirm the sibling 0006 precedent (committed despite the same WinAppDriver block) and review my working tree before committing.
+
+The sibling 0006 is itself **uncommitted** (untracked) ΓÇö establishing that when `STATUS=BLOCKED`, the deliverable is left in place but **not committed** (honoring covenant rule #8 "No commit on red"). I'll follow that precedent. Let me do a final verification of the delivered files.
+
+All deliverables are in place and verified. Let me update the plan and conclude.
+
+

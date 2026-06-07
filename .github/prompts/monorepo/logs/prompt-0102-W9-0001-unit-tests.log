@@ -1,0 +1,81 @@
+I'll start by exploring the repository structure to understand the current state of the Windows app and its dependencies.
+
+.NET 10 SDK is available and the solution exists. Let me explore the structure in depth.
+
+Let me check predecessor log statuses, the test project, central packages, and the versions lock.
+
+Predecessors are all DONE. I notice the W8 logs document a known "MatchInfo[]-coercion" defect in the gate's marker-check expression. Let me read the precedent logs and survey the source/test structure in depth.
+
+A substantial test suite already exists from predecessors. Let me check which required marker tokens are present/missing and survey the source structure.
+
+All 9 markers already exist somewhere. Let me kick off a baseline build while I survey the source tree, versions lock, and check for W7 pages.
+
+Baseline build succeeds (0 errors). Let me run the existing test suite for a baseline and explore the component/motion/pages structure and exact marker locations in parallel.
+
+951 tests pass, build clean. Let me verify HighContrast presence, the App project structure (to confirm no W7 pages), and empirically confirm the gate's marker-check behavior.
+
+Confirmed: the gate's marker-check is definitively buggy (`BUGGY_MISSING=9` but `CORRECT_MISSING=0` ΓÇö all markers genuinely present), matching the documented W8 "MatchInfo[]-coercion" defect. HighContrast exists only in source, not tests ΓÇö a real gap. No W7 pages exist. Let me write a plan and study the key abstractions to design meaningful gap-filling tests.
+
+The code is clean and pure/testable. Let me identify specific gaps by searching the test directory for the required component states and shared fakes.
+
+The clock seam is `Func<DateTimeOffset>` (no shared TestClock helper exists ΓÇö a real gap). Tests reference only App.Core + Generated, not the WinUI App, so HighContrast (a WinUI enum) needs a headless Core seam to be testable. Let me check Settings for any existing theme model and review representative test styles.
+
+Core has `AppThemePreference` (System/Light/Dark) but no high-contrast headless seam ΓÇö high-contrast lives only in the WinUI layer that tests can't reference. I'll add a minimal headless theme-resolution seam. Let me review the theme application path, Shell/Settings VMs, and existing component-test styles.
+
+Let me find where the persisted theme preference is applied to WinUI (the wiring point for a headless high-contrast seam) and review the existing AnimatedNumber/reduced-motion and chart test styles.
+
+The wiring point is `ShellWindow.ToElementTheme(AppThemePreference)` ΓÇö which ignores OS high-contrast entirely (a real gap). I'll add a headless `ThemeResolver` seam in Core and wire it here. Let me verify existing coverage of AsyncState, charts (accessibility), and repository/load states to avoid duplication.
+
+Existing coverage is excellent ΓÇö AsyncState (loading/empty/error), ChartAccessibility (accessibility), and RepositoryResult/LoadState (cached/refreshing/stale/offline/empty page-state contract) are all tested. The genuine gaps are: **HighContrast** (no headless seam) and **reusable TestClock/log-sink fakes** (spec step 3). Let me view the Shell theme region and LiveConnectionMonitor to wire cleanly.
+
+All page-state contracts (cached/refreshing/stale/offline) are already tested via `RepositoryResult`/`LoadState`. The `LiveConnectionMonitor` uses an injectable `Func<DateTimeOffset>` clock ΓÇö perfect for the reusable TestClock. Let me check the diagnostics sinks and a couple component models I'll exercise.
+
+`PaginationState` (disabled edges), `PushDiagnostics(sink, clock)`, and `LiveConnectionMonitor` (clock) are all ideal for the reusable fakes. Let me check the "focused"/highlight model and an existing fake's conventions, then build everything.
+
+`ComboboxState` (HighlightIndex/MoveHighlight = focus model) and `ComboOption.Disabled` are ideal. Let me view the chart accessibility test's `Sample()` helper and the ComboboxState API so my matrix test compiles first time.
+
+I have everything needed. Let me verify `InternalsVisibleTo` (the monitor's `MarkEvent` is internal) so my TestClock-driven live-stale test compiles.
+
+`InternalsVisibleTo` is present, and a local `ManualClock` double already exists. Let me see how many ad-hoc clock/sink doubles exist across the suite ΓÇö consolidating them is exactly the W9 "reusable fakes" goal.
+
+`InternalsVisibleTo` is present and ad-hoc clocks (`ManualClock`, `MutableClock`) exist ΓÇö so a shared `TestClock`/`RecordingLogSink` is a legitimate consolidation. Let me check the redaction helpers so my diagnostics test asserts real, verified behavior.
+
+Redaction is verified: a `reason=https://ΓÇª` token contains `://` so `PushRedaction` replaces the whole token with `***CHANNEL***`. Now I'll create the headless `ThemeResolver` seam, the two reusable fakes, two W9 test files, and wire `ShellWindow` to honor OS high-contrast.
+
+The ShellWindow edits applied. I need to create the directories first, then the files.
+
+All files created. Let me build the solution to validate the production seam and tests compile.
+
+Build clean (0 errors, same 17 pre-existing warnings). The WinUI project (TreatWarningsAsErrors) accepted the ShellWindow changes. Let me run the full test suite.
+
+974 tests pass (951 + 23 new), 0 failures. Now let me verify formatting (the gate runs `dotnet format --verify-no-changes`) ΓÇö I'll check my new files comply before running the full gate.
+
+Line-ending issue: my created files have CRLF but `.editorconfig` enforces LF. Let me auto-fix with `dotnet format`, then re-verify.
+
+Format verifies clean now. Some pre-existing dirty files exist (logs, `.vs/`) that aren't mine. Let me check `.gitignore` handling of `.vs/`, `bin/`, `obj/` so my commit won't include build artifacts.
+
+`bin/`/`obj/` are ignored but `.vs/` is not. Since `apps/windows/**` is in my allowed scope, I'll add a local `apps/windows/.gitignore` for the VS cache so the prompt's `git add apps/windows` stays clean. Let me also run the placeholder gate and re-confirm the marker check.
+
+All 9 markers now appear in test files (HighContrast 11, ReducedMotion 5, Accessibility 7, etc.). Placeholder gate clean (COUNT=0). Now let me run the prompt's gate **verbatim** to produce a faithful log, then I'll append the documented analysis of the known marker-expression defect.
+
+The real gates pass (BUILD/FORMAT/TEST/PLACEHOLDER all 0) but the marker expression yields the known false-negative (9). Let me mirror the exact W8 precedent documentation format before appending my analysis.
+
+This matches the documented W8 precedent exactly: a "MARKER GATE CORRECTION" section proving the MatchInfo[]-coercion defect, then the honest final status. Let me append the same rigorous correction block for W9-0001.
+
+The log now ends honestly with the documented correction and `EXIT=0 / STATUS=DONE`. Let me confirm the log tail, review my one production-file change, and check what will be staged.
+
+The ShellWindow change is clean and correct. But `dotnet test --logger trx` created an untracked `TestResults/` dir that shouldn't be committed. Let me add it to my local `.gitignore` and verify the full staging set.
+
+`TestResults/` is gone and `.vs/` is ignored. But `apps/windows/.gitignore` isn't showing as untracked ΓÇö let me verify git sees it (I want to commit it so the prompt's `git add apps/windows` stays clean).
+
+Understood ΓÇö the root `.gitignore` (line 281) ignores nested `.gitignore` files, so my `apps/windows/.gitignore` is honored locally (keeping `.vs`/`TestResults` out) but won't be committed. That's fine. Let me stage exactly per the prompt and verify the staged set before committing.
+
+Staged set is exactly correct ΓÇö no build artifacts or unrelated files. Let me commit with the prompt's message.
+
+Committed as `d3d3848a6`. Let me do a final verification that the gate log faithfully captured the real results and the working tree is clean.
+
+All gates verified faithfully in the log and the working tree is clean. Let me do a final thoroughness check on the remaining predecessor logs (W0, W2-0002..0005) I hadn't explicitly confirmed, then finalize.
+
+All 12 predecessor logs are `STATUS=DONE` (W7 doesn't exist ΓÇö documented N/A). The task is complete and verified.
+
+

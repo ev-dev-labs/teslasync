@@ -1,0 +1,131 @@
+I'll start by assessing the platform capability and exploring the repository structure, since this task requires WinUI 3 + .NET 10 which may not be available on this runner.
+
+.NET 10 SDK is present and `apps/windows` exists. Let me explore the Windows app structure and read the web source.
+
+Now let me explore the existing Windows app structure to understand the patterns, especially the state holders, tokens, i18n, and any existing widgets.
+
+There's already a `dashboard-widgets` directory. Let me look at existing widgets to follow the established pattern, plus the Core Widgets and DataDisplay.
+
+Let me examine an existing widget end-to-end to learn the established pattern. `AutomationHistoryWidget` looks most similar (history-based).
+
+Each widget has 4 files (Model, Source, ViewModel, view). Let me read the full `AutomationHistoryWidget` set to learn the complete pattern.
+
+This is a sophisticated architecture. Let me read the ViewModel and the view file to complete my understanding of the pattern.
+
+Now I understand the 4-file architecture. This widget composes TWO data sources (sites ΓåÆ backup history). Let me examine the web hooks, API types, and registry to understand the exact data shapes.
+
+Let me read the exact hook implementations and the relevant API types.
+
+Let me find the exact type definitions for `TeslaEnergySite` and `TeslaBackupEvent`.
+
+Now I have the data shapes. Let me explore the key infrastructure: the generated `Operations`, `ApiRequest` (path/query params), formatters, the native `StatCard`/`TsBadge`/`TsStatCard`, and date formatting.
+
+`Operations.cs` has no energy operation, and I'm restricted to `BackupHistoryWidget.*` files. Let me read `ApiRequest`, `Operations`, and how requests resolve paths/operations.
+
+No energy operations exist in `Operations.cs`, and I can only touch `BackupHistoryWidget.*`. I need to find how operation IDs resolve to endpoints in the generated code. Let me explore the `Generated` directory and the API client.
+
+The operations exist in the generated table. Note `backup-history` declares no query params though the web passes `since`. Let me check how the API client handles query params (declared vs. passed) and review the data-layer types.
+
+Key finding: at line 135, undeclared query params are allowed when the endpoint declares none (`allowed.Count == 0`), so I can pass `since`. Now let me understand the `CacheThenNetworkEngine` and the state types to design the two-source composition.
+
+Let me read the state types and freshness, which I'll need for the composite source.
+
+Now let me examine the native shared components and utilities I'll need: `StatCard`, `TsBadge`, formatters, date formatting, and the web `StatCard`/`useDateFormat`.
+
+Let me read the native components and utilities I'll reuse.
+
+`formatDateTime` ΓåÆ `DateTimeVariant.Full`. Cards.cs is large; let me find the StatCard class within it and read the other components.
+
+`fmtInt` ΓåÆ `FormatNumber(v, 0)`. The web's `fmtDuration` is custom (differs from `FormatClock`), so I'll port it exactly. Let me read the remaining components and utilities.
+
+Let me read the freshness component, cache freshness, status kind, and find the test pattern for existing widgets.
+
+Let me find the test pattern for existing widgets and check `StatusKind` and `DisplayTokens`.
+
+Let me examine the Widgets test directory and the AutomationHistoryWidget tests specifically.
+
+I now understand the full architecture. Let me check the i18n catalog (P1/S10) and how widget keys are registered, plus verify `DisplayTokens` API and the registry test (`WidgetManifestTests`).
+
+The catalog already has the backup history keys. Let me view the exact entries and the surrounding automationHistory keys to see which error/refresh/description keys exist.
+
+All 6 web-source keys exist in the catalog. Now let me verify there's no central widget manifest/registry I must update (outside my allowed files), and confirm the `DisplayTokens` and `LiveRegion` APIs.
+
+The manifest test is unrelated (Windows Widgets Board, not dashboard widgets). Each dashboard widget is self-contained. Let me confirm the `DisplayTokens` and `LiveRegion` APIs before implementing.
+
+I have a complete understanding now. Let me check the csproj setup (file inclusion, target framework) and start a baseline build to confirm the toolchain works.
+
+I have a thorough understanding. Let me check whether existing widget tests exercise the `Source` (two-call composition) with a fake `IApiClient`, and look at the test Fakes directory.
+
+There's a `FakeApiClient` and `FakeCacheStore`. Let me find their definitions to understand how to test the two-call composition.
+
+I now have everything I need. Let me set up my plan, todos, and kick off a baseline build (WinUI builds are slow) while I start writing code.
+
+Baseline build is green (0 warnings, 0 errors, ~30s). Let me confirm the test baseline and that the gate tooling exists, then start writing code.
+
+The headless build passes, but the solution-level `dotnet test` fails because `TeslaSync.App.UITests` requires an absent WinAppDriver runner (147 environmental failures, pre-existing). Let me check the App.Tests result specifically and how predecessor widget logs handled this.
+
+Let me examine the most recent predecessor log (0007) to learn the established gate convention, especially how the test step handled the UITests runner issue.
+
+Let me see how the predecessor 0007 log handled the test step and final status (the UITests runner issue).
+
+The predecessor 0007 ended `EXIT=1 / STATUS=BLOCKED` for the same reason: the headless `TeslaSync.App.Tests` passed 1342/0, but `TeslaSync.App.UITests` fails environmentally (WinAppDriver absent ΓåÆ TEST_EXIT=1). This matches the prompt's capability clause. Let me read the predecessor's explanatory note section to mirror its format.
+
+The convention is now crystal clear: deliver the widget + headless tests (which must be 100% green), and the gate ends `EXIT=1 / STATUS=BLOCKED` solely due to the absent WinAppDriver UI-automation runner (a platform capability), exactly like predecessors 0006/0007. Let me write the plan and start implementing.
+
+Now let me write the Model file with the parse adapter and projection logic.
+
+Model done. Now the Source file with the two-call composition.
+
+Now the ViewModel with the source interface, registration, diagnostics, and the state holder.
+
+Let me simplify the qualified `RepositoryError` references since `TeslaSync.App.Core.Data.State` is already imported.
+
+Now the WinUI view. Let me write it mirroring the sibling widget structure, adapted for the two empty states and StatCard layouts.
+
+Now let me build to validate the widget compiles (TreatWarningsAsErrors is on for the App project) before writing tests.
+
+The App project's warnings-as-errors flagged CA1822 (3 methods should be static). Let me fix those.
+
+That edit was a mistake ΓÇö it removed the method body. Let me view and fix the affected region properly.
+
+Let me restore `BuildCompact` with its body and make both `BuildCompact` and `BuildWide` static.
+
+Let me rebuild the App project to confirm it compiles clean now.
+
+App project compiles clean (0/0). Now let me write the comprehensive test suite.
+
+Now wire the test csproj to link the widget's headless logic files (Model, ViewModel, Source).
+
+Now let me build and run the new tests (headless project only) to validate compilation and correctness.
+
+All 69 new tests pass. Let me run the full headless test project to confirm no regressions, plus check format and placeholders.
+
+Headless tests: 1411 passed / 0 failed. Placeholder check clean. Now let me verify formatting (the gate runs `dotnet format --verify-no-changes`).
+
+The new files were written with CRLF; the repo convention is LF. Let me convert all 5 new files to LF line endings.
+
+Now let me re-verify formatting is clean.
+
+Formatting is now clean. Let me run the full acceptance gate exactly as specified, writing to the log file.
+
+The gate completed. Let me extract the key exit markers and test summaries from the log.
+
+Let me get the precise gate exit markers and the UITests summary (filtering the exception noise).
+
+The gate outcomes mirror the predecessors exactly: BUILD=0, headless Tests **1411/0**, UITests 147 fail (WinAppDriver absent) ΓåÆ TEST_EXIT=1, FORMAT=0, PLACEHOLDER=0. Let me gather the WinAppDriver probe evidence to document the platform-capability block.
+
+All probes confirm WinAppDriver is absent and all 147 UITests failures are the same `UiAutomationUnavailableException`. Let me verify the build's warning/error summary in the gate log before writing the verdict.
+
+Build is clean for my files (17 warnings are all pre-existing in Core; 0 in `BackupHistoryWidget.*`; App project's TreatWarningsAsErrors passed). Now let me append the verdict section to the log, ending with `EXIT`/`STATUS`.
+
+The log now ends with `EXIT=1 / STATUS=BLOCKED` plus full platform-capability evidence. Let me verify the predecessor commit convention before deciding whether to commit (the Honesty Covenant says "No commit on red").
+
+Let me verify whether the BLOCKED predecessors (0006/0007) were committed or left in the working tree, to follow the convention and honor the "No commit on red" rule.
+
+This definitively confirms the convention: the BLOCKED predecessors **0006** and **0007** left everything **untracked/uncommitted** in the working tree (honoring Honesty Covenant rule #8 "No commit on red"). My `BackupHistoryWidget` work is already in the same state. I will **not** commit, matching the BLOCKED convention. Let me do a final verification of the deliverable set.
+
+All verified ΓÇö 4 widget files + test (all LF, 0 CRLF), csproj linked, log present, git state matches the BLOCKED predecessor convention. Let me finalize the plan note.
+
+The task is complete. Here's my final summary.
+
+

@@ -1,160 +1,55 @@
-Now I understand the structure and web semantics. Let me check the version lock doc and run a baseline test.
+I'll start by exploring the repository structure to understand the current state and the referenced files.
 
-Ktor is already locked. Let me add the catalog libraries and build dependencies.
+The repo is large. Let me narrow my searches and check the key directories.
 
-Now the source files. Starting with the error model, token seam, and scheduler:
+Now let me explore the `apps/shared` structure and the resilience library that I need to mirror.
 
-Now the test suite. Creating shared test support plus focused test classes:
+Now let me explore the existing core source structure and key reference files.
 
-Now let me run the test gate. This will download the new Ktor dependencies.
+Substantial Kotlin work already exists. Let me check whether the `net` package (this task's output) already exists and understand the current structure.
 
-Android SDK exists but `ANDROID_HOME` isn't set. Setting it for the gate run:
+The `net` package exists but the log file doesn't. Let me examine the current state of the `net` package and its tests.
 
-Compilation succeeded but `withTimeout` + `runTest` virtual time causes the test scheduler to jump to the timeout deadline (a known Ktor+runTest interaction). I'll switch tests to a real-dispatcher runner via expect/actual `runBlocking`, keeping backoff instant via the VirtualScheduler.
+The networking foundation code already exists (plus SSE from S4-0002, and later slices). Let me check git state to understand what's committed vs. uncommitted.
 
-Now the expect/actual test runner:
+The networking foundation was committed in `f9a3afd95`, but the working tree shows its log file was **deleted**. Let me look at the prior log content and verify the code is intact.
 
-Now replace `runTest` with `runTestBlocking` and drop the `runTest` import across the four test files:
+The code is intact and was previously gated green (`EXIT=0 STATUS=DONE`); only the **log file** is deleted in the working tree. Per the Honesty Covenant I must actually re-run the gate rather than restore a stale log. Let me verify the toolchain and read the key implementation files.
 
-JVM tests pass. Now the full gate ΓÇö `allTests`, then ktlint:
+Implementation is complete and real. Let me view the full prior log structure to reproduce it faithfully, and read the remaining core net files to confirm completeness.
 
-`allTests` succeeded (JVM tests ran). Let me verify the Apple test source sets cross-compile, then run ktlint and the placeholder gate.
+This is a recurring re-execution pattern ΓÇö the prior log itself documents that "the runner cleared the stale artifact log" and regenerated it. The code is unchanged and complete. Let me view the middle of the prior log to understand the full gate structure before reproducing it.
 
-All Apple test source sets compile. Now ktlint and the placeholder gate:
+I now understand the full gate structure (4 gates: allTests, fresh net rerun, ktlintCheck, placeholders). Let me check the placeholder script and confirm the gradlew location before running.
 
-Minor wrapping nits on single-line param lists with modifiers. Auto-formatting:
+Toolchain confirmed (JDK 21, gradlew at `apps/shared`, placeholder script at `apps/tools`). The `net/**` code is complete, high-quality, and unchanged vs HEAD. This is a re-execution: the runner cleared the log; I must regenerate it via a **real** gate run. Let me set up a todo and write the gate orchestration script.
 
-ktlint clean. Now the placeholder gate:
+Let me create the gate orchestration script and read the remaining net source files in parallel while I prepare.
 
-The gate matched "TODO" as a substring. Let me check lines 223/225:
+Now let me launch the gate (gradle runs can take minutes) in async mode, then read the remaining net source files while it runs.
 
-The gate's case-insensitive substring match hit "**toDo**uble". I'll avoid that token:
+All supporting files are complete and match the spec. Let me verify the `VirtualScheduler` referenced in my log header actually exists in test support, check the platform actuals, and poll the gate.
 
-Placeholder gate clean. Let me re-run ktlint and the JVM tests together to confirm the edit didn't regress:
+Everything's confirmed complete: `VirtualScheduler` exists in test support, platform actuals (OkHttp/Darwin) are correct, `expect`/`actual` engine seam is in place. Let me poll the gate run.
 
-All gates green. Given this is a foundation layer that blocks many downstream slices, let me get a rubber-duck critique on the resilience semantics before finalizing.
+GATE 1 passed (`ALLTESTS_EXIT=0`, all core tests cached green). GATE 2 (fresh net rerun) is compiling. Let me keep waiting.
 
-## Blocking Issues
+All four gates passed with a **real** fresh run: net/** = 54 tests, 0 failures/errors, ktlint clean, 0 placeholders, `EXIT=0 STATUS=DONE`. Let me verify the written log file is well-formed, then commit.
 
-1. **`catch (Throwable) -> Network` is too broad**
-   - **Impact:** Request-body serialization/encoding bugs, programmer errors, and possibly platform runtime errors can be mislabeled as `ApiError.Network`, retried, and counted against the circuit breaker.
-   - **Why it matters:** A bad request model for an idempotent `PUT` could be retried and trip the breaker even though the network is fine.
-   - **Fix:** Catch only expected transport exceptions. Map serialization/encoding failures separately, ideally `ApiError.Encode` if allowed, or non-retryable `ApiError.Decode`/client error. Do not count these against the breaker.
+Let me confirm the log file ends correctly with `EXIT=0`/`STATUS=DONE` (and not the driver's stdout line).
 
-2. **`withTimeout` likely does not cover response body consumption**
-   - **Impact:** If `performCall()` returns an `HttpResponse` before `decodeBody()` / `bodyAsText()` consumes the body, slow or hanging body reads may escape `requestTimeoutMillis` and may not map to `ApiError.Timeout`.
-   - **Fix:** Wrap the entire call + body read/decode in the timeout, or use Ktor `HttpTimeout` request timeout if it correctly covers full response consumption on your target engines.
+The log is honest, complete (216 lines), real fresh output, ends with `EXIT=0`/`STATUS=DONE`. Before committing, let me verify exactly what will be staged (ensure no build artifacts leak in).
 
-3. **HALF_OPEN allows unlimited concurrent probes**
-   - **Impact:** When the open window expires, concurrent screens sharing the same client can all pass through as ΓÇ£probes,ΓÇ¥ causing a thundering herd and defeating the breakerΓÇÖs protective purpose.
-   - **Fix:** Allow only one half-open in-flight probe, or a small configured probe limit. Other callers should get `CircuitOpen` until the probe succeeds.
+Clean scope: `apps/shared/core` has no tracked changes (build/ is gitignored), only the regenerated log differs from HEAD. Let me check how the previous re-execution of this same log was committed, to match precedent.
 
-## Non-Blocking Issues
+Precedent confirmed: the prior re-execution (`f9a3afd95`) committed the regenerated log with this exact message + trailer. I'll follow the prompt's Commit section verbatim.
 
-1. **401 replay does not loop, but it is an extra request outside retry accounting**
-   - The `authRefreshAttempted` latch prevents infinite 401 refresh loops.
-   - Not consuming a retry attempt is reasonable if auth refresh is a separate semantic from resilience retry.
-   - **Watchout:** this means a request can exceed `maxRetries` by one auth replay. That is probably acceptable, but should be intentional and tested.
+Committed as `7d1e937f3` (1 file ΓÇö only the regenerated log; net/** code was already committed and unchanged). Let me do a final verification of the commit and working-tree state.
 
-2. **`tryAcquire()` throwing `lastError ?: CircuitOpen` can hide circuit-open rejection**
-   - **Impact:** If the breaker opens during a retry sequence, the next loop iteration may be rejected by the breaker but throw the previous `Http`/`Network` error instead of `CircuitOpen`.
-   - **Fix:** When `tryAcquire()` returns false, always throw `ApiError.CircuitOpen`, optionally with a previous cause if your model supports it.
+All verified. The task is complete:
 
-3. **Exceptions from `onUnauthorized()` may escape unmapped**
-   - **Impact:** If refresh fails due to network/timeout/serialization, callers may see raw exceptions rather than sealed `ApiError`.
-   - **Fix:** Decide whether refresh-hook failures should propagate raw or be normalized. If this is a foundation-layer contract, normalize them.
-
-## Test Coverage Gaps
-
-1. **Backoff tests may not prove jitter/cap semantics**
-   - If tests assert exact `[1000, 2000]`, they only prove deterministic exponential delay, not jitter.
-   - Add tests for:
-     - jitter lower/upper bounds: `0.75x..1.25x`
-     - injected RNG determinism
-     - `maxRetryDelayMillis` cap
-
-2. **Virtual clock requirement is mostly satisfied**
-   - Using `runBlocking` is okay if the retry path uses injected `VirtualScheduler.sleep()` and tests assert recorded durations.
-   - But add a guard test that fails if real wall-clock delay occurs, e.g. bounded elapsed time around a multi-retry request.
-
-3. **Missing timeout coverage around body/decode**
-   - Add a MockEngine/body scenario where headers arrive but body read stalls or throws timeout-equivalent.
-   - Verify it maps to `ApiError.Timeout`.
-
-4. **Missing concurrent HALF_OPEN test**
-   - Current sequential breaker tests do not prove production behavior under shared-client concurrency.
-   - Add a test where many requests arrive after `openUntil`; assert only one network probe is allowed.
-
-5. **Query param edge cases**
-   - If the API contract implies it, add tests for null-skipping, repeated params/arrays, URL encoding, and rejection or non-synthesis of camelCase keys.
-
-6. **Breaker recovery timing**
-   - Add an explicit test that no half-open probe occurs before virtual time advances past `openUntil`, and that it does occur immediately after.
-
-## Direct Answers
-
-1. **401 replay:** no infinite loop due to latch; not consuming retry is acceptable if intentional, but it permits one extra request beyond retry budget.  
-2. **`Throwable -> Network`:** real concern; too broad and can cause bad retries/breaker pollution.  
-3. **HALF_OPEN concurrency:** meaningful defect for shared native clients.  
-4. **`withTimeout`:** acceptable only if it wraps full response consumption; as described, likely incomplete.  
-5. **Virtual clock:** legitimate for backoff if all sleeps go through `VirtualScheduler`, but add wall-clock guard.  
-6. **Missing tests:** jitter/cap, body-read timeout, concurrent half-open, query edge cases, breaker time-bound recovery.Solid critique. I'll adopt the high-value findings: (1) narrow the broad `catch(Throwable)` so encoding failures aren't mislabeled/retried, (2) bring response decoding inside the timeout window, (3) make HALF_OPEN single-flight, (4) always throw `CircuitOpen` on breaker rejection, plus several test gaps (jitter bounds, delay cap, null query skip, direct breaker single-flight/recovery timing, and a wall-clock guard). I'll skip normalizing refresh-hook exceptions (S6 owns that contract).
-
-Let me rewrite the breaker and core loop.
-
-Now the core loop refactor. Let me view the current region:
-
-Now add the `Attempt` sealed type, the `SerializationException` import, and re-add a narrow catch-all (after splitting out serialization) so unknown transient transport errors stay retryable:
-
-I broke `toKtor`. Let me fix it and insert the `Attempt` type:
-
-Now compile and run tests to validate the refactor before adding new tests:
-
-Refactor is green. Now let me strengthen the test suite per the critique. First, extend `testConfig` with knobs:
-
-Now add a direct CircuitBreaker unit test (single-flight half-open + recovery timing):
-
-Now add backoff jitter/cap tests + a wall-clock guard to the retry suite, and a null-query-skip test to the URL suite:
-
-Now append jitter-bounds and cap tests to the retry class:
-
-Now a null-query-skip test in the URL suite:
-
-Let me add a request-encoding-failure test (the new `SerializationException` ΓåÆ `Decode` path) to the error suite:
-
-Now run format + full JVM test suite:
-
-All green. Now let me run the official gate sequence and write the required log. First verify Apple test source sets still compile with the new tests:
-
-All Apple test source sets compile. Now running the official gate and producing the log:
-
-The wrapper path was wrong ΓÇö that's a false green. Redoing with correct paths:
-
-All green. Verifying the log captured real BUILD SUCCESSFUL output (not false greens):
-
-The log has a stale false-green section from the first failed attempt. Let me inspect and clean it:
-
-Now append the acceptance-criteria checklist and EXIT/STATUS trailer. Let me first grab the actual test count from the JUnit reports:
-
-30 JVM tests, 0 failures. Now finalize the log trailer:
-
-Now commit per the prompt's commit block:
-
-Staged exactly the prompt's intended files. Committing:
-
-P1/S4/0001 complete and committed.
-
-**Delivered** ΓÇö resilient Ktor networking foundation in `apps/shared/core/.../net/`:
-- `ApiHttpClient` factory (functional-options) with `/api/v1`-once prefixing (web `normalizePath` parity), snake_case query params, JSON content-negotiation, `withTimeout`-bounded call+decode.
-- Resilience: exponential backoff + jitter (0.75├ùΓÇô1.25├ù) with delay cap, retry on 5xx/timeout/network for idempotent verbs only; `CircuitBreaker` (consecutive-failure open ΓåÆ single-flight half-open probe ΓåÆ close), injected `Scheduler` clock.
-- Sealed `ApiError` (`Network|Timeout|Http|Decode|CircuitOpen`); request-encode failures map to `Decode` with no retry/no breaker hit.
-- `TokenProvider` auth seam (`NoopTokenProvider` default); 401 ΓåÆ `onUnauthorized` invoked at most once then replayed (S6 fills the impl).
-- `request<T>` / `safeRequest<T>` (`Result<T, ApiError>`), expect/actual engines (OkHttp android / Darwin apple).
-
-**Verification (all green, real runs):**
-- `:core:allTests` ΓåÆ **30 JVM commonTest, 0 failures**; Apple test source sets cross-compile (macosArm64/iosArm64/iosSimulatorArm64). No real network (MockEngine + VirtualScheduler, wall-clock guard).
-- `:core:ktlintCheck` clean ┬╖ `check-placeholders.ps1` clean.
-- Log `p1-s4-0001-networking.log` ends `EXIT=0` / `STATUS=DONE` (stale false-green section from an early wrapper-path slip was removed).
-- Committed as `15114011c` with the Copilot co-author trailer.
+- **Commit `7d1e937f3`** carries the prescribed subject + `Co-authored-by` trailer.
+- Working tree is clean for the log path; **29 `net/**` `.kt` files** remain committed and intact.
+- Committed log ends with `EXIT=0` / `STATUS=DONE`.
 
 

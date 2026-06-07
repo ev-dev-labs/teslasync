@@ -1,19 +1,69 @@
-Now I have a complete understanding. Let me set up todos and start implementing.
+I'll start by exploring the repository structure and understanding the task requirements. Let me look at the key files in parallel.
 
-Now the models + derivations file:
+Let me explore the shared core structure and look for existing patterns from previously ported hooks.
 
-Now the store:
+Let me find the RBAC types and explore the core structure for existing patterns.
 
-Now let me write the three test files:
+Now let me explore the commonMain structure to find existing patterns for state holders, repositories, and dependencies.
 
-Now run the full test suite:
+There's already an `rbacmatrix` directory. Let me check its contents plus a complete reference example and the data/repo layers.
 
-Tests pass. Now run ktlintCheck + placeholder gate and finalize the log:
+Existing RBAC files are present. Let me read them along with the key S7 infrastructure (Resource, CacheThenNetwork, RbacRepository).
 
-All three gates pass. Let me write the parity enumeration and final status to the log:
+The implementation already exists. Let me check the repository interface, HTTP implementation, tests, and git status to understand the current state.
 
-All gates green. Now commit:
+The implementation code already exists, but the log file shows as **deleted** in git. Let me investigate the history and check for existing tests and golden vectors.
 
-Task complete. Committed cleanly within scope.
+This prompt was already executed in commit `4a13fe089`, but the log file is now deleted in the working tree. Let me understand the current state ΓÇö check recent commits, the committed log content, and the test files.
+
+I see the pattern now ΓÇö recent commits "restore + re-verify" each state-holder log. Let me examine how the Push and Pinned restorations were done to follow the same pattern.
+
+Let me read the Push log (the most recent restore) and the original committed RbacMatrix log to understand the exact format.
+
+Now I fully understand. This prompt was already implemented and committed in `4a13fe089`; its log was later deleted from the working tree. The established pattern (last 2 commits) is **"restore + re-verify"**. Let me confirm the log is in HEAD, check for source drift, and read the tests.
+
+Confirmed: log is in HEAD, **no source drift**, only the log was deleted. This is the "restore + re-verify" case. Let me restore the log, read the remaining tests, and verify infrastructure exists.
+
+Everything is in place and restored. Now I'll re-run the full gate to confirm no drift (honest re-verification). Starting with the test suite.
+
+`gradlew` lives in `apps/shared`, not `core`. Let me run from the correct location targeting `:core`.
+
+Tests pass (cached). Let me force a fresh run of the RBAC tests for real evidence, then run ktlint and the placeholder check.
+
+Fresh tests pass (18 tasks executed). Let me read the test result XMLs for exact counts and run ktlint + placeholder checks.
+
+Tests: 6+7+8 = 21, all passing. Ktlint clean. Now the placeholder check.
+
+All gate checks pass: **TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0**. Let me compute the commit distance and confirm no source drift, then append the re-verification evidence to the log.
+
+89 commits before HEAD, no source drift. Let me view the tail of the restored log and append the re-verification evidence (matching the Push log format).
+
+Now I'll append the re-verification evidence to the restored log, matching the established format.
+
+Let me verify the appended section renders correctly, then commit.
+
+Log is complete and clean. Now I'll commit following the established "restore + re-verify" pattern ΓÇö staging only the log file. Let me check the Push commit's full message format first to match it exactly.
+
+Now I'll stage only the log file and commit with the matching format.
+
+Committed cleanly (`35218e920`, 1 file, 26 insertions ΓÇö matching the Push pattern). Let me do a final verification.
+
+Done. The P1/S8/0037 RbacMatrix slice was already implemented and committed at `4a13fe089` (89 commits back); only its execution log had been deleted from the working tree. I restored it and re-verified against the current tree.
+
+**Verification results (all real, freshly run):**
+- `:core:allTests` ΓåÆ BUILD SUCCESSFUL, **TEST_EXIT=0**
+- Targeted RBAC tests (`--rerun-tasks`, 18 tasks executed) ΓåÆ **21 tests, 0 failures**:
+  - RbacRepositoryContractTest = 6
+  - RbacMatrixGoldenTest = 7
+  - RbacMatrixStoreTest = 8
+- `:core:ktlintCheck` ΓåÆ BUILD SUCCESSFUL, **LINT_EXIT=0**
+- `check-placeholders.ps1` ΓåÆ PLACEHOLDER_COUNT=0, **PH_EXIT=0**
+
+**Parity confirmed** ΓÇö both hooks + both helpers from `useRbacMatrix.ts` are ported, SI preserved, snake_case verbatim, UI-free, repository-injected:
+- `useRbacMatrix` ΓåÆ `RbacRepository.matrix()` / `RbacMatrixStore.matrix` (GET `/admin/rbac/matrix`, 30s TTL, cacheΓåÆnetwork, 501 AUTH_MODE_OPEN ΓåÆ `Open`)
+- `useUpsertRbacCells` ΓåÆ `upsertCells()` (PUT, onSuccess refresh = `invalidateQueries(rbacMatrixKeys.matrix())`)
+- `isRbacOpenMode`, `diffMatrices` ΓåÆ `RbacMatrixDerivations` (golden-vector locked for KMP+C# parity)
+
+No `apps/shared/core` source changed. Committed as `35218e920` (log only).
 
 

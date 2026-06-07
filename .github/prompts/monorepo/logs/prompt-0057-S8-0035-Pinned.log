@@ -1,234 +1,56 @@
-Grep is timing out scanning the repo. Let me read specific files directly.
+I'll start by exploring the repository structure and understanding the task requirements. Let me look at the web source hook, the KMP shared core structure, and predecessor work.
 
-Now I have a complete understanding. Let me set up tracking and start implementing.
+The `pinned` directory already has files. Let me read them along with the `savedviews` slice (a close analog with reorder) to understand the established pattern.
 
-Now the repository interface with the query and cache-key helpers:
+A substantial `PinnedStore.kt` already exists. Let me check the repository layer (S7), existing tests, the log file, and git status to understand what's already done vs. pending.
 
-Now the store:
+The log file was deleted from the working tree but the implementation files exist and appear committed. Let me check git history, the deleted log's content, the repository layer, and existing tests.
 
-Now add the `Pinned` CacheDomain entry:
+The previous run completed this task and committed it, but the log file was deleted from the working tree. Let me verify the implementation is fully committed, find its commit, and check the test files exist.
 
-Let me verify there's no central DI registry that needs the new repo/store wired in, then run the gate.
+There's a committed Pinned implementation (`1679b86e6`). Let me verify its relationship to HEAD and confirm the implementation files are unchanged in the working tree.
 
-Let me run the gradle gate (long-running) and get a rubber-duck critique in parallel.
+This task was already completed and committed in `1679b86e6` (89 commits before HEAD); only the log file was deleted from the working tree. Per the Honesty Covenant I must run the real gate rather than assume green. Let me restore the log, and read the repository + tests + cache domain to verify parity before running the gate.
 
-## Blocking Issues
+Implementation is complete and faithful. Let me read the full restored log, the three test files, and confirm the cache domain.
 
-None found from the described design. The core parity choices look correct.
+The implementation, tests, and log are all complete and committed (`1679b86e6`). The log was only deleted from the working tree, now restored. Per the Honesty Covenant I must run the real gate to confirm it's still green against the current tree. Let me verify the cache domain, the other two test files, and the build tooling first.
 
-## Non-Blocking Issues / Subtle Risks
+Everything is in place: `CacheDomain.Pinned = 5.minutes`, golden vectors cover all derivations, gradlew at `apps/shared`, Java 21, placeholder script present. The slice was committed 89 commits ago, so I'll now run the real gate to confirm it's still green against the current tree.
 
-### 1. `refreshType(type)` parity depends on TanStack partial-key matching semantics
+Let me start the canonical gate ΓÇö the full `:core:allTests` build (this is the long part).
 
-**Assessment:** Your reading is correct.
+Build is incremental (UP-TO-DATE), so tests didn't re-execute. To get genuine fresh evidence for the Pinned slice (and confirm which target runs commonTest on Windows), let me check the module's targets and force a clean re-run of the Pinned tests.
 
-`invalidateQueries({ queryKey: ['pinned', type, null] })` does prefix/partial matching by array position, not ΓÇ£match any context.ΓÇ¥ Therefore it matches:
+Core targets are `androidTarget` (JVM-based unit tests) + two Apple targets (skipped on Windows). So commonTest runs via `testDebugUnitTest`. Let me force a fresh run of the three Pinned test classes to get genuine pass counts.
 
-```ts
-['pinned', type, null]
-['pinned', type, null, ...]
-```
+Fresh execution succeeded (18 tasks executed, `BUILD SUCCESSFUL`, `TEST_EXIT=0`). Let me read the JUnit XML reports to capture genuine per-class test counts.
 
-but does **not** match:
+All 30 Pinned tests pass fresh (PinnedStoreTest=11, PinnedRepositoryContractTest=13, PinnedGoldenTest=6; 0 failures). Now the remaining two gate steps ΓÇö ktlint and the placeholder check ΓÇö in parallel.
 
-```ts
-['pinned', type, 'ctx']
-['pinned', type, '']
-['pinned', type, 'null']
-```
+All three gate steps pass against the current tree:
+- **TEST_EXIT=0** ΓÇö full `:core:allTests` BUILD SUCCESSFUL; fresh Pinned run: 30 tests, 0 failures (PinnedStoreTest=11, PinnedRepositoryContractTest=13, PinnedGoldenTest=6)
+- **LINT_EXIT=0** ΓÇö `:core:ktlintCheck` BUILD SUCCESSFUL
+- **PH_EXIT=0** ΓÇö PLACEHOLDER_COUNT=0
 
-So your `refreshType(type)` bumping only `pinnedCacheKey(type, null)` is faithful to the web behavior, assuming the KMP feeds are exactly keyed by `(type, context)` with `null` representing absent context.
+The slice is already implemented and committed (`1679b86e6`); only the log was removed from the working tree. Let me append an honest re-verification stamp to the restored log before committing.
 
-**Recommended fix:** None.
+Now let me verify the log diff is clean and confirm no source changes, then stage exactly the two prescribed paths and commit.
 
----
+Log diff is clean (only my re-verification block; still ends with `EXIT=0`/`STATUS=DONE`), and `apps/shared/core` has no source changes. Let me stage exactly the two prescribed paths, confirm nothing else is staged, and commit with an honest message.
 
-### 2. `togglePin(..., pin = false)` should refresh all even when no existing row is found
+Only the pinned log is staged. Committing with an honest message reflecting the re-verification:
 
-**Assessment:** Your reproduction is correct.
+Commit succeeded (`983afae7b`). Let me do a final verification of the log's terminal lines and confirm the pinned log is no longer dirty, then clean up temp files.
 
-In the web mutation, returning `null` from the mutation function is still a successful mutation result, so `onSuccess` fires and invalidates all pinned queries.
+Task complete and verified.
 
-Your behavior:
+**Finding:** The P1/S8/0035 Pinned state holder was already fully implemented, tested, and committed at `1679b86e6` (89 commits before HEAD). Only its execution log had been deleted from the working tree.
 
-```kotlin
-Result.success(null).onSuccess { refreshAll() }
-```
-
-matches that.
-
-**Recommended fix:** None.
-
----
-
-### 3. Fallback fetch on cache miss/not-found is required
-
-**Assessment:** Your understanding is correct, but this is worth being strict about.
-
-The web logic effectively does:
-
-```ts
-cached?.find(...) ?? (await fetchPinned()).find(...)
-```
-
-So it fetches when:
-
-- cache is cold / `undefined`
-- cache exists but does not contain the item
-- cached list is empty
-- cached item IDs do not match after string coercion
-
-Your KMP logic is faithful **only if** it does the equivalent of:
-
-```kotlin
-val cachedHit = repo.peekPinned(type, context)
-    ?.firstOrNull { it.itemId.toString() == itemId.toString() }
-
-val existing = cachedHit ?: repo.fetchPinned(type, context).getOrThrow()
-    .firstOrNull { it.itemId.toString() == itemId.toString() }
-```
-
-The important parity point is: **a non-null cached list that lacks the item must not be treated as authoritative.**
-
-**Recommended fix:** Ensure the implementation does not accidentally short-circuit on `peekPinned(...) != null`. It must short-circuit only on an actual matching item.
-
----
-
-### 4. Kotlin `Result` covariance is okay, but type inference may need help
-
-**Assessment:** Semantically fine.
-
-`Result` is covariant: `Result<out T>`, so `Result<PinnedItem>` can be used where `Result<PinnedItem?>` is expected.
-
-Similarly:
-
-```kotlin
-repo.deletePin(id).map { null }
-```
-
-is valid as a `Result<PinnedItem?>` if the expected type is present. Without an expected type, Kotlin may infer `Result<Nothing?>`, which is still assignable to `Result<PinnedItem?>` because of covariance.
-
-**Potential issue:** In complex `if`/`when` expressions, inference can occasionally choose an awkward common type.
-
-**Recommended fix:** Put an explicit return type on `togglePin` / `resolveAndUnpin`, e.g.
-
-```kotlin
-fun togglePin(...): Result<PinnedItem?>
-```
-
-and optionally:
-
-```kotlin
-repo.deletePin(existing.id).map { null as PinnedItem? }
-```
-
-only if inference complains.
-
----
-
-### 5. Leaving stale durable cache until refresh completes is faithful, but watch failure behavior
-
-**Assessment:** Your reasoning is mostly correct.
-
-TanStack invalidation does not remove cached data. It marks stale and refetches active queries. So leaving stale rows available while a refresh runs is closer than clearing the cache.
-
-The subtle difference is durability/offline behavior:
-
-- Web query cache is in-memory and may disappear on reload.
-- Your durable cache may preserve stale pins across app restarts or network failures.
-
-If cache-then-network emits cached data first and the network refresh fails, users may continue seeing stale pins longer than the web would in a fresh session. That may be acceptable for offline-first behavior, but it is not perfectly equivalent to ephemeral TanStack cache.
-
-**Recommended fix:** No need to clear cache for parity with invalidation. But make sure mutation-triggered refresh failures surface a `Resource.Error` or equivalent, rather than silently leaving stale data looking fresh.
-
----
-
-### 6. Possible divergence between StateFlow data and durable `peekPinned`
-
-**Assessment:** This is the main subtle parity risk.
-
-The web unpin reads from the TanStack in-memory query cache ΓÇö exactly what the UI hook is using. Your unpin reads from the durable offline cache. If the feedΓÇÖs `StateFlow` and durable cache can diverge, unpin resolution can behave differently.
-
-Possible bad cases:
-
-- Feed has fresh network data, but durable write has not completed yet.
-- Feed emits transformed/normalized data different from the stored durable data.
-- Durable cache contains older data from a previous session while the current in-memory feed has newer data.
-- A successful fetch updates the StateFlow before the durable cache write succeeds.
-
-Impact: unpin may fail to find an item in `peekPinned`, then fallback fetch saves you in most online cases. But if the network fallback fails, web may have succeeded from in-memory cache while KMP returns failure.
-
-**Recommended fix:** Prefer resolving from the active in-memory feed first, then durable cache, then network fallback:
-
-1. Check current `feeds[key].value` if it contains a successful list.
-2. Else check `repo.peekPinned(type, context)`.
-3. Else / on miss, call `fetchPinned`.
-
-That would better match TanStack Query because the active UI-observed state is the closest analogue to `qc.getQueryData`.
-
----
-
-## Suggestions
-
-### Match JavaScript `String(...)` item ID comparison exactly
-
-The web compares:
-
-```ts
-String(p.item_id) === String(itemId)
-```
-
-If Kotlin uses strict typed equality, you may miss parity when one side is numeric and the other is string-like.
-
-**Recommended fix:** Compare normalized strings:
-
-```kotlin
-p.itemId.toString() == itemId.toString()
-```
-
-Also ensure nullable IDs, if possible, do not turn into surprising `"null"` matches unless the web could do the same.
-
----
-
-### `refreshAll()` only refreshes existing feeds
-
-If `refreshAll()` bumps every existing trigger, that matches invalidating existing TanStack queries. It does not need to create new feeds. Future calls to `pinned(type, context)` should still use cache-then-network normally.
-
-**Recommended fix:** None, assuming new feeds fetch on first subscription.
-
----
-
-## Direct Answers
-
-1. **Yes**, `['pinned', type, null]` does not match `['pinned', type, 'ctx']`.
-2. **Yes**, returning `null` is still mutation success, so refresh-all is faithful.
-3. **Yes**, the web falls back both on cold cache and cached-list miss. Your design is faithful if it falls back on `firstOrNull == null`.
-4. **No major concern**; `Result` covariance is fine. Add explicit return types if inference gets messy.
-5. **Generally correct**; invalidation is refetch-not-remove. Main concern is stale durable cache after failed refresh.
-6. **Yes, possible subtle divergence**. Best parity is to resolve from active in-memory feed state before durable cache, then fallback fetch.The rubber-duck confirmed my parity reasoning on all 6 points. Its main suggestion (read in-memory feed before durable cache) ΓÇö I'll keep `peek()` since that's the established getQueryData-analogue across the entire S8 layer, and my fetch fallback covers the divergence case. The `String()` comparison concern doesn't apply since `itemId` is already `String` on both sides. Let me check the test results.
-
-PowerShell needs `.\gradlew.bat`. Let me run the real gate.
-
-Found the wrapper at `apps/shared`. Running the gate from there.
-
-Tests pass. Now ktlint and the placeholder check.
-
-Let me auto-fix with ktlintFormat, then re-check.
-
-ktlintFormat applied fixes. Re-running the check and tests to confirm green.
-
-Now the placeholder check, and a final tests re-run after formatting.
-
-Placeholder clean. Final tests re-run after formatting to confirm green:
-
-All gates green. Let me verify my Pinned tests actually executed (not silently skipped), then write the log and commit.
-
-All 30 Pinned tests pass (11 store + 13 contract + 6 golden), zero skipped. Writing the log and committing.
-
-A `done.txt` shows as staged ΓÇö that's outside my allowed scope. Let me check and keep the commit to only my files.
-
-Staged set is exactly my 9 files (done.txt is unrelated worktree noise, not staged). Committing.
-
-Committed. Task complete.
+**What I did:**
+- Verified all 3 web hooks are ported faithfully: `usePinned`ΓåÆ`PinnedStore.pinned`, `useTogglePin`ΓåÆ`togglePin` (POST-pin / resolve-then-DELETE unpin, refresh-all), `useReorderPin`ΓåÆ`reorderPin` (PATCH, refresh no-context feed only). Endpoints/snake_case params/cache-key tuple/invalidate granularity all match; SI preserved; derivations golden-locked.
+- Restored the deleted log from HEAD.
+- Re-ran the **real** gate against the current tree (no assumptions): `:core:allTests` Γ£à, fresh Pinned run = **30 tests, 0 failures** (Store=11, Contract=13, Golden=6), `:core:ktlintCheck` Γ£à, placeholder check = 0.
+- Stamped an honest re-verification into the log (ends `EXIT=0`/`STATUS=DONE`) and committed only the two prescribed paths (`983afae7b`). No `apps/shared/core` source changed.
 
 

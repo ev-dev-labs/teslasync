@@ -1,85 +1,40 @@
-I'll start by exploring the codebase to understand the structure and what already exists.
+I'll start by exploring the codebase to understand the task structure, the web source hooks, and the existing KMP shared core architecture.
 
-Let me explore the existing shared core source structure and find a similar already-ported domain to use as a template.
+Key finding: substantial code already exists (`NotificationsStore.kt`, `NotificationModels.kt`, `NotificationsRepository.kt`, `HttpNotificationsRepository.kt`), and the log file shows as **deleted** in the working tree. Let me investigate git history and the prior log.
 
-This is a large task. Let me read the web source hook file and existing notification-related code to understand the patterns.
+The work appears already committed at HEAD with a DONE log, but the log file shows as deleted in the working tree. Let me determine the true state ΓÇö which commit introduced the Notifications code and log.
 
-Now let me examine the existing patterns ΓÇö Resource, CachingRepository, and a complete Store+Repo+Models+Http+test example (Automations is a good candidate with reads+mutations).
+The Notifications work was committed as `f1b7b7240`. I need to understand its relationship to HEAD (`5269b7ab8` = NotificationChannels). Let me check the ancestry definitively.
 
-Excellent template. Let me look at the Automations Repository interface, Http impl, Models, and the test file to replicate exact patterns.
+Now the picture is clear: the Notifications work is **already committed** as `f1b7b7240` (an ancestor of HEAD), apps/shared/core is clean, and only the log file was deleted in the working tree (alongside unrelated log churn from a parallel runner). 
 
-Let me look at the test patterns, CacheDomain, the net request helpers, and the existing notification channels models/store.
+My job: verify the committed deliverable genuinely satisfies parity, run the gate for real, and restore the log. Let me locate the test files and confirm hook coverage.
 
-This is a large task. Let me read the web type definitions for all the notification-related types, and check the existing channels repo's Http impl and CacheDomain.
+Let me restore the deleted log (it's part of the committed deliverable) and read the key implementation files to verify parity coverage.
 
-I have a complete understanding of the patterns. Let me verify the log directory and set up tracking.
+The restored log enumerates all 36 hooks with endpoint/method/refresh mappings matching the web source. Per the Honesty Covenant I must verify the actual code and run the gate for real ΓÇö not trust the log. Let me read the repository interface and check the Gradle setup, then launch the gate.
 
-Let me check an existing log format to match conventions, and confirm the gradle wrapper works.
+The repository interface fully covers all 36 hooks with proper endpoints, golden-locked body/param builders, and cache keys ΓÇö genuinely complete, not stubs. The Gradle root is `apps/shared` (settings.gradle.kts there). Let me locate the wrapper and launch the gate.
 
-Now I'll build the implementation. Starting with the models file.
+All prerequisites are in place (JDK 21, Android SDK, gradlew at `apps/shared`, module `:core`). The prompt's gate path is slightly off (gradlew lives at `apps/shared`, not `apps/shared/core`), so I'll run `:core:allTests` from the Gradle root. Launching the test gate now.
 
-Now the repository interface with key builders and pure derivations.
+Tests are UP-TO-DATE and pass (`BUILD SUCCESSFUL`), but to honestly verify (not rely on cached results) I'll force-rerun the Notifications tests to capture real counts, then run ktlint and the placeholder check.
 
-Now the HTTP repository implementation.
+Tests genuinely execute and pass. Let me capture the actual test counts from the result XMLs and run the placeholder check, then ktlint.
 
-Now the state holder (Store).
+Notifications domain tests: **14 + 38 + 9 = 61 tests, 0 failures**. Placeholder check clean (`PH_EXIT=0`, count 0). Now the final gate component ΓÇö ktlint.
 
-Let me compile the main source set to catch errors before writing tests.
+All three gate components pass for real: **TEST_EXIT=0** (61 Notifications tests green), **LINT_EXIT=0** (ktlint), **PH_EXIT=0** (placeholder, count 0). Let me verify the scoped working-tree state and confirm the log's terminal status.
 
-Main source compiles. Now the store test.
+Everything is verified. Let me summarize the confirmed state:
 
-I need to verify my model/repo signatures before finalizing the test. Let me view the actual files I created.
+- **Deliverable already committed** as `f1b7b7240` (ancestor of HEAD) containing all 9 files: the S7 `NotificationsRepository` interface (343 L), `HttpNotificationsRepository` (374 L), `NotificationModels` (528 L), `NotificationsStore` (317 L), `notifications-golden.json` (65 L), 3 test files (38+9+14 tests), and the 385ΓÇæline log.
+- **Gate re-run green this session**: `:core:allTests` Γ£à, forced Notifications test rerun = **61 tests, 0 failures** Γ£à, `:core:ktlintCheck` LINT_EXIT=0 Γ£à, placeholder check PH_EXIT=0 / count 0 Γ£à.
+- **Log restored** (it was the only in-scope working-tree drift) and ends with `EXIT=0` / `STATUS=DONE`.
+- **Scoped paths clean** ΓÇö nothing new to commit.
 
-Signatures all match. Let me create the directory and test file.
+Let me clean up temp files.
 
-Now let me view the HTTP repository to write the contract test accurately.
-
-Now let me view the contract test template and golden test template.
-
-Now I'll write the contract test.
-
-Now the golden test. Let me view the channels golden test and its spec.
-
-Now the golden spec JSON. Let me check the existing one's format.
-
-Now let me run the gate. First a quick test-compile to surface errors fast.
-
-Compiles. Let me fix the redundant cast warning.
-
-Now run the new tests on the JVM target.
-
-All Notifications tests pass. Now run the full gate, teeing to the log.
-
-Let me auto-format, then fix the one non-auto-correctable long line.
-
-Format applied. Re-run ktlintCheck.
-
-ktlint clean. Now the placeholder check, and re-run allTests to confirm green post-format.
-
-All green. Let me verify the native (Apple) target cross-compiles commonMain to substantiate the cross-platform parity claim.
-
-Both Apple klibs cross-compile. Now finalize the log with the parity enumeration and honesty notes.
-
-Now let me append the parity enumeration, honesty notes, and trailer to the log.
-
-Now commit.
-
-P1/S8/0032 complete and committed (`f1b7b724`).
-
-**Delivered** ΓÇö the web `useNotifications` domain (36 hooks) ported to UI-free KMP shared-core state holders:
-
-- **`NotificationModels.kt`** ΓÇö all read DTOs, id-free input bodies, result envelopes, sealed `BulkMarkReadVars` + `NotificationChannelInput` unions.
-- **`NotificationsRepository.kt`** (S7) ΓÇö 12 reads + 24 mutations + golden-locked pure derivations (`notificationFilterParams`, `notificationGroupsParams`, `bulkMarkReadBody`, `acknowledgeBody`) + cache-key builders mirroring the web `notificationKeys`.
-- **`HttpNotificationsRepository.kt`** ΓÇö cacheΓåÆnetwork impl; every endpoint/method/body locked to the web `request()` calls; SI on the wire.
-- **`NotificationsStore.kt`** (S8) ΓÇö shared refreshable `StateFlow<Resource<T>>` reads + suspend `Result` mutations; each mutation refreshes exactly the feeds the web hook's `invalidateQueries` does (incl. the `notification-logs:` prefix family).
-- **3 test files** (61 tests) + **`notifications-golden.json`** shared C#/KMP vector source.
-
-**Gate (all green):**
-- `:core:allTests` ΓåÆ BUILD SUCCESSFUL (TEST_EXIT=0)
-- `:core:ktlintCheck` ΓåÆ BUILD SUCCESSFUL (LINT_EXIT=0)
-- `check-placeholders.ps1` ΓåÆ PLACEHOLDER_COUNT=0 (PH_EXIT=0)
-- Apple commonMain + commonTest cross-**compile** verified; native test **execution** requires a macOS host (honestly noted ΓÇö Windows host).
-
-Log ends `EXIT=0` / `STATUS=DONE` with a `=== PARITY ===` section enumerating all 36 hooks.
+Task complete. Here's the honest outcome.
 
 

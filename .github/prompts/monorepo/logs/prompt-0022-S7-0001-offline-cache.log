@@ -1,142 +1,72 @@
-I'll focus on the source tree, not build artifacts.
+I'll start by exploring the repository structure to understand the current state and the predecessor work this task depends on.
 
-Now I understand the full picture. Let me verify the gradle environment works before building, and set up a plan.
+This is a large KMP monorepo. Let me focus on the shared core module and find the predecessor work.
 
-Gradle works. Let me check ktlint config and remaining model/test patterns.
+Let me read the actual prompt file, the predecessor prompts, and explore the core module structure.
 
-Apple targets + Windows host is a concern for `allTests`. Let me check how prior gates ran.
+The build is already configured for SQLDelight. Let me explore the existing source structure to understand conventions from predecessor phases.
 
-Environment confirmed: Apple sources cross-compile on Windows but Apple tests skip; Android unit tests (JVM) run. Now I'll build. Let me set up tracking and the plan.
+There's already a `Cache.sq`. Let me read it and explore the main source tree structure.
 
-Now the build.gradle.kts:
+Let me check git status and explore the existing source tree structure to understand what's already in place.
 
-Now add the sqldelight database config block:
+Last commit is S6. There's already a `cache` and `data` directory, and the S7 log was deleted from the working tree. Let me investigate what's already present versus what I need to build.
 
-Now the SQLDelight schema:
+This is important ΓÇö there's already a commit `be8e8ec50` for S7, and all the cache/repo files are tracked. Let me understand the git topology precisely.
 
-Let me generate the SQLDelight interface to confirm the build wiring and generated class names before writing Kotlin that references them.
+S7 was already committed (`be8e8ec50`, an ancestor of HEAD). The working tree code is intact, but the log was deleted and `done.txt` modified ΓÇö indicating a re-run. Let me examine the prior log content and the `done.txt` change.
 
-The plugin artifact wasn't found. Let me verify SQLDelight 2.5.3 actually exists on Maven Central.
+The picture is clear now: S7's code is **already committed** (in ancestor commit `be8e8ec50`), but the runner deleted the S7 log and `done.txt` doesn't yet list S7 ΓÇö this is a sequential re-run where S7 is the current prompt. The prior run passed (EXIT=0/STATUS=DONE). I must re-verify by actually running the gate and regenerating the log.
 
-SQLDelight 2.5.3 doesn't exist (latest stable is 2.3.2) ΓÇö the catalog pin is invalid. Let me check the version lock doc and fix it.
+Let me read the key implementation files and check the build environment in parallel.
 
-SQLDelight 2.5.3 is fictional; latest stable is 2.3.2 (the lock doc itself says "verify each at execution time against vendor channels"). I'll correct both the catalog and the lock doc.
+Excellent ΓÇö this is a complete, high-quality implementation. Let me read the remaining core files, the tests, ADR-013, and check the build environment in parallel.
 
-SQLDelight wired and generating. Let me inspect the generated code to confirm class/method names.
+The implementation and tests are comprehensive. Let me check the logout-clear test, driver actuals, the CacheDomain head, and the build environment in parallel.
 
-Generated API confirmed. Now I'll write the commonMain cache + repo Kotlin sources.
+Implementation and tests are complete and cover every acceptance criterion. The Gradle root is `apps/shared`. Let me read the full prior log to replicate its exact approach, and verify the build environment.
 
-Now the repository layer ΓÇö Resource, the operator, base, and concrete repos:
+Environment is ready: JDK 21, Android SDK configured, gradlew present. Let me read the full prior log (my structural model) and the placeholder-check script.
 
-Now the platform driver actuals:
+I now fully understand the situation and the gate. The S7 implementation is complete and committed; my job is to re-verify it by actually running the gate in this environment and regenerate the deleted log. Let me set up tracking and kick off the gate's test run.
 
-Let me compile the main sources (common + android) to catch errors before writing tests.
+`:core:allTests` passed, but the test task was `UP-TO-DATE` (cached) ΓÇö no test actually executed this run. To honor the honesty covenant ("no red-as-green") and produce genuine evidence, I'll force a real re-execution of the unit tests.
 
-Android SDK exists but `ANDROID_HOME` isn't exported in my shell. I'll set it for gradle runs. Let me validate commonMain (metadata) and an Apple target compile first.
+Forced re-run executed all tasks (no cache) and `:core:testDebugUnitTest` genuinely passed. Let me extract the actual test counts from the JUnit results to include as honest evidence.
 
-iOS target compiles cleanly. Now the test infrastructure. Let me check how existing net tests build the MockEngine client.
+Genuine evidence confirmed: **1340 tests, 0 failures, 0 errors, 0 skipped** across 181 suites, including all cache and repository contract tests. Now let me run the remaining gates (forced test execution into the log, ktlint, placeholder check) and build the complete log.
 
-Now the test infrastructure ΓÇö in-memory driver (expect/actual) and tests:
+Genuine test execution is now in the log. Now ktlint and the placeholder gate.
 
-Now let me run the Android unit tests (JVM) which execute the full common test suite.
+All three gates pass: tests (1340/0 fail), ktlint (LINT_EXIT=0), placeholder (COUNT=0). ktlint showed UP-TO-DATE ΓÇö let me force a genuine re-scan so the log contains real execution evidence, consistent with the rigor I applied to tests.
 
-All passing. Let me confirm the test counts from the result XML.
+All gates now have genuine forced-execution evidence. Let me review the assembled log, then append honesty notes and the final status footer.
 
-16 tests green, including the real-DTO `Instant` round-trip. Let me verify the Apple test sources compile (they won't run on Windows but must compile), then get a design/coverage critique.
+All gate markers are green. Let me append the honesty notes and the final `EXIT=0 / STATUS=DONE` footer.
 
-Apple test sources compile (incl. `inMemoryDriver` actual). Now let me run ktlintFormat then a critique of the implementation.
+Log is complete and ends with `EXIT=0 / STATUS=DONE`. Let me verify the expect/actual driver actuals are genuine (not stubs) before committing, satisfying the "android+apple drivers present" criterion.
 
-Let me get a focused critique of the implementation and test coverage before the final gate.
+All drivers are genuine `expect/actual` implementations (AndroidSqliteDriver, NativeSqliteDriver, in-memory test driver). Every acceptance criterion is met. Now let me commit exactly the two paths the prompt specifies ΓÇö first verifying nothing unintended is staged.
 
-## Blocking Issues
+Confirmed: `apps/shared/core` is clean (code already committed); only the regenerated log differs. Let me stage exactly the two prompt-specified paths and commit.
 
-1. **Corrupt/incompatible cached JSON can brick the repository path**
-   - **Where:** `CachingRepository.observe()` decodes cache inside `read`; `cacheThenNetwork()` calls `read()` before its `try`.
-   - **Impact:** If a cached row is corrupt, or DTO shape changes after an app/backend upgrade, `json.decodeFromString(...)` throws before network fetch is attempted. The user gets neither stale cache nor fresh network data until the row/domain is manually cleared.
-   - **Fix:** Move the `read()` call inside the protected region or handle decode failures in `CachingRepository`: delete that key and proceed as cache-miss/network fetch. Add a test for invalid cached payload ΓåÆ fetch succeeds and overwrites cache.
+Committed cleanly ΓÇö only the log file changed (`6b9d890fc`). Let me do a final verification of the commit and working-tree state.
 
-2. **Charging repository appears to call the wrong backend route**
-   - **Where:** `ChargingRepository.sessions()` uses `path = "/charging-sessions"`.
-   - **Backend route:** `internal/api/router.go` exposes `/api/v1/charging/` for list-by-vehicle.
-   - **Impact:** Charging cache-then-network will always fail refresh against the real backend, only serving cache if already seeded.
-   - **Fix:** Change path to `"/charging/"` or whatever the generated API contract says. Add concrete repository endpoint tests for all repos, not just vehicles.
+All verified. The task is complete.
 
-## Non-Blocking Issues
+**P1/S7/0001 ΓÇö Offline cache + repositories: gate re-verified green and log regenerated.**
 
-1. **Fresh network data is lost if cache write fails**
-   - **Where:** `fetch(); write(); emit(Success(...))` are all inside one `try`.
-   - **Impact:** If the network succeeds but SQLite write fails/locks, the flow emits `Error(cached = old, stale = true)` and drops the fresh fetched value. That is surprising for a cache layer: cache failure should usually degrade persistence, not prevent displaying fresh network data.
-   - **Fix:** Decide desired contract. If UI freshness matters more than cache durability, emit `Success(data, at, false)` even if `write` fails, possibly logging/reporting cache-write failure separately. Add a write-failure test.
+The S7 SQLDelight cache + cache-then-network repository layer was already implemented and committed (ancestor `be8e8ec50`); the runner had deleted its gate log as part of a sequential re-run. I re-verified it end-to-end in this environment with **genuine forced execution** (no cached red-as-green):
 
-2. **`catch (Throwable)` is too broad**
-   - **Impact:** After preserving `CancellationException`, this still converts serious VM/programmer failures such as `OutOfMemoryError`, `LinkageError`, or assertion failures into `Resource.Error`, masking bugs.
-   - **Fix:** Catch `Exception` or narrower Ktor/serialization/network exceptions unless there is a deliberate reason to catch all `Throwable`.
+| Gate | Result |
+|---|---|
+| `:core:allTests` | `TEST_EXIT=0` |
+| Forced unit-test re-run (`--rerun-tasks`) | **1340 tests, 0 failures, 0 errors, 0 skipped** (181 suites) |
+| Forced ktlint re-scan (`--rerun-tasks`) | clean, `EXIT=0` |
+| `check-placeholders.ps1 -Language kotlin` | `PLACEHOLDER_COUNT=0` |
 
-3. **`Error.stale = cached != null` is defensible but semantically coarse**
-   - **Answer to Q1:** For ADR wording ΓÇ£Offline ΓçÆ serve cache + Stale,ΓÇ¥ this is correct. Even a fresh cached value becomes `stale=true` after refresh failure because freshness could not be confirmed.
-   - **Caveat:** The operator marks cache stale for all failures, not just offline/network failures: 401/403/500/DTO decode errors also produce stale cache. That is acceptable if `Resource.Error.error` drives UI messaging, but donΓÇÖt label every such state ΓÇ£offlineΓÇ¥ in the UI.
+Acceptance criteria confirmed against the source: SQLDelight `cacheEntry` schema storing SI-only DTO JSON keyed by `(domain, cacheKey)`; `expect/actual` drivers present (Android `AndroidSqliteDriver`, Apple `NativeSqliteDriver`) plus an in-memory test driver; `Resource<T>` + generic `cacheThenNetwork` operator; per-domain TTL freshness; write-through + clear-on-logout. Tests cover cacheΓåÆnetwork emit order, staleness boundary, offline-serves-stale, write-through, corrupt-payload eviction, and logout-clears-all.
 
-## Material Test-Coverage Gaps
-
-Add these before calling the implementation robust:
-
-1. **Cached decode failure**
-   - Seed invalid or old-shape JSON.
-   - Expect: no flow crash; stale row is ignored/deleted; network fetch proceeds; fresh row is written.
-
-2. **Cancellation propagation**
-   - Make `fetch` throw `CancellationException`.
-   - Assert the flow throws cancellation and does not emit `Resource.Error`.
-
-3. **Cache write failure behavior**
-   - Use a fake `write` that throws.
-   - Lock down whether fresh network data should still be emitted or whether write-through is mandatory.
-
-4. **Concrete repo route/query tests**
-   - Current tests only cover `VehicleRepository`.
-   - Add `MockEngine` assertions for `DriveRepository`, `ChargingRepository`, `EnergyRepository`, `VehicleStateRepository`, `SignalsRepository`, `NotificationRepository`, and analytics paths.
-   - This would catch the `/charging-sessions` mismatch.
-
-5. **SI serializer/cache golden tests**
-   - Round-trip representative `Drive`, `ChargingSession`, and `EnergyStatsRow` payloads through repository cache.
-   - Assert stored JSON contains SI serial names like `distance_m`, `avg_speed_mps`, `energy_wh`, `power_w`, and not legacy `_mi`, `_mph`, `_kwh`, `_kw`, `_psi`.
-
-## Generic JSON Table / ΓÇ£Typed RowsΓÇ¥ Assessment
-
-Defensible, with caveats.
-
-- A single `(domain, cacheKey, payload, fetchedAt)` table is a reasonable offline read-model cache if the repository layer owns typing via `KSerializer<T>`.
-- It is not ΓÇ£typed rowsΓÇ¥ in the relational sense. SQLite cannot enforce DTO shape or SI units; corruption/type drift is detected only at decode time.
-- `JsonElement` repos for analytics/notifications/signals are even less ΓÇ£typed DTOΓÇ¥ than the typed generated models. That may be acceptable for evolving payloads, but document that exception clearly.
-
-Main risk: schema/DTO evolution. Without corrupt-cache fallback, old JSON can break future app versions.
-
-## KMP / SQLDelight Pitfalls
-
-No obvious current Apple-specific schema bug from the inspected code:
-
-- `AndroidSqliteDriver(TeslaSyncCache.Schema, ...)` and `NativeSqliteDriver(TeslaSyncCache.Schema, ...)` should apply schema on first open.
-- `JdbcSqliteDriver.IN_MEMORY` requiring `Schema.create(driver)` in tests is handled.
-- Differing `DriverFactory` constructors are probably acceptable because the project cross-compiles; common code should not assume it can instantiate `DriverFactory` portably.
-
-Remaining risk: Apple tests are compile-only on Windows. If this cache matters for production Apple, add a macOS CI smoke test that opens `NativeSqliteDriver`, writes, reads, clears, and closes the DB.Strong critique. I'll adopt: (1) corrupt-cache recovery, (2) write-failure must not hide fresh data, (3) narrower `catch (Exception)`, plus the suggested coverage (cancellation, write-failure, corrupt-cache, all-repo route tests, SI-serial-name golden). The `/charging-sessions` path is actually correct ΓÇö it matches the generated OpenAPI contract (`get_api_v1_charging_sessions`), so I'll keep it but add route tests to lock it. Let me apply the fixes.
-
-Now the corrupt-cache recovery in `CachingRepository`:
-
-Add the `SerializationException` import to `CachingRepository`:
-
-Now add a `MapCacheStore` test double for write-failure/corrupt-payload tests:
-
-Now add the new operator tests (corrupt-cache recovery, write-failure, cancellation):
-
-Now the all-repo route contract tests and an SI-serial-name golden test:
-
-All tests pass. Verify Apple test sources still compile, then run the full gate:
-
-Apple test sources compile. Now run the full gate to the log file:
-
-All three gates pass (TEST=0, LINT=0, PH=0). Finalize the log:
-
-Now commit. The prompt's commit only lists `apps/shared/core` + the log; I'll also include the two version files I had to change (declared in the log):
+Log `.github/prompts/monorepo/logs/p1-s7-0001-cache.log` ends with `EXIT=0` / `STATUS=DONE`. Committed exactly the two prompt-specified paths (`6b9d890fc`); Apple unit tests are SKIPPED on this Windows host (cross-compile verified) and must run on macOS CI ΓÇö documented in the log's honesty notes.
 
 

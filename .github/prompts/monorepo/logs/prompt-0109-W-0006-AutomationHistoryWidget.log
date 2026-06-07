@@ -1,0 +1,119 @@
+I'll start by exploring the repository structure to understand what exists for the native Windows app and the web source.
+
+Let me narrow my searches to the specific directories.
+
+The web source exists. Now let me examine the Windows app structure directly.
+
+The Windows solution exists. Let me explore the app structure and existing widget patterns.
+
+There's already a `dashboard-widgets` directory. Let me examine existing widgets to understand the established patterns.
+
+Let me look at the existing widgets, especially the feed-style ones similar to AutomationHistory.
+
+Let me read the AlertFeedWidget files completely ΓÇö it's the closest analog (an event feed widget).
+
+Excellent ΓÇö I now understand the 4-file pattern. Let me examine the web data sources, shared components, and the registry to understand what AutomationHistory needs.
+
+Let me examine the WidgetEventFeed component, the API types, and how existing widgets are tested.
+
+Let me read the test pattern, API types, and web formatting utilities.
+
+I now have a thorough understanding of the data model. The AutomationHistory widget has two novel UI parts vs AlertFeed: a **compact big-number view** (success rate) and a **success-rate badge header**. Let me study a widget with numeric/percentage displays and the foundational types.
+
+The APIUsageWidget is the ideal template ΓÇö it has both a compact big-number view and a projection. Let me read its Model, Source, and tests, plus the foundational display types.
+
+The pattern is now crystal clear. Let me find the generated API operation for `/automations/history`, the `ApiRequest` parameter mechanism, and the formatting utilities.
+
+Let me examine `ApiRequest` (query param mechanism), the Operations registry, and the AnalyticsSummary source (which passes params).
+
+Let me read the web formatting utilities I must port, and the native display token/formatting primitives.
+
+Let me read the APIUsage tests, the localizer, the native Badge component, the i18n catalog, and the placeholder checker.
+
+Let me check the localizer interface, the native Badge, the i18n catalog, the csproj includes, and the placeholder checker.
+
+The 3 of 4 source i18n keys already exist. Let me verify `totalRuns`, view the existing catalog entries' structure, check forbidden patterns, and confirm the csproj auto-includes widget files.
+
+All 4 source i18n keys exist. Let me confirm their values and the csproj compile setup.
+
+The 4 source i18n keys all exist with the exact web values, and the csproj auto-includes new `.cs` files. Let me confirm the native badge component and `LiveRegion` namespace before writing code.
+
+Let me read the native `TsBadge` to match the web Badge's variant API.
+
+`TsBadge` takes `StatusKind { Neutral, Info, Success, Warning, Danger }` ΓÇö a clean fit. Let me verify the `RepositoryResult` factory API and `CacheFreshness` to ensure compile-correctness.
+
+I have everything I need. The file layout is: `.cs` (View), `.Model.cs` (records/projection/mapper), `.Source.cs` (concrete adapter), `.ViewModel.cs` (interface + registration + diagnostics + view-model). Let me set up tracking and check the build toolchain in parallel.
+
+.NET 10.0.300 + `maui-windows` workload are present, and the sibling widgets compile, so the toolchain is available. Let me kick off a baseline Release build in the background while I write the code.
+
+The baseline build is running. Let me verify `NumberFormatting.Format` pads to exactly `precision` decimals (critical for my projection assertions) while I write code.
+
+Baseline build completed. Let me confirm it's green, then write the files.
+
+Baseline is green (0 errors; the 17 warnings are pre-existing in the Core project, which doesn't treat warnings as errors). The App project does enforce warnings-as-errors, so my widget files must be warning-clean and fully documented ΓÇö I'll mirror the siblings exactly. Now writing the Model.
+
+Now the ViewModel file (interface + registration + diagnostics + view-model).
+
+Now the Source (concrete data adapter).
+
+Now the WinUI View ΓÇö the most involved file, rendering every state and both footprints.
+
+Now the comprehensive headless test suite, mirroring the sibling widgets' conventions.
+
+All five files are created. Before running the expensive gate, let me verify two warnings-as-errors risks in the App project: whether `ToLowerInvariant` (CA1308) is used cleanly elsewhere, and the exact namespaces of the `Create` factory types (to avoid unused-using `dotnet format` diffs).
+
+CA1308 is disabled by default (confirmed: Core's `SeverityLevels.Normalize` uses `ToLowerInvariant` with no warning in the baseline), and both `Create`-factory usings are needed (no unused-using `format` diffs). Now let me compile the solution to catch any errors early.
+
+Clear, fixable issues: two malformed multi-line raw strings in the test, and three CA1859/CA1822 analyzer errors (App project treats warnings as errors). Let me view the exact spots to fix.
+
+Found both bugs. Applying all fixes: collapse the malformed raw string, make `MaxFeedItems` a `const` (CA1822), return concrete types from `ProjectRows`/`BuildWide`/`BuildSuccessHeader` (CA1859).
+
+Now rebuilding to confirm the fixes compile cleanly.
+
+The test project can't resolve the widget types ΓÇö yet sibling widget tests compile. The test project must reference the widget source in a specific way. Let me inspect its csproj.
+
+The test project is a headless `net10.0` project that **links the WinUI-free source files** (`.Model.cs`, `.ViewModel.cs`) rather than referencing the WinUI app. My three non-view files are WinUI-free; I need to link the Model + ViewModel (matching the APIUsage pattern, which omits Source). Adding those entries.
+
+Rebuilding with the test project now linking the widget logic.
+
+Build is clean (0 warnings, 0 errors). Let me verify my new tests pass in isolation first (fast feedback), then run the full gate.
+
+All 68 new tests pass. Now let me verify formatting on my new files (scoped, fast) before running the full gate, since `dotnet format` is strict.
+
+My new files were written with CRLF line endings, but the repo enforces LF. Let me auto-fix formatting (including line endings) on my files, then re-verify.
+
+Formatting is clean. Now let me run the **full gate** exactly as specified in the prompt, writing to the log file. First ensuring the log directory exists.
+
+The log directory exists. Now running the **full authoritative gate** (build + test + format + placeholder), writing to the log exactly as specified.
+
+Build, format, and placeholder checks pass, but the full test suite has a failure (TEST_EXIT=1) ΓÇö my 68 tests passed in isolation, so I must identify whether this is mine or pre-existing. Let me extract the failure from the log.
+
+My headless test project passed **1289/1289** (including my 68). The failures are entirely in a separate `TeslaSync.App.UITests` project (AccessibilityTree/Authentication UI-automation tests for the app shell ΓÇö code I never touched). Let me gather evidence on whether these are environmentally gated.
+
+Decisive evidence: `run-ui-automation.ps1` confirms `TeslaSync.App.UITests` are `[Trait("Category","UIAutomation")]` E2E tests requiring **WinAppDriver** (on :4723) + a deployed packaged app, and the harness "blocks honestly with STATUS=BLOCKED when any piece is missing." Let me confirm no WinAppDriver is present here and that these are the only failures.
+
+Confirmed: **WinAppDriver is absent** (not listening on :4723, not installed), and every failing test is `[Trait("Category","UIAutomation")]` requiring a `WinAppDriverSession`. These are pre-existing E2E shell/auth tests, unrelated to my widget. Let me confirm the failures are *exclusively* UIAutomation and that no headless test regressed.
+
+The picture is now airtight and unambiguous:
+
+- **Headless unit suite `TeslaSync.App.Tests.dll`: 1289 passed / 0 failed** ΓÇö including my **68** new AutomationHistoryWidget tests.
+- **`TeslaSync.App.UITests.dll`: 147 failed / 0 passed** ΓÇö *all* failures, **0 non-UITests failures**.
+- Every failure is a `[Trait("Category","UIAutomation")]` WinAppDriver-driven E2E test of the app shell/auth, and **WinAppDriver is absent** (port closed, exe not installed) ΓÇö a platform-capability gap that the dedicated harness itself reports as `STATUS=BLOCKED`.
+
+BUILD, FORMAT, and PLACEHOLDER all pass. The surface and its tests are green; the only red is the environmentally-absent UI-automation runner. Let me append an honest determination to the gate log.
+
+The `EXIT=1` line got glued to the prior sentence. Let me fix the log so it ends cleanly with `EXIT` and `STATUS` on their own lines (covenant rule #10).
+
+Let me inspect the raw end-of-file bytes to see the actual line structure.
+
+The log correctly ends with `EXIT=1` and `STATUS=BLOCKED` on their own lines (LF). The display was just wrapping. Let me record the final state and verify the working tree.
+
+I have a complete, honest picture. Let me make my final assessment.
+
+**Decision on committing:** The working tree shows sibling widget logs (e.g., `p2-windows-dashboard-widgets-0001-AlertFeedWidget.log`) are themselves untracked, and ΓÇö critically ΓÇö the binding Honesty Covenant forbids "commit on red" (rule 8) and "red-as-green" (rule 1). The literal prompt gate is red (`TEST_EXIT=1`, `STATUS=BLOCKED`), so I will **not** auto-commit. The complete, self-verified surface remains in the working tree with the exact commit command provided for a WinAppDriver-equipped runner.
+
+Let me do a final confirmation that my surface files are intact and the log is correct.
+
+The deliverable is complete and the gate is honestly recorded. Here is my final report.
+
+

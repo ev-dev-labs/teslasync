@@ -1,19 +1,49 @@
-I'll start by examining the web source hook and the existing KMP shared core structure to understand the patterns to follow.
+I'll start by understanding the task scope. Let me explore the web source hook, the KMP shared core structure, and relevant patterns.
 
-Let me study an existing simple read-only store, its models, tests, and the repository layer pattern.
+The web hook is simple: 2 read queries, no mutations. Let me examine the existing presentation layer structure and find a similar already-ported domain to model after.
 
-I have enough understanding. Let me set up tracking and create the files, mirroring the Anomalies precedent (raw `JsonElement`, no derivation, gated reads).
+There's already a `commands` directory. Let me inspect it and find a good read-only model domain to follow.
 
-Now the store, mirroring the Anomalies pattern but with two gated reads:
+Much of the Commands infrastructure appears to already exist. Let me read the existing files to assess current state.
 
-Now let me run the gate. First I'll set up the log path and run the gradle tests + ktlint + placeholder check.
+This task appears already implemented. Let me verify the test file, the log, cache domain wiring, and git status.
 
-Tests pass. Now ktlint and the placeholder check:
+The implementation files already exist and are committed (not showing as modified/untracked). But the log file `p1-s8-0014-commands.log` shows as **deleted** from the working tree. Let me investigate the git history to understand the state.
 
-ktlint clean. Now the placeholder check:
+Commit `93c610ab9` ("Commands state holder") added these files. Let me understand its relationship to HEAD and why the log was deleted.
 
-All three gates pass. Now I'll append the parity enumeration and final status to the log, then commit.
+`93c610ab9` is an ancestor of HEAD (91 commits back), so Commands was implemented long ago and the implementation is committed and unmodified. Only the log file was deleted from the working tree in this session. Let me examine the log naming conventions, the committed log content, and a sibling log to understand the expected deliverable format.
 
-All intended files staged (done.txt is unstaged and won't be committed). Committing:
+Now the picture is clear. There are two log-naming schemes: an old one (`p1-s8-0014-commands.log`, from historical commit `93c610ab9`) and the current run's scheme (`prompt-0036-S8-0014-Commands.log`). The `done.txt` shows the current re-run has completed through **Chat (S8-0013)** ΓÇö and **Commands (S8-0014) is the next prompt**. The HEAD commit (Chat) is my template. Let me examine exactly what the Chat commit did.
+
+The HEAD (Chat) commit **only regenerated its log file** (`p1-s8-0013-chat.log`) ΓÇö the implementation already existed and was unchanged. So for Commands, I need to regenerate `p1-s8-0014-commands.log` (currently deleted) by running the gate, then commit. Let me examine the committed Chat log (current format template) and the old Commands log to understand the exact expected format.
+
+Clear template now. The honesty covenant requires I actually run the gate (no fabrication). Let me view the old committed Commands log (to preserve its PARITY content), the contract test, and CacheDomain wiring before running the real gate.
+
+The implementation is fully present and committed (store, repos, cache domain, 2 test files with 12 tests total). The current run rewrites each log in a cleaner format with real gate output. I must actually run the gate (honesty covenant). Let me verify the build tooling and cache domain wiring first.
+
+All wired correctly: `CacheDomain.Commands("commands", 10.seconds)` exists, gradlew is at `apps/shared/gradlew.bat`, and check-placeholders exists. Now let me run the real gate. Starting with the test suite (KMP build, may take a while).
+
+Tests passed but were cached (UP-TO-DATE). To actually execute them (honesty covenant + match the Chat precedent), let me force a rerun of the unit-test tasks.
+
+Tests executed for real ΓÇö BUILD SUCCESSFUL, 33 tasks executed, exit 0. Let me extract the actual per-class test counts from the XML reports for the Commands tests.
+
+Commands tests: ContractTest=4, StoreTest=8, total=12, all passing. Now the ktlint and placeholder gates.
+
+ktlint passed (exit 0). Now the placeholder check (capturing its output for the log).
+
+All three gates pass: TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0 (PLACEHOLDER_COUNT=0). Let me verify the STALE_TIMES values and backend routes so the PARITY section is accurate, then write the log.
+
+Everything verified and honest: backend routes `/vehicles/{id}/commands/history` & `/commands/latest` exist, STALE_TIMES QUICK=10s/MODERATE=15s confirmed, 12 Commands tests pass, ktlint + placeholder clean. Now I'll write the regenerated log in the current run's format.
+
+Implementation is unchanged and committed; only the regenerated log changes. Following the Chat precedent (commit only the log + the unchanged `apps/shared/core`), let me stage exactly those paths and verify what's staged before committing.
+
+Only the regenerated log is staged (implementation unchanged) ΓÇö exactly matching the Chat precedent. Committing with the prompt's message.
+
+Committed as `2ae57a8c8`, immediately after Chat ΓÇö matching prompt ordering and the established precedent. Let me do a final verification of the log footer and clean working-tree state for this file.
+
+The log is committed correctly ΓÇö ends with `EXIT=0` / `STATUS=DONE`, `=== PARITY ===` enumerates both hooks, and GATE SUMMARY shows all gates green. Let me do a final precise check of the footer formatting via line numbers to rule out any line-merge issue.
+
+Footer is clean (lines 72ΓÇô74: blank, `EXIT=0`, `STATUS=DONE`). The task is complete and verified.
 
 

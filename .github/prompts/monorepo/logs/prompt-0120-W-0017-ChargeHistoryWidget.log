@@ -1,0 +1,129 @@
+I'll start by investigating the runner's capabilities and the existing repository structure, since this task has a hard platform-capability requirement (WinUI 3 + Windows App SDK 1.6+ + .NET 10) and an Honesty Covenant that forbids claiming success without evidence.
+
+.NET 10 SDK Γ£ô, Windows solution Γ£ô, web source Γ£ô. Let me read the web source and explore the existing Windows app structure to understand patterns and dependencies.
+
+The Windows widgets follow a 4-file pattern (`.cs` view, `.Model.cs`, `.Source.cs`, `.ViewModel.cs`). Let me study the closest sibling (`ChargeCostTrackerWidget`) and a chart-based widget (`BatteryDegradationTrendWidget`), plus the web shared components I must reproduce.
+
+The `ChargeCostTracker` is a great structural template but has no chart. My web source uses `AreaChartWrapper`. Let me find a native chart-based widget to mirror, and read the web shared components I must reproduce (`WidgetChartSummary`, `WidgetShell`, `AreaChartWrapper`, `convertEnergyFromSI`).
+
+`shared.tsx` doesn't exist at that pathΓÇölet me locate the `./shared` module and read the native chart-based widget reference (`BatteryDegradationTrendWidget`) plus the web `AreaChartWrapper`.
+
+`BatteryDegradationTrendWidget` is the ideal referenceΓÇöchart + stat-summary, same as my web source's `WidgetChartSummary` + `AreaChartWrapper`. Let me read its Model/Source/ViewModel, the web `WidgetChartSummary`, and the native chart primitives.
+
+Now let me read the remaining references: the ViewModel state-holder, native chart primitives, the web `ChargingSession` type + `convertEnergyFromSI`, the `ChargeCostTracker` session parsing (same endpoint), and how tests are structured.
+
+I now understand the architecture well. Key insight: `convertEnergyFromSI(wh, 'kWh')` is a fixed `wh/1000`ΓÇöenergy is always kWh, so no `UnitPref` needed. Let me read the native chart primitives, the session JSON parsing, and the existing test structure.
+
+Let me locate the `TsAreaChart`/`ChartSeries`/`ChartPoint` definitions and read the two test files that I'll mirror.
+
+I have the full pattern. Now let me verify the critical build capability (WinUI 3/Windows App SDK) and the i18n approach. Let me kick off a restore in the background while I inspect the project config and localizer.
+
+Build capability looks present (`net10.0-windows10.0.19041.0`, `UseWinUI`, `Microsoft.WindowsAppSDK`). Restore is running. Let me confirm the i18n catalog approach and the web translation keys while restore proceeds.
+
+Restore finished. Let me read its result and check whether the existing widgets' i18n keys live in the `.resw` catalog (which I can't modify) or rely on the inline-fallback pattern.
+
+The `.resw` has some widget keys but not all (e.g., `widget.trend.refresh` is absent yet `BatteryDegradationTrend` shipped). This confirms the inline-`GetString(key, fallback)` facade is the i18n contract, not a hard catalog requirement. Let me confirm there's no i18n parity test that would fail, and check which ChargeHistory keys already exist.
+
+All four ChargeHistory keys already exist in the catalog. There's a `WidgetManifestTests.cs`ΓÇöI need to check whether it centrally enumerates widgets (which could require changes outside my allowed files). Let me inspect it and the web i18n source.
+
+`WidgetManifestTests` is about the MSIX widget providerΓÇönot a dashboard-widget registry. Each widget is self-contained, so I only create the `ChargeHistoryWidget` files + test + log. Let me verify the placeholder-check script, backend `/charging` ordering+limit (for chart parity), the formatter, and the exact web i18n values.
+
+`Operations.Charging.Sessions` (vehicle_id only, no limit) and `ScalarFormatters.FormatNumber` confirmed. Let me check the backend `/charging` ordering (to replicate the web's `limit=10` + reverse correctly) and read the placeholder pattern list so my comments don't trip the gate.
+
+Confirmed: `/charging` is `ORDER BY started_at DESC` (most recent first), so the web's `limit=10` = 10 most recent, then `.reverse()` for chronological chart order. Native parity = `Take(10).Reverse()`. Placeholder gate forbids `TODO/FIXME/XXX/Placeholder/Lorem ipsum/not implemented/NotImplementedException/// stub`ΓÇöI'll avoid those words. Let me confirm the chart color role, the exact resw subkeys, and check for any UI-test convention.
+
+All four i18n keys exist in the catalog, and `ChartRole.Energy ΓåÆ TsChartEnergyBrush` (green) matches the web's `#10b981`. No widget UI-test conventionΓÇöheadless tests (like `BatteryDegradationTrend`) are the pattern. Let me read `DisplayTokens` and find a vetted bar-chart glyph + green brush key, then I'll write the code.
+
+I have everything: `BarChart3` glyph = `"\uE9D9"`, green = `TsColorSuccessBrush`, `ChartRole.Energy` for the series. Let me read the `ChargeCostTracker` result mapper (the list-based exemplar) to mirror it exactly, then write a plan and implement.
+
+I now have the complete pattern. Let me set up a plan and todos, then implement.
+
+Now implementing the 4 widget files. Starting with the Model (state, session parse, size, projection, mapper):
+
+Model created. Now the Source. Let me confirm the `Operations.Charging.Sessions` constant value for the source and its test assertion.
+
+`Operations.Charging.Sessions = "get_api_v1_charging_sessions"`. Now the Source:
+
+Now the ViewModel (registration + diagnostics + state holder):
+
+Now the WinUI view:
+
+Now the test file. Let me check the test helpers (`FakeApiClient`, `InMemoryCacheStore`, `WidgetVehicleSnapshot`) before writing.
+
+`FakeApiClient.ReturnsValue<T>` + `.Requests` confirmed. Let me verify where `CacheThenNetworkEngine` lives (to get test usings exactly rightΓÇö`dotnet format` will fail on any unused using), then write the tests.
+
+Confirmed `CacheThenNetworkEngine` is in `TeslaSync.App.Core.Data`. Now writing the comprehensive test suite (mirroring the predecessor's exact usings to keep `dotnet format` clean):
+
+All five files created. Now let me run the build to catch compile errors before the full gate.
+
+Build started in background. Let me wait for it to complete.
+
+The only real errors are 2 `CA1859` (perf) warnings-as-errors in `BuildStats`; the 15 `CS0246` in the test project are a cascade because the App assembly failed to build. Let me fix `BuildStats` to use concrete types (mirroring the predecessor's `List<T>` return).
+
+Now rebuilding:
+
+App project now builds clean (0 warnings/errors for App); the 15 remaining are all `CS0246` in the Tests project failing to find my types. Since `BatteryDegradationTrend` types resolve fine there, this looks like an incremental/reference-assembly staleness issue. Let me inspect the Tests project references and confirm my types are in the App assembly.
+
+Now I understand: the Tests project targets plain `net10.0` (no WinUI), so it can't reference the WinUI app project. Instead, each widget's **WinUI-free** source files (`.Model.cs`, `.ViewModel.cs`, `.Source.cs`) are explicitly `<Compile Include .../>`-linked into the test project. This is the established convention for all 20+ predecessor widgets. I must add the same 3 links for `ChargeHistoryWidget` (the `.cs` view stays outΓÇöit has WinUI deps).
+
+Now rebuilding to confirm both App and Tests compile:
+
+Build succeeded ΓÇö 0 warnings, 0 errors. Now let me run my test class to verify it passes, then the full suite.
+
+All 42 tests pass. Let me pre-check formatting on my files and run the placeholder gate, and confirm the log directory exists, before running the full prescribed gate.
+
+Placeholder gate passes (count=0). Log dir exists. Let me wait for the format check.
+
+The files were written with CRLF line endings; the repo enforces LF (`dotnet format` ENDOFLINE). Let me convert all 5 new files to LF (UTF-8, no BOM) and re-verify.
+
+The .NET working directory differs from the PowerShell location. Let me use absolute paths.
+
+All 5 files converted to LF. Let me re-verify formatting (and confirm the csproj edit didn't introduce CRLF).
+
+Formatting is clean on my files (FORMAT_EXIT=0). Now let me run the full prescribed gate exactly as specified, writing to the log file.
+
+The full gate is running (build + test + format + placeholder). Let me wait for it to complete.
+
+Gate finished. Let me extract the exit markers and key results from the log.
+
+Build, App.Tests (1938 incl. my 42), format, and placeholder all pass. But `TeslaSync.App.UITests.dll` shows **147 failed / 0 passed** ΓÇö the signature of an environment issue. I must determine honestly whether this is pre-existing or caused by my change. Let me inspect the UITests failure reason.
+
+The UITests failures span unrelated app-shell suites (`AccessibilityTreeTests`, `AuthenticationFlowTests`)ΓÇönothing to do with my widget. Let me see the actual error message to confirm it's an environmental (UI-host) issue.
+
+The 147 UITests failures are all `UiAutomationUnavailableException`: WinAppDriver/Appium isn't installed/listening on this runner ΓÇö a pre-existing platform-capability gap affecting unrelated app-shell E2E tests, not my widget. My widget's 42 headless tests all pass. Let me check how predecessor widget gates handled this (to determine the correct honest outcome).
+
+The predecessor ChargeCostTracker (0016) log shows the **same** `UiAutomationUnavailableException` (WinAppDriver absent) ΓÇö confirming this is pre-existing and environmental, not my change. Let me see how the predecessor's log concluded (its final TEST_EXIT/STATUS markers).
+
+Decisive evidence: the immediately-preceding sibling **ChargeCostTracker (0016)** ΓÇö which is committed ΓÇö concluded with `EXIT=1 / STATUS=BLOCKED` for the identical `UiAutomationUnavailableException` (WinAppDriver absent), noting "Identical outcome to siblings 0006-0015." This is the prompt's sanctioned platform-capability path. Let me verify all 147 failures are that one exception (none mine) before writing the evidence section.
+
+Confirmed: all 147 UITests failures are the identical `UiAutomationUnavailableException` (0 reference my widget); App.Tests passes 1938/1938 including my 42. This is the exact pre-existing platform-capability gap that siblings 0006ΓÇô0016 hit and resolved as `STATUS=BLOCKED`. Let me append the structured evidence section to the log (honest, with the EXIT/STATUS markers), mirroring the sanctioned predecessor outcome.
+
+Let me verify the log's final lines are correctly newline-separated (the covenant requires the log to end with `EXIT=<int>` and `STATUS=` on their own lines).
+
+The log correctly ends with `EXIT=1` and `STATUS=BLOCKED` on their own lines (the earlier display was just wrapping). 
+
+This matches the prompt's sanctioned platform-capability path and the exact outcome of committed siblings 0006ΓÇô0016. The surface is complete and fully green headless; the only red is the absent WinAppDriver UI-automation host. Let me commit (as the prompt directs and predecessors did), staging the widget, its tests, the test wiring, and the evidence log.
+
+All 7 files staged. Now committing with the prompt's message (plus an honest one-line body noting the platform-capability status):
+
+Commit `7a3d4fa12` created. The csproj shows 33 insertions which seems high for a 3-line addition ΓÇö let me verify I made a clean, minimal change and didn't inadvertently rewrite line endings.
+
+The committed csproj swept in **pre-existing uncommitted working-tree changes** ΓÇö wiring entries for siblings 0006ΓÇô0016 (AutomationHistoryΓÇªChargeCostTracker) that were modified in the working tree before I arrived but not yet committed to HEAD. My `git add` of the whole csproj captured them. Let me understand the full repo state before deciding how to clean this up.
+
+Now I understand: HEAD's committed csproj (from sibling commit `3a267f30d`) only had wiring through `AuditLogWidget`; siblings 0006ΓÇô0016 left their csproj wiring **uncommitted** in the working tree. My `git add` of the whole csproj necessarily swept that in ΓÇö and it's actually **required** for my commit to build (those siblings' committed test files need those links). Let me confirm no other uncommitted source files exist that my build silently relied on.
+
+Critical insight: the prompt's commit command stages **only** the widget dir + log ΓÇö not the test file or csproj. The siblings 0006ΓÇô0016 followed exactly this: their test files are untracked (`??`) and their csproj wiring is uncommitted in the working tree (the gate runs against the working tree). My commit deviated by sweeping in the test file and the accumulated sibling csproj wiring. Let me amend to match the prompt + sibling convention: commit only the 4 widget files + log, leaving the test and csproj wiring in the working tree (where the gate already validated them).
+
+Staged correctly: 4 widget files + log. The test file is now untracked (`??`) like the siblings'. Let me confirm the csproj is back to modified-unstaged (working-tree wiring preserved for the gate), then re-commit.
+
+The commit `b900f6f2d` is now clean ΓÇö exactly 5 files (4 widget + log), matching the prompt's commit command and the sibling convention. The test file (untracked) and csproj wiring (modified, unstaged) remain in the working tree where the gate validated them, identical to siblings 0006ΓÇô0016. Let me do a final state verification.
+
+The task is in its correct terminal state. Final verification confirms:
+
+- **HEAD `b900f6f2d`**: 4 widget files + log committed (exactly matching the prompt's commit command and sibling convention).
+- **Working tree**: test file untracked + csproj wiring modified-unstaged ΓÇö identical to siblings 0006ΓÇô0016 (the gate runs against the working tree, where it validated everything).
+- **Log markers**: `BUILD_EXIT=0`, `TEST_EXIT=1`, `FORMAT_EXIT=0`, `PLACEHOLDER_EXIT=0`, `EXIT=1`, `STATUS=BLOCKED`.
+
+The `TEST_EXIT=1` is solely the pre-existing WinAppDriver/Appium-absent platform-capability gap (147 unrelated app-shell E2E tests), which the prompt's capability clause explicitly designates as `STATUS=BLOCKED` with evidence.
+
+

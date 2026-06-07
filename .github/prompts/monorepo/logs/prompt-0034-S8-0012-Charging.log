@@ -1,38 +1,75 @@
-I have full context now. Let me set up tracking and start implementing.
+I'll start by understanding the task and exploring the codebase structure. Let me read the key files in parallel.
 
-Now creating the implementation. First, the input models:
+Now let me explore the shared core structure and predecessor work (S4-S7) in parallel.
 
-Now the repository interface with query/key/family helpers (replacing the concrete S7 class):
+A lot of sibling work exists (S8 0001-0059), but 0012-charging is missing ΓÇö that's our task. Let me study an existing completed holder to learn the established pattern. Let me look at the driving domain (similar shape) and the directory structure.
 
-Now the HTTP implementation:
+A `charging` directory already exists. Let me check its current state and study the driving domain as the reference pattern.
 
-Now the store:
+Charging files already exist but there's no `0012` log. Let me check git status and the existing charging file contents to understand what state they're in.
 
-Now update the existing contract test reference, then write the new tests:
+There's a commit `b54861e83` that already created the charging holder, and the log file shows as deleted. Let me understand the exact state ΓÇö this is critical before I act.
 
-Now the repository contract test:
+Now the picture is clear. The charging implementation already exists in HEAD (commit `b54861e83`), but the log file `p1-s8-0012-charging.log` was deleted from the working tree and `done.txt` was rolled back to stop at 0011 (Automations). My job: **verify** the existing implementation truly meets all acceptance criteria, run the real gate, and restore the log. I must not assume it's correct.
 
-Now the golden test:
+Let me read all the existing charging implementation files.
 
-Now let me run the gate. First ktlint format check and tests:
+ChargingStore covers all 16 hooks. Now let me verify the repository (endpoints/params/keys) and the tests ΓÇö the critical part is the `charging-sessions` vs `charging-session` family boundary.
 
-Now run the full test suite:
+The repository and its key-family boundary logic look correct. Let me read the HTTP implementation and all three test files to verify true parity and test coverage.
 
-Tests pass. Now ktlintCheck and placeholder check:
+The HTTP implementation matches all 16 web hook endpoints exactly. Now let me read the three test files to confirm coverage, then run the actual gate.
 
-All gates green. Let me check the 0011 log format then write the log:
+Store tests are comprehensive (8 tests). Let me read the golden and contract tests, and verify the generated DTOs exist.
 
-Let me count tests in my suites for accurate logging:
+This is a remarkably complete implementation ΓÇö all 16 hooks ported with 8 store tests, 22 contract tests, and 9 golden tests. Before running the gate, let me verify the generated DTOs and tooling exist, and check the one-line `RepositoryContractTest.kt` change.
 
-Now commit:
+All dependencies verified: DTOs exist, the contract smoke test is in place, and tooling is present. The gradle wrapper is at `apps/shared/` (not `apps/shared/core/`). Let me confirm the layout, then run the real gate. Gradle/KMP builds are slow, so I'll start the test run with a long wait.
 
-All gates green and committed.
+Gradle wrapper is at `apps/shared/`. Let me run the real test gate now (KMP `allTests` can take several minutes on first build).
 
-**P1/S8/0012 ΓÇö Charging state holder: DONE**
+BUILD SUCCESSFUL, but tests were served `FROM-CACHE`/`UP-TO-DATE` since the committed charging code is unchanged. For honest verification I'll force an actual re-run so the tests genuinely execute, then pull real counts from the JUnit XML reports.
 
-- All 16 hooks ported (11 reads + 5 mutations) at web-hook parity ΓÇö same endpoints, snake_case params, query keys, and the exact `invalidateQueries` set per mutation (TanStack prefix semantics via `|`-boundary keys). SI preserved.
-- `ChargingRepository` converted from concrete S7 class ΓåÆ interface; `HttpChargingRepository` over `CachingRepository<JsonElement>`; `ChargingStore` with family-targeted refresh; `ChargingModels` request bodies.
-- Gate: `TEST_EXIT=0` (38 charging tests: Store=8, Contract=21, Golden=9; full `:core:allTests` BUILD SUCCESSFUL), `LINT_EXIT=0`, `PH_EXIT=0`.
-- Log written (`=== PARITY ===` enumerates all 16) and committed (9 files, +1715/-36).
+Tests actually executed now: **BUILD SUCCESSFUL in 2m 14s, TEST_EXIT=0**, 38 tasks executed. The only warning is a pre-existing `monthNumber` deprecation in `SettingsBackupRepository.kt` (unrelated). Apple targets are SKIPPED (Windows host), matching sibling logs. Let me extract the real charging test counts from the JUnit XML reports.
+
+All charging suites pass: **ChargingRepositoryContractTest=21, ChargingGoldenTest=9, ChargingStoreTest=8** ΓÇö 0 failures/errors/skipped (shown twice for Debug+Release variants). Now the ktlint gate.
+
+ktlint passes (LINT_EXIT=0). It's UP-TO-DATE, so let me force-rerun the commonMain/commonTest checks to be certain the current charging files lint clean, then run the placeholder check.
+
+ktlint force-rerun clean (LINT_RERUN_EXIT=0). Now the placeholder check from repo root.
+
+All three gates pass: **TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0** (PLACEHOLDER_ALLOWED=17, COUNT=0). Let me retrieve the original committed log from `b54861e83` to use as the authoritative format, then restore it with my verified gate results.
+
+The original log matches my independent verification exactly (38 tests, 0 failures, all gates green). Two numbers differ in my fresh run and I'll record the honest values: build time (`2m 14s` via forced rerun) and `PLACEHOLDER_ALLOWED=17` (the tree grew since the original run). Let me restore the log with my verified results.
+
+Log restored. Before committing, let me verify exactly what's staged under the allowed paths (the source is already in HEAD from `b54861e83`; build artifacts must not leak in).
+
+Confirmed: `apps/shared/core` is unchanged (already committed in `b54861e83`); only the log file is modified (restored with my verified gate numbers). The implementation is verified present and fully green. Committing with the exact scoped command from the prompt.
+
+Commit succeeded (`a9e382971`, 1 file changed) ΓÇö only the charging log, with the unrelated `done.txt`/other logs correctly left out of scope. Let me run a final verification.
+
+All verified:
+- Commit `a9e382971` restores the charging log; working tree is clean for `apps/shared/core` and the log.
+- `ChargingStore` exposes exactly **16 public functions** (11 reads + 5 mutations) = all 16 web hooks.
+
+Let me clean up the temp files I created.
+
+## Summary
+
+**P1/S8/0012 ΓÇö Charging shared state holder: verified complete and committed (`a9e382971`).**
+
+The charging KMP state holder was already implemented in an ancestor commit (`b54861e83`), but its verification log `p1-s8-0012-charging.log` had been deleted. Per the Honesty Covenant, I **verified rather than assumed**:
+
+**Parity confirmed** ΓÇö read `useCharging.ts` and every Kotlin artifact (`ChargingStore`, `ChargingRepository`, `HttpChargingRepository`, `ChargingModels`, + 3 test files). All **16 hooks** ported (11 reads + 5 mutations) with exact endpoint/method/param/body parity:
+- Critical derivation intact: the `charging-sessions` (plural family) vs `charging-session` (singular numeric detail) `|`-boundary, so a bulk-delete refreshes by-vehicle + string-id detail but **not** the numeric detail or paginated feed.
+- `applySchedule`ΓåÆ`charge-plans` only (rate-plans untouched); Tesla history/sessions refreshes fan their own family; `optimizeCharge` invalidates nothing ΓÇö all matching the web `invalidateQueries`.
+- SI preserved (Wh/W on the wire; conversion is display-only).
+
+**Real gate (forced rerun, not cache):**
+- `:core:allTests --rerun-tasks` ΓåÆ **BUILD SUCCESSFUL 2m 14s, TEST_EXIT=0**. Charging suites: Contract=**21**, Golden=**9**, Store=**8** (38 tests, 0 failures/errors/skipped). Apple targets SKIPPED (Windows host).
+- ktlint (incl. forced common-set rerun) ΓåÆ **LINT_EXIT=0**
+- placeholder check ΓåÆ **PLACEHOLDER_ALLOWED=17, COUNT=0, PH_EXIT=0**
+
+**Log restored** with my actual observed numbers (honestly updated from the stale `33s`/`13` to `2m 14s`/`17`), `=== PARITY ===` enumerating all 16 hooks, ending `EXIT=0 / STATUS=DONE`. The commit is correctly scoped ΓÇö unrelated `done.txt`/other working-tree log edits were excluded.
 
 

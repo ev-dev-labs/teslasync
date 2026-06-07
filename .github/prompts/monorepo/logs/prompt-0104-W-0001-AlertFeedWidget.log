@@ -1,0 +1,140 @@
+I'll start by exploring the repository structure to understand what exists and whether the required platform capabilities are available.
+
+.NET 10 is available and the web source exists. Now checking whether the native Windows app scaffold exists and reading the source files.
+
+Web source read. `apps/windows` exists. Now exploring the native Windows scaffold to understand the architecture and required dependencies (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics, P2 core).
+
+`dashboard-widgets` doesn't exist yet ΓÇö this may be the first one. Let me understand the existing patterns: state-holders, i18n, tokens, diagnostics, and how existing views/components are structured.
+
+This is a sophisticated, mature native scaffold. Let me understand the key infrastructure: diagnostics (P1/S11 `view.opened`), the i18n facade (P1/S10), existing shared widget controls, and the parity manifest entry.
+
+No existing widget shell or diagnostics `view.opened` yet. Let me examine the i18n facade, diagnostics infrastructure, the Strings catalog, and the parity manifest structure.
+
+This is a code-first WinUI app (C# component builders, not XAML views). Let me study the established conventions: feedback overlays, badges, layout scaffold, and the diagnostics pattern.
+
+Let me check the build configuration to understand the platform requirements, and study the existing component/diagnostics conventions in parallel.
+
+The WinUI app targets `net10.0-windows10.0.19041.0` with Windows App SDK 2.1.3 + MSIX. The critical gating question is whether this builds on the runner. Let me establish a baseline build while I continue studying conventions.
+
+`maui-windows` workload is installed ΓÇö WinUI build capability is present. Baseline build running. Let me study the feedback components, badges, and how a control with states is built.
+
+Rich component library exists (`TsSeverityBadge`, `SeverityLevels.TokensFor`, `AsyncState<T>`, `TsEmptyState`). Now I need to understand the test project structure and the alerts data source. Let me check test setup and build progress.
+
+Baseline build **succeeded** (0 errors, 49s) ΓÇö platform capability confirmed, task is not blocked. Note: the App project has `TreatWarningsAsErrors=true` + `AnalysisMode=Recommended`, so my widget code must be analyzer-clean. Now let me resolve the testing approach.
+
+Now I understand the test architecture: `TeslaSync.App.Tests` is headless (net10.0), references Core + Generated, not the WinUI app. Let me check how sibling P2 prompts structured their files (directory vs dotted, where tests went) by examining the logs and recent git history.
+
+The P1/S8 state holders live in `apps/shared`. Let me explore that shared layer and find the alerts/notifications state holder the widget must bind to.
+
+`apps/shared` is Kotlin Multiplatform ΓÇö the Windows app reproduces those contracts natively. Let me find the native alerts data access and the canonical alerts projection contract.
+
+Now I understand the data contract: `useAlerts` ΓåÆ `GET /alerts` ΓåÆ `Alert[]`. Let me find the `Alert` type shape, severity/drillthrough helpers, the i18n catalog keys, and whether the native data layer exposes `/alerts`.
+
+Key finding: the native data layer has **no `/alerts` access** ΓÇö `NotificationRepository` only does notifications. Let me examine the Net layer, `Operations` constants, `RepositoryBase`, and the generated client to find how to reach `/alerts`.
+
+Let me verify whether the generated API client knows the `/alerts` endpoint, how the App wires data/DI, and whether the widget i18n keys exist in the native resources.
+
+The data path is feasible: generated client knows `get_api_v1_alerts` ΓåÆ `/alerts/`, and native i18n keys `widget.alertFeed`/`widget.noAlerts` already exist. Now let me study the freshness/stale model, the display primitives, severity tokens, and the App composition.
+
+I now have the core building blocks. Let me read the remaining feedback controls, the App's DI/service access pattern, datetime formatting, and an existing widget test for style.
+
+No DI container in the App ΓÇö widgets are self-contained/constructor-injected. Let me locate the exact feedback controls (`TsEmptyState`, spinner, error), typography components, datetime formatting, the cache engine signature, and an existing widget test for style.
+
+Let me read the cache engine and datetime formatting to finalize the data + timestamp approach, then I'll have everything needed.
+
+Let me read the web `WidgetShell`, `WidgetEventFeed`, widget `types.ts`, and the severity tokens to reproduce exact composition and behavior.
+
+I now have the full web composition. Let me confirm a few native specifics: the exact widget i18n key values, any severity-label keys, and whether a freshness-indicator control exists for the header chip.
+
+The two widget keys exist. Let me read the freshness-indicator control (for the header stale/offline/refresh chip) and list the data-display components to find a timeline/row primitive.
+
+Native has `Timeline.cs` and `TsDataFreshness`. Let me read the timeline control to reuse for feed rows, then I'll start building.
+
+I have the full picture now. Let me verify the native route paths (to align drill-through targets) and the `TsButton` API, then write the plan and build.
+
+Native routes align with web paths. `TsButton` extends `Button`. Let me confirm the JSON deserialization contract (`ApiClientOptions.Json` naming policy, `IApiClient.SendAsync<T>`) so my DTO maps correctly, then I'll build.
+
+I now have a complete understanding. Key design decisions:
+- **Data**: `get_api_v1_alerts` ΓåÆ `/alerts/` via the cache-then-network engine; parse `JsonElement` (snake_case) with a tolerant parser (Web JSON defaults aren't snake_case-aware).
+- **States**: drive all 5 from `RepositoryResult<T>` (Loading/Cached/Refreshing/Loaded/Empty/Offline + `IsStale`).
+- **Composition**: mirror `WidgetShell` (skeleton/QueryError/header+freshness) + `WidgetEventFeed` (severity-iconed rows, drill-through).
+- **Testability**: pure logic files linked into the headless test project.
+
+Let me set up tracking and the directory.
+
+Now creating the plan file and the pure model/projection. Let me write the plan and the first source file.
+
+Now the state-holder view-model, port, registration, and diagnostics. Let me first verify `RepositoryError` shape, then create the file.
+
+Now the repository-backed source and the WinUI view. Let me first confirm the `TsSkeleton`/`TsSpinner` APIs and `CacheFreshness`, then create both files.
+
+Now creating the source and the WinUI view.
+
+Let me confirm the `LiveRegion` helper namespace before writing the view (to avoid a build miss).
+
+`LiveRegion` is in `TeslaSync.App.Components.Feedback`. Now writing the WinUI view.
+
+Now let me build the App project to catch compile/analyzer errors before writing tests.
+
+Good ΓÇö only analyzer (CA) errors, no logic/type errors. The code structure is sound. Let me fix the CA1859/CA1001 issues.
+
+App builds clean. Now writing the headless tests and linking the pure logic files into the test project.
+
+Now running the new tests (filtered) to validate the logic.
+
+All 36 tests pass. Now let me prepare the acceptance gate: verify the log dir, inspect the placeholder checker, and format-check my files.
+
+The placeholder patterns are narrow (TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented/NotImplementedException/// stub) ΓÇö my grep hits were false positives from my own broad pattern. Let me auto-format my files first, then run the full gate.
+
+Format made no changes ΓÇö my files were already clean. Now running the full acceptance gate exactly as specified.
+
+Build passed. Now the test step (full solution).
+
+The headless unit suite passed **1010/1010** (including my 36). The 147 failures are all in `TeslaSync.App.UITests` (`PageStateMatrixTests`) ΓÇö WinAppDriver UI-automation tests, failing uniformly in <1ms. Let me confirm these are pre-existing/environmental and not caused by my change.
+
+Confirmed: the 147 failures are a pre-existing **environmental** gap ΓÇö `UiAutomationUnavailableException: WinAppDriver/Appium runner is absent` (nothing on :4723). They affect every route identically and none reference AlertFeed. My headless surface suite is 1010/1010 green. Let me check whether this harness has a sanctioned "skip when driver absent" switch before deciding the gate outcome.
+
+The harness is intentionally designed to hard-fail (never skip) when the runner is absent ΓÇö there's no skip switch. So `dotnet test sln` is environmentally red on this runner regardless of my work. This is exactly the platform-capability gap the acceptance criteria anticipate ("STATUS=BLOCKED with platform-capability evidence"). Let me complete the remaining gate steps (format, placeholder) and record honest evidence.
+
+Format is clean (FORMAT_EXIT=0). Now the placeholder check on my surface directory.
+
+All surface-scoped gates are green (BUILD=0, FORMAT=0, PLACEHOLDER=0; headless tests 1010/1010 incl. my 36). The only red is the WinAppDriver-dependent UITests, environmentally absent. Let me record honest evidence and finalize the log.
+
+The final `EXIT=1` got glued onto the prior sentence. Let me fix the log so `EXIT=1` and `STATUS=BLOCKED` are clean trailing lines.
+
+The regex replace didn't catch it. Let me rebuild the evidence section cleanly from the `--- EVIDENCE` marker using explicit lines.
+
+`Select-String` confirms `^EXIT=1` and `^STATUS=BLOCKED` exist as clean line-starts (the `Get-Content -Tail` glue is a CR/LF rendering quirk). Let me verify the actual byte-level line endings to be certain the log terminates correctly.
+
+Byte-level inspection confirms the log is correctly terminated: `...(Honesty Covenant #8).<CR><LF><CR><LF>EXIT=1<CR><LF>STATUS=BLOCKED<CR><LF>` (the earlier "glue" was just a console rendering quirk). Let me finalize todos and clean up temp files.
+
+All deliverable files are in the working tree. Let me confirm the todo state and do a final verification that the surface files are intact, then summarize.
+
+## Summary
+
+I built the native **WinUI 3 / .NET 10 `AlertFeedWidget`** at full parity with the web source (`features/dashboard/widgets/AlertFeedWidget.tsx`). The surface is complete and verified; the composite gate is **STATUS=BLOCKED** purely by a missing UIΓÇæautomation runner (not by the surface), so per the Honesty Covenant I did **not** commit.
+
+**Delivered** (`apps/windows/TeslaSync.App/dashboard-widgets/AlertFeedWidget/`):
+- `AlertFeedWidget.Model.cs` ΓÇö alert DTO + tolerant JSON parse, drillΓÇæthrough map (port of `lib/alertDrillthrough.ts`), size/`maxItems`, severity mapping, projection, cacheΓÇæthenΓÇænetwork result mapper.
+- `AlertFeedWidget.ViewModel.cs` ΓÇö `IAlertFeedSource` port + stateΓÇæholder rendering all six states (loading/loaded/empty/error/stale/offline) + registry metadata + `view.opened` diagnostics.
+- `AlertFeedWidget.Source.cs` ΓÇö repoΓÇæbacked source over `get_api_v1_alerts` via the shared cacheΓÇæthenΓÇænetwork engine.
+- `AlertFeedWidget.cs` ΓÇö `ContentControl` view: skeleton/error/header(title+Bell+freshness)/rows or empty, Narrator labels, drillΓÇæthrough event, i18n facade only.
+
+**Gate results** (`.github/prompts/monorepo/logs/p2-windows-dashboard-widgets-0001-AlertFeedWidget.log`):
+- `BUILD_EXIT=0` ┬╖ `FORMAT_EXIT=0` ┬╖ `PLACEHOLDER_EXIT=0`
+- Headless tests **1010/1010 pass**, including **36 new** AlertFeedWidget tests (parse, drillΓÇæthrough, projection, mapper, all 6 viewΓÇæmodel states, registration, diagnostics, a11y names).
+- `TEST_EXIT=1` ΓÇö **only** because `TeslaSync.App.UITests` (147 cases) require a WinAppDriver/Appium runner that is **absent on this host** (`UiAutomationUnavailableException: nothing listening on :4723`). These are repoΓÇæwide, environmental, and reference no AlertFeed code.
+
+Log ends `EXIT=1` / `STATUS=BLOCKED` with platformΓÇæcapability evidence. **No commit** was made (Covenant #8 "no commit on red"); the files sit ready in the working tree.
+
+**Note:** the acceptance criteria require runnable tests, which can only live in `TeslaSync.App.Tests` ΓÇö so I added one test file there and linked the two pure logic files into that project (a minimal, documented deviation from the strict allowedΓÇæfiles list). To turn this green/committable, run on a WinAppDriverΓÇæprovisioned runner (or scope the surface gate to exclude `App.UITests`).
+
+
+
+Before finalizing, let me rigorously check whether the UIΓÇæautomation runner can be provisioned here (the repo ships `run-ui-automation.ps1`) ΓÇö that's the only path that could turn the gate green.
+
+This confirms it definitively: the UITests are `[Trait("Category","UIAutomation")]` meant to run via `run-ui-automation.ps1`, which **itself exits `STATUS=BLOCKED`** when the runner is absent (it "never reports an absent runner as green"), and requires WinAppDriver + an interactive desktop + MSIX deploy ΓÇö infeasible and inappropriate to provision in this shared headless environment. My BLOCKED determination matches the repo's own convention exactly. Let me strengthen the log evidence with this, then finalize.
+
+The log is byte-verified clean (`...#8).<CR><LF><CR><LF>EXIT=1<CR><LF>STATUS=BLOCKED<CR><LF>`). All implementable work is done and rigorously verified; the only remaining gate step is environmentally blocked in a way the repo's own tooling treats identically (STATUS=BLOCKED), and provisioning it is infeasible/inappropriate/out-of-scope here.
+
+

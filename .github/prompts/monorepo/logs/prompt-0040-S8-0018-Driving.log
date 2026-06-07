@@ -1,25 +1,67 @@
-Now I have a complete understanding. Let me set up tracking and write the plan.
+I'll start by exploring the repository structure to understand the task scope. Let me look at the key files in parallel.
 
-Now the HTTP implementation:
+Now let me explore the shared core structure and find existing state holder patterns from the dependency slices (S4-S7).
 
-Now the DrivingStore:
+There's an existing `presentation/driving` directory. Let me examine it along with a reference pattern (charging) and the repo layer.
 
-Good. Now run the gate:
+Existing driving files already exist. Let me read the current driving implementation and the charging reference pattern to understand structure and what's covered.
 
-Tests pass. Now ktlint and placeholder checks:
+A substantial implementation already exists. Let me check git status, the log file, existing tests, and the HTTP repository to understand the current state versus what's required.
 
-Now run ktlintFormat to auto-fix the remaining style issues, then re-check:
+Let me investigate the git history of the driving files ΓÇö they exist on disk but aren't in the status, while the log file shows as deleted. This needs clarification.
 
-ktlint passes. Now placeholder check and re-run tests (after edits):
+The driving files are tracked and a commit `e1e12f093` exists for this exact task. Let me determine the precise git topology to understand whether this work is already in HEAD.
 
-All gates green. Let me capture test counts for the log:
+Let me pinpoint `e1e12f093`'s position and read the existing tests and HTTP repository in parallel.
 
-All 24 driving tests pass. Now writing the parity log:
+Now it's clear: `e1e12f093` (the Driving slice) was committed Jun 5 and is 90 commits behind HEAD ΓÇö the code persists unchanged in HEAD. The orchestrator deleted the log to re-execute this slice. Per the honesty covenant, I must genuinely verify the gate, not trust the old log. Let me read the remaining implementation files, tests, and the original log.
 
-Now commit per the prompt instructions:
+The implementation is comprehensive. Let me read the remaining two test files and the original committed log to understand the expected gate output.
 
-`done.txt` got staged but isn't part of my work. Let me unstage it and commit only the slice files:
+Let me view the original committed log to understand the expected gate output and parity enumeration.
 
-Committed successfully. All work complete and verified.
+I now have the full picture. The Driving slice was completed in commit `e1e12f093` (Jun 5) and its code survives unchanged in HEAD, 90 commits later. The orchestrator deleted the log to re-execute. Per the honesty covenant ("No red-as-green"), I must genuinely re-run the gate against the current tree ΓÇö later commits could have drifted shared types. Let me set up tracking and verify the environment.
+
+The Gradle wrapper is at `apps/shared/` (the build root), with `:core` as the subproject. Let me inspect the build config, settings, and the placeholder script to run the gate correctly.
+
+Environment is clear: Gradle root is `apps/shared` (`:core` subproject), Java 21, Android SDK configured. Let me read the core build file to confirm targets and the ktlint task, then launch the gate.
+
+Build is KMP with Android + Apple targets (Apple disabled on Windows), so `:core:allTests` runs the Android unit tests that execute `commonTest`. Let me update tracking and launch the gate ΓÇö first the full test run, which compiles the entire shared core and will surface any drift from the 90 subsequent commits.
+
+Gate test build launched. Let me wait for it to make progress.
+
+`:core:allTests` is BUILD SUCCESSFUL (exit 0), with Android unit tests cached-green and Apple targets skipped on Windows. Since the result was cached, let me force a fresh run of the Driving test suites to get real, current pass counts ΓÇö not trust the cache.
+
+Driving tests ran fresh (18 tasks executed, not cached) ΓÇö BUILD SUCCESSFUL, exit 0. Let me extract exact per-suite test counts from the JUnit XML reports to confirm the numbers.
+
+Driving suites confirmed fresh-green: **24 tests, 0 failures, 0 errors, 0 skipped** (Contract=13, Golden=6, Store=5) ΓÇö matching the original log exactly. Now the ktlint gate.
+
+ktlint gate is BUILD SUCCESSFUL, exit 0 (commonMain + commonTest checks pass; UP-TO-DATE is valid green since the driving source is byte-identical to the committed version). Now the placeholder gate.
+
+All three gate steps are genuinely green: **TEST_EXIT=0** (24 driving tests, 0 failures), **LINT_EXIT=0**, **PH_EXIT=0** (PLACEHOLDER_COUNT=0). Before writing the log and committing, let me check exactly what sibling slice commits included (e.g., did they commit `done.txt`?) so I match the established pattern.
+
+This confirms the pattern precisely: recent sibling re-run commits (DLQ at HEAD, Charging) committed **only their log file** ΓÇö the code was already in-tree from the original Jun-5 build (like driving's `e1e12f093`). Each re-run regenerates its log with fresh gate output and commits it alone. Let me view the latest sibling (DLQ) committed log as the format template.
+
+This is the exact honest "re-verification run" log format the orchestrator uses ΓÇö the DLQ log even states "Implementation already committed at `<hash>` (ancestor of HEAD); this run re-verifies the gate green." I'll mirror it precisely for Driving. Let me extract the per-test case names and a fresh timestamp.
+
+I have all real artifacts. Now I'll compose the re-verification log mirroring the DLQ template exactly, embedding the actual gate output, the forced-fresh per-test results (24 tests), the full 17-hook parity enumeration, and the honest note that the implementation is already committed at `e1e12f093` (ancestor of HEAD).
+
+Log written. Now I'll commit following the prompt's exact command and the sibling pattern (log-only, since the code is already in HEAD). Let me stage the specified paths and verify exactly what's staged before committing ΓÇö guarding against sweeping in build artifacts or unrelated working-tree changes.
+
+Exactly one file staged ΓÇö the regenerated log (shown as `M` since git collapses the delete+recreate). No build artifacts, no unrelated files, matching the sibling re-run pattern. Committing now.
+
+Committed as `8a5ba0e10`. Let me do a final verification that the working tree is in the expected state and the driving log is no longer deleted.
+
+All verified. The Driving slice (P1/S8/0018) is complete:
+
+**Gate ΓÇö genuinely re-run against the current tree (not trusting cache):**
+- `:core:allTests` ΓåÆ BUILD SUCCESSFUL, **TEST_EXIT=0**
+- Forced-fresh `testDebugUnitTest --rerun-tasks` on the 3 Driving suites ΓåÆ **24 tests, 0 failures, 0 errors, 0 skipped** (Contract=13, Store=5, Golden=6)
+- `:core:ktlintCheck` ΓåÆ BUILD SUCCESSFUL, **LINT_EXIT=0**
+- `check-placeholders.ps1` ΓåÆ PLACEHOLDER_COUNT=0, **PH_EXIT=0**
+
+**Parity:** all **17** `useDriving.ts` hooks are ported (16 reads + `useBulkDeleteDrives`), with matching endpoints, snake_case params, webΓåÆcache query keys, `safeArray` derivations, and the critical bulk-delete invalidation (`['drives']` + `['drive']`, why-ended nested under `['drive']`, siblings untouched). SI preserved end-to-end.
+
+**Context discovered:** the implementation was already committed Jun 5 at `e1e12f093` (90 commits behind HEAD) and survives unchanged in HEAD. The orchestrator had deleted the slice log to re-execute. Following the exact pattern of the preceding sibling slices (DLQ at HEAD, Charging), the re-run regenerates the log with fresh real gate output and commits it alone ΓÇö no source drift across the intervening commits.
 
 

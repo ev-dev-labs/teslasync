@@ -1,35 +1,81 @@
-Now adding the `Dlq` cache domain:
+I'll start by exploring the codebase structure and reading the key files for this task.
 
-Now the repository interface with pure derivations:
+The prompt lists `useDLQReplay` under reads but it's actually a POST mutation. I'll port it faithfully as a mutation. Let me explore the shared core structure and predecessor slices.
 
-Now running the gate (tests + lint):
+Now let me explore the KMP shared core structure and the predecessor slices' patterns.
 
-Tests pass. Now ktlint and placeholder checks:
+Let me look at the presentation layer and repository structure that already exist from predecessor slices.
 
-Lint passes. Now placeholder check and writing the gate log:
+There's already a `dlq` presentation folder. Let me examine it and a similar complete sibling (featureflags, ingestxray) for the established pattern.
 
-All 16 DLQ tests green. Now writing the gate log and committing:
+There's an existing `DlqStore.kt`. Let me read it and compare with complete siblings.
 
-Done. P1/S8/0017 ΓÇö DLQ state holder ΓÇö complete and committed (`3c0f879ea`).
+`DlqStore.kt` already exists. Let me check git status, the repository dependency (S7), existing tests, and the log file to understand current state.
+
+The DLQ log was deleted and `DlqStore.kt` exists but isn't in git status. Let me check tracking state and the S7 repository dependency plus tests.
+
+The DLQ work appears already committed in `3c0f879ea`, but HEAD is at DashboardLayouts. Let me untangle the git history.
+
+The DLQ commit `3c0f879ea` is already an ancestor of HEAD ΓÇö the work was committed earlier. Only the log file shows as deleted in the working tree. I must verify the implementation actually passes the gate (Honesty Covenant: no red-as-green). Let me read the committed log and all implementation/test files.
+
+Implementation and tests are already committed. Per the Honesty Covenant I must actually run the gate rather than trust the committed log. Let me read the test files and CacheDomain entry first.
+
+The implementation, tests, and golden vectors are complete and committed. Now I must verify by running the actual gate. Let me first confirm the `CacheDomain.Dlq` entry and check the Windows C# port parity requirement.
+
+`CacheDomain.Dlq("dlq", 15.seconds)` exists, placeholder script exists, and the Windows C# port has no DLQ state holder yet (out of scope ΓÇö golden vectors are inlined for the C# port to later mirror). Everything is committed. Now the critical step: actually run the gate. Let me locate gradlew and check the toolchain.
+
+Java 21 and gradlew are available. Let me check the core build config to understand which targets `allTests` runs on Windows, then start the gate.
+
+Targets include Apple (iOS/macOS) which can't run on Windows, but prior slice logs show `allTests` passing here ΓÇö so it resolves to JVM/Android tests on this host. Let me run the actual gate now. Starting with `:core:allTests`.
+
+`:core:allTests` ΓåÆ BUILD SUCCESSFUL, TEST_EXIT=0 (tasks UP-TO-DATE). To get honest, fresh evidence of the DLQ tests actually executing, let me force a re-run of the three DLQ test classes.
+
+Fresh run passed (RERUN_EXIT=0). Let me extract concrete test counts from the result XMLs for honest evidence.
+
+All 16 DLQ tests pass with 0 failures. Now the ktlint and placeholder gate steps.
+
+ktlint passes (LINT_EXIT=0). Now the placeholder check.
+
+All three gate steps pass: TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0. Now let me do a rigorous parity audit. Let me verify the web constants mapping (staleTime/interval/limit) and the full `CacheDomain.Dlq` rationale to confirm there are no parity shortcuts.
+
+All mappings verified: `MODERATE`=15s Γ£ô, `STANDARD`=30s, `DEFAULT_LIMIT`=50 Γ£ô. The `CacheDomain.Dlq` comment thoroughly documents the single-TTL decision (conservative 15s over STATIC) as an S7 architecture choice, not a shortcut. Parity is faithful. Let me review the current log state and finalize it with the PARITY enumeration and trailer.
+
+The raw gate output is captured. Now let me append the forced fresh DLQ test evidence, the PARITY enumeration, and the EXIT/STATUS trailer.
+
+Log finalized with EXIT=0/STATUS=DONE. Now let me verify exactly what will be committed ΓÇö the implementation is already committed, so only the regenerated log should be staged. Let me check git status scoped to the allowed paths.
+
+Only the regenerated DLQ log is staged-worthy; `apps/shared/core` has no tracked changes (build/ is gitignored) and the implementation was already committed. Gate is green, so committing is allowed. Let me commit with the prompt's exact scoped `git add` and message.
+
+Committed as `37113ccf3` (only the regenerated log; implementation was already committed). Let me verify the golden-vector approach is consistent with the established S5/S8 pattern, since the acceptance criteria emphasizes KMP+C# parity vectors.
+
+Two golden-vector patterns coexist: shared JSON in `apps/shared/core/spec/*.json` (+ a `*GoldenLoader`) and inlined-in-test (used by DLQ, driving, energy, featureflags, fsm, etc.). Let me confirm how the Windows C# port consumes these to decide whether DLQ needs a shared JSON for true cross-platform parity.
+
+The Windows C# DLQ port doesn't exist yet (out of scope here). Let me check the `apps/parity` harness to see how cross-platform golden parity is tracked and whether DLQ is recorded as compliant.
+
+The parity is tracked at the hook/feature level; trivial DLQ derivations are golden-locked inline (the same established pattern as featureflags/driving/energy/fsm siblings), and the Windows C# DLQ port is explicitly out of scope and doesn't exist yet. Adding a JSON nothing loads would diverge from the sibling convention. The implementation is complete and gate-green. Let me do a final end-state verification.
+
+All verified. Final state confirmed.
 
 ## Summary
 
-Ported all 4 web `useDLQ.ts` hooks to UI-free KMP shared-core state holders, at web-hook parity:
+The P1/S8/0017 DLQ state holder was already implemented and committed in `3c0f879ea` (an ancestor of HEAD); only the gate **log** was missing from the working tree. Per the Honesty Covenant I re-ran the **full gate** rather than trusting the prior log, then regenerated and committed it.
 
-| Web hook | KMP API | Endpoint |
+**Gate results (fresh):**
+- `:core:allTests` ΓåÆ BUILD SUCCESSFUL, `TEST_EXIT=0`
+- Forced fresh run of the 3 DLQ classes (`--rerun-tasks`, 18 tasks executed): **16/16 pass, 0 failures** ΓÇö `DlqRepositoryContractTest` (7), `DlqStoreTest` (7), `DlqDerivationGoldenTest` (2)
+- `:core:ktlintCheck` ΓåÆ `LINT_EXIT=0`
+- `check-placeholders` ΓåÆ `PLACEHOLDER_COUNT=0`, `PH_EXIT=0`
+
+**Parity audit (all 4 `useDLQ` hooks, verified against web constants):**
+| Web hook | Holder | Endpoint |
 |---|---|---|
 | `useDLQList` | `DlqStore.list()` | `GET /system/dlq` |
-| `useDLQEntry` | `DlqStore.entry(id, enabled)` | `GET /system/dlq/{id}` ΓÇö `enabled && numericId>0` gate reproduced as a stable non-fetching feed |
-| `useDLQAudit` | `DlqStore.audit(dlqId, limit)` | scoped `ΓÇª/{id}/audit?limit` or global `ΓÇª/audit?limit` |
-| `useDLQReplay` | `DlqStore.replay(id)` | `POST ΓÇª/{id}/replay` ΓåÆ clears whole `Dlq` partition + refreshes every observed feed (`invalidateQueries(['system','dlq'])` analogue) |
+| `useDLQEntry` | `DlqStore.entry(id, enabled)` | `GET /system/dlq/{id}` (enabled-gate + `dlqEntryNumericId` guard) |
+| `useDLQAudit` | `DlqStore.audit(dlqId, limit)` | scoped/global `ΓÇª/audit?limit=N`, default 50 |
+| `useDLQReplay` | `DlqStore.replay(id): Result` | `POST /system/dlq/{id}/replay` ΓåÆ clears whole `Dlq` partition + refreshes every feed |
 
-**Files:** added `DlqRepository`, `HttpDlqRepository`, `DlqStore`, a `Dlq` cache domain (15s TTL), plus 3 test files (contract, store, golden) ΓÇö 16 tests, all green.
+`MODERATE=15s` / `DEFAULT_LIMIT=50` confirmed; reads emit cacheΓåÆnetwork (ADR-013); SI preserved (verbatim `JsonElement`); derivations golden-locked for KMP+C# parity. **Note:** the prompt header lists `useDLQReplay` as a read (mutations=0), but the real web file declares it a POST mutation ΓÇö ported faithfully as 1 mutation (no scope narrowing).
 
-**Verification (raw output):**
-- `:core:allTests` ΓåÆ **TEST_EXIT=0** (DlqRepositoryContractTest 7, DlqStoreTest 7, DlqDerivationGoldenTest 2; 0 failures/errors)
-- `:core:ktlintCheck` ΓåÆ **LINT_EXIT=0**
-- `check-placeholders.ps1` ΓåÆ **PLACEHOLDER_COUNT=0 / PH_EXIT=0**
-
-SI preserved end-to-end (raw `JsonElement`, no conversion); derivations (entry-id guard, audit scoping) locked by inlined language-neutral golden vectors for KMP+C# parity (ADR-004). Log written with `=== PARITY ===` enumerating all 4 hooks; `EXIT=0 / STATUS=DONE`.
+Log ends `EXIT=0 / STATUS=DONE`. Committed as `37113ccf3`, scoped to allowed files only.
 
 

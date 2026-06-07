@@ -1,40 +1,71 @@
-Let me explore the existing shared core source structure and find a sibling state holder to mirror.
+I'll start by exploring the repository structure and understanding the task context. Let me look at the web source hook and the existing KMP shared core structure.
 
-There's an existing `enabled` gate pattern in `AlertMessageHelpersStore`. Let me read it.
+Now let me explore the existing KMP shared core structure to understand patterns from prior slices (S4-S7).
 
-Now I have all the patterns. Let me set up todos and create the files.
+There's already an `anomalies` directory. Let me examine its current state and look at comparable completed slices for patterns.
 
-No DI wiring needed. Adding the cache domain and creating the files.
+Existing scaffolding exists for anomalies. Let me read these files plus the core repository infrastructure to understand the current state and patterns.
 
-Now the tests.
+Implementation files exist. I need to verify completeness ΓÇö tests, cache domain, log file, and whether the gate passes. Let me check the test structure and supporting infrastructure.
 
-Now let me run the gate. First the tests.
+Tests exist but the log file does not. Let me examine the tests, the cache domain, and a sibling log to understand the expected format.
 
-Tests pass. Now ktlint and the placeholder check.
+The implementation and tests look complete. Let me verify `CacheDomain.Anomalies` exists and check sibling logs for the expected format.
 
-All three gates pass (TEST=0, LINT=0, PH=0). Let me finalize the log with the PARITY enumeration and EXIT/STATUS, then commit.
+All sibling logs exist except `0008-anomalies` ΓÇö confirming this is the slice to complete. The implementation appears present. Let me confirm `CacheDomain.Anomalies` is defined and review the sibling log format.
 
-Done. Committed `8f...` ΓåÆ new commit for P1/S8/0008.
+I now understand the full picture. The implementation, repository, HTTP impl, and both tests already exist and look complete and correct. `CacheDomain.Anomalies` is defined. Only the gate run + log file + commit remain. Let me check git state to understand what's committed vs pending.
+
+The git state is revealing ΓÇö the log file shows as `deleted` (tracked but removed from working tree), and there's a lot of unrelated working-tree churn. Let me investigate whether the anomalies source files are committed and what the deleted log contained.
+
+Let me definitively confirm the commit relationship and verify the placeholder-check tool exists before running the gate.
+
+Now the situation is fully clear. The anomalies slice source (store, repo, HTTP impl, both tests) and `CacheDomain.Anomalies` are already implemented and committed in HEAD's tree. Only the working-tree log file was deleted. Per the honesty covenant, I won't trust the old log ΓÇö I'll re-run the gate for real, regenerate the log truthfully, and commit it scoped (only `apps/shared/core` + the log, avoiding the unrelated churn).
+
+Let me locate the gradle wrapper and confirm the project layout.
+
+Gradle wrapper is at `apps/shared` (the `:core` subproject lives in `apps/shared/core`). I'll run the gate from there. Per the honesty covenant, I'll force a fresh re-run (`--rerun-tasks`) and capture real output into the log. Starting the gate now.
+
+`:core:allTests` passed fresh (TEST_EXIT=0, 2m49s, 38 tasks executed; native targets skipped on Windows as expected). Now running ktlint and the placeholder gate.
+
+All gate checks pass: TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0. Now let me extract the real test counts from the JUnit XML reports for an honest breakdown.
+
+Real counts: ContractTest=4, StoreTest=7, total=11, all green. Let me verify the endpoint against the backend router before writing the PARITY section.
+
+Endpoint confirmed (`router.go:3316 GET /analytics/anomalies`) and `CacheDomain.Anomalies("anomalies", 5.minutes)`. Let me confirm the web `STALE_TIMES.SLOW` value, then write the log trailer.
+
+Two objects expose `SLOW`. Let me confirm which one is `STALE_TIMES` (the one the hook imports).
+
+Everything verified: `STALE_TIMES.SLOW = 5 min` Γåö `CacheDomain.Anomalies 5.minutes`. Now I'll append the gate summary, honest test breakdown, and PARITY section to the log.
+
+Let me verify the log's tail and the gate sections render correctly.
+
+The log is structurally correct ΓÇö `Select-String` confirms `TEST_EXIT=0` (L83), `LINT_EXIT=0` (L140), `PH_EXIT=0` (L141), `EXIT=0` (L203), `STATUS=DONE` (L204) each at line-start (the console just visually collapsed a blank line). 
+
+Now I'll stage **only** the two scoped paths (avoiding the unrelated working-tree churn) and review what's staged before committing.
+
+Exactly one file staged ΓÇö the regenerated log. The source was already committed and clean; no build artifacts or unrelated churn leaked in. Committing now.
+
+Task complete. All gate checks pass and the commit is in place.
 
 ## Summary
 
-Ported the web `useAnomalies` hook to a UI-free KMP shared-core state holder at exact parity.
+**P1/S8/0008 ΓÇö Anomalies state holder** is complete and verified.
 
-**Parity (1/1 hooks, 0 mutations):**
-- `useAnomalies` ΓåÆ `AnomaliesStore.anomalies(vehicleId, days=7)`
-- Endpoint `GET /analytics/anomalies?vehicle_id={id}&days={days}` ΓÇö snake_case params, default 7-day window.
-- `enabled: vehicleId !== null` reproduced as a stable, non-fetching `Loading` feed when `vehicleId` is null.
-- `staleTime: STALE_TIMES.SLOW` (5 min) ΓåÆ new `CacheDomain.Anomalies` with `5.minutes` TTL.
-- No web `select`/derivation, so no golden vectors needed; payload stays SI (display conversion is S5's job).
+**Finding:** The KMP source for this slice was already implemented and committed (`AnomaliesStore`, `AnomaliesRepository`, `HttpAnomaliesRepository`, both tests, and `CacheDomain.Anomalies`), but the working tree had the gate log deleted and the slice was unverified. Per the honesty covenant, I re-ran the full gate for real rather than trusting the stale log.
 
-**Files added/changed:**
-- `cache/CacheDomain.kt` ΓÇö `Anomalies` entry
-- `data/repo/AnomaliesRepository.kt` + `HttpAnomaliesRepository.kt` (cache-then-network via existing `CachingRepository`)
-- `presentation/anomalies/AnomaliesStore.kt` (StateFlow feed + enabled gate + refresh)
-- `AnomaliesRepositoryContractTest.kt` (endpoint/param/SI-cache locks) + `AnomaliesStoreTest.kt` (cacheΓåÆnetwork, sharing, keying, refresh, disabled gate)
+**Verification (real output, not fabricated):**
+- `:core:allTests --rerun-tasks` ΓåÆ **TEST_EXIT=0** (38 tasks executed fresh, 2m49s; native iOS/macOS targets skipped on Windows host as expected)
+- `:core:ktlintCheck` ΓåÆ **LINT_EXIT=0**
+- `check-placeholders.ps1` ΓåÆ **PH_EXIT=0**
+- Test breakdown (from JUnit XML): `AnomaliesRepositoryContractTest`=4, `AnomaliesStoreTest`=7 ΓåÆ **11 tests, 0 failures, 0 errors**
 
-**Gate ΓÇö actual output:** `TEST_EXIT=0`, `LINT_EXIT=0`, `PH_EXIT=0` ΓåÆ `EXIT=0 / STATUS=DONE`. Log written to `.github/prompts/monorepo/logs/p1-s8-0008-anomalies.log`.
+**Parity confirmed against sources:**
+- Endpoint `GET /analytics/anomalies` Γåö `router.go:3316`; snake_case `vehicle_id`/`days`, default `days=7`
+- `enabled: vehicleId !== null` ΓåÆ disabled-feed gate (never fetches, stays Loading)
+- `staleTime: STALE_TIMES.SLOW` (5 min, `constants.ts:60`) Γåö `CacheDomain.Anomalies(5.minutes)`
+- 0 mutations, 0 derivations ΓåÆ no golden vectors required; reads emit cacheΓåÆnetwork (asserted both layers); SI preserved verbatim
 
-The task is complete and verified ΓÇö all gates passed and the work is committed.
+**Committed** scoped (`88324b693`) ΓÇö only the regenerated log + `apps/shared/core`; the unrelated working-tree churn (W-series logs, run logs, `done.txt`) was left untouched. Log ends `EXIT=0` / `STATUS=DONE` with a `=== PARITY ===` section enumerating the 1 hook.
 
 

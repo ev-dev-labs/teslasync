@@ -1,29 +1,63 @@
-Now I have a complete picture. Let me set up tracking and create the implementation.
+I'll start by exploring the repository structure and understanding the task. Let me read the web source hook and examine the existing KMP shared core structure.
 
-Now let me run the gate. Starting with the test suite:
+The web hook is clear ΓÇö 3 hooks (2 queries, 1 mutation). Now let me understand the existing KMP shared core patterns. Let me explore the directory structure and find a similar existing presentation domain to use as a template.
 
-Tests pass. Now ktlint and placeholder checks:
+Let me find the relevant types and explore existing presentation patterns to use as templates.
 
-Now the placeholder check, plus a re-run of tests to confirm green after edits:
+Now let me explore the existing presentation domains in commonMain to understand the patterns. Let me find existing state holders, repositories, and the networking/cache layers.
 
-The placeholder checker flags the legitimate domain word "placeholder" (the Alert-Studio API resource name). The tool's sanctioned mechanism is the `// parity:allow <reason>` opt-out (its own self-test uses it for a legit identifier). I'll keep KDoc prose free of the bare word and opt-out the unavoidable code/string lines. Let me rewrite the files.
+The `alertmessagehelpers` directory already exists. Let me check its current contents and look at a recently-completed similar domain as a template.
 
-Now let me rewrite the repository interface with KDoc free of the bare word and opt-outs on code lines:
+Both files already exist. Let me read them to see their current state ΓÇö they may be stubs that need full implementation.
 
-Now let me run the placeholder check to confirm zero violations:
+The store and test exist and look complete. They depend on `AlertMessageHelpersRepository` from S7. Let me verify that repository exists and check the log file and methodology.
 
-PH check passes (0 violations). Now re-run ktlint and tests:
+The S7 repository, S8 store, and tests all already exist. Let me check git status to understand whether this work is committed or in-progress, and look at the methodology + log file.
 
-Max-line-length (140) plus expression-body rules need fixing in 3 spots. Let me restructure those:
+Now I understand the context. This is prompt 0005 in a sequence ΓÇö the previous 4 (AchievementUnlocks, Admin, AiSettings, AiUsage) are committed. Interestingly, the AlertMessageHelpers source files already exist but the log file shows as deleted. Let me investigate the actual state carefully.
 
-Both pass. Now let me run the complete gate sequence cleanly into the log file:
+The store files were created in commit `e28e3f807` but that commit isn't in HEAD's recent log. Let me understand the commit graph relationship.
 
-All gates green (TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0). Let me append the PARITY section and finalize the log:
+Now it's clear: commit `e28e3f807` (June 5) already completed this exact prompt ΓÇö store, repo, HTTP repo, tests, CacheDomain entry, and log ΓÇö and it's an ancestor of HEAD. The 0001ΓÇô0004 commits were done later on top. The working tree currently shows the 0005 log as deleted. Let me understand why and check the runner bookkeeping state.
 
-Now commit per the prompt spec:
+The picture is now clear. `done.txt` lists S4-0001 through S8-0004 as done, but **not** S8-0005. The runner deleted the 0005 log to force a clean re-execution, even though the code was committed earlier in `e28e3f807`. My job: re-verify the implementation, run the gate for real, regenerate the log, and commit.
 
-The staged set is exactly `apps/shared/core/**` plus my log (done.txt is unstaged/unrelated). Committing per the prompt spec:
+Let me check how the prior S8 commits (e.g., AiUsage 0004) were structured ΓÇö whether they touched a C# port or just `apps/shared/core`.
 
-Committed. Task complete.
+The pattern is clear now: the AiUsage (0004) commit at HEAD changed **only the log file** (70 insertions, 55 deletions) ΓÇö source was already committed earlier. So these June-6 re-runs re-verify and regenerate the log. I'll follow the same pattern for 0005.
+
+Let me read the committed 0005 log (to see expected format + PARITY section) and the supporting files (repo, HTTP repo, CacheDomain, contract test).
+
+The committed log is comprehensive ΓÇö TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0, full PARITY section, EXIT=0/STATUS=DONE. The implementation is complete. This is a re-verification: I must actually run the gate (honesty covenant ΓÇö no skip-and-assume), regenerate the log, and commit (log-only, matching the AiUsage pattern).
+
+Let me gather the remaining context: HTTP repo, CacheDomain entry, contract test, and verify the tooling locations.
+
+The implementation is complete and high-quality across all 5 files. Now I need to verify tooling and run the gate for real. Let me check the CacheDomain entry, locate gradlew, and inspect the placeholder checker.
+
+`gradlew` lives at `apps/shared/gradlew` (with `settings.gradle.kts` there and the `:core` module), not in `apps/shared/core`. The prompt's `Push-Location apps/shared/core` is a template inaccuracy ΓÇö I'll run from `apps/shared` with the `:core:` task prefix, which matches the committed log's task names. CacheDomain.AlertMessages (10 min TTL) is confirmed.
+
+Let me read the placeholder checker and write a plan file.
+
+I now fully understand the gate. The `// parity:allow <reason>` markers in the code are counted as PLACEHOLDER_ALLOWED (13) with COUNT=0. Everything checks out at the code level. Let me write a brief plan, then run the gate for real (honesty covenant requires actual execution).
+
+Gradle test build is running. Let me wait for it to complete.
+
+Tests reported success but mostly UP-TO-DATE/NO-SOURCE (incremental cache, since source is unchanged). To genuinely verify (honesty covenant ΓÇö no red-as-green), let me force-execute the AlertMessageHelpers tests directly.
+
+Forced execution: 18 tasks executed (not cached), BUILD SUCCESSFUL, FORCED_TEST_EXIT=0. The tests genuinely pass. Let me confirm the exact test counts from the JUnit report for accurate evidence.
+
+Confirmed: 18 tests (9 + 9), 0 failures/errors/skipped. Now let me run the ktlint and placeholder checks, appending to the log.
+
+LINT_EXIT=0. Now the placeholder check, appending to the log.
+
+All three gate steps pass: **TEST_EXIT=0**, **LINT_EXIT=0**, **PH_EXIT=0** (PLACEHOLDER_COUNT=0). The ALLOWED count grew 13ΓåÆ17 because the scan now includes the sibling S8 domains committed June 6 ΓÇö expected, not a regression. Now let me append the `=== PARITY ===` section and the final footer to the log.
+
+Log is complete. Let me verify the key markers are all present in the log and confirm the working-tree state before committing.
+
+All gate markers present and green. Only the log file is modified ΓÇö `apps/shared/core` source is unchanged (already committed in `e28e3f807`), exactly matching the AiUsage 0004 re-run pattern (log-only commit). Let me commit as specified in the prompt.
+
+Commit `dfedec221` created ΓÇö log-only change (8 insertions, 7 deletions), matching the established re-run pattern. Let me verify the final state is clean.
+
+Task complete and verified. Final state is clean: the two allowed paths are committed, HEAD is `dfedec221`, and the log ends with `EXIT=0`/`STATUS=DONE`.
 
 

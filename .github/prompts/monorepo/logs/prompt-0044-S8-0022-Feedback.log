@@ -1,47 +1,43 @@
-Now I have full understanding. Let me create the implementation files.
+I'll start by exploring the repository structure to understand the task, the web source hook, and existing patterns from prior slices.
 
-Now the state holder:
+File operations are timing out due to repo size. Let me narrow my searches and read the key files directly.
 
-Now add the `Feedback` cache domain:
+I have the web hook. Now let me examine the existing presentation structure to understand the established pattern. Let me view the saved glob output.
 
-Now the three test files:
+There's already a `feedback\FeedbackStore.kt`. Let me investigate its current state and look at a reference implementation pattern (notifications has admin reads + mutations like feedback).
 
-Compiles cleanly. Now run the feedback tests, then the full android unit test suite and ktlint:
+A substantial implementation already exists. Let me check whether it's complete and committed, or work-in-progress. Let me examine the models, repository, tests, and git status.
 
-Tests pass. ktlint flagged chain-wrapping. Let me auto-format:
+The implementation files exist (committed, not in status), but the log file `p1-s8-0022-feedback.log` shows as deleted (`D`) in the working tree. Let me understand the history and check the repository layer and tests.
 
-Now re-run ktlint check and tests together to confirm green:
+The task was already implemented and committed at `5a6491324`, but the log file was deleted in the working tree. Per the Honesty Covenant (no commit on red, log must end with real EXIT/STATUS), I must verify the implementation truly passes before restoring the log. Let me examine the repository layer and tests.
 
-Both green. Now the placeholder check:
+Implementation is complete and well-crafted. Let me review the tests and save the full deleted log content for restoration.
 
-All gates green. Now writing the execution log:
+Let me verify the contract test and CacheDomain entry exist, save the original log for reference, and locate the gradle wrapper.
 
-Now commit:
+All implementation files and tests are present and the CacheDomain has the Feedback entry. The gradle wrapper is at `apps/shared/gradlew` (the `:core:allTests` task confirms it runs from `apps/shared`). Let me verify the project structure and placeholder script, then run the gate.
 
-`done.txt` was already staged from a prior process and is out of my allowed scope. Let me unstage it:
+Let me review how the gate ran in the original log to understand the expected test execution, then check the core module's configured targets.
 
-Staged set is now exactly the allowed scope. Committing:
+The original log honestly documents that this host (Windows) can't run Apple native targets, so `:core:allTests` was substituted with `:core:testDebugUnitTest` (JVM-based Android unit test running the full commonTest suite). Let me confirm the target configuration.
 
-Committed. Task complete.
+Confirmed: `:core` targets Android + Apple only (no JVM), so the host-runnable equivalent of `:core:allTests` is `:core:testDebugUnitTest` (full commonTest suite on JVM). Let me run the gate now, starting with the tests.
 
-## Summary
+Tests pass (`BUILD SUCCESSFUL`, `TEST_EXIT=0`), though served FROM-CACHE. To witness the feedback tests actually execute (Honesty Covenant #1), let me force a re-run and then run ktlint.
 
-Ported the web `useFeedback` hook domain (`web/src/api/hooks/useFeedback.ts`) to a UI-free KMP shared-core state holder at exact web parity.
+Tests re-executed and pass (`BUILD SUCCESSFUL in 51s`, `TEST_EXIT=0`). Let me confirm the feedback test classes actually executed (via test reports) and run ktlint.
 
-**All 3 hooks ported:**
-- `useFeedbackList` ΓåÆ `FeedbackStore.feedbackList(params)` ΓÇö `GET /admin/feedback` cache-then-network `StateFlow<Resource<ΓÇª>>`, query/key built by `feedbackQuery`/`feedbackCacheKey` (web `buildQuery`/`feedbackKeys.list` semantics; status/category dropped when blank, limit/offset sent incl. `0`). TTL 1m = web default `staleTime`.
-- `useSubmitFeedback` ΓåÆ `submitFeedback()` ΓÇö `POST /feedback`, **no cache invalidation** (matches the web hook exactly).
-- `useUpdateFeedback` ΓåÆ `updateFeedback()` ΓÇö `PATCH /admin/feedback/{id}`, invalidates the **whole** partition (= web `invalidateQueries(feedbackKeys.all)`) and refreshes every observed feed.
+Both pass: 21 feedback tests green (10+5+6), `LINT_EXIT=0`. Now the placeholder check.
 
-**Files:** `FeedbackModels.kt`, `FeedbackStore.kt`, `FeedbackRepository.kt` (+ derivation helpers), `HttpFeedbackRepository.kt`, new `CacheDomain.Feedback`, plus 3 test files (fake-repo store tests, golden vectors, HTTP contract test). SI preserved (no unit-bearing fields).
+All three gate steps pass: `TEST_EXIT=0`, `LINT_EXIT=0`, `PH_EXIT=0` (21 feedback tests green, ktlint clean, 0 placeholders). Now let me reconstruct the deleted log with the real, current gate output. Let me view the full original log header to preserve its accurate content.
 
-**Gate (honest, Windows host ΓÇö `:core` has android+apple targets, no jvm; apple Kotlin/Native can't run here, so the runnable full-commonTest task was used):**
-- `:core:testDebugUnitTest` ΓåÆ **PASS** (all commonTest incl. new tests)
-- `:core:ktlintCheck` ΓåÆ **PASS**
-- `check-placeholders.ps1` ΓåÆ `PLACEHOLDER_COUNT=0`, EXIT=0
+The original log content is accurate. I'll reconstruct the deleted log, preserving its informative sections and refreshing the GATE section with the real output I just captured (including per-class test counts as stronger evidence). Let me create it.
 
-Logged to `p1-s8-0022-feedback.log` with `=== PARITY ===` and `EXIT=0 / STATUS=DONE`. Committed within the allowed file scope only.
+Log restored. Now let me stage only the in-scope paths (the prompt's Commit step targets `apps/shared/core` + the log) and verify exactly what will be committed before committing ΓÇö I must not sweep in the unrelated log churn in the working tree.
 
-The task is fully complete and verified. All work is committed.
+Confirmed: the core module is already committed (clean working tree there), and only the feedback log is staged (19 insertions, 8 deletions vs HEAD ΓÇö the refreshed, verified-green GATE section). Let me commit with the prompt's specified message.
+
+Task complete. Let me clean up the scratch files in the session folder.
 
 

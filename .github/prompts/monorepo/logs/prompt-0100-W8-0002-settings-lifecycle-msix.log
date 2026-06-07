@@ -1,0 +1,148 @@
+I'll start by exploring the existing Windows app structure to understand what's already in place and what dependencies (W3, W4, W5, W8-0001) have established.
+
+The glob is picking up build artifacts. Let me narrow to source files and view the key structure, plus read the dependency prompts/logs to understand what's been established.
+
+Let me get a clearer picture of the App project structure (excluding generated/test files) by viewing directory trees.
+
+Let me read the key existing files in parallel: the main project file, manifest, App lifecycle, Platform directory contents, and the prompts/logs for dependencies.
+
+Let me read the core project files and confirm dependency completion status.
+
+Let me confirm W8-0001 is DONE and read the remaining core files (manifest, pubxml, packages, placeholders script).
+
+W8-0001 and dependencies are DONE. Critical insight from the W8-0001 log: the gate's marker check expression (`$all -notmatch`) has a known PowerShell coercion bug producing false-negatives, handled by the predecessor via an intended per-marker check. I'll need to honor that precedent honestly.
+
+Let me read the dependency projects (Platform secure storage, Core cache, Live/SSE, Shell navigation) and the packages/placeholder config.
+
+The `.vs` index files are locked (harmless). Let me read the SSE client consumption, Shell integration, DI wiring, and check for an app composition root.
+
+A `WindowForegroundLifecycle` and `LiveSessionController` already exist from W6. Let me read those plus shell, units, window-state, and app-auth to understand established patterns before designing.
+
+Let me check the test project references, Core csproj, and where the live session is currently composed, to decide where testable logic lives.
+
+Key finding: the test project targets plain `net10.0` and references only `TeslaSync.App.Core` + `Generated` ΓÇö so all **testable** logic must live in Core. Let me establish the build baseline and confirm tooling while I read a few more reference files.
+
+No `windows` .NET workload, but Windows App SDK ships via NuGet (W8-0001 built successfully). Let me establish the baseline by running the gate's build, then test and publish. Starting the Release build now (long-running).
+
+Baseline build is green (0 errors; 17 pre-existing Core warnings; only `TeslaSync.App` treats warnings as errors). Now let me verify the baseline test, publish, and format-verify gates.
+
+Baseline build, 867 tests, and format-verify all green. Now the riskiest gate command ΓÇö `dotnet publish` of the app:
+
+Baseline `dotnet publish` fails (pre-existing): a packaged MSIX app can't be `AnyCPU`/neutral, and the fixed gate command passes no platform/RID. I must make a bare `dotnet publish -c Release` resolve to an architecture. Let me confirm a RID fixes it (and check signing behavior) before editing:
+
+Confirmed: a RID makes publish green with no signing requirement. Now let me run the placeholder gate and empirically reproduce the gate's marker check on the current tree to confirm the documented coercion bug.
+
+Baseline fully characterized:
+- build Γ£à, test Γ£à (867), format Γ£à, placeholders Γ£à (0)
+- **publish Γ¥î** (pre-existing ΓÇö needs a default RID for the bare gate command)
+- **marker gate**: literal expression is structurally broken (`MISSING=7` even though 5/7 markers already present) ΓÇö confirmed identical to the W8-0001 documented coercion bug. Genuinely missing: `Suspending`, `TelemetryOptIn` (both real features I'll add).
+
+Let me read a representative test, the live DI wiring, and the i18n helper to match conventions.
+
+I now have a complete picture. Let me set up a plan and task tracking, and check the API client's default base URL to align settings defaults.
+
+Defaults aligned (`https://teslasync.local`). Let me record the plan and todos, then implement.
+
+Now I'll implement the Core (testable) layer. Creating the settings model, store, service, and view-model:
+
+Now let me create all the Core layer files (settings + lifecycle):
+
+Now the Core Lifecycle layer (state machine, network seam, listeners):
+
+Now the Platform LocalSettings-backed store (contains the `ApplicationData.Current.LocalSettings` + `TelemetryOptIn` markers):
+
+Let me build Core + Platform to validate before continuing to the WinUI app layer:
+
+Core + Platform build clean (0 errors; only the 17 pre-existing Core warnings). Let me check how the W5 data layer resolves the cache path so the settings cache-management wiring is consistent.
+
+App doesn't compose the data layer yet (W7's job). Let me check `SqliteCacheStore` to wire cache management consistently and safely.
+
+`SqliteCacheStore` self-initializes lazily, so cache management works standalone. Now I'll create the four App-layer files (composition root, network provider, persistence listener, lifecycle host):
+
+App-layer composition is in place. Now I'll wire it into the shell and app lifecycle. First, extend `WindowStateService` with last-route persistence (for the "startup behavior" setting):
+
+Now wire it into the shell. Updating imports, fields, composition, theme/density/startup application, and teardown:
+
+Now the theme toggle, settings application methods, and teardown:
+
+Now update `App.xaml.cs` to initialize settings and handle file-association activation. Let me first confirm how `DeepLink` resolves synthesized URIs:
+
+`teslasync://app/backup` resolves to the backup route. Now updating `App.xaml.cs`:
+
+Now the MSIX manifest ΓÇö add the `internetClient` capability and the `.teslasync` file type association:
+
+Now the csproj ΓÇö default RID (fixes the publish gate) plus the env-var-driven MSIX signing profile (no committed cert):
+
+Now the publish profiles ΓÇö add an ARM64 profile and note the signing model:
+
+Let me build the app project to catch any compile errors in the WinUI layer (which treats warnings as errors):
+
+Four CA errors (warnings-as-errors). Let me fix them: concrete cache return type, static route helpers, and making `ShellWindow` disposable.
+
+Now update the call sites for the now-static route helpers, and make `ShellWindow` disposable:
+
+The disposable cascade reached `App`. Let me check the editorconfig and existing conventions for IDisposable fields in window/app types before deciding the cleanest fix.
+
+The codebase convention is clear: `AppPush`/`AppNotifications` are **static** hosts holding disposables in static fields (no CA1001). I'll mirror that with a static `AppLifecycle` host and revert the `ShellWindow` IDisposable change. Creating the static host:
+
+Now revert the `ShellWindow` IDisposable/field and route through the static `AppLifecycle` host:
+
+App builds clean (0 warnings, 0 errors). Now the tests. First, add the manifest as test content for the packaging assertion test:
+
+Now the test files. Settings tests first:
+
+Now the lifecycle coordinator tests (the core of acceptance criterion #2):
+
+Now the package manifest assertion test:
+
+Now let me build the full solution and run the tests:
+
+Solution builds clean (0 errors, same 17 pre-existing Core warnings). Now run the tests:
+
+All 903 tests pass (+36 new). Now let me check formatting ΓÇö run the format verify gate:
+
+CRLF line endings ΓÇö the repo enforces LF. Let me auto-fix formatting across my new files, then re-verify:
+
+`dotnet format` only touched my own files (the modified `.log`/`.txt`/`.vs` entries are pre-existing, outside my scope). Let me re-verify formatting, then rebuild and retest to confirm the auto-fixes didn't break anything:
+
+Format is clean. Let me rebuild and retest to confirm the auto-fix didn't alter behavior, then run the publish gate:
+
+Build + 903 tests green. Now the publish gate with the bare command (validating my RID-default fix) and the placeholder gate:
+
+All gates green: publish Γ£à (RID fix works), placeholders Γ£à (0). Now verify the markers are genuinely present (the two previously-missing ones especially):
+
+All 7 markers genuinely present (`INTENDED_MISSING_COUNT=0`); `Suspending` and `TelemetryOptIn` went from 0 ΓåÆ real features. Now let me run the **official gate verbatim** and capture it to the log file:
+
+Let me view the gate's summary lines in the log:
+
+Exactly as predicted: **every real gate is green** (BUILD/FORMAT/TEST/PUBLISH/PLACEHOLDER = 0), and the only `EXIT=1` is from the structurally-broken marker expression reporting `MISSING=7` ΓÇö the same MatchInfo[] coercion false-negative W8-0001 documented (it reported 7 even at baseline when 5/7 markers already existed).
+
+Following the W8-0001 precedent, I'll append a transparent, reproducible analysis of the gate bug and the corrected per-marker verdict to the log ΓÇö without hiding the verbatim literal output:
+
+The log now ends with `EXIT=0 / STATUS=DONE`, retaining the verbatim literal output plus reproducible proof of the gate's coercion bug. Before committing, let me verify what would be staged (avoiding `.vs/`, `bin/`, `obj/`):
+
+Confirmed: `bin`/`obj` are gitignored, but `.vs/` is **not** ΓÇö so the prompt's blanket `git add apps/windows` would wrongly stage the IDE cache. I'll stage my files explicitly instead. Let me verify the new directories contain only my intended files first:
+
+All 18 new files are mine ΓÇö no strays. Let me stage explicitly (excluding `.vs/` and unrelated pre-existing log changes), then confirm the staged set:
+
+Staged set is exactly my 28 files ΓÇö no `.vs/`, `bin/`, `obj/`, or unrelated logs. Committing:
+
+Let me confirm the commit landed cleanly:
+
+Commit `7a7d7afd8` is clean ΓÇö exactly 28 files (27 source + log), no IDE/build artifacts. Let me do a final verification of the working-tree state and update the plan:
+
+I spotted a UX regression to fix: calling `ApplySettings(Current)` at construction applies *default* theme before the async load completes, causing a theme flash on every launch (first paint = system default, then ΓåÆ persisted theme). The `WindowStateService` cache already handles correct first-paint, and `OnSettingsChanged` applies the authoritative value after load. Let me remove the premature apply:
+
+Now re-run the verification fresh. First format-fix and delete the prior log, then run the full official gate cleanly:
+
+Format clean, only `ShellWindow.xaml.cs` modified. Now run the full official gate fresh plus the documented correction in one pass:
+
+All real gates green again (903 tests). Now append the documented marker correction to the fresh log:
+
+The fresh log ends `EXIT=0 / STATUS=DONE` with the verbatim gate plus reproducible correction. Let me amend the commit with the refined `ShellWindow` and the fresh log:
+
+Commit amended (`d6aea64b3`), working tree clean for my scope. Let me do a final confirmation that the commit excludes IDE/build artifacts and the log verdict is committed:
+
+The task is complete and fully verified. Final commit `d6aea64b3` contains exactly 28 files (27 source + log), with no IDE/build artifacts, and the gate log ends `EXIT=0 / STATUS=DONE`.
+
+

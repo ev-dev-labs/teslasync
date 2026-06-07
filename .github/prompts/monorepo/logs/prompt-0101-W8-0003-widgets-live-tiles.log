@@ -1,0 +1,129 @@
+I'll start by exploring the repository structure to understand the Windows app and its dependencies.
+
+Build artifacts are slowing globs. Let me narrow to source files and view the key directories.
+
+Let me verify dependencies are DONE and review the predecessor task patterns.
+
+Now let me check the .NET toolchain and review the app host wiring. These determine whether I build real widget providers or a BLOCKED log.
+
+Let me review the project files and establish a baseline build.
+
+`dotnet 10.0.300` is available and this is Windows. The gate's marker logic is subtle ΓÇö let me empirically verify how its `$all -notmatch $_` check behaves before relying on it.
+
+My empirical test shows the marker logic flags all 6 as "missing" ΓÇö yet W8-0002 passed. Let me inspect the actual W8-0002 log to understand what really happened.
+
+I now understand the marker-gate quirk (a documented `MatchInfo[]` false-negative that W8-0001/W8-0002 handled transparently). Let me set up tracking, kick off a baseline build, and study the remaining wiring files in parallel.
+
+Baseline build is running. Let me study the route table and app-host wiring while it builds.
+
+Baseline build finished. Let me read its result and the route definitions.
+
+Baseline build is green (0 errors). I have the route names. Let me run baseline test+format in the background and read the privacy/notification-action patterns I'll mirror.
+
+Let me read the remaining wiring/style references and check the baseline test status.
+
+Let me check baseline test results and the live signal value type.
+
+Baseline tests pass (903). Format still running. Let me locate the live signal value type.
+
+Baseline is fully green (build 0 errors, 903 tests, format clean). Now the critical de-risk: confirm the Windows App SDK 2.1.3 actually exposes the widget provider APIs before I write code against them.
+
+A dedicated `microsoft.windowsappsdk.widgets` package exists. Let me confirm the 2.1.3 meta-package pulls it in and what provider types the winmd exposes.
+
+Widget provider APIs are confirmed present in the pinned SDK (2.1.3 ΓåÆ Widgets 2.0.5). Let me verify the exact member/type names I'll call so the provider compiles cleanly.
+
+All needed widget APIs are present. Let me study the W5 cache contract (so the widget reads real cached data) and the analyzer config before designing.
+
+Let me inspect the generated `VehicleState`/`Vehicle` shapes and the data-layer JSON options so the Core cache adapter maps real fields correctly.
+
+I have the complete data contract. The generated `VehicleState`/`Vehicle` use snake_case JSON, cached as serialized JSON. Now let me fetch Microsoft's official widget-provider COM-hosting sample to mirror a known-compiling pattern for the WinUI side.
+
+Found the sample. Let me fetch the COM-hosting and provider files to mirror a known-compiling pattern.
+
+Confirmed the known-good COM-hosting pattern (classic `[DllImport]` + `IClassFactory` + `MarshalInspectable`). I now have everything. Let me record the plan and applicability decision, then implement.
+
+Now let me confirm the exact Units API signatures before writing the projection.
+
+Units API confirmed (null-safe `UnitFormatters`). Now I'll create the Core widget logic (headless, testable). Batch 1: models, privacy, redaction, deep links, definitions, applicability.
+
+Need to create directories first.
+
+Now the projection core. Let me check `ScalarFormatters` output so my tests assert correctly.
+
+Now the heart: the view model and the SIΓåÆdisplay projection.
+
+Now the Adaptive Card template (single source of truth) and the data builder.
+
+Now the data source that reads the real W5 cache + W6 live freshness (references Generated types ΓÇö lives in Core).
+
+Core logic is in place. Let me build the Core project to catch compile errors early.
+
+Core builds clean (0 errors). Let me fix the two minor analyzer hints in my new code for cleanliness.
+
+Core compiles. Now let me check the existing localizer implementation I can reuse for the App provider.
+
+Let me check whether `SqliteCacheStore` self-initializes before deciding the source's init strategy.
+
+`SqliteCacheStore.ReadAsync` self-initializes ΓÇö no extra init needed. Let me fetch the official sample manifest to copy schema-valid widget extension XML.
+
+I have the exact schema-valid manifest pattern. Now let me create the WinUI-side widget code. First, the COM interop (mirrors Microsoft's sample, analyzer-clean) and the COM server host.
+
+Now the content bridge (real cache+settings ΓåÆ Core projection) and the provider implementation.
+
+Now wire the widget COM-server branch into `Program.Main`.
+
+Now the packaged Adaptive Card template (PublicFolder content, drift-tested against the Core constant).
+
+Now let me verify the asset files exist before referencing them in the widget manifest extension.
+
+Assets exist. Now add the widget manifest extensions (uap3 namespace, widget COM server, and the widget provider definition).
+
+Now wire the template into the App and Tests projects (reclassify to Content; copy next to tests for the drift test).
+
+Now the critical build of the full solution to validate the WinUI provider compiles against the SDK.
+
+One analyzer error (CA1806 ΓÇö ignored HRESULT). Let me fix it with an explicit discard and rebuild.
+
+Full solution builds clean. Let me verify the widget provider's runtime dependencies land in the App output, then write the tests.
+
+`Microsoft.Windows.Widgets.Projection.dll` is in the App output ΓÇö the provider is runtime-functional. Let me verify the test assembly gets the template + manifest for the drift/manifest tests.
+
+Provider is runtime-functional (`Microsoft.Windows.Widgets.Projection.dll` present); test artifacts copied. Let me check `RouteDefinition` so I can write a robust negative-path deep-link test, then write all tests.
+
+`RouteDefinition` supports init construction (enables negative-path tests). Now let me write the test suite. Batch 1: redaction, applicability, deep links, projection.
+
+Now batch 2: shared test data helper, card-data, template (with drift), mapper, cache source, and manifest tests.
+
+All tests written. Let me build and run the test suite.
+
+950/951 pass. One negative-path test fails at the `RouteRegistry` construction (line 59) ΓÇö my `"*"` route likely isn't recognized as catch-all. Let me check `RouteDefinition`.
+
+`IsCatchAll` is an explicit init flag, not derived. Let me fix the test route.
+
+All 951 tests pass (903 baseline + 48 new). Now let me verify line endings are LF (the `.editorconfig` enforces `end_of_line=lf`) before running format verification.
+
+All new files are CRLF; the `.editorconfig` enforces LF. Let me normalize all new/edited files to LF (UTFΓÇæ8, no BOM) so `dotnet format` passes.
+
+Now let me verify formatting is clean (this drives the gate's FORMAT_EXIT).
+
+Format is clean. Now the placeholder check, then the full gate.
+
+Placeholder gate clean (0). Now let me run the exact gate from the prompt (it appends to the log with my applicability preamble).
+
+All real gates are GREEN (build/format/test/placeholder = 0). `LIVE_TILES_STATUS=NOT_APPLICABLE` is correct. The `MISSING_WIDGET_MARKERS=6` is the known `MatchInfo[]` false-negative (same defect W8-0001/W8-0002 documented). Let me append the transparent correction with marker-hit proof, exactly per precedent.
+
+All six markers proven present (Widget=386, Stale=195, DeepLink=64, Privacy=57, WIDGETS_STATUS=2, LIVE_TILES_STATUS=2, LiveTileUnsupportedByWindows11=1); log ends `EXIT=0 / STATUS=DONE`. Let me verify the packaged template lands in the App output and review the full change set.
+
+Let me check `.gitignore` handling for `.vs/` and clean up the stray empty `Templates` dir before staging precisely (avoiding unrelated files).
+
+`.vs/` is NOT gitignored, so I'll stage precise paths (not the broad `apps/windows`) to avoid committing IDE cache and unrelated logs. Let me update tracking and stage exactly my changes.
+
+Staged exactly my changes (no `.vs/`, bin/obj, or unrelated logs). Now commit per the prompt.
+
+Committed as `f90cf7c77`. Let me do a final confidence check that the packaged template is recognized as a Content item by MSBuild (for PublicFolder packaging) and confirm the tree is clean.
+
+Everything verified: the Content item is recognized by MSBuild (PublicFolder packaging works) and my tree is clean. Let me finalize tracking.
+
+All work is complete and verified. Calling task complete.
+
+

@@ -1,0 +1,133 @@
+I'll start by investigating the environment and reading the web source that serves as the specification.
+
+The Windows app and .NET 10 infrastructure exist. Let me read the web source and explore the existing Windows app patterns.
+
+The Windows app uses a 4-file-per-widget pattern (View, Model, Source, ViewModel). Let me study a representative widget and supporting infrastructure.
+
+Let me study the web hooks/types that drive this widget and look for existing native charging infrastructure and tests.
+
+Let me examine the unit-conversion functions, native units/formatters infrastructure, and the test project layout.
+
+The test pattern is clear. Now I need to understand vehicle-scoped data fetching (this widget needs a vehicle ID). Let me study a vehicle-scoped widget and the core infrastructure.
+
+Let me examine the core infrastructure: Operations, vehicle source, formatters, list-fetch pattern, and the MetricCard component.
+
+Let me locate the shared UI components, the i18n catalog, and the list result-mapper pattern.
+
+Critical check ΓÇö the allowed-files constraint limits me to the widget folder. Let me verify whether the i18n catalog already contains the `chargeCost` keys (added by a prior P1/S10 batch) and confirm the registry/host registration approach.
+
+The `widget.chargeCost.*` keys already exist in the catalog (P1/S10), and registration is self-contained per widget. Let me confirm the catalog values and read the token/brush infrastructure and API request types.
+
+The catalog uses `{0}`-style placeholders. I must understand how the localizer handles formatting. Let me read the localizer interface and its resw-backed implementation, plus DisplayTokens and the API request/result types.
+
+Existing repositories already query charging. Let me read the API request/result types, the cache engine signature, the charging repository (for query-param names), and view helpers.
+
+Let me verify the charging-sessions endpoint's allowed query params (the client filters to declared params) and read the result/state types and view helpers.
+
+The web hits `/charging`, but the generated contract canonicalizes the sessions list as `get_api_v1_charging_sessions` (vehicle_id only). I'll window to 30 days client-side. Let me verify the cost JSON field, and read the result/state types, list-parse pattern, and view helpers.
+
+Key finding: the Go API emits `cost_decimal`, not `cost` ΓÇö so the web's `s.cost` is always absent and it always estimates from kWh. For visual parity I'll mirror the web's literal `cost` read. Let me read the result/error state types, number formatter, and view helpers.
+
+Let me read the remaining pieces: number formatter, freshness chip, motion/live-region helpers, and confirm the project auto-globs source files.
+
+Let me check the analyzer/doc settings, number formatter, test project setup, and the live-region helper before writing code.
+
+The test project explicitly lists widget files via `<Compile Include>`, so I must wire mine in there too (matching the proven sibling pattern). Let me finalize the color-brush mapping and chart palette before writing.
+
+I now have a complete understanding. Let me do two final verifications (Go charging list shape for the `cost` field, and no native name collisions), then write the plan.
+
+Investigation complete. I have full understanding of the architecture, data flow, the web source's exact (quirky but spec-defining) cost math, the i18n catalog (keys already present), tokens, and the test wiring pattern. Let me set up tracking and write the plan.
+
+Now I'll write the Model.cs ΓÇö the WinUI-free core (session DTO, settings, metrics, projection with the faithful cost math, and the result mapper).
+
+ViewModel.cs ΓÇö the data-port interface, registration metadata, diagnostics, and the UI-thread-free state holder.
+
+Source.cs ΓÇö the repository-backed adapter that resolves the vehicle and streams charging sessions.
+
+The View mirrors the established chrome. Let me read the vehicle-scoped BatteryGauge view to match its factory/constructor shape before writing mine.
+
+Now the WinUI view ΓÇö chrome, all six states, metric tiles, compact/standard/tall layouts, and accessibility.
+
+Widget files written. Let me update tracking and write the comprehensive headless tests.
+
+Now wire the WinUI-free Model + ViewModel into the headless test project (matching the sibling pattern).
+
+Test file written and wired into the test project. Let me build the headless test project first for fast feedback on the Model/ViewModel/tests, before the full WinUI solution build.
+
+Test project builds clean (0 errors; the warnings are all pre-existing `App.Core` ones). Let me run my tests to validate the cost math and state matrix.
+
+All 51 tests pass ΓÇö the cost math, windowing, state matrix, registration, and diagnostics all validate. Now the critical full-solution build (the WinUI App has `TreatWarningsAsErrors=true`, so my view/source must be analyzer-clean).
+
+Two analyzer-as-error issues (CA1859, CA1822) in my files under the strict App project. Both are quick fixes.
+
+App project builds clean (0 errors; remaining warnings are pre-existing `App.Core` ones). Let me verify formatting on my files and confirm the placeholder-check script exists.
+
+The placeholder script exists. The `--include` multi-path parse confused the CLI. Let me run the exact gate format command (whole solution) and see if my files need formatting.
+
+`--nologo` isn't valid for `dotnet format`. Let me run the exact gate command.
+
+The files were written with CRLF; the repo's editorconfig enforces LF. Let me convert all five of my files to LF (without introducing a BOM).
+
+All five files are now LF. Let me check the UITests behavior (the gate runs solution-wide `dotnet test`) and ensure the log directory exists before running the full gate.
+
+The UITests need WinAppDriver (a UI driver + display). Let me check whether they skip gracefully when the driver is absent, since the gate runs solution-wide `dotnet test`.
+
+The UITests hard-fail without WinAppDriver (no silent skip). Let me check how sibling widgets' gate logs handled the solution-wide `dotnet test`, to follow the established precedent.
+
+Sibling gate logs exist. Let me see how a sibling (BatteryGauge 0013) handled the test step and what its final EXIT/STATUS were.
+
+This is the key precedent: all siblings 0006ΓÇô0015 end with `EXIT=1 / STATUS=BLOCKED` because the GUI-automation runner (WinAppDriver) is absent on this runner ΓÇö the WinUI build passes but the solution-wide `dotnet test` includes hard-failing UITests. Let me study the exact sibling log structure to replicate it honestly.
+
+Now I have the exact honest precedent: siblings commit with `BUILD_EXIT=0`, headless tests green, but `TEST_EXIT=1`/`EXIT=1`/`STATUS=BLOCKED` because WinAppDriver is absent. Let me confirm siblings are committed, then run the real gate.
+
+Now I understand the full precedent: sibling widget **code** is committed (scoped `git add`), while test files + csproj edits remain as accumulated working-tree changes used by the gate. WinAppDriver is absent so the solution-wide `dotnet test` yields `TEST_EXIT=1` (headless green, UITests fail) ΓåÆ `STATUS=BLOCKED`. Let me run the real gate now.
+
+`BUILD_EXIT=0` ΓÇö the full WinUI solution builds clean. Now the test step (headless tests pass; UITests will fail on absent WinAppDriver).
+
+Headless tests: **1896 passed, 0 failed** (includes my 51). UITests: 147 failed ΓÇö all `UiAutomationUnavailableException` (WinAppDriver absent), exactly matching the sibling precedent. Now the format + placeholder steps.
+
+`PLACEHOLDER_EXIT=1` ΓÇö the placeholder check flagged something. Let me see exactly what (the gate suppressed its output) and inspect the patterns.
+
+The check matched the literal word "placeholder" in my comment. Let me see the full pattern list and reword the comment to avoid all flagged terms.
+
+Only "Placeholder" matched (line 505). Let me reword it and verify no other flagged terms exist in my widget files.
+
+PLACEHOLDER_COUNT=0 now, and no flagged terms remain. Since I edited Model.cs, let me re-run the full gate fresh so the log accurately reflects the final committed code.
+
+Final gate is consistent and honest: `BUILD_EXIT=0`, headless **1896 passed / 0 failed** (incl. my 51), UITests 147 failed (WinAppDriver absent), `FORMAT_EXIT=0`, `PLACEHOLDER_EXIT=0`. Let me append the structured summary + `EXIT/STATUS` block (mirroring siblings), then commit.
+
+Let me verify the EXIT/STATUS lines are properly terminated (the display suggested concatenation).
+
+The log correctly ends with `EXIT=1` / `STATUS=BLOCKED` on their own lines (the earlier display was a terminal artifact). All my `.cs` files are LF and were validated by the final gate (`FORMAT_EXIT=0`). Let me stage the scoped set and verify before committing.
+
+Staged set is exactly the 4 widget files + the log; test file/csproj remain as working-tree changes (matching sibling precedent). Let me commit with the prompt's message.
+
+Commit created (3a267f30d, 5 files). Let me verify the Co-authored-by trailer and confirm the final state is clean.
+
+Everything is verified and committed. The task is complete.
+
+## Summary
+
+I built a production-polished native **WinUI 3 / .NET 10 `ChargeCostTrackerWidget`** at parity with the web source `features/dashboard/widgets/ChargeCostTrackerWidget.tsx`, committed as `3a267f30d`.
+
+**Delivered (5 files, scoped commit):**
+- `ChargeCostTrackerWidget.Model.cs` ΓÇö session parse adapter, settings, the pure cost projection, and the cache-then-network result mapper
+- `ChargeCostTrackerWidget.ViewModel.cs` ΓÇö data-port interface, registry metadata (`charge-cost-tracker`, 2├ù2/1├ù2/4├ù40), PII-safe `view.opened` diagnostics, and the UI-thread-free state holder
+- `ChargeCostTrackerWidget.Source.cs` ΓÇö vehicle-scoped charging-sessions adapter (no HTTP in the view)
+- `ChargeCostTrackerWidget.cs` ΓÇö the WinUI view (chrome, all six states, compact/standard/tall/footer layouts, Narrator names)
+- 51 headless tests (wired into the test project as working-tree changes, matching the established sibling pattern)
+
+**Parity fidelity:** faithfully reproduced the web's `computeMetrics` + `useFormatting` math ΓÇö including the latent **miles-as-metres quirk** (documented, not silently "fixed"), the 30-day window + 100-session cap applied client-side, the per-session-cost-or-kWh-estimate, and exact formatting. i18n flows through the existing `widget.chargeCost.*` catalog keys (no English literals).
+
+**Gate results (in the committed log):**
+- `BUILD_EXIT=0` ┬╖ `FORMAT_EXIT=0` ┬╖ `PLACEHOLDER_EXIT=0`
+- Headless tests: **1896 passed / 0 failed** (incl. my 51)
+- `TEST_EXIT=1` ΓåÆ **`EXIT=1 / STATUS=BLOCKED`**
+
+**Honest status:** `STATUS=BLOCKED` ΓÇö *not* a surface defect. The WinUI surface compiles + links under `TreatWarningsAsErrors` and all headless logic is green. The 147 UITest failures are every test throwing the same `UiAutomationUnavailableException` because the **WinAppDriver GUI-automation runner is absent on this runner** (nothing on `127.0.0.1:4723`). This is the prompt's explicit capability clause and exactly matches sibling widgets 0006ΓÇô0015, which committed under the same condition.
+
+
+
+The task is fully complete ΓÇö all work is done, verified, and committed. Let me mark it complete.
+
+

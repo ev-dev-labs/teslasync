@@ -1,0 +1,135 @@
+I'll start by assessing the environment and capabilities, since this task requires WinUI 3 + .NET 10 and explicitly says to report STATUS=BLOCKED with evidence if unavailable.
+
+.NET 10.0.300 is present and `apps/windows/TeslaSync.sln` exists. Let me read the web source and explore the existing Windows app structure to learn conventions.
+
+Now let me explore the Windows app structure ΓÇö especially existing dashboard widgets, state holders, tokens, and i18n.
+
+Let me look at the existing dashboard-widgets directory and the Core's Widgets/state-holder layer to find patterns to follow.
+
+There are many existing widgets. Let me examine a couple that are most similar (gauge-based battery widgets) to learn the exact file structure and conventions.
+
+Each widget is 4 files: Model, Source, ViewModel, and view. Let me read the closest analogs in full ΓÇö `BatteryDegradationForecastWidget` (uses energy analytics) and `BatteryGaugeWidget` (gauge-based).
+
+This is a mature, well-structured codebase. Let me read the `BatteryGaugeWidget` (gauge-based, closest visual analog) in full and find the native shared components for `WidgetShell`/`WidgetGaugeHero`.
+
+The pattern is clear. Now I need the data contract for `useBatteryHealthAnalytics` and the web shared `WidgetGaugeHero` (gauge + stats), plus a native widget that renders a gauge+stats grid. Let me gather these.
+
+Key facts: endpoint is `GET /analytics/battery-health` (not degradation), shared component is `WidgetGaugeHero`. Let me read the web gauge-hero layout, the data type, the hook, and confirm the generated operation id exists.
+
+Operation `get_api_v1_analytics_battery_health` exists. Now let me get the `BatteryHealthAnalytics` type, the `RadialGauge` web component (for gauge formatting/color), and check the Core DataDisplay for any stat-grid component I can reuse.
+
+I now have the full data shape. The web `useUnits`/`convertTempFromSI` are vestigial (no displayed value is unit-bearing ΓÇö all are %, scores, counts). Let me read `RadialGauge` semantics and study how a native multi-stat widget renders its grid.
+
+Now let me find the test patterns and confirm layout primitives. Let me look at existing tests for `BatteryGaugeWidget`, check for WrapPanel availability, and locate `ScalarFormatters`.
+
+No WrapPanel anywhere ΓÇö I'll use a Grid like `AnalyticsSummaryWidget`. Let me read the test patterns and the formatter API.
+
+Let me read the gauge widget tests and the degradation forecast tests (closest analog with vehicle_id query) to mirror the test conventions.
+
+I have the full pattern. Let me verify whether widgets are centrally registered (which would be outside allowed files) and confirm the shared test helpers exist.
+
+Widgets are self-contained (no central registry to modify) and test helpers exist. Now let me check the i18n catalog ΓÇö whether widget keys must be registered there, and whether I can satisfy that within allowed files.
+
+All `widget.batteryHealthAnalytics.*` i18n keys already exist in en/ar/he catalogs ΓÇö no Strings changes needed. Let me read the exact key names and English values.
+
+Exact key values confirmed. Now let me check how native-chrome keys (refresh/retry/loading/error ΓÇö not in the web source) are handled, and whether any test enforces catalog completeness.
+
+Let me read `WidgetManifestTests.cs` ΓÇö it may enumerate widgets and could require registration.
+
+i18n keys and manifest are fine ΓÇö no out-of-scope files needed. Let me read the web `WidgetShell` to get the exact chrome (title/freshness/loading/error) behavior for compact vs standard, then set up my todos.
+
+I have the full chrome model now. Let me confirm a few exact APIs before writing: number formatting semantics, `RepositoryResult`/`ApiRequest` shapes, and `DisplayTokens` members.
+
+Let me confirm the `Operations` constant, `RepositoryResult` factory methods, and how the degradation-forecast view (same 2├ù4 default, has a title) handles its chrome/compact.
+
+Let me see how the degradation-forecast view handles compact (title hide) and its Render/UpdateHeader, plus the `DisplayTokens` namespace it uses.
+
+I have everything needed. Let me set up tracking and write the four production files plus tests, modeled on `BatteryGaugeWidget` (gauge/model), `AnalyticsSummaryWidget` (stat grid), and `BatteryDegradationForecastWidget` (title chrome, file org).
+
+Model written. Now the Source.cs (cache-then-network adapter), mirroring `BatteryDegradationForecastSource` for the `battery-health` endpoint.
+
+Now the ViewModel.cs (interface + registration + diagnostics + state-holder), modeled on `BatteryGaugeWidget.ViewModel.cs` (nullable display, no content-gate since web uses `!!data`).
+
+Now the WinUI view, composing the title chrome (`BatteryDegradationForecastWidget`), the gauge ring (`BatteryGaugeWidget`), and a centered stat grid.
+
+Now the tests. Let me check how the closest analog (`BatteryDegradationForecastWidgetTests`, same `vehicle_id` query pattern) asserts the source request, to mirror it exactly.
+
+The pattern uses `Convert.ToInt64(request.Query!["vehicle_id"], ...)`. Now writing the comprehensive test file mirroring `BatteryGaugeWidgetTests` (adapter, projection, state matrix, registration, diagnostics, source, a11y).
+
+All five files are written. Let me build the solution in Release (the gate's first step) to catch any compile errors.
+
+The App project **built successfully** with my four widget files. The 14 errors are all in the test file's helpers region (lines 522+), yet the test methods above resolve the same types ΓÇö that's suspicious. Let me inspect that region and the test project's references.
+
+Found the root cause. The test project **does not reference the App exe** ΓÇö it links each widget's `Model/ViewModel/Source.cs` via `<Compile Include>`. My new widget's logic files aren't linked, so the types don't resolve. I must add three `<Compile Include>` entries (the established pattern for every sibling). Let me view the exact insertion point.
+
+Now rebuild ΓÇö I'll target the test project (fastest path to verify the fix) in Release.
+
+Build succeeds. Let me run my new tests to confirm they pass before running the full gate.
+
+All 58 tests pass. Before running the full gate, let me verify the placeholder-check script's rules, confirm the log directory exists, and scan my four widget files for any forbidden tokens.
+
+My widget files are clean of forbidden tokens. Let me check the exact placeholder patterns (to be sure words like "skeleton" aren't flagged), then format my new files so the `--verify-no-changes` step passes.
+
+Patterns are narrow (`NotImplementedException`, `// stub`, `TODO`, etc.) ΓÇö my files are clean. Now let me format my new files so the gate's `--verify-no-changes` passes.
+
+Format applied whitespace fixes to all 5 files (the MSBuild "Debug dll" notes are non-fatal ΓÇö it still formatted and exited 0). Let me review what changed and confirm everything still builds and passes.
+
+Test project rebuilds clean post-format. Before running the full-solution gate, let me check whether `dotnet test <solution>` would also invoke `TeslaSync.App.UITests` (which could need a UI driver and skew TEST_EXIT).
+
+UITests is a real test project (WinAppDriver-based). Let me check how it handles an unavailable driver ΓÇö that determines whether the full-solution `dotnet test` passes here.
+
+The UITests are designed to **fail** (not skip) when the WinAppDriver runner is absent. That would make a full-solution `dotnet test` fail here regardless of my code. Let me check how sibling widget gate logs handled this ΓÇö precedent is the best guide.
+
+Sibling logs exist (0001ΓÇô0013). Let me see how 0013 (BatteryGauge) recorded its gate exit codes and how it handled UITests.
+
+The sibling 0013 log shows the **same** environment: `TeslaSync.App.Tests.dll` passes (1714/1714) but `TeslaSync.App.UITests` fails with `UiAutomationUnavailableException` (no WinAppDriver). Let me see exactly how 0013 recorded TEST_EXIT and the final STATUS.
+
+This is the definitive precedent: siblings 0006ΓÇô0013 all end **EXIT=1 / STATUS=BLOCKED** ΓÇö `BUILD_EXIT=0`, `FORMAT_EXIT=0`, `PLACEHOLDER_EXIT=0`, but `TEST_EXIT=1` solely because the pre-existing solution-wide `TeslaSync.App.UITests` E2E suite requires a WinAppDriver endpoint + deployed MSIX absent on this runner. The headless unit suite passes 100%. WinUI 3/.NET 10 capability is present (build proves it).
+
+First, let me confirm my changes cause **no regression** in the full headless unit suite, then run the gate.
+
+No regressions: full headless suite **1772/1772**. Now running the gate exactly as specified (writing the log via `Tee-Object`), suppressing console flood while the log captures everything.
+
+Gate result matches sibling precedent: **BUILD_EXIT=0, TEST_EXIT=1, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0**. Let me confirm from the log that TEST_EXIT=1 is solely the WinAppDriver E2E suite (not my unit tests).
+
+Confirmed root cause: `TeslaSync.App.Tests` = **1772 passed / 0 failed** (includes my 58, no regressions); `TeslaSync.App.UITests` = 147 failed, **all** `UiAutomationUnavailableException` (WinAppDriver runner absent). Build succeeded; placeholders clean. Identical to siblings 0006ΓÇô0013.
+
+Let me append the thorough analysis + final `EXIT=1 / STATUS=BLOCKED` to the log (matching sibling structure).
+
+Let me verify `EXIT=1` and `STATUS=BLOCKED` are each on their own line (rule 10 requires the log to *end* with these as discrete lines).
+
+Log ends correctly with standalone `EXIT=1` and `STATUS=BLOCKED` lines (rule 10 satisfied). Let me update tracking and confirm the exact commit scope used by a sibling (did they include the test file + csproj edit in the same commit?).
+
+The sibling's surface commit lists only the log + 4 widget files ΓÇö not the test file or csproj. Let me see the sibling commit's full file list and when the test file/csproj were committed.
+
+Surprising: the sibling's `BatteryGaugeWidgetTests.cs` has **no git history** ΓÇö the widget test files appear to be untracked/local-only. Let me check the working-tree state to understand the real convention.
+
+Now I understand the repo convention precisely. The committed sibling surface commit (d0e529af) contains **only the 4 widget files + the log**. The `*WidgetTests.cs` files and the `Tests.csproj` Compile-Include edits are intentionally left as untracked/modified working-tree changes (the csproj already carries many other widgets' uncommitted entries). I'll follow the prompt's Commit section exactly ΓÇö staging only my widget folder + log ΓÇö to match precedent and avoid dragging unrelated uncommitted csproj entries into scope.
+
+Staged scope is correct (4 widget files + log), matching the sibling precedent. Committing with the prompt's exact message.
+
+Committed as `fe60095dc` (4 widget files + log), matching the sibling precedent exactly. Let me finalize tracking.
+
+## Summary
+
+I shipped a production-polished, native WinUI 3 port of `BatteryHealthAnalyticsWidget` at parity with the web source, following the established TeslaSync dashboard-widget architecture.
+
+**Delivered** (`apps/windows/TeslaSync.App/dashboard-widgets/BatteryHealthAnalyticsWidget/`):
+- **`.Model.cs`** ΓÇö state enum, `BatteryHealthAnalytics` parse adapter (snake-case `GET /analytics/battery-health`), size/footprint, projection (gauge + 6 stat tiles, `scoreColor` thresholds ΓëÑ80 green / ΓëÑ50 amber / else red), and cache-then-network result mapper.
+- **`.Source.cs`** ΓÇö repository adapter over `IWidgetVehicleSource` + `CacheThenNetworkEngine` (operation `get_api_v1_analytics_battery_health`, `vehicle_id` query). No HTTP in the view.
+- **`.ViewModel.cs`** ΓÇö interface, registry metadata (`battery-health-analytics`, 2├ù4 / 1├ù2 / 4├ù40), PII-safe diagnostics, and the state-holder (loading/loaded/empty/error/stale/offline).
+- **`.cs`** ΓÇö the view: title chrome (hidden when compact), radial SOH gauge, centered stat grid, all six states, Narrator names, reduced-motion.
+- Plus 58 headless tests (adapter/projection/state-matrix/registration/diagnostics/source/a11y).
+
+**Gate result** (`ΓÇª/logs/p2-windows-dashboard-widgets-0014-BatteryHealthAnalyticsWidget.log`):
+- `BUILD_EXIT=0` ┬╖ `FORMAT_EXIT=0` ┬╖ `PLACEHOLDER_EXIT=0`
+- `TeslaSync.App.Tests`: **1772/1772 pass** (1714 prior + my 58; no regressions)
+- `TEST_EXIT=1` ΓÇö **solely** the pre-existing solution-wide `TeslaSync.App.UITests` E2E suite (147 `UiAutomationUnavailableException` ΓÇö no WinAppDriver/MSIX on this runner).
+
+**`EXIT=1 / STATUS=BLOCKED`** ΓÇö WinUI 3 / .NET 10 capability IS present (build proves the view compiles + links; all headless tests run). The only absent capability is the GUI-automation runner, explicitly covered by the prompt's capability clause and identical to siblings 0006ΓÇô0013. Committed the surface + log as `fe60095dc`, matching the sibling commit convention (test file + csproj Compile-Include left as working-tree changes, exactly as every recent sibling).
+
+
+
+All work is complete and verified; the only non-green gate step is the pre-existing WinAppDriver E2E suite (absent runner), which is sanctioned as `STATUS=BLOCKED` by the prompt and identical to siblings 0006ΓÇô0013. No further actionable work remains on this runner.
+
+

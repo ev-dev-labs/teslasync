@@ -1,63 +1,47 @@
-Now I have full context. Let me write a plan and create the implementation.
+I'll start by exploring the repository structure to understand what exists for this task.
 
-Now the golden loader (expect/actual) and tests:
+The web hook is SSE-driven, not a network query. Let me explore the existing KMP structure to understand the patterns, dependencies (S4-S7), and any existing presentation holders.
 
-AchievementModels.kt is missing ΓÇö the first create failed. Let me create it now.
+The `achievementunlocks` directory already has 3 files. Let me examine them and check for existing tests.
 
-Tests + ktlint green. Now the placeholder gate:
+Implementation files already exist. Let me verify they're real (not stubs) by checking the SSE infrastructure they depend on, git status, and whether tests + log exist.
 
-All gates green. Let me finalize the log with the parity enumeration and status:
+Key findings: the implementation + tests already exist and are committed, but the log file was **deleted** (shown as `D` in git status). Per the honesty covenant, I must actually run the gate and regenerate the log with real output ΓÇö not assume. Let me review the tests, SSE infra, and git history.
 
-The golden fixture is currently in `apps/shared/spec`, but allowed files are scoped to `apps/shared/core/**`. Let me move it under `core` to respect the file scope while keeping cross-platform readability:
+The work was done in a single commit `94de0e8cc`, but the log file was deleted from the working tree. Let me verify the supporting files (golden spec JSON, `actual` loaders, SSE infra types) exist and inspect the original committed log for reference.
 
-Let me get a quick rubber-duck critique on the parity correctness and architectural mapping before committing.
+HEAD is at S7 (`6b9d890fc`); the S8 commit `94de0e8cc` is in history but the golden spec JSON `apps/shared/spec/achievement-unlocks-golden.json` is **MISSING** and not shown as deleted in git status. The golden test depends on it. Let me investigate whether the spec was ever committed and how the loaders read it.
 
-## Blocking Issues
+Now the picture is clear: the golden spec JSON was **never committed** (only `units-golden.json` exists in `apps/shared/spec/`). The golden test loads `spec/achievement-unlocks-golden.json` relative to cwd. The gate is currently RED. Let me check how the **units** golden loader resolves its path (the working convention) to know exactly where to place the spec.
 
-None found. The port appears fundamentally correct and can proceed, assuming `AchievementUnlocksStore` is intended to be used from a single UI/application lifecycle context.
+The golden spec **does** exist at `apps/shared/core/spec/achievement-unlocks-golden.json` (my earlier search checked the wrong dir). The implementation looks complete. Let me confirm git tracking, view the golden spec content, and retrieve the original committed log format.
 
-## Non-Blocking Issues
+Now I have the full picture. The implementation is **complete and committed** at `94de0e8cc` (ancestor of HEAD), including the golden spec (7 scenarios) and platform loaders. Only the **log file was deleted**. The original log shows the gate passed (TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0).
 
-### 1. `stop()` retention is not exact hook lifecycle parity
-**Impact:** Web `useState` is destroyed on unmount/page refresh; this store keeps `recent` across `stop()`/`start()`. If consumers treat `stop()` as ΓÇ£unmountΓÇ¥, stale unlocks could reappear after foreground/background or navigation unless already dismissed.
+Per the honesty covenant ("no red-as-green"), I won't just restore the old log ΓÇö I'll **re-run the gate** on the current tree and regenerate the log with fresh real output. Let me verify the gate prerequisites exist.
 
-**Recommended fix:** Either:
-- document `stop()` as ΓÇ£pause subscription only; queue retainedΓÇ¥, and add `clear()`/`reset()` for true unmount semantics, or
-- clear `_recent` in `stop()` if lifecycle parity is the goal.
+The gradlew wrapper is at `apps/shared/` (the gradle root); `core` is a subproject (`:core:`). The prompt's `Push-Location apps/shared/core` is slightly idealized ΓÇö I'll run from the gradle root using the `:core:` task paths. Let me confirm `gradlew.bat` and initialize the log, then run the test gate.
 
-Your current test explicitly asserts retention, so this is a semantic decision, not a bug.
+Everything is in place. Now let me run the gate for real. First, initialize the log with a fresh header and run `:core:allTests`.
 
-### 2. `start()` idempotency is not thread-safe
-**Impact:** `if (job?.isActive == true) return` is fine for single-threaded/UI-thread use, but concurrent `start()` calls could race and create multiple collectors/subscriptions.
+`:core:allTests` is green (TEST_EXIT=0), but tests were UP-TO-DATE (cached). For honest evidence, let me force-rerun the AchievementUnlocks test classes specifically, then run ktlintCheck.
 
-**Recommended fix:** If store may be called from multiple dispatchers/threads, guard start/stop with a `Mutex`, confine the store to main thread, or document single-threaded lifecycle ownership.
+Forced rerun executed and passed. Let me confirm the actual test counts from the JUnit XML results, then run ktlintCheck appending to the log.
 
-## Suggestions
+Confirmed: 9 AchievementUnlocks tests pass (7 store + 2 golden, 0 failures). Now run ktlintCheck and the placeholder check, appending to the log.
 
-### 3. Validate `maxRecent`
-**Impact:** Web has a fixed positive constant. KMP exposes `maxRecent`; `0` behaves as always-empty, negative values can throw via `subList`.
+ktlintCheck passed (LINT_EXIT=0). Now the placeholder check on `apps/shared/core`.
 
-**Recommended fix:** Add `require(maxRecent >= 1)` in the store/reducer boundary, or keep `maxRecent` internal/test-only.
+All three gate checks pass: **TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0** (PLACEHOLDER_COUNT=0). Now let me append the placeholder results, focused-test evidence, and the `=== PARITY ===` section to finalize the log.
 
-### 4. Architecture deviation is reasonable, but should be explicitly justified
-Injecting `SseClient` is the correct mapping for an SSE-only hook. A REST repository would be less faithful and could imply polling/persistence that the web hook does not have.
+Let me verify `EXIT=0` and `STATUS=DONE` are on their own lines (the terminal display looked concatenated) ΓÇö covenant rule 10 requires the log to end with parseable `EXIT=<int>` / `STATUS=<...>`.
 
-**Recommended fix:** Keep the justification in code/docs: ΓÇ£this ports `sseManager.subscribe('achievement_unlocked')`; `SseClient` is the shared SSE abstraction, not a raw Ktor call; no clock because ordering is insertion order.ΓÇ¥
+The log ends correctly with standalone `EXIT=0` (line 163) and `STATUS=DONE` (line 164), both regex-matching. Now let me commit, staging **only** my in-scope paths (the prompt's other modified logs must not be included). First verify `apps/shared/core` is clean.
 
-## Direct Answers
+Only the log file is staged (`apps/shared/core` is clean ΓÇö implementation already committed). Now commit with the prescribed message.
 
-1. **De-dup/bound/ordering parity:** Yes, for normal `MAX_RECENT=25`, parity looks exact: newest-first, ignore duplicate IDs, truncate oldest.
-2. **SseClient injection:** Reasonable and architecturally clean for this hook.
-3. **Concurrency:** `MutableStateFlow.update` protects state updates, but `start()`/`stop()` job management is not concurrency-safe.
-4. **Decode leniency:** Boundary looks right: require `achievement.id`, tolerate missing non-identifying fields. This matches the web guard.
-5. **Start/stop:** Idempotent enough for single-owner lifecycle. Main caveat is retained queue semantics across `stop()`/`start()`.Good ΓÇö no blocking issues. I'll adopt the cheap guardrail (validate `maxRecent`); the retention/threading points are documented single-owner lifecycle semantics already covered by KDoc and tests.
+Committed as `2e5b0c155`. Let me do a final airtight verification that the committed log ends with the required markers.
 
-Now re-run the full gate to confirm everything is still green after the edits, and refresh the log:
-
-Now commit. Let me stage the allowed files and verify what's staged:
-
-Staged files are exactly my changes plus the log. `done.txt` is an unrelated working-tree change (not staged). Committing:
-
-Committed. Task complete.
+All gate counters are present and line-anchored in the committed log (`^EXIT=` and `^STATUS=` both matched). Task verified complete.
 
 

@@ -1,43 +1,74 @@
-Now I have a complete understanding of the patterns. Let me set up tracking and create the files.
+I'll start by exploring the repository structure and understanding the task. Let me read the key files in parallel.
 
-Now creating the source files:
+File operations are timing out due to repo size. Let me narrow searches and check the key directories.
 
-Now add the CacheDomain and the store:
+Now I have the web source. Let me examine the existing presentation structure to follow established patterns.
 
-Following the established `FeedbackStore` precedent (placeholderData left to render layer; single dynamic input for a search box), I'll write the holder:
+A `search` directory already exists. Let me inspect it and find a recently-completed comparable domain as a reference pattern.
 
-Module is `:core`, gradle root is `apps/shared`. Let me run the test gate. This will be long; I'll allow time.
+The `search` files exist but `p1-s8-0039-search.log` is **missing** ΓÇö meaning this task wasn't completed/verified. Let me inspect the existing search files and compare against a completed neighbor (savedviews/0038).
 
-Tests pass. Now ktlint and placeholder checks:
+The implementation looks substantial. Let me verify the S7 `SearchRepository` dependency exists and read the test files.
 
-ktlint clean. Now re-run tests (edited test files) and the placeholder check:
+All files exist: store, models, repository (S7), golden tests, store tests, and repo contract test. The log is missing though. Let me check git status to understand what's committed vs. uncommitted.
 
-Now fix the SearchStore.kt occurrence:
+The working tree is in an unusual state: my target log `p1-s8-0039-search.log` shows as **deleted**, `done.txt` is modified, and many other logs are modified. The search `.kt` files appear already committed. Let me understand the history and what the deleted log contained.
 
-Placeholder gate clean. Final verification ΓÇö re-run ktlint and tests together since I edited comments:
+Search `.kt` files are committed and clean. The pattern in recent commits ("restore + re-verify ... state-holder log") suggests logs get deleted then restored. Let me trace the history of the search code and the deleted log, and retrieve the deleted log's committed content.
 
-All gates pass. Now writing the log and cleaning up:
+Now I understand: commit `335d4b80e` added the complete Search implementation + log (it's an ancestor of HEAD). The working tree has the log **deleted** ΓÇö this matches the "restore + re-verify" pattern seen in recent commits. Let me examine that pattern and the `done.txt`/other-log changes to understand the full picture.
 
-Done. **P1/S8/0039 ΓÇö Search state holder** is complete and committed (`335d4b80e`).
+Now I fully understand. This is the **"restore + re-verify"** pattern: the Search holder (0039) was already implemented & committed at `335d4b80e`, but its log was removed from the working tree. The `done.txt`/other-log churn is pre-existing and not mine to commit (precedents changed only 1 file). Let me examine the exact re-verify log format and confirm the S7 data port is complete.
 
-## What shipped
-Ported the web `useSearch` domain (1 read hook, 0 mutations) to UI-free KMP shared-core state holders, exactly mirroring `web/src/api/hooks/useSearch.ts`:
+Implementation is complete and faithfully mirrors the web hook. I'll follow the established **restore + re-verify** procedure (as done for Pinned/Push/RbacMatrix). First, restore the log, gather metadata, and verify the Gradle setup ΓÇö then run the real gate.
 
-- **`SearchModels.kt`** ΓÇö `SearchHitType` (9 wire tokens), `SearchHit`/`SearchResponse`, `SearchOptions`/`SearchInput`, and the `planSearch` gating derivation (`!disabled && trim.length >= 2`).
-- **`SearchRepository.kt` + `HttpSearchRepository.kt`** (S7) ΓÇö `GET /search` cache-then-network; `q` always, `types` only when non-empty (comma-joined), `limit` only when `>0`; cache key flattens the web `searchKeys.global` tuple.
-- **`SearchStore.kt`** (S8) ΓÇö single dynamic input ΓåÆ one shared `StateFlow<Resource<SearchResponse>>` via `flatMapLatest`; too-short/disabled queries settle to empty **without** a request.
-- **`CacheDomain.Search`** ΓÇö 30s TTL matching web `STALE_TIMES.FAST`.
-- **Tests** ΓÇö contract (endpoint/params/decode/cache), store (fake-repo routing + gating), and **golden vectors** for `planSearch`/`searchQuery`/`searchCacheKey` (KMPΓåöC# parity).
+Log restored (clean vs HEAD), and the Search commit is 89 commits back. `gradlew` isn't in `apps/shared/core` ΓÇö let me locate it and the Gradle project root.
 
-## Gate results (all green)
-```
-TEST_EXIT=0   (:core:allTests ΓÇö 978 tests, 19 new Search tests)
-LINT_EXIT=0   (:core:ktlintCheck)
-PH_EXIT=0     (check-placeholders ΓÇö PLACEHOLDER_COUNT=0)
-```
+`gradlew` and `settings.gradle.kts` are at `apps/shared` (the Gradle root; `:core` is a subproject). Let me verify the placeholder tool exists, then kick off the full test gate (the long pole).
 
-Honest scope note: `placeholderData (prev)=>prev` keep-previous is left to the render layer, consistent with the sibling `FeedbackStore` precedent. Log ends `EXIT=0 / STATUS=DONE`.
+All prerequisites confirmed. Now running the full test gate (`:core:allTests`) ΓÇö this is the long pole.
 
-All gates pass, the work is committed, and all todos are done.
+`:core:allTests` passed (TEST_EXIT=0), but Android unit tests were `FROM-CACHE`. For honest, fresh evidence and real Search test counts, I'll force re-execution of the Search tests specifically (mirroring the RbacMatrix re-verify).
+
+Search tests re-ran fresh and passed (TEST_EXIT=0). The deprecation warning is in an unrelated domain (SettingsBackup). Let me extract the actual Search test counts from the result XML.
+
+Real counts: ContractTest=5, GoldenTest=8, StoreTest=6 ΓåÆ **19 tests, 0 failures**. Now the remaining gate steps: ktlint and placeholder check.
+
+ktlint passed (LINT_EXIT=0). Now the placeholder check.
+
+All gate steps pass: **TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0**. Let me confirm no `apps/shared/core` source changed and view the end of the restored log to append a re-verification block.
+
+`apps/shared/core` is clean and gate is fully green. Now I'll append a RE-VERIFICATION block to the restored log (mirroring the established RbacMatrix format) with the real evidence gathered.
+
+Now I'll stage **only** the search log (matching the single-file precedent) and commit with the "restore + re-verify" message.
+
+Exactly 1 file staged, 26 insertions (matching precedent). Committing now.
+
+Commit `2b752e89c` succeeded. Final verification and temp cleanup.
+
+Task complete. All gate steps verified green and the commit is in place.
+
+## Summary
+
+The **P1/S8/0039 Search state holder** was already implemented and committed at `335d4b80e` (89 commits back), but its execution log had been removed from the working tree ΓÇö the same **"restore + re-verify"** situation as the immediately-preceding Pinned/Push/RbacMatrix slices. I followed that established procedure.
+
+**Verified parity** ΓÇö the existing KMP port faithfully mirrors web `useGlobalSearch` (`web/src/api/hooks/useSearch.ts`):
+- `GET /search` with `q` always, `types` (comma-joined) only when non-empty, `limit` only when `> 0`
+- `planSearch` reproduces the `enabled` guard (`!disabled && trimmed.length >= 2`) ΓåÆ `Skip` emits empty hits with **no request**
+- `searchCacheKey` matches the `searchKeys.global` tuple; SI preserved; read-only (no mutations)
+
+**Re-ran the full gate against the current tree (real output):**
+| Gate | Result |
+|---|---|
+| `:core:allTests` | BUILD SUCCESSFUL ┬╖ `TEST_EXIT=0` |
+| Search re-run (`--rerun-tasks`) | 18 tasks executed ┬╖ ContractTest=5, GoldenTest=8, StoreTest=6 ΓåÆ **19 tests, 0 failures** |
+| `:core:ktlintCheck` | BUILD SUCCESSFUL ┬╖ `LINT_EXIT=0` |
+| `check-placeholders.ps1` | `PLACEHOLDER_COUNT=0` ┬╖ `PH_EXIT=0` |
+
+`git status --porcelain apps/shared/core` was empty ΓÇö no source drift across the 89 intervening slices.
+
+**Committed** `2b752e89c` (1 file, 26 insertions) ΓÇö restored log + appended RE-VERIFICATION block ending `EXIT=0 / STATUS=DONE`. The unrelated `done.txt`/other-log working-tree churn was left untouched, matching the single-file precedent.
+
+
 
 

@@ -1,0 +1,79 @@
+I'll start by exploring the repository structure to understand the current state and verify dependencies.
+
+There's a substantial Windows .NET app. Let me explore its structure (excluding build artifacts) and verify predecessor dependencies.
+
+Let me verify predecessor W9-0001 is DONE, check version pins, and examine the existing test project setup.
+
+W9-0001 is DONE. Critical finding from its log (lines 91-92): W7 pages may route to `RoutePendingView`. Also, **versions.lock.md has no WinAppDriver/Appium pin**. Let me verify tooling availability and the actual app UI state.
+
+Confirmed environment reality: **dotnet 10.0.300 present, but WinAppDriver and Appium are both absent.** No `Features/` pages exist (only Shell + ComponentGallery), matching W9-0001's note that pages route to `RoutePendingView`. Per the capability note, the runner is absent ΓÇö an honest BLOCKED is the likely terminal state. But I must still produce the complete, real deliverable (test project, harness, fixtures, tests, CI script). Let me dig deeper.
+
+Now let me read the package management setup, manifest identity, shell routing logic, and placeholder patterns to design realistic UI automation locators.
+
+I now have the full picture. Let me confirm a few critical details: the logs directory for BLOCKED precedent, existing W9 test conventions, any Directory.Build.props, and how predecessors structured run scripts.
+
+Let me read the shell code-behind (for menu/navigation automation IDs) and the route registry (for route groups), plus the reusable fakes convention.
+
+I have a thorough understanding of the shell now. Let me read the route group definitions and route table to reference real routes in tests, then start building.
+
+I now have comprehensive understanding. Let me record the plan and check the last two details (gitignore, Localization) before building.
+
+I have full context. Let me set up tracking and the plan, then build.
+
+Now I'll build the project. First create the directory structure, then the project file and source.
+
+Now the core dependency-free WinAppDriver W3C client. This is real, functional automation code.
+
+Now the fixtures. First the fake API server seed data, then the server, profile, screenshot recorder, exception, and session fixture.
+
+Now the shared test base and shell automation-id constants.
+
+Let me check the DeepLink API so the deep-link tests reference it correctly, then write the test classes.
+
+Now the six test classes. Writing them in parallel.
+
+Let me add a window-rect read to the client (for the platform-polish persistence check), then write the platform and accessibility tests.
+
+Now wire the project into the solution and do a first build to catch compile errors.
+
+Single compile error: `Directory` property shadows `System.IO.Directory`. Let me fully-qualify the call.
+
+Build is clean. Now let me verify the honesty mechanism: the UIAutomation tests must fail with the precise "runner absent" reason (not skip, not pass).
+
+The tests fail with the precise reason. But I truncated the pipeline, which masks the real exit code. Let me capture it cleanly.
+
+147 UIAutomation tests all fail honestly (exit 1, 0 skipped). Now the critical check: the inverse filter (`Category!=UIAutomation`) on the UITests project must not break the unit gate.
+
+Unit gate is safe (0 matched ΓåÆ exit 0). Now the CI/run script that documents requirements and blocks honestly when the runner is absent.
+
+Now format the new code and verify, then update todos.
+
+Format verify passes. Now the placeholder gate (exact gate command) and a marker self-check.
+
+All green where expected. Now I'll run the **exact gate** from the prompt, writing to the specified log. This will build the full solution, format-verify, run both test filters, placeholder, and markers.
+
+Gate ran honestly: **BUILD=0, FORMAT=0, UNIT=0 (974 pass), UI_AUTOMATION=1 (147 fail ΓÇö runner absent), PLACEHOLDER=0, EXIT=1, STATUS=BLOCKED.** The `MISSING_MARKERS=8` is the predecessor-documented buggy `-notmatch` expression. Let me prove the markers are actually all present (correct check) and append the honest analysis.
+
+All 8 markers are genuinely present (correct check = 0 missing); the buggy expression is input-independent. Now I'll append the honest analysis block to the log ΓÇö crucially keeping **STATUS=BLOCKED** (runner absent is a real, sanctioned block; I will not fake DONE).
+
+Found a real bug during self-review: the back/forward chords use `\uE008` (Shift) instead of `\uE00A` (Alt) ΓÇö that would break on a real runner. Let me also simplify the session's endpoint probe. Fixing both.
+
+I left `IsEndpointLive()` unused after the refactor. Removing it to avoid an unused-member warning.
+
+Let me rebuild the project to confirm the edits compile, then re-run the full gate cleanly (the code changed after the first gate run, so the log must reflect final code).
+
+Build clean. Now re-run the full gate fresh (delete old log first so it reflects final code).
+
+Same honest result on final code. Now re-append the analysis with recomputed marker proof.
+
+Let me check git state to ensure no build artifacts get staged before committing.
+
+Build artifacts are git-ignored; only the new project, run script, modified `.sln`, and log will stage. Now committing with an honest BLOCKED message (the deliverable is complete; only the environmental runner-absence is red, which the capability note sanctions).
+
+All 28 staged files are the deliverable (no build artifacts). Committing now.
+
+Commit succeeded (28 files, 4125 insertions). Let me verify the working tree is clean and the log's terminal status.
+
+All verified. The task is complete to the maximal honest extent: a complete, real WinAppDriver UI automation harness is delivered and committed, and the gate honestly terminates **BLOCKED** because the UI automation runner is genuinely absent in this environment (the capability note explicitly sanctions this).
+
+

@@ -1,19 +1,65 @@
-Now I understand the pattern fully. Let me create a plan and implement.
+I'll start by exploring the repository structure to understand the task, the web source hook, and the existing KMP shared core architecture.
 
-Now the repository interface:
+Now let me explore the KMP shared core structure and find existing state holders to use as parity examples.
 
-Let me verify backend routes match before running the gate.
+Let me explore the existing presentation packages and the package structure to find parity examples.
 
-Now running the gate. First the test suite:
+There's already an `aiusage` directory. Let me examine it and find a good parity example from a completed read-only domain like `aisettings`.
 
-Tests passed and compiled for all targets. Let me confirm my new tests actually executed (not silently skipped):
+Key finding: `AiUsageStore.kt`, `AiUsageRepository.kt`, and `HttpAiUsageRepository.kt` already exist. Let me read them plus the foundation files to understand current state.
 
-All 11 tests executed and passed. Now ktlint and the placeholder gate:
+The implementation files already exist and look complete. Let me check git status, test coverage, the `CacheDomain.AiUsage` enum, and whether the log/commit exist.
 
-Now the placeholder gate. Let me regenerate the full clean log with all three steps:
+The implementation and test files already exist and appear committed, yet the last commit is AiSettings (0003), and the `p1-s8-0004-aiusage.log` shows as **deleted** in the working tree. Let me investigate this discrepancy carefully before acting.
 
-All gates green. Now append the PARITY enumeration and final status to the log, then commit:
+Let me run precise diagnostics to understand the git state ΓÇö whether commit `d5b5c27f1` (AiUsage) is an ancestor of HEAD and what it contains.
 
-Committed. Task complete.
+`is_ancestor_exit=0` confirms commit `d5b5c27f1` (full AiUsage work ΓÇö source, tests, CacheDomain, and the 144-line log) is an ancestor of HEAD, just older by date than the 15 shown. So the **code is already present and committed**, but the log file was deleted from disk and `done.txt` lacks the S8-0004 entry. 
+
+My job: verify the implementation is correct/complete with a real gate run, restore the log, and commit per the prompt. Let me read the tests, `CacheDomain.kt`, and the original committed log for format reference.
+
+Tests are comprehensive and match all 3 hooks. Let me verify `CacheDomain.AiUsage` exists, locate the gradlew + placeholder checker, and retrieve the original committed log for format reference.
+
+Everything is confirmed:
+- `CacheDomain.AiUsage("ai_usage", 30.seconds)` exists (30s TTL mirrors web `INTERVALS.STANDARD`).
+- The original committed log shows a green gate (TEST/LINT/PH all 0) with a full `=== PARITY ===` enumeration of all 3 hooks.
+- `gradlew` lives at `apps/shared/` (gate uses `:core:` project path).
+
+The code + tests are already committed (ancestor `d5b5c27f1`) and clean at HEAD; only the **log file is missing** and a commit is needed. Per the Honesty Covenant I must run the gate for real, not just restore the old log. Let me inspect the placeholder checker, then run the real gate.
+
+Everything checks out: `:core` ΓåÆ `apps/shared/core`, gradlew at `apps/shared/`, placeholder checker confirmed. Now I'll run the real gate (Honesty Covenant: no red-as-green, no skip-and-assume) and capture output to the log. Let me set up tracking and launch the build.
+
+Build is compiling all targets fresh and running tests. Only a pre-existing deprecation warning (unrelated `SettingsBackupRepository.kt`). Let me wait for completion.
+
+`allTests` BUILD SUCCESSFUL ΓÇö 38 tasks all freshly executed, both `testDebugUnitTest` and `testReleaseUnitTest` ran (not cached), TEST_EXIT=0. Now ktlint + placeholder checks.
+
+ktlint passed (LINT_EXIT=0). Now the placeholder/stub gate.
+
+All three gate steps green: TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0 (PLACEHOLDER_COUNT=0). Let me verify the AiUsage tests actually executed and passed by checking the JUnit XML reports, so my PARITY enumeration is fact-based.
+
+Verified from JUnit XML: **AiUsageRepositoryContractTest = 6 tests, AiUsageStoreTest = 5 tests, all passing (0 failures/errors/skipped)** across both debug and release variants. Now I'll append the `=== PARITY ===` enumeration and the `EXIT=0` / `STATUS=DONE` trailer to the log.
+
+The appends got concatenated onto prior lines (inconsistent newlines from `Tee-Object`/`Add-Content`), leaving `EXIT=0` glued mid-line instead of standalone. Since the covenant requires the log to **end with clean `EXIT=<int>` and `STATUS=<...>` lines**, I'll rebuild the trailer robustly: truncate at the last `PH_EXIT=0` and re-append a normalized PARITY block with explicit CRLF.
+
+The concatenation persists despite explicit CRLF joins ΓÇö I need to see the actual bytes rather than guess. Let me inspect the raw characters around the boundaries.
+
+The raw bytes are actually correct ΓÇö the `Get-Content -Tail` display was just a rendering artifact. The file properly has:
+- `PH_EXIT=0<CR><LF><CR><LF>=== PARITY ===`
+- `EXIT=0<CR><LF>STATUS=DONE<CR><LF>` as the final two standalone lines
+
+This satisfies covenant rule 10. Let me confirm with `ReadAllLines` and then commit.
+
+The log is now perfectly structured (159 lines): line 157 `EXIT=0`, line 158 `STATUS=DONE`, with TEST/LINT/PH all 0 and the full 3-hook PARITY enumeration. Now let me verify what will be staged (ensuring build artifacts are ignored) before committing.
+
+Confirmed: `apps/shared/core` is fully clean (source/tests already committed in ancestor `d5b5c27f1`, build dirs git-ignored), and the log shows `M` (modified). The commit will cleanly contain the regenerated honest gate log. Executing the prompt's exact commit command:
+
+Commit `7322e9759` created. Let me do a final verification: confirm the AiUsage source/tests are present in HEAD's tree, the log is committed (no longer "deleted"), and the gate markers are intact.
+
+All verified and committed:
+
+- **Source + tests in HEAD tree:** `AiUsageStore.kt`, `AiUsageRepository.kt`, `HttpAiUsageRepository.kt`, `AiUsageStoreTest.kt`, `AiUsageRepositoryContractTest.kt`
+- **`CacheDomain.AiUsage("ai_usage", 30.seconds)`** present (30s TTL = web `INTERVALS.STANDARD`)
+- **Working tree clean** for the task scope; log committed (no longer "deleted")
+- **Committed log markers:** `TEST_EXIT=0`, `LINT_EXIT=0`, `PH_EXIT=0`, `Reads (3/3 ported)`, final `EXIT=0` / `STATUS=DONE`
 
 

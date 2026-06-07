@@ -1,0 +1,136 @@
+I'll start by investigating the task requirements: checking the web source spec, the existing Windows app structure, and the platform capability (.NET 10 / WinUI 3).
+
+The Windows app structure exists with .NET 10. Let me wait for the dotnet output and look at the existing structure.
+
+.NET 10 SDK present. Now let me read the web source (THE spec) and explore the Windows app structure.
+
+Now let me explore the existing Windows `dashboard-widgets` directory to learn the established patterns I must follow.
+
+The Windows widgets follow a 4-file pattern (View `.cs`, `.ViewModel.cs`, `.Model.cs`, `.Source.cs`). The closest analog is `BatteryDegradationForecastWidget`. Let me study it fully plus the web shared components.
+
+The Forecast widget shares my exact data source (`/analytics/battery-degradation`). Let me read the large View and Model files in sections.
+
+Now the View file and the test structure. Let me read the Forecast View and find its tests.
+
+Let me read the rest of the Forecast view and its test, plus find native widgets that render charts (my widget needs an area/line chart).
+
+I need to understand native chart primitives and the web shared components (`WidgetChartSummary`, `WidgetShell`). Let me explore those.
+
+Let me see all native widget directories to find an existing chart-summary-based port to mirror.
+
+The next widget alphabetically is exactly mine. No chart-summary native port exists yet, so I'll establish the pattern. Let me study the native cartesian chart primitives and chart brushes.
+
+The native cartesian chart is full-featured. Let me read the Area variant, the chart brushes/palette, and the core chart model types.
+
+Now the core chart model types (`ChartSeries`, `ChartPoint`, `ChartAnnotation`, `ChartPalette`).
+
+Let me examine the web hook/response shape and locate the native i18n catalog where widget keys are registered.
+
+The i18n catalog lives in `Strings/{en,he,ar}/Resources.resw`. Let me check existing widget keys there and the web `DegradationData` type (for `monthly_trend`).
+
+Most i18n keys already exist in the catalog. Let me confirm the localizer mechanics, the resw entry format, and the web `WidgetShell` for state parity.
+
+Let me read the rest of the Forecast test (the source/vehicle fakes and view-model helpers) and the test data helpers.
+
+I now understand the full pattern. Let me study the other chart-based widget (AnalyticsSummary) for the stat-row + chart idiom, plus the test fakes and display tokens.
+
+Let me confirm the chart Y-scale behavior, the number formatter, display tokens, and verify the `monthly_trend` API field naming on the backend.
+
+Let me confirm the backend DTO field names and the remaining shared API surface (ApiRequest, CacheFreshness, RepositoryResult).
+
+Backend DTOs confirm `avg_health`/`avg_range`. Let me verify how the precedent handled localization across locales and whether the resw requires sorted order, before I write code.
+
+The Forecast chrome keys aren't in the resw ΓÇö the localizer fallback handles them. So I won't touch the large resw files (the 8 source keys already exist). Let me confirm the chart Y-scale behavior and the placeholder-check tool before writing.
+
+Placeholder gate scans for TODO/FIXME/XXX/"Placeholder"/"not implemented"/NotImplementedException ΓÇö I'll avoid those tokens. Let me kick off a baseline build (to confirm platform capability) and read the project files meanwhile.
+
+Baseline build passes (exit 0) ΓÇö **WinUI 3 + .NET 10 capability confirmed**. Tests are explicitly linked per-file in the Tests csproj, so I'll need to add Compile entries there. Let me confirm the App project's compile globbing.
+
+Baseline build is green and the platform capability is confirmed. The App project uses default compile globbing (my 4 files auto-include) with `TreatWarningsAsErrors=true`, and the Tests project links widget logic files explicitly. I now have a complete understanding. Let me set up tracking and write the plan.
+
+Now I'll create the Model file ΓÇö the read-model, size, display, projection, result mapper, and JSON helpers.
+
+Now the Source (data adapter) ΓÇö mirroring the Forecast source against the same endpoint.
+
+Now the ViewModel ΓÇö registration metadata, PII-safe diagnostics, and the UI-thread-free state holder.
+
+Let me verify the `_clock` field is actually used in the Forecast ViewModel (to avoid an unused-field warning under `TreatWarningsAsErrors`).
+
+Now the View ΓÇö the WinUI surface. It mirrors the Forecast view's chrome/state handling and composes the stat row + `TsAreaChart` per the web `WidgetChartSummary`.
+
+Let me verify the test fakes' APIs (`FakeApiClient`, `InMemoryCacheStore`) before writing the test file.
+
+Fakes confirmed. Now the comprehensive headless test file mirroring the Forecast test coverage.
+
+Let me verify the exact namespaces of `ApiClientOptions` and `CacheThenNetworkEngine` so my test usings are correct (and won't trip the format gate's unused-using check).
+
+Let me remove the two unused usings I introduced (`Components.UI` in the View, `Core` in the test) to keep the build warning-clean and pass the format gate.
+
+Now wire the 3 logic files into the headless Tests project (after the Forecast block, alphabetically correct).
+
+Now let me build the solution to validate compilation.
+
+CA1822 wants the constant-returning property static. I'll drop the convenience property from the record and reference the projection constant directly. Three edits:
+
+Build is green. Let me run my widget's tests first for fast feedback, then the full suite.
+
+All 48 widget tests pass. Now the full gate sequence: full test suite, format verify, and placeholder check.
+
+Headless unit tests pass (1653/1653). The UITests failed (147) ΓÇö these are WinAppDriver UI-automation tests needing a desktop session. Let me confirm these are environmental/pre-existing, not caused by my change.
+
+Confirmed: all 147 UITest failures are `UiAutomationUnavailableException` ΓÇö WinAppDriver isn't installed on this runner (nothing on `127.0.0.1:4723`). This is environmental and independent of my change (no UITest references my widget). Let me check how the precedent widgets' gate logs handled this.
+
+The Forecast widget (0011) is the direct precedent. Let me read its gate log to see how the UITest environment was recorded.
+
+This is the exact precedent: the Forecast widget (0011) recorded `BUILD_EXIT=0, TEST_EXIT=1, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0, EXIT=1, STATUS=BLOCKED` ΓÇö blocked solely by the absent WinAppDriver runner (147 identical UITest failures), with the headless suite green (1605/1605; mine is now 1653/1653 = +48). My surface is in the same state. Let me run the remaining gate steps (format + placeholder) to confirm they're clean like the precedent.
+
+Placeholder gate passes (0). Format failed only on line endings ΓÇö my created files have CRLF but the repo uses LF. Let me check the expected encoding/charset and an existing file's bytes before converting.
+
+Encoding is correct (UTF-8, no BOM); only line endings differ. Let me convert CRLFΓåÆLF on all 5 new files.
+
+All converted to LF. Let me re-run the format gate to confirm it's clean now.
+
+FORMAT_EXIT=0. All four gate steps now match the precedent (BUILD=0, TEST=1 [UITests blocked], FORMAT=0, PLACEHOLDER=0). Let me read the tail of the Forecast log to replicate its capability-evidence + EXIT/STATUS block format exactly.
+
+I'll replicate the precedent's log format exactly. Let me run the authentic gate script (build, test, format, placeholder) to produce the real log, then append the summary/evidence block.
+
+The gate script completed. Let me verify the recorded exit markers in the log.
+
+The log faithfully records `BUILD_EXIT=0, TEST_EXIT=1, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0` with the headless suite green (1653/1653, +48 new) and the 147 UITests blocked by absent WinAppDriver. Now I'll append the precedent-style summary + capability-evidence + EXIT/STATUS block.
+
+Let me verify the log ends cleanly with `EXIT=1` and `STATUS=BLOCKED` on their own lines (covenant item 10).
+
+The log ends correctly with `EXIT=1` then `STATUS=BLOCKED` on their own lines. Let me review the exact working-tree changes before committing.
+
+The working tree has substantial pre-existing uncommitted state from prior widget runs (modified resw/logs, untracked widgets 0006ΓÇô0009, and the Forecast test file is untracked with the csproj modified-but-uncommitted). The prompt's commit command is scoped to only my widget dir + log. Let me verify how the precedent (Forecast 0011) was actually committed.
+
+Confirmed: the precedent commit (`776b1994d`) included exactly 5 files ΓÇö the 4 widget files + the log ΓÇö and deliberately left the test file and csproj as working-tree changes. I'll follow this identical scoped commit. Let me stage only my widget dir + log and verify the staged set.
+
+Exactly 5 files staged ΓÇö matching the precedent's scope. Now committing with the prompt's message.
+
+Committed as `25ad47ea4` (5 files, same scope as the precedent). Let me update tracking and finalize.
+
+The task is complete. The `BatteryDegradationTrendWidget` native WinUI 3 surface is fully implemented, verified, and committed.
+
+## Summary
+
+I shipped a production-polished native Windows parity port of `BatteryDegradationTrendWidget.tsx`, following the established 4-file widget pattern (closest precedent: `BatteryDegradationForecastWidget`, same `/analytics/battery-degradation` endpoint).
+
+**Files created** (committed in `25ad47ea4`, scoped exactly like the precedent ΓÇö widget dir + log):
+- `BatteryDegradationTrendWidget.Model.cs` ΓÇö trend read-model, `isEmpty` gate, size, display, projection (stats + chart series + EOL-reference logic), result mapper, tolerant JSON readers
+- `BatteryDegradationTrendWidget.Source.cs` ΓÇö per-vehicle cache-then-network adapter (primary-vehicle resolution; disabled-query short-circuit)
+- `BatteryDegradationTrendWidget.ViewModel.cs` ΓÇö registry metadata (`battery-degradation-trend`, 2├ù4/1├ù2/4├ù40), PII-safe `view.opened` diagnostics, full state-holder
+- `BatteryDegradationTrendWidget.cs` ΓÇö WinUI view: header/freshness/refresh, loading/error/empty/loaded/stale/offline, stat row + shared `TsAreaChart` (theme series, 80% EOL reference line, "More data needed" fallback), Narrator labels
+- Plus a 48-test headless suite + 3 csproj `<Compile>` links (left in working tree, as the precedent did)
+
+**Parity reproduced**: SoH / Degradation(ΓêÆx%/mo) / Cycles stats, `isEmpty` and `isCompact` gating, chart-only-when->1-point, EOL line visibility mirroring the web `[dataMin-2, 100]` domain. All source i18n keys (`widget.soh/degradation/mo/cycles/healthPct/needMoreData/batteryDegradation/noDegradation`) already exist in the resw catalog; every string flows through `ILocalizer`.
+
+**Gate results**: `BUILD_EXIT=0` (Release, warnings-as-errors clean), headless tests **1653/1653 pass** (+48 new), `FORMAT_EXIT=0`, `PLACEHOLDER_EXIT=0`.
+
+**STATUS=BLOCKED** ΓÇö `TEST_EXIT=1` solely because all 147 `TeslaSync.App.UITests` fail with `UiAutomationUnavailableException` (WinAppDriver absent on `:4723`, non-interactive runner). This is environmental, references none of my code, and is identical to the Forecast 0011 precedent. The WinUI 3 + .NET 10 build/runtime capability **is** present; only the UI-automation harness is missing. Per the prompt's capability clause and acceptance criterion, the log ends `EXIT=1` / `STATUS=BLOCKED` with full platform-capability evidence.
+
+
+
+All work is finished and committed. Every verification that can run on this runner is green; the only blocker is the environmental WinAppDriver gap (STATUS=BLOCKED, an accepted terminal state per the prompt and identical to the precedent).
+
+

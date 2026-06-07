@@ -1,0 +1,44 @@
+[2026-06-07 00:23:24] [105/2734] START  p2-windows/dashboard-widgets/W-0002-AnalyticsSummaryWidget.prompt.md
+[2026-06-07 00:59:32] [105/2734] DEFERRED [windows-ui-deferred-implicit] after 36.1 min — auto-recorded, advancing
+[2026-06-07 00:59:42] [106/2734] START  p2-windows/dashboard-widgets/W-0003-AnomalyDetectorWidget.prompt.md
+[2026-06-07 01:37:45] [106/2734] Cleaning up stale copilot PID 94724
+[2026-06-07 01:37:45] [106/2734] DEFERRED [windows-ui-deferred-implicit] after 38 min — auto-recorded, advancing
+[2026-06-07 01:37:55] [107/2734] START  p2-windows/dashboard-widgets/W-0004-APIUsageWidget.prompt.md
+[2026-06-07 02:10:29] [107/2734] DEFERRED [windows-ui-deferred-implicit] after 32.6 min — auto-recorded, advancing
+[2026-06-07 02:10:39] [108/2734] START  p2-windows/dashboard-widgets/W-0005-AuditLogWidget.prompt.md
+[2026-06-07 03:01:44] [108/2734] DONE in 51.1 min
+[2026-06-07 03:01:54] [109/2734] START  p2-windows/dashboard-widgets/W-0006-AutomationHistoryWidget.prompt.md
+[2026-06-07 03:45:42] [109/2734] Cleaning up stale copilot PID 74612
+[2026-06-07 03:45:42] [109/2734] DEFERRED [windows-ui-deferred-implicit] after 43.8 min — auto-recorded, advancing
+[2026-06-07 03:45:52] [110/2734] START  p2-windows/dashboard-widgets/W-0007-AutomationStatusWidget.prompt.md
+[2026-06-07 04:19:03] [110/2734] DEFERRED [windows-ui-deferred-implicit] after 33.2 min — auto-recorded, advancing
+[2026-06-07 04:19:13] [111/2734] START  p2-windows/dashboard-widgets/W-0008-BackupHistoryWidget.prompt.md
+[2026-06-07 04:54:14] [111/2734] DEFERRED [windows-ui-deferred-implicit] after 35 min — auto-recorded, advancing
+[2026-06-07 04:54:24] [112/2734] START  p2-windows/dashboard-widgets/W-0009-BackupMonitorWidget.prompt.md
+[2026-06-07 05:36:48] [112/2734] Cleaning up stale copilot PID 83572
+[2026-06-07 05:36:48] [112/2734] DEFERRED [windows-ui-deferred-implicit] after 42.4 min — auto-recorded, advancing
+[2026-06-07 05:36:58] [113/2734] START  p2-windows/dashboard-widgets/W-0010-BatteryCellsWidget.prompt.md
+[2026-06-07 06:15:58] [113/2734] DEFERRED [windows-ui-deferred-implicit] after 39 min — auto-recorded, advancing
+[2026-06-07 06:16:08] [114/2734] START  p2-windows/dashboard-widgets/W-0011-BatteryDegradationForecastWidget.prompt.md
+[2026-06-07 07:04:18] [114/2734] Cleaning up stale copilot PID 86760
+[2026-06-07 07:04:18] [114/2734] DEFERRED [windows-ui-deferred-implicit] after 48.2 min — auto-recorded, advancing
+[2026-06-07 07:04:28] [115/2734] START  p2-windows/dashboard-widgets/W-0012-BatteryDegradationTrendWidget.prompt.md
+[2026-06-07 07:42:58] [115/2734] DEFERRED [windows-ui-deferred-implicit] after 38.5 min — auto-recorded, advancing
+[2026-06-07 07:43:09] [116/2734] START  p2-windows/dashboard-widgets/W-0013-BatteryGaugeWidget.prompt.md
+[2026-06-07 08:28:28] [116/2734] DEFERRED [windows-ui-deferred-implicit] after 45.3 min — auto-recorded, advancing
+[2026-06-07 08:28:38] [117/2734] START  p2-windows/dashboard-widgets/W-0014-BatteryHealthAnalyticsWidget.prompt.md
+[2026-06-07 09:09:32] [117/2734] Cleaning up stale copilot PID 84684
+[2026-06-07 09:09:32] [117/2734] DEFERRED [windows-ui-deferred-implicit] after 40.9 min — auto-recorded, advancing
+[2026-06-07 09:09:42] [118/2734] START  p2-windows/dashboard-widgets/W-0015-BatteryRadialGaugeWidget.prompt.md
+[2026-06-07 09:41:26] [118/2734] DEFERRED [windows-ui-deferred-implicit] after 31.7 min — auto-recorded, advancing
+[2026-06-07 09:41:36] [119/2734] START  p2-windows/dashboard-widgets/W-0016-ChargeCostTrackerWidget.prompt.md
+[2026-06-07 10:29:56] [119/2734] DEFERRED [windows-ui-deferred-implicit] after 48.3 min — auto-recorded, advancing
+[2026-06-07 10:30:06] [120/2734] START  p2-windows/dashboard-widgets/W-0017-ChargeHistoryWidget.prompt.md
+[2026-06-07 11:13:13] [120/2734] Cleaning up stale copilot PID 90832
+[2026-06-07 11:13:13] [120/2734] DEFERRED [windows-ui-deferred-implicit] after 43.1 min — auto-recorded, advancing
+[2026-06-07 11:13:23] [121/2734] START  p2-windows/dashboard-widgets/W-0018-ChargePlansWidget.prompt.md
+[2026-06-07 12:03:22] [121/2734] DONE in 50 min
+[2026-06-07 12:03:32] [122/2734] START  p2-windows/dashboard-widgets/W-0019-ChargeSessionChartWidget.prompt.md
+[2026-06-07 12:43:53] [122/2734] Cleaning up stale copilot PID 91232
+[2026-06-07 12:43:54] [122/2734] DEFERRED [windows-ui-deferred-implicit] after 40.4 min — auto-recorded, advancing
+[2026-06-07 12:44:04] [123/2734] START  p2-windows/dashboard-widgets/W-0020-ChargeStatusLiveWidget.prompt.md

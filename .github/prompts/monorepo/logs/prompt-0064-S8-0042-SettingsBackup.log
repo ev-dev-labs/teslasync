@@ -1,67 +1,67 @@
-I have the web source. Now let me study an existing ported state holder to mirror the pattern. Let me find a similar mutation-heavy domain.
+I'll start by exploring the task context ΓÇö the web source hook and the existing KMP shared core structure.
 
-`feedback` looks like the best mutation-only template. Let me read it fully plus its repo layer.
+Now let me explore the KMP shared core structure and the supporting web schema/types.
 
-Now the S7 repository layer. Let me read the FeedbackRepository and find how repos are structured/registered.
+Let me explore the existing KMP structure to understand the established patterns for state holders and repositories.
 
-Now let me read the HTTP repo pattern, the existing Settings repo (closely related), and the web schema types.
+There's already a `settingsbackup` directory. Let me check its current state and look at a similar already-ported domain for the pattern.
 
-This domain has derivations (`defaultExportFilename`, `summariseImportResult`) and the mutations prime cache keys (`setQueryData`) rather than invalidate. Let me examine the net layer and a non-caching repo pattern, plus how the Settings page uses these.
+The settingsbackup directory already has files. Let me examine them along with the settingsreset reference pattern.
 
-Let me check the net request signatures and whether stores/repos are wired into a DI registry.
+The store and models look complete already. Let me check the repository (S7), tests, the log file, and git status to understand what's done vs. pending.
 
-Let me view the full feedback log to mirror its structure, and check the C# port location for golden-vector parity.
+The implementation files already exist, but the log file `p1-s8-0042-settingsbackup.log` was **deleted** in the working tree and `done.txt` was modified. This matches the "restore + re-verify log" pattern in recent commits. Let me examine the diffs and the deleted log's prior content.
 
-Let me view the contract test pattern and check CacheDomain (though I likely won't need a cache domain since these mutations don't persist).
+Now I understand the situation clearly. The implementation exists but the log was deleted. Let me examine the most recent equivalent commit (Settings S8-0041) to mirror the exact restore pattern, and check the nature of the "modified" log files.
 
-Now let me verify the backend endpoint shapes for export/import to ensure exact parity.
+The pattern is now clear: the most recent peer commit restored + re-verified a single log file (`p1-s8-0041-settings.log`), with the `apps/shared/core` implementation already committed. My task (0042 SettingsBackup) is the next sibling. Let me verify the implementation is committed/clean and read the repository + test files plus the full deleted log.
 
-All patterns understood. Let me create the directories and write the files.
+Implementation is fully committed and clean. Let me read the three test files and the complete deleted log to verify parity coverage before re-running the gate.
 
-Now the tests. Let me check for an existing test clock helper.
+The implementation is complete and faithful ΓÇö all 3 hooks ported, golden vectors for both derivations, contract tests, and fake-repo state-holder tests. This is a "restore + re-verify log" task. Let me examine exactly what the peer commit changed so I reproduce the precedent precisely.
 
-Now let me run the gate. Building/testing via Gradle (this host runs the android unit-test task since apple targets can't run here).
+I now fully understand the precedent. Let me restore the deleted log, find the original implementing commit, and check the build environment ΓÇö all in parallel.
 
-Now fix `cacheJson` ΓåÆ `defaultApiJson` in the HTTP repo:
+Log restored (117 lines). Original implementing commit is `f53e8defa`. Let me view the full restored log to understand its structure before re-running the gate.
 
-Compilation passes (monthNumber is just a deprecation warning). Fixing 3 ktlint expression-body formatting issues:
+All test counts in the log (8/6/6) are accurate ΓÇö I verified them against the actual `@Test` methods. Now let me check the build environment and view the current committed Settings peer log to match the exact re-verify format.
 
-BUILD SUCCESSFUL ΓÇö tests + ktlint pass. Now the placeholder check:
+Now I see two different log formats. The Settings peer log (the established re-verify precedent) runs the canonical `:core:allTests` gate and proves apple tests are *SKIPPED* (not failed) on Windows ΓÇö so `:core:allTests` **is** runnable here with `TEST_EXIT=0`. The SettingsBackup log's "NOTE ON HOST / allTests not runnable" claim is inaccurate drift. I'll run the real canonical gate and align the log to the peer format.
 
-All gates green: TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0. Let me write the log file.
+Let me run the full gate now.
 
-All gates pass. Let me commit per the prompt's instructions.
+`:core:allTests` passed (`TEST_EXIT=0`) but tests were `UP-TO-DATE` (cached). To get honest re-execution evidence per the Honesty Covenant (matching the peer which ran `cleanTest*` first), let me force the tests to actually run and capture genuine output.
 
-`done.txt` was already staged (pre-existing); the prompt's commit scope is only my files. Let me unstage it and commit exactly as specified.
+Tests came `FROM-CACHE` (Gradle build cache). To get genuine re-execution evidence, let me force it with `--no-build-cache` after cleaning, and then inspect the JUnit result XML to confirm the SettingsBackup tests actually ran.
 
-Done. P1/S8/0042 ΓÇö **SettingsBackup state holder** complete and committed (`f53e8defa`).
+Now tests genuinely executed (`testDebugUnitTest` ran, 5 tasks executed, `TEST_EXIT=0`). Let me confirm the SettingsBackup tests actually ran and passed by inspecting the JUnit result XML.
 
-## What shipped
-Ported all **3 web hooks** from `useSettingsBackup.ts` to UI-free KMP shared-core state holders:
+All 3 SettingsBackup suites genuinely passed: ContractTest=6, GoldenTest=6, StoreTest=8 (0 failures). Now let me run ktlint and the placeholder check.
 
-| Web hook | KMP surface | Endpoint |
-|---|---|---|
-| `useExportSettings` | `SettingsBackupStore.exportSettings()` | `GET /settings/export` |
-| `useDryRunImport` | `dryRunImport(bundle)` | `POST /settings/import {dry_run:true, bundle}` |
-| `useApplyImport` | `applyImport(bundle)` | `POST /settings/import {dry_run:false, bundle}` |
+ktlint passed (`LINT_EXIT=0`). Now the placeholder check ΓÇö running it visibly to capture the actual counts.
 
-**Key parity decisions:**
-- The domain has **0 reads** (all `useMutation`, no `useQuery`), so no `Resource` feed/CacheDomain ΓÇö instead the hooks' `setQueryData(lastExport/lastImport)` priming is reproduced as observable `StateFlow<SettingsBundle?>`/`StateFlow<SettingsImportResult?>`, updated only on success.
-- Bundle nested verbatim under `bundle`; opaque sections round-trip shape-preserving; null sections dropped (`JSON.stringify`/`explicitNulls=false`).
-- SUDO step-up handled transparently by the shared client (no bespoke plumbing).
-- `downloadSettingsBundle` correctly excluded (browser-only Blob/DOM side effect).
+Full gate is green and genuinely re-executed:
+- `:core:allTests` ΓåÆ `TEST_EXIT=0` (SettingsBackupStoreTest=8, GoldenTest=6, ContractTest=6, all 0 failures)
+- `:core:ktlintCheck` ΓåÆ `LINT_EXIT=0`
+- placeholder check ΓåÆ `PLACEHOLDER_ALLOWED=17, PLACEHOLDER_COUNT=0, PH_EXIT=0`
 
-**Derivations** (golden-vectored for KMP+C# parity): `defaultExportFilename` (UTC `YYYYMMDD`) and `summariseImportResult` (`total = added+updated`, skipped excluded).
+The restored log's GATE section has two inaccuracies vs. reality: it claims `:core:allTests` is "not runnable" on Windows (the peer proves it runs with apple tests SKIPPED), and lists `PLACEHOLDER_ALLOWED=13` (actual: 17). Let me grab the real timestamp and correct the GATE section to the canonical gate.
 
-## Gate (all green)
-```
-TEST_EXIT=0   (SettingsBackupStoreTest[8] + GoldenTest[6] + ContractTest[6])
-LINT_EXIT=0   (ktlint commonMain + commonTest)
-PH_EXIT=0     (placeholders: 0)
-EXIT=0 / STATUS=DONE
-```
-Host note: `:core:allTests` fans out to Apple/native binaries unrunnable on Windows; the runnable full-commonTest equivalent `:core:testDebugUnitTest` was executed (logged honestly).
+All gate steps genuinely pass. Now let me correct the GATE section of the restored log ΓÇö replacing the inaccurate "not runnable" claim with the real canonical `:core:allTests` run, real per-suite JUnit results, and the correct `PLACEHOLDER_ALLOWED=17`.
 
-The task is fully complete and committed. All gates pass.
+Let me verify the edited log section and confirm the file ends correctly with `EXIT=0`/`STATUS=DONE`.
+
+The GATE section is now accurate. Let me verify the diff against HEAD shows only the intended GATE changes (no encoding corruption) and confirm the em-dashes are proper UTF-8.
+
+The diff is clean and surgical (29 insertions, 20 deletions), em-dashes preserved as proper UTF-8, only the GATE section changed. Let me clean up temp files, confirm `apps/shared/core` is still clean, and stage only the log file.
+
+Only the log file is staged (`apps/shared/core` is clean ΓÇö already committed at `f53e8defa`). Now let me commit following the peer "restore + re-verify" precedent with an honest message.
+
+Commit landed (`f8002ff6f`, 1 file changed). Let me do a final verification ΓÇö confirm the log is clean in git, the commit touched only the one file, and the file ends with `EXIT=0`/`STATUS=DONE`.
+
+Task complete and verified. Final state confirmed:
+- HEAD commit `f8002ff6f` touched **only** the one log file (29 insertions, 20 deletions)
+- Log file is clean in git and ends with `EXIT=0` / `STATUS=DONE`
+- `apps/shared/core` unchanged (implementation already committed at `f53e8defa`)
 
 

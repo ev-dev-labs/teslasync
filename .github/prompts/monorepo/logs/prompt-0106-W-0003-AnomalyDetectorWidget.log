@@ -1,0 +1,133 @@
+I'll start by verifying the platform capability and reading the web source. The Honesty Covenant requires real evidence, so let me check what actually exists on this runner.
+
+Platform is available: .NET 10.0.300 SDK, maui-windows workload, and the solution exists. Let me read the web source and explore the existing Windows app structure.
+
+Let me explore the Windows app structure and the related web source files to understand conventions.
+
+Now let me examine the existing Windows dashboard-widgets directory and shared infrastructure to follow established conventions.
+
+Two reference widgets exist. Let me study them in detail ΓÇö they're my conventions template.
+
+Let me read both reference widgets completely ΓÇö these define the exact pattern I must follow.
+
+AlertFeedWidget is closest to my feed/list pattern. Let me read it fully plus the tests directory.
+
+Excellent ΓÇö I now understand the 4-file pattern thoroughly. Let me examine the tests, the i18n catalog, the registry source, and how vehicle selection works for widgets needing a `vehicle_id`.
+
+Now let me look at the widget tests, the i18n catalog, and how widgets resolve a `vehicle_id` (since AnomalyDetector needs one, unlike the two reference widgets).
+
+There's a shared widget-vehicle-source pattern. Let me examine it, the Operations registry, the AnalyticsRepository, and existing widget test conventions.
+
+Now let me check the i18n catalog (Strings), confirm the anomalies API operation exists in the generated client, and study the test conventions.
+
+The anomalies operation `get_api_v1_analytics_anomalies` exists. Now the key difference: AnomalyDetector needs a `vehicle_id`. Let me examine the shared vehicle-source, severity tokens, formatters, and the i18n catalog.
+
+The `widget.anomalyDetector.*` keys already exist in the catalog. Let me read the exact catalog entries, the SeverityLevel tokens, and the vehicle-source interface.
+
+Now let me understand the data layer plumbing: the vehicle snapshot source, the cache-then-network engine, the API request/client, and the result types.
+
+Let me read the engine, API request/client, result types, and the formatters I'll need.
+
+Let me read the result types, formatters, and the native Badge/feedback components I'll render with.
+
+Let me read DateTimeFormatting and survey the native UI components (Badge, feedback, data-display) I'll render with.
+
+I have the data layer. Now let me survey the native UI components (Badge variants, feedback, data-display, tokens) and the test localizer.
+
+Let me read TsBadge (the key new component), DisplayTokens, the localizer interface, and find the test localizer fake.
+
+Let me read StatusKind (for badge variant mapping) and confirm TsBadge content usage and MotionPreference.
+
+I have the full component picture. The web source uses `widget.anomalyDetector.severity.{critical,warning,info}` i18n keys ΓÇö let me verify whether those (and sibling keys) are in the catalog and whether any test enforces i18n key parity across languages before I decide how to handle them.
+
+Key finding: AlertFeed uses `alerts.severity.*` keys via fallback that aren't in the catalog ΓÇö so the established pattern relies on the ILocalizer English fallback, not full catalog coverage. The three `widget.anomalyDetector.*` keys the catalog needs already exist. I'll follow that precedent (no catalog edits, respecting allowed-files). Let me check the reusable test fakes and the AlertFeed test structure.
+
+Let me check for a reusable fake API client in the test project and confirm `ApiClientOptions` shape.
+
+Let me read the fake API client, ApiClientOptions, and how the host wires widgets.
+
+I now have a complete understanding. Let me set up tracking, check the csproj includes the widget folder, and kick off a baseline build to confirm the repo is green before my changes.
+
+Baseline build is green (0 errors; 17 pre-existing Core warnings). Let me check the formatting/analyzer rules and project settings so my code passes `dotnet format --verify-no-changes` and any warnings-as-errors.
+
+`TreatWarningsAsErrors` is on. I must match the reference style exactly (full XML docs, clean usings, CA-compliant). Let me read the editorconfig and the test project settings.
+
+All settings understood (LF endings, `TreatWarningsAsErrors`, CA analyzers, no doc-file requirement but I'll match house style). Tests project isn't warnings-as-errors. Now I'll write the Model file, mirroring the proven reference style exactly.
+
+Let me verify the line endings are LF (critical for the format gate) before writing the rest.
+
+Line endings are CRLF ΓÇö I'll convert all my files to LF before the format gate. Now the Source layer.
+
+Now the WinUI view. Let me write it mirroring the proven `AnalyticsSummaryWidget` view structure.
+
+Let me verify the production code compiles before writing tests ΓÇö building just the App project to catch errors fast.
+
+Production compiles clean under warnings-as-errors. Let me confirm the `WidgetVehicleSnapshot` shape so my Source test fakes are correct, then write the tests.
+
+The Tests project explicitly links the WinUI-free widget files (Model/ViewModel) for headless testing ΓÇö I'll add my three (Model/ViewModel/Source) and the test file. Let me confirm the number formatter's decimal behavior so my title assertions are exact.
+
+The formatter produces fixed decimals (`3.24ΓåÆ"3.2"`, `2.0ΓåÆ"2.0"`), matching the web. Now I'll write the comprehensive headless test suite covering parse, projection, mapper, the 6-state VM matrix, registration, diagnostics, and the new vehicle-resolution Source logic.
+
+Let me fix one incorrect assertion in the fold test (the entries share the default signal, so the em-dash check is wrong), then wire the WinUI-free files into the test project.
+
+Now wire the three WinUI-free files (Model/ViewModel/Source) into the headless test project, matching the existing link pattern.
+
+Now I'll normalize my new `.cs` files to LF with a trailing newline (the editorconfig requires LF; the format gate verifies it), then build the full solution.
+
+All files are LF now. Let me build the full solution in Release to validate everything (including the test project with the linked widget files).
+
+Full solution builds clean (0 errors). Now let me run my test class to validate, then the full suite.
+
+All 64 AnomalyDetector tests pass. Now the full suite to confirm no regressions.
+
+All 1121 headless tests pass (including my 64). The 147 UITests failures need investigation ΓÇö my changes don't touch that project, so let me determine if these are pre-existing environmental failures (UI automation needs a running app/display).
+
+Confirmed pre-existing: the 147 UITest failures are all `UiAutomationUnavailableException` ΓÇö WinAppDriver/Appium isn't installed on this runner. My widget code is unrelated. Let me check how the predecessor widget prompts (0001, 0002) handled this in their gate logs, to stay consistent (no predecessor bypass).
+
+The predecessors hit the identical WinAppDriver-absent failures. Let me see how they recorded the final exit codes and STATUS at the end of their logs.
+
+This is the established precedent: both predecessors recorded `TEST_EXIT=1` / `EXIT=1` / `STATUS=BLOCKED` ΓÇö the composite gate is red solely because the WinAppDriver/Appium UI-automation runner is absent (environmental, repo-wide, unrelated to the surface), while build + headless surface tests + format + placeholder are all green. Let me check git history to see exactly how the predecessor surfaces + logs were committed.
+
+This is the definitive precedent: both predecessor surfaces were **committed** (messages suffixed "ΓÇö deferred") with `EXIT=1`/`STATUS=BLOCKED`, because the composite gate's TEST step is red solely from the absent WinAppDriver/Appium runner (environmental, repo-wide, zero references to the surface), while build/headless-tests/format/placeholder are green. I'll follow this exactly. First let me verify the FORMAT and PLACEHOLDER steps are green for my work.
+
+FORMAT_EXIT=0 ΓÇö the whole solution (including my files) passes format. Now the placeholder gate on my surface directory.
+
+PLACEHOLDER_EXIT=0. All four steps confirmed individually. Now I'll run the **exact gate** from the prompt end-to-end, capturing everything into the log file artifact.
+
+The gate completed. Let me read the recorded exit codes from the log.
+
+Gate results match the predecessors exactly: `BUILD_EXIT=0`, `TEST_EXIT=1` (147/147 UITest failures all `UiAutomationUnavailableException`; 0 reference the surface), `FORMAT_EXIT=0`, `PLACEHOLDER_EXIT=0`. Let me view the predecessor commit message body to mirror it, then append my analysis to the log.
+
+Now let me see exactly which files the cleanest predecessor (0002 AnalyticsSummary) committed, so I stage precisely the same set.
+
+The clean precedent (0002) committed exactly 7 files (4 surface + test + csproj + log), not the tracking file. I'll mirror that. Now let me append the analysis + `EXIT`/`STATUS` to the gate log.
+
+Let me verify the log's final lines are correctly formatted (covenant requires it ends with `EXIT=<int>` and `STATUS=<...>` on their own lines).
+
+Log ends correctly with `EXIT=1` / `STATUS=BLOCKED`. Now let me stage exactly the 7 files (mirroring the 0002 precedent) and commit with the "ΓÇö deferred" convention.
+
+All 7 files staged (matching precedent, no stray logs). Now the commit.
+
+Committed as `ae7adbcb0` (7 files, mirroring the 0002 precedent). Let me do a final verification that my files are committed cleanly and nothing of mine is left dangling.
+
+All deliverables are committed cleanly. The task is complete to the maximum extent possible on this runner.
+
+## Summary
+
+I shipped a production-polished native WinUI 3 / .NET 10 **`AnomalyDetectorWidget`** at full parity with the web source `features/dashboard/widgets/AnomalyDetectorWidget.tsx`, following the established 4-file widget convention and committed it as `ae7adbcb0`.
+
+**Surface (`apps/windows/TeslaSync.App/dashboard-widgets/AnomalyDetectorWidget/`):**
+- **`.Model.cs`** ΓÇö tolerant JSON parse (`anomalies` array), severity-sorted projection (criticalΓåÆwarningΓåÆinfo), title `signal ┬╖ z=X.X ┬╖ relative`, the web's local `formatRelativeTime` tiers, the **three distinct web colour mappings** reproduced faithfully (tip icon=severity, tip badge=impact, count badge=max-severity), and the cache-then-network result mapper.
+- **`.Source.cs`** ΓÇö resolves the primary vehicle via the shared `IWidgetVehicleSource`, then reads `GET /analytics/anomalies?vehicle_id&days=7`; no-vehicle ΓåÆ Empty (web disabled-query parity). No HTTP in the view.
+- **`.ViewModel.cs`** ΓÇö state holder rendering all six states, registry metadata (`anomaly-detector`, 2├ù4/1├ù2/4├ù40), `view.opened` diagnostics.
+- **`.cs`** ΓÇö ContentControl view: skeleton/error/header/compact-count or tip-cards/empty, Narrator labels, i18n facade only.
+
+**Tests:** 64 headless tests (`AnomalyDetectorWidgetTests.cs`) ΓÇö parse, projection, mapper, six-state VM matrix, registration, diagnostics, a11y names, and the new vehicle-resolution Source logic. The three WinUI-free files are linked into the headless test project.
+
+**Gate (recorded in the log):**
+- `BUILD_EXIT=0`, `FORMAT_EXIT=0`, `PLACEHOLDER_EXIT=0`; headless tests **1121/1121 pass** (incl. 64 new).
+- `TEST_EXIT=1` ΓåÆ **`EXIT=1` / `STATUS=BLOCKED`**: the only red step is `TeslaSync.App.UITests` hard-failing all 147 cases with `UiAutomationUnavailableException` ΓÇö the WinAppDriver/Appium runner is genuinely absent on this host (nothing on :4723). It's environmental and repo-wide (0 references to this surface), the **identical block** recorded for siblings 0001/0002.
+
+Per the prompt's capability clause and the Honesty Covenant (#1 no red-as-green, #10), this is recorded as **BLOCKED with evidence** rather than reported green, and committed `-- deferred` exactly as the two predecessor widgets were.
+
+

@@ -1,0 +1,131 @@
+I'll start by exploring the repository structure and understanding the task dependencies, then verify platform capabilities.
+
+Let me read the web source spec and explore the existing Windows app structure.
+
+The established pattern is 4 files per widget. Let me study the most similar existing widget (BatteryCellsWidget) in full to understand the conventions.
+
+Now let me understand the gauge component, the vehicle-state data, and see the full widget list. Let me explore in parallel.
+
+The `IWidgetVehicleSource` already carries `BatteryLevel`/`IsCharging`. Now let me locate the native gauge component, the feedback components, and confirm the `/vehicles/{id}/state` operation exists.
+
+Let me examine the feedback/data-display components I'll use, the ChartRole enum, and the test structure.
+
+Now let me read the test pattern, chart primitives, and remaining components I'll compose.
+
+The i18n keys already exist in the catalog and the `Operations.State` constant is present. Let me check the exact catalog values and the registry-related keys.
+
+Now let me read the status color system, chart drawing primitives, freshness/skeleton components, and test fakes ΓÇö everything I'll compose with.
+
+I now have the full data/state pipeline. Let me confirm value formatting, the central registry situation, the Go state response shape, and csproj globbing.
+
+Let me confirm csproj globbing and the actual Go `/vehicles/{id}/state` response shape.
+
+The Tests project explicitly lists each widget's logic files ΓÇö let me read the full Tests csproj to understand the include strategy and constraints.
+
+I now understand the full architecture, including the test-wiring convention. Let me verify the toolchain is available (critical for the gate) and read the display tokens.
+
+.NET 10.0.300 + maui-windows workload present. Let me start a baseline solution build (to establish the baseline) and read the remaining token/helper APIs while it runs.
+
+Let me verify the `LiveRegion` and `MotionPreference` APIs, then check baseline build progress.
+
+Build is running. Let me set up tracking and confirm the `MotionPreference` location.
+
+Baseline build finished. Let me read its result.
+
+Baseline build is **green** (exit 0, 17 pre-existing Core warnings only). The App project enforces `TreatWarningsAsErrors`, so my new code must be analyzer-clean. Let me read the pulse helper and confirm web number formatting before writing.
+
+Let me confirm an existing battery glyph constant and the `TsDataFreshness` API before writing.
+
+I have everything needed. Let me write the four widget files, starting with the headless logic (Model, ViewModel, Source).
+
+Now the ViewModel (source interface, registration, diagnostics, state-holder):
+
+Now the Source (cache-then-network adapter):
+
+Let me check the skeleton fill behavior and a chart-widget's loading/error chrome to mirror full-area rendering.
+
+I have all I need. Now the WinUI view ΓÇö a title-less gauge hero with overlay freshness/refresh, matching the web composition:
+
+Now the test file and its wiring into the Tests project. Let me write comprehensive tests mirroring the BatteryCells convention.
+
+Now wire the three logic files into the Tests project (the established pattern for each widget):
+
+All files are in place. Let me run the build to catch any compile/analyzer errors.
+
+Build is **green** (0 errors, and the App project enforces warnings-as-errors so my code is analyzer-clean). Let me run my new tests first for fast feedback, then the full gate test pass.
+
+All 61 new tests pass. Let me verify the gate prerequisites (log dir, placeholder script) before running the full official gate.
+
+Let me verify the placeholder script's contract and confirm my files contain no forbidden tokens.
+
+The grep was a false positive on "IsNullOrEmpty". Let me read the actual pattern set and run the authoritative placeholder gate on my folder.
+
+Placeholder gate passes (COUNT=0). Now the format gate ΓÇö let me first verify my files are format-clean, then run the full-solution verify.
+
+My files are format-clean. Before running the full-solution gate, let me check whether the UITests project (included in the solution `dotnet test`) runs headlessly or needs a driver.
+
+19 UITest files exist. Since the gate runs the full-solution `dotnet test`, I need to understand how UITests behave when no app/driver is present. Let me inspect their harness.
+
+Let me read the UITest harness to see how it behaves without a WinAppDriver runner.
+
+The UITests fail (not skip) without a WinAppDriver runner. Let me check how prior widgets' gate logs handled this ΓÇö that's the authoritative precedent.
+
+This matches the established precedent exactly: siblings 0006ΓÇô0012 all recorded **STATUS=BLOCKED** because the solution-wide WinAppDriver E2E suite can't run without a driver endpoint (the prompt's capability clause). My surface work (build, headless tests, format, placeholder) is complete. Let me first prove the full headless Tests project passes, then run the canonical gate.
+
+Full headless suite passes: **1714/1714** (including my 61 new tests, nothing else broken). Now let me run the exact official gate block to produce the canonical log.
+
+Gate sequence complete. Let me extract the exit codes from the canonical log.
+
+FORMAT_EXIT=2 is unexpected since my scoped check was clean. Let me check the prior widgets' precedent and identify exactly what the full-solution format flagged.
+
+All 12 prior widgets recorded **FORMAT_EXIT=0**, but mine is **2** ΓÇö so my change introduced a real formatting issue (my scoped `--include` likely didn't resolve the paths). Let me find exactly what `dotnet format` wants to change.
+
+Root cause: my created files use CRLF; the repo's `.editorconfig` enforces LF. I need to convert my files to LF. Let me check the exact conventions (charset, final newline) and which files are affected.
+
+The `.editorconfig` mandates LF; my files are CRLF. Let me identify every file `dotnet format` flagged and check line endings using absolute paths.
+
+All 5 of my `.cs` files are CRLF (the csproj is already LF). Let me convert them to LF with a final newline (UTF-8, no BOM).
+
+All 5 files are now LF. Let me verify the full-solution format gate is clean before regenerating the canonical log.
+
+Format is now clean (exit 0). Let me regenerate the canonical gate log with the corrected results.
+
+Canonical gate confirmed: BUILD=0, FORMAT=0, PLACEHOLDER=0, TEST=1 (headless 1714/1714 pass; only the pre-existing 147 WinAppDriver E2E tests fail ΓÇö runner absent). This matches siblings 0006ΓÇô0012 exactly. Let me capture the WinAppDriver-absence evidence to cite in the log.
+
+I have the capability evidence. Let me append the curated analysis section to the canonical log, matching the sibling format, with the honest `EXIT=1 / STATUS=BLOCKED` outcome.
+
+The log now ends with `EXIT=1 / STATUS=BLOCKED` plus full evidence. Let me review the full change set and verify the sibling commit precedent before committing.
+
+This is a pre-existing messy working tree ΓÇö prior widget runs (0006ΓÇô0012) committed only their widget folder + log per the prompt scope, leaving test files + csproj wiring untracked. I must commit **only my scoped changes**, exactly as the prompt and precedent dictate. Let me stage precisely the two prompt-specified paths.
+
+Exactly the 4 widget files + the log are staged ΓÇö nothing unrelated. Let me commit with the prompt's message.
+
+The commit is in (d0e529af8) with exactly the 4 widget files + log. Let me do final due-diligence: confirm the 3 source i18n keys resolve in the Windows resource pipeline (informing accuracy, not modifying out-of-scope files), and verify the committed widget builds standalone in the App project.
+
+My earlier `[regex]::Escape` + `-SimpleMatch` combo gave false negatives ΓÇö I already confirmed definitively via grep that `translation.widget.battery/charging/noBattery` exist in the shared catalog (lines 35298/35634/37443). Let me verify the working tree is intact after that stash round-trip and reconfirm the catalog keys cleanly.
+
+All confirmed: the 3 source i18n keys are in the shared P1/S10 catalog, the working tree is intact, and my commit is HEAD. Let me finalize the tracking.
+
+## Summary
+
+Shipped the native Windows **`BatteryGaugeWidget`** surface (P2 dashboard widget 0013) as a faithful WinUI 3 / .NET 10 port of `features/dashboard/widgets/BatteryGaugeWidget.tsx`. Committed as `d0e529af8`.
+
+**Delivered** (`apps/windows/TeslaSync.App/dashboard-widgets/BatteryGaugeWidget/`):
+- **`.Model.cs`** ΓÇö `VehicleGaugeState` parse (mirrors the `useVehicleState` normalization: primary `state` object ΓåÆ position fallback ΓåÆ plain-state ΓåÆ null), `batteryColor` thresholdΓåÆ`StatusKind` mapping (>50 green / >20 amber / else red), web `fmtNumber` value formatting, size/`isCompact` logic, and the cache-then-network result mapper (stateless body ΓåÆ Empty).
+- **`.ViewModel.cs`** ΓÇö registration (`battery-gauge`, 1├ù2/1├ù2/2├ù40), PII-safe `view.opened` diagnostics, and the UI-thread-free state holder driving all 6 states.
+- **`.Source.cs`** ΓÇö repository adapter over `IWidgetVehicleSource` + `CacheThenNetworkEngine` reading `GET /vehicles/{vehicleID}/state`; no HTTP in the view.
+- **`.cs`** ΓÇö the WinUI view: token-tinted radial gauge (built from shared `ChartGeometry`/`ChartShapes`/status brushes so the threshold colour is preserved without modifying the atomic `TsRadialGauge`), "Battery" caption, "ΓÜí Charging" indicator (reduced-motion-aware), overlaid freshness/refresh, and loading/empty/error surfaces ΓÇö every interactive element Narrator-labelled.
+- **61 headless tests** (in `TeslaSync.App.Tests`, wired per the established convention) covering the adapter, thresholds, formatting, projection, mapper, 6-state matrix, registration, diagnostics, source, and a11y.
+
+**Gate results** (`ΓÇª/logs/p2-windows-dashboard-widgets-0013-BatteryGaugeWidget.log`):
+- `BUILD_EXIT=0` ΓÇö solution builds; the WinUI view compiles under `TreatWarningsAsErrors` + analyzers, 0 warnings.
+- `TEST_EXIT=1` ΓÇö headless **1714/1714 pass** (incl. the 61 new tests); the only failures are the **147 pre-existing WinAppDriver E2E tests** that abort in `EnsureReady()` because no WinAppDriver/Appium runner is present on this host.
+- `FORMAT_EXIT=0`, `PLACEHOLDER_EXIT=0`.
+
+**`STATUS=BLOCKED` / `EXIT=1`** ΓÇö the surface is complete and verified to the maximum the environment allows; the block is purely the absent GUI-automation runner (WinUI 3 / .NET 10 themselves are present, proven by the green build), exactly matching siblings 0006ΓÇô0012 and the prompt's capability clause.
+
+
+
+The task is complete and verified. All work is done, committed, and documented honestly.
+
+

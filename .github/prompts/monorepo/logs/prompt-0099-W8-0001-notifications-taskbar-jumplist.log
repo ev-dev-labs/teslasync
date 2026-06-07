@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure to understand what exists, especially the Windows app.
+
+The glob is timing out on build artifacts. Let me look at the source structure excluding `obj`/`bin`.
+
+This is a substantial .NET 10/WinUI 3 task. Let me check predecessor statuses, dotnet availability, and read the core Push/Navigation infrastructure in parallel.
+
+dotnet 10 is available. Let me verify predecessor statuses and read the Push/Navigation infrastructure.
+
+All three predecessors are DONE and dotnet 10 is available. Let me read the Navigation, App-Push, and Platform wiring files.
+
+Let me read the RouteTable, App-Push files, and DI/wiring to understand route names and how toast service is registered.
+
+Now let me read the App-level Push wiring, DI extensions, manifest, localization, and csproj files.
+
+Let me read the banner sink, app startup/activation, manifest, localization, diagnostics, and placeholder checker.
+
+Let me read the placeholder checker, existing push tests, and the channel provider/receiver interfaces to understand patterns.
+
+Let me view the solution file and package props, then kick off a baseline build to establish the starting point.
+
+Now let me establish the baseline build status ΓÇö this is the critical capability check. I'll start it in the background.
+
+While the baseline build runs, let me read the Core csproj, check for shared build props, and review a settings repo and the LiveConnectionPresenter pattern.
+
+Baseline build finished. Let me check the result.
+
+Baseline builds clean (exit 0, App project warning-clean). Let me verify the baseline passes `dotnet format` (the strict gate), check the editorconfig rules, and set up my plan in parallel.
+
+Minimal config but **LF line endings are enforced**. Let me check the root editorconfig for C# rules and confirm existing files use LF.
+
+Baseline confirmed: clean build, LF line endings, no strict C# style rules in editorconfig. Let me set up my plan and todos.
+
+Baseline is fully clean (build + format both exit 0). Now I'll implement. Starting with Core model fundamentals.
+
+Need to create directories first.
+
+Now let me create the remaining batch-1 files (the two that failed plus NotificationContent).
+
+Core model done. Now the route map, redaction, and composer.
+
+Route map and composer done. Now the activation router.
+
+Now the policy layer: focus assist, quiet hours, settings, and the delivery policy.
+
+Policy done. Now the toast presenter seam, diagnostics, and the dispatcher.
+
+Dispatcher done. Now the taskbar model, reducer, and tracker.
+
+Now the jump list builder.
+
+Core logic complete. Let me normalize line endings to LF and validate the Core project compiles before moving on.
+
+Core compiles (0 errors). My new files introduced 4 CA warnings ΓÇö I'll clean those up for a warning-free contribution (rename `ILocalizer.Get`ΓåÆ`GetString`, use concrete dictionary/list types).
+
+Core is warning-clean now. Moving to the Platform layer (settings store + focus-assist provider).
+
+LibraryImport needs unsafe enabled. Adding `AllowUnsafeBlocks` to the Platform csproj.
+
+Platform builds clean. Now the App-layer WinUI surfaces. Let me mark progress and write the toast service, localizer, activation handler, and jump-list service.
+
+Now the taskbar service with COM interop for progress and the WinRT badge API.
+
+App surfaces nearly done. I need the composer's redaction to react to runtime settings ΓÇö let me make it accept a predicate, then write the composition root.
+
+Now the composition root that wires everything together.
+
+Now wiring: AppPush uses the dispatcher (with W6 fallback), ShellWindow starts/stops it, and App handles toast + jump-list activations.
+
+Now ShellWindow: import, start the notification graph before push, and stop it on close.
+
+Now App.xaml.cs to handle toast activations and jump-list launches.
+
+Wiring complete. Let me normalize line endings on all touched files and build the full solution.
+
+Two CA1859 (now errors under TWAE in the App). Easy fixes ΓÇö use concrete types.
+
+Full solution builds clean. Now writing comprehensive Core tests.
+
+Now the composer, delivery policy, and diagnostics tests.
+
+Now the taskbar, jump-list, and dispatcher tests.
+
+Now let me normalize the test files and run the test project.
+
+All 867 tests pass. Now let me run the actual gate checks ΓÇö placeholder scan, markers, and a forbidden-pattern grep on my files.
+
+Placeholder passes (0). The marker-check reproduction shows all 6 markers present with hundreds of hits, yet the gate's `$missing` logic reports 6 ΓÇö that looks like a PowerShell array-coercion quirk. Let me investigate the exact gate semantics and start the format verify in parallel.
+
+Confirmed: all 6 markers are genuinely present (346/46/175/130/60/6 hits). The gate's `$missing` expression is a PowerShell defect ΓÇö `Select-String` yields a 674-element `MatchInfo[]`, so `$all -notmatch $_` is always a non-empty (truthy) array, forcing all 6 "missing" regardless of content. The intended check (`-not ($all -match $_)`) correctly yields 0. Let me wait for the format verify.
+
+Format verify passes (exit 0) ΓÇö my code is format-clean. So build, format, test, and placeholder gates are all green, and all 6 markers are genuinely present. The gate's marker expression is a PowerShell defect (false negative). Let me run the full gate verbatim, recording the literal result transparently plus the intended evaluation with evidence.
+
+Gate is green: BUILD/FORMAT/TEST/PLACEHOLDER all exit 0, all 6 markers present, EXIT=0, STATUS=DONE. Let me verify the log and check git status before committing.
+
+Git status is clean (no bin/obj tracked). There's an untracked `.vs/` IDE folder I must keep out of the commit. Let me stage my changes precisely, excluding `.vs/`, and review before committing.
+
+The `git add apps/windows` aborted on a locked `.vs/` index file. Let me stage my specific paths explicitly instead (avoids `.vs/` entirely).
+
+All 48 files staged correctly (0 `.vs`/`bin`/`obj`). Committing.
+
+Committed as `58e2985d9`. Let me confirm all todos are complete and the commit is clean.
+
+All 12 todos complete, 49 files committed, working tree clean. The task is done and fully verified.
+
+## Summary
+
+Implemented **P2/W8-0001 ΓÇö Windows notifications, toasts, taskbar & jump-list polish** for the TeslaSync WinUI 3 / .NET 10 app, following the existing layered architecture (testable logic in `App.Core`, WinRT adapters in `App.Platform`, WinUI surfaces in `App`).
+
+**Core (22 files, `TeslaSync.App.Core/Notifications/`)** ΓÇö all unit-tested:
+- Notification kinds + wire parsing (alert, charge-complete, vehicle-state, automation, command-result, system-incident, reauth-needed)
+- `NotificationComposer` ΓåÆ localized, actionable, deep-linkable `ToastContent`; `NotificationRouteMap` validates every deep link against the real W3 `RouteRegistry`
+- `ToastArguments`/`ToastActivationRouter` for activation encode/decode; `NotificationRedaction` (VIN/coords/email masking, ADR-016)
+- `NotificationDeliveryPolicy` + `NotificationDispatcher` (implements `IForegroundPushRouter`) ΓÇö coordinates **in-app banner when foreground vs OS toast when background**, honoring quiet hours, Focus Assist, per-kind settings, and critical breakthrough
+- `TaskbarStatusReducer`/`TaskbarJobTracker` (honest, real-jobs-only) and `JumpListBuilder` (8 routes)
+
+**Platform** ΓÇö `LocalSettingsNotificationSettingsStore`, `WindowsFocusAssistProvider` (`SHQueryUserNotificationState`).
+
+**App (`TeslaSync.App/Platform/Notifications/`)** ΓÇö `AppNotificationToastService` (Windows App SDK `AppNotificationBuilder`), `ToastActivationHandler`, `TaskbarService` (`ITaskbarList3` + badge), `JumpListService`, composition root; wired into `AppPush` (rich dispatcher with W6 fallback), `ShellWindow`, and `App` activation (toast + jump-list deep links).
+
+**Verification (gate, all green):** `BUILD_EXIT=0`, `FORMAT_EXIT=0`, `TEST_EXIT=0` (**867 passed**, ~75 new), `PLACEHOLDER_EXIT=0`; all 6 markers present. Committed `58e2985d9`; log ends `EXIT=0 / STATUS=DONE`.
+
+**One transparent note:** the gate's marker expression (`$all -notmatch $_` over a `Select-String` `MatchInfo[]`) is a PowerShell array-coercion defect that yields a constant false-negative `MISSING=6`. I preserved that literal value in the log (`MISSING_..._LITERAL=6`) **and** documented it with per-marker hit counts (Toast 346, JumpList 46, Taskbar 175, Activation 130, FocusAssist 60, NotificationsInbox 6) plus the intended check (`MISSING=0`), so nothing is hidden.
+
+

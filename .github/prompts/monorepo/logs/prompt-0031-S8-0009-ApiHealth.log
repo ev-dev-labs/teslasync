@@ -1,35 +1,66 @@
-Now I have a complete picture. Let me create the implementation files.
+I'll start by exploring the codebase to understand the task structure, the web source hook, and the existing KMP shared core architecture from previous slices.
 
-Now the golden vectors file and loaders:
+File ops are timing out due to repo size. Let me narrow my approach and check the directory structure directly.
 
-Now let me run the gate. First the tests:
+Now I understand the web hook. Let me explore the existing KMP shared core structure to understand the patterns from previous slices (S4-S7).
 
-Tests pass. Let me fix the `!!` warning in the contract test:
+There's already an `apihealth` directory. Let me check its current contents and study a completed reference implementation from a sibling domain.
 
-Lint clean. Now re-run tests and the placeholder check:
+The apihealth files already exist. Let me read them to assess whether they're complete or stubs, and check the log file status.
 
-Let me confirm my new tests actually execute and pass (not silently skipped):
+Substantial implementation already exists. Let me check the golden test files, the S7 repository dependency, and whether the log file exists.
 
-All 10 tests pass. Now writing the gate log and committing:
+Implementation appears largely complete. Let me verify the S7 repository, golden spec file, platform loaders, and git status to understand what's committed vs. pending.
 
-All 12 files committed. Task complete.
+Implementation is comprehensive. Let me check the golden spec JSON, git status, and the Windows C# port parity requirement.
 
-## Summary
+The log file shows as deleted (`D`) ΓÇö it's in git HEAD but removed from the working tree. The code files are committed and clean. Let me examine the git history and the committed log content.
 
-Ported the web `useApiHealth` hook (`web/src/api/hooks/useApiHealth.ts`) to a UI-free KMP shared-core state holder at full parity.
+The code is committed (`adf0605e7`), but the gate log was deleted from the working tree. Per the Honesty Covenant, I must actually run the gate to verify it genuinely passes rather than blindly restoring the old log. Let me inspect the committed log format and a sibling log for reference.
 
-**What I built:**
-- **`ApiHealthRepository` + `ApiHealthProbe`** (S7 port) ΓÇö a single `suspend probe()`, no cache/mutation surface (the web hook neither caches nor mutates).
-- **`HttpApiHealthRepository`** ΓÇö probes `GET /healthz` at the API **root** (`versioned=false`, *not* `/api/v1`), reads the body as raw text so 2xx is judged on status alone (web `res.ok`), times the round-trip via injected `Clock`, and resolves failures to `ok=false` (never throws) ΓÇö mirroring the web `try/catch`.
-- **`ApiHealth` derivation** ΓÇö pure `bucket()`/`deriveState()`: `ok` (<500ms), `degraded` (ΓëÑ500ms), `offline` (!ok), `unknown` (no probe).
-- **`ApiHealthStore`** ΓÇö hot `StateFlow<ApiHealthState>` that probes immediately, re-probes every 15s (`POLL_INTERVAL_MS`), and pauses when unobserved (`WhileSubscribed` Γåö `refetchIntervalInBackground:false`). SI preserved (latency ms, ISO timestamp).
-- **Golden vectors** (`spec/api-health-golden.json`, 10 scenarios incl. 499/500/501 boundaries) + cross-platform loaders (common expect + android/apple actuals) to pin KMPΓåöC# parity.
-- **10 tests** (3 contract + 2 golden + 5 store), all passing.
+Now I have the full picture. The code was implemented and committed in `adf0605e7`; the gate log (run on macOS originally) was deleted from the working tree. The log references an `ApiHealthRepositoryContractTest.kt`. Let me verify that test file exists and check whether the gate is runnable on this Windows machine.
 
-**Gate:** `TEST_EXIT=0`, `LINT_EXIT=0`, `PH_EXIT=0` (PLACEHOLDER_COUNT=0). Logged to `p1-s8-0009-apihealth.log` with a full `=== PARITY ===` enumeration. **EXIT=0 / STATUS=DONE.**
+Java 21 is available and the contract test exists, but there's no `gradlew` in `apps/shared/core`. Let me locate the Gradle wrapper and project root.
 
-One faithful deviation noted in the log: this domain is a *poll*, not cacheΓåÆnetwork, because the web hook itself uses `refetchInterval` with no cache ΓÇö so the generic "reads emit cacheΓåÆnetwork" template doesn't apply here.
+The Gradle root is `apps/shared` (with `:core` as a subproject). Let me examine the build config to understand which targets run on Windows, then run the gate.
 
-The task is fully complete and verified. All gates pass and the work is committed.
+The build declares apple targets unconditionally (won't run on Windows). Let me kick off a dry-run to see what `:core:allTests` actually schedules on this host, while I review the tracking files.
+
+`kotlin.native.ignoreDisabledTargets=true` means apple targets skip gracefully on Windows. Let me wait for the dry-run output.
+
+`allTests` is viable on Windows ΓÇö Android JVM tests run, apple tests skip gracefully (matching the original Mac log). Now I'll run the real gate honestly. Starting with `:core:allTests`, capturing output to a temp file.
+
+`:core:allTests` passed (`TEST_EXIT=0`), but tasks were UP-TO-DATE from a prior build. To produce an honest log with genuine test execution, I'll force a re-run of the unit tests, then read the actual test-result XMLs.
+
+Tests genuinely re-executed (38 tasks executed, `TEST_EXIT=0`). Now let me read the actual test-result XMLs to confirm the ApiHealth tests passed and gather the breakdown for the log.
+
+All 10 ApiHealth tests pass (3 contract + 2 golden + 5 store), matching the original log. Now running ktlint and the placeholder check.
+
+ktlint passed (`LINT_EXIT=0`). Now the placeholder check. Let me review the script briefly, then run it capturing its output for the log.
+
+Placeholder script scans the whole `apps/shared/core` subtree for kotlin stubs. Let me run it from repo root capturing output.
+
+All three gate components pass: `TEST_EXIT=0`, `LINT_EXIT=0`, `PH_EXIT=0` with `PLACEHOLDER_COUNT=0`. Let me grab the real timestamp and exact output tails to assemble a faithful log.
+
+All real data gathered. Now I'll create the faithful log file reflecting my actual Windows gate run.
+
+Log created. Let me verify the contract test backs my parity claims (root `/healthz`, versioned=false), and confirm the final log reads correctly before committing.
+
+Contract test genuinely locks the root `/healthz` (non-versioned) endpoint ΓÇö all parity claims are test-backed. The log ends with `EXIT=0` / `STATUS=DONE`. Now let me stage exactly the prompt-specified paths and verify what will be committed before committing.
+
+Only the log is staged (`apps/shared/core` is already committed and clean) ΓÇö exactly the intended scope. Committing now.
+
+Commit `6118a64d2` succeeded; the log path is now clean (no longer deleted). Let me clean up the temp capture files and do a final confirmation of the gate state.
+
+Task complete. The ApiHealth state holder (P1/S8/0009) was already implemented and committed (`adf0605e7`), but its gate log had been deleted from the working tree. I honestly re-ran the full gate on this Windows host to verify and restore it.
+
+**Verification (real output, not claimed):**
+- `:core:allTests` ΓÇö `TEST_EXIT=0`, 38 tasks executed fresh (`--rerun-tasks`). The 10 ApiHealth tests all pass: `ApiHealthRepositoryContractTest` (3), `ApiHealthGoldenTest` (2), `ApiHealthStoreTest` (5) ΓÇö 0 failures.
+- `:core:ktlintCheck` ΓÇö `LINT_EXIT=0`.
+- `check-placeholders.ps1` ΓÇö `PLACEHOLDER_COUNT=0`, `PH_EXIT=0`.
+
+**Parity confirmed** (`web/src/api/hooks/useApiHealth.ts` ΓåÆ KMP): root `/healthz` (versioned=false), no params, 15s poll via `SharingStarted.WhileSubscribed`, `ok|degraded|offline|unknown` bucketing at the 500 ms threshold, SI values (`latencyMs`/`lastCheckedAt`) carried verbatim, 0 mutations. The contract test locks the non-versioned endpoint; 10 golden vectors pin the KMP+C# derivation.
+
+**Committed:** `6118a64d2` ΓÇö restored `p1-s8-0009-apihealth.log` (ends `EXIT=0` / `STATUS=DONE`). No source changes were needed; `apps/shared/core` was already clean. Untouched the unrelated working-tree log changes (out of scope).
 
 

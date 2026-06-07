@@ -1,45 +1,49 @@
-I'll start by exploring the relevant files and understanding the existing structure.
+I'll start by exploring the repository structure to understand the task, the web source, and the existing KMP shared core patterns.
 
-Let me study existing patterns and the API endpoints. Let me look at a representative store with mutations plus the chat API functions.
+Let me explore the web API layer and existing KMP state holder patterns in parallel.
 
-Now let me study the repository layer, the Resource type, types, and the test patterns.
+There's already a `chat` presentation directory and a log file. Let me investigate the current state and study the patterns.
 
-Multiple read shapes share one domain in chat. Let me see how Automations/Admin repos handle heterogeneous cached types.
+This task appears to have been completed in a prior session (log `prompt-0035-S8-0013-Chat.log`, commit `ae0ec42b2`). But the expected log `p1-s8-0013-chat.log` doesn't exist yet, and the summary mentions `ChatRepository.kt`/`HttpChatRepository.kt` which aren't in the chat dir. Let me verify the actual current state rigorously.
 
-I have everything needed. Let me set up tracking and create the implementation files.
+Important findings: commit `ae0ec42b2` (Chat) exists but HEAD is at `a9e382971` (Charging, 0012). The expected log `p1-s8-0013-chat.log` shows as **deleted (D)** in working tree, and chat `.kt` files exist but aren't in git status. Let me reconcile the actual tracking state and locate all chat files.
 
-Now the CacheDomain entry and the `evict` helper:
+Now it's clear: the Chat commit `ae0ec42b2` **is an ancestor of HEAD** (a rebase created duplicate Charging commits). All 7 chat files are tracked and on disk. The only working-tree discrepancy in scope is the **deleted** `p1-s8-0013-chat.log`. 
 
-Now let me run the gate. First, verify the gradle setup:
+Per the Honesty Covenant I must actually verify parity and run the gate ΓÇö not assume. Let me read all the existing chat implementation + test files.
 
-Build succeeded and tests passed. There's a compiler warning about an unnecessary `!!`. Let me fix it and run ktlint + placeholder checks.
+The implementation is thorough. Let me verify the tests and confirm the web-side types match (ChatMessage, ChatResponse), then check the committed log.
 
-ktlint passes. Now run the full tests again (clean) and the placeholder check:
+Let me confirm the web `ChatMessage`/`ChatResponse` type definitions to validate the Kotlin models, and check `CacheDomain.Chat` + the committed log content.
 
-Let me confirm my chat tests actually ran and run the placeholder check:
+Web types confirm parity (ChatMessage: id/session_id/role/content/created_at; ChatResponse: response/session_id). `CacheDomain.Chat("chat", 30.seconds)` exists. The committed log has a proper `=== PARITY ===` section.
 
-All 27 chat tests pass. Now the placeholder check:
+The work is committed at HEAD; only the working-tree log file is deleted (out-of-scope files like `done.txt` were touched by the orchestrator ΓÇö I won't touch those). Per the Honesty Covenant I must **actually run the gate myself** rather than trust the prior log. Let me verify the gradle tooling and log tail first.
 
-All gates green. Let me write the log and commit. Let me check the existing log format first:
+No `gradlew` in `apps/shared/core`. Let me locate the actual gradle wrapper and settings to know how to run the gate correctly.
 
-`done.txt` was already staged from a prior state but is out of my allowed scope. Let me unstage it and commit only the in-scope files:
+The wrapper is at `apps/shared/gradlew` with settings at `apps/shared`. Let me confirm the project name and then run the gate (tests). This will be the authoritative verification.
 
-Done. P1/S8/0013 Chat state holder is complete and committed.
+Project is `:core`, wrapper at `apps/shared`. Now I'll run the actual gate ΓÇö this is the authoritative verification required by the Honesty Covenant. Starting the full `:core:allTests` run (KMP builds can take several minutes).
 
-## Summary
+Build was `UP-TO-DATE` (cached green). To honestly verify per the covenant ΓÇö not rely on caching ΓÇö I'll force actual re-execution of the unit tests.
 
-Ported all **5 hooks** from `web/src/api/hooks/useChat.ts` to a UI-free KMP shared-core state holder, verified against `devtools.ts`, `router.go`, and `chatbot/dtos.go`.
+Tests actually executed (33 tasks, `BUILD SUCCESSFUL`, `TEST_EXIT=0`) ΓÇö only a pre-existing unrelated deprecation warning. Now running ktlint and confirming the chat test counts from result XMLs.
 
-**Reads (2):** `chatSessions()` ΓåÆ `GET /chatbot/sessions`; `chatHistory(id)` ΓåÆ `GET /chatbot/history?session_id=` (with the web `enabled: !!sessionId` gate). Both exposed as shared cache-then-network `StateFlow<Resource<T>>`.
+Chat tests confirmed: **ChatRepositoryContractTest=10, ChatGoldenTest=9, ChatStoreTest=8 = 27 tests, 0 failures**. ktlint green. Now the placeholder check, plus a forced ktlint re-run to remove any "up-to-date" doubt.
 
-**Mutations (3):** `renameChatSession` (PATCH, id percent-encoded, body `{title}`), `deleteChatSession` (DELETE 204), `sendChatMessage` (POST, drops `session_id` when null). Rename/delete optimistically patch the cached session list (the `setQueryData` analogue) and the store refreshes the sessions feed (`invalidateQueries` analogue); delete also evicts the session's history key (`removeQueries` analogue). Send has no cache interaction.
+All three gates pass: **TEST_EXIT=0** (27 chat tests, 0 failures), **LINT_EXIT=0** (forced re-run), **PH_EXIT=0** (PLACEHOLDER_COUNT=0). Let me confirm the release test set matches and that `apps/shared/core` is clean before writing the log.
 
-**Derivations golden-locked** (KMP+C# parity): `normalizeChatTitle`, `applyRenameToSessions`, `applyDeleteToSessions`, `chatHistoryKey`/`chatHistoryQuery`.
+Confirmed: `apps/shared/core` is clean (work already committed), chat tests pass in **both** debug and release sets (27 each, 0 failures), and the only in-scope working-tree change is the deleted log. Now writing the log file with my actual gate output.
 
-**Files:** new `chat/ChatModels.kt`, `ChatStore.kt`, `ChatRepository.kt`, `HttpChatRepository.kt` + 3 test files; added `CacheDomain.Chat` and a `protected evict(key)` to `CachingRepository`. SI preserved (no unit-bearing fields).
+Log written. Now staging only the in-scope files and committing per the prompt ΓÇö being careful not to touch out-of-scope modified logs.
 
-**Gate (all green):** `TEST_EXIT=0` (27 chat tests, 0 failures), `LINT_EXIT=0` (ktlint), `PH_EXIT=0` (placeholders). `EXIT=0 / STATUS=DONE`. Committed as `ae0ec42b2`.
+Only the chat log is staged (in-scope). Committing with the prompt's specified message.
 
-The task is fully complete ΓÇö all gates pass and the work is committed.
+Committed as `c503e7e4f`. Let me do a final verification that everything is consistent at HEAD.
+
+Everything is verified and consistent. Let me clean up temp files and confirm the log's final two lines are correctly separated.
+
+All gates green and the deliverable is committed and consistent. The task is complete.
 
 

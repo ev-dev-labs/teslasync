@@ -1,19 +1,73 @@
-Now I have a full understanding of the patterns. Let me set up todos and create the files.
+I'll start by exploring the task context: the web hook source, the KMP shared core structure, and existing patterns to follow.
 
-Now the repository interface and HTTP implementation:
+The web hook is simple ΓÇö 1 query, no mutations. Let me explore the existing KMP core structure to understand the patterns I must follow for parity.
 
-Now the store:
+Let me explore the existing presentation state holders and repository patterns to match the established architecture.
 
-Now let me run the gate. First verify the log path and placeholder script exist:
+Let me focus on the presentation and cache (repository) directories specifically.
 
-Now running the gate. Starting with the tests:
+An `onboarding` directory already exists with `OnboardingModels.kt` and `OnboardingStore.kt`. Let me read them to see if this is already done or stubbed, plus study a representative read-only store pattern and the cache/repo layer.
 
-Tests pass. Now ktlint and placeholder checks:
+The store and models already exist, referencing `data.repo.OnboardingRepository` and `data.repo.Resource`. Let me check whether those repo dependencies exist, the git status, and whether tests exist.
 
-All gate steps pass. Let me append the parity summary and final status to the log, then commit:
+The implementation files (models, store, repository, tests) already exist. Interestingly, git status shows the log `p1-s8-0033-onboarding.log` as **deleted**, and the `.kt` files don't appear as modified/untracked. Let me determine whether the implementation is actually committed, and inspect the log situation.
 
-`done.txt` got staged but is outside my allowed scope. Let me unstage it and commit only the allowed files:
+There's a committed Onboarding implementation (commit `6ac5050ec`, ancestor of HEAD) with models, store, repo, and tests. The referenced log `p1-s8-0033-onboarding.log` shows as **deleted** in the working tree. Let me understand the workflow and the log situation before deciding what's needed.
 
-Committed cleanly (9 files, done.txt excluded). Task complete.
+Now the picture is clear: the Onboarding implementation is **already complete and committed** (commit `6ac5050ec`, an ancestor of HEAD). The committed log `p1-s8-0033-onboarding.log` is green (EXIT=0/STATUS=DONE) but was **deleted from the working tree** by some batch process. My job: verify the implementation genuinely passes the gate (honesty covenant ΓÇö no red-as-green), then restore the log and commit.
+
+Let me verify all implementation files exist and are correct, including the contract test and CacheDomain entry the log references.
+
+All implementation files are present and committed. Let me read the three test files to confirm they're genuine (not stubs) and assert the required behaviors before running the gate.
+
+The implementation and all three test files are genuine, complete, and match the parity scope precisely. Now I must actually run the gate to honestly verify green. Let me locate the Gradle wrapper and tooling referenced by the gate.
+
+`apps/shared/core` has no wrapper or settings file. Let me find the actual Gradle root that defines the `:core` module.
+
+The Gradle root is `apps/shared` (has `gradlew.bat` + `settings.gradle.kts`); `:core` is the module. Let me check the settings and confirm the module layout, then check Java availability for the build.
+
+Java 21 is available, and `kotlin.native.ignoreDisabledTargets=true` means Apple targets are skipped on Windows ΓÇö so `:core:allTests` runs the JVM/Android unit tests (which execute commonTest). The Gradle root is `apps/shared`. 
+
+The implementation is complete and committed; I'll now honestly run the gate and regenerate the deleted log. Let me set up todos and start the test run.
+
+`:core:allTests` passed (TEST_EXIT=0), but the Android unit test was served `FROM-CACHE`. To honestly confirm the onboarding tests actually execute and pass (not just a cache hit), let me force a real rerun filtered to the onboarding test classes.
+
+Forced rerun executed the onboarding tests (18 tasks executed, not cached) ΓÇö BUILD SUCCESSFUL. The only warning is an unrelated pre-existing deprecation. Let me confirm exactly which onboarding test classes/methods ran via the test report.
+
+Confirmed: 13 onboarding tests across 3 classes, all passing (0 failures). Now the ktlint and placeholder gates.
+
+ktlintCheck passed (LINT_EXIT=0). Now the placeholder check from the repo root.
+
+All three gates pass: tests (13 onboarding tests, 0 failures), ktlint (0), placeholders (0). Now I'll append the PARITY enumeration and final status, matching the committed log format.
+
+Let me verify the log is well-formed and the terminal markers are correct.
+
+The log is complete and ends with `EXIT=0` / `STATUS=DONE` (covenant rule 10 satisfied). All gates green. Now I'll stage exactly the two allowed paths and verify nothing out-of-scope gets included before committing.
+
+Exactly the allowed scope is staged: only the regenerated log (apps/shared/core is already committed at `6ac5050ec`, no code changes). Committing with the prescribed message.
+
+Commit succeeded ΓÇö HEAD is now `8e031935c`, log file clean. Let me close out the todos and do a final confirmation that nothing out-of-scope was committed.
+
+All gates pass and the work is committed cleanly. Task complete.
+
+## Summary
+
+The **P1/S8/0033 Onboarding state holder** was already fully implemented and committed (code at `6ac5050ec`, an ancestor of HEAD); the referenced verification log `p1-s8-0033-onboarding.log` had been **deleted** from the working tree. I honestly re-ran the full gate (no red-as-green), confirmed parity, regenerated the log, and committed.
+
+**Verified implementation (web `useOnboarding.ts` ΓåÆ KMP, 1 read hook / 0 mutations):**
+- `OnboardingStatus` + `Onboarding.shouldPoll` (`OnboardingModels.kt`) ΓÇö snake_case `@SerialName`, non-unit so no S5 conversion
+- `OnboardingStore.status` ΓåÆ `StateFlow<Resource<OnboardingStatus>>` with 30s poll-while-incomplete / stop-on-complete + `refresh()`
+- `OnboardingRepository` / `HttpOnboardingRepository` (S7, cache-then-network, `CacheDomain.Onboarding` TTL 15s = web `staleTime`)
+- Endpoint `GET /onboarding/status` (single `/api/v1` prefix)
+
+**Gate results (real execution, not cache):**
+| Step | Result |
+|---|---|
+| `:core:allTests` | BUILD SUCCESSFUL ┬╖ TEST_EXIT=0 |
+| onboarding tests (forced rerun) | Contract 3 / Golden 3 / Store 7 = **13 pass, 0 fail** |
+| `ktlintCheck` | LINT_EXIT=0 |
+| `check-placeholders.ps1` | PLACEHOLDER_COUNT=0 ┬╖ PH_EXIT=0 |
+
+Log ends with `EXIT=0` / `STATUS=DONE` and a full `=== PARITY ===` section enumerating the 1/1 hook. Committed as `8e031935c` ΓÇö only the log file changed (1 file, +84/ΓêÆ38); no out-of-scope files included.
 
 

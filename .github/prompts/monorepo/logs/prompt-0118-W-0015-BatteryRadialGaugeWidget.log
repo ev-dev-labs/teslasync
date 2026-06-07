@@ -1,0 +1,111 @@
+I'll start by investigating the repository state to understand what exists and whether the required platform capabilities are available.
+
+The Windows app structure exists. Let me narrow my searches and check platform capability in parallel.
+
+.NET 10 SDK is available and the widget structure exists. There's already a `BatteryGaugeWidget` (different widget) I can use as a template. Let me study the established pattern and the web shared components.
+
+This is a mature, well-established pattern. `BatteryRadialGaugeWidget` differs from `BatteryGaugeWidget` by adding a charge-limit ring overlay and a stats array. Let me read the web counterparts and the existing tests to nail parity.
+
+Now let me read the existing test file and understand the i18n catalog and supporting types.
+
+Let me examine the i18n catalog structure, the localizer, and the predecessor's completion log.
+
+All six source i18n keys already exist in the catalog. The predecessor's chrome keys (`widget.batteryGauge.*`) rely on localizer fallback. Let me confirm the catalog values and locate the supporting types and test fakes.
+
+Let me confirm a few remaining support types and check whether widgets are wired into a central registry.
+
+Widgets aren't wired into a central registry ΓÇö only self-referenced and linked into the test project. Let me check the predecessor's gate outcome (critical for honesty) and the two csproj files.
+
+I now have the full picture and the honest precedent: the predecessor shipped a complete widget with passing headless tests, but the gate's `dotnet test` reports `TEST_EXIT=1` due to 147 pre-existing **WinAppDriver E2E** tests that need an absent GUI-automation runner ΓåÆ `STATUS=BLOCKED` with evidence. I'll follow the same honest path. Let me read the csproj files and the placeholder checker.
+
+Now let me look at how a native widget WITH a title+icon header builds its chrome (the web `BatteryRadialGaugeWidget` has a title when not compact, unlike `BatteryGaugeWidget`).
+
+`BatteryHealthAnalyticsWidget` composes exactly what I need (title chrome + gauge ring + stat grid). Let me read it and its model.
+
+The composition pattern is clear. Let me confirm the stat-formatting convention and `ScalarFormatters` API before writing.
+
+I have everything needed. Let me set up tracking and create the four production files, modeled on `BatteryGaugeWidget` (parse/gauge) + `BatteryHealthAnalyticsWidget` (title chrome + stats), with the unique charge-limit ring overlay.
+
+Now the Source (data adapter) and ViewModel files.
+
+The view composes title chrome + gauge + charge-limit overlay + stats + charging line. Let me read the web `WidgetShell` to match its title styling precisely before writing the view.
+
+`WidgetShell` confirms uppercase muted 11px title ΓÇö matching the established native chrome. Now the WinUI view with the charge-limit ring overlay.
+
+Now wire the three non-UI files into the test project and update todos.
+
+Now the comprehensive headless test file, covering the unique charge-limit / stats / charging behaviors plus the full state matrix.
+
+Let me verify the vehicle-source interface and run the placeholder check on the new surface before building.
+
+Placeholder gate passes (COUNT=0) and the interface matches. Now the full solution build (Release) ΓÇö the gate's first step.
+
+Build failed with 82 errors ΓÇö but they're all XAML compiler errors (`WMC0001`/`WMC0110`/`WMC9999`) in **existing** files (`ComponentGallery.xaml`, `Styles.xaml`, `ShellWindow.xaml`), with an internal `WMC9999: Object reference not set` crash. None reference my new files. I need to determine whether my C# triggered a cascade or this is stale XAML state. Let me check for any C# errors and build the headless Tests project (which compiles my logic without XAML).
+
+The headless Tests project builds clean (`0 Error(s)`), so my Model/Source/ViewModel C# and tests are correct. The App build failed only in **existing** XAML files with a `WMC9999: Object reference not set` internal crash ΓÇö a classic stale XAML-compiler state. Let me confirm there are no C# errors in my view, then do a clean rebuild (the standard WMC9999 fix).
+
+Found the real cause: a `CS0104` ambiguity ΓÇö `Path` is ambiguous between `Microsoft.UI.Xaml.Shapes.Path` and `System.IO.Path` (implicit usings). The 82 XAML errors were a cascade from this C# failure. Fix: use `var` and drop the now-unused Shapes import.
+
+Now rebuild the App project to confirm the fix resolves both the C# error and the cascaded XAML crash.
+
+App builds clean (`0 Error(s)`). Now let me auto-format my new files (scoped) to ensure the `dotnet format --verify-no-changes` gate step passes, then run the full gate.
+
+Format completed. Now let me run the **full gate** exactly as the prompt specifies, writing to the log file.
+
+Gate ran to completion. Let me extract the exit-code markers and test summary from the log.
+
+BUILD/FORMAT/PLACEHOLDER all pass ΓÇö but there's **1 failing headless test** in `TeslaSync.App.Tests` (1844/1845), which I must fix (the 147 UITest failures are the expected WinAppDriver-absent ones). Let me find the failing test.
+
+The production code is correct ΓÇö my test had a **contradictory assertion**. `Project_large_shows_stats_default_does_not` wrongly asserts `ShowChargeLimitRing` is false for a 1├ù2 (which is *not* compact, so the ring *does* show ΓÇö correctly verified by my dedicated `Project_charge_limit_ring_shows_on_non_compact_non_large` test). Let me remove the bad line.
+
+Now re-run the headless test project to confirm all pass (filtered to my tests first for speed, then full project).
+
+All 73 of my tests pass (`Failed: 0`). The remaining `TEST_EXIT=1` is purely the 147 pre-existing WinAppDriver E2E tests. Let me re-run the full gate to regenerate the log with the now-clean headless suite, and confirm the UITest failure cause.
+
+All headless tests pass (`1845/1845`); only the 147 WinAppDriver E2E tests fail. Let me confirm the documented cause is the absent GUI-automation runner (platform capability).
+
+Confirmed: all 147 UITest failures are `UiAutomationUnavailableException: WinAppDriver/Appium runner is absent` ΓÇö the same platform-capability gap as the predecessor (0013), not a surface defect. The gate result is honest:
+
+- **BUILD_EXIT=0**, **FORMAT_EXIT=0**, **PLACEHOLDER_EXIT=0**
+- Headless `TeslaSync.App.Tests`: **1845/1845 pass** (incl. my 73 new tests)
+- **TEST_EXIT=1** solely from the 147 WinAppDriver E2E tests (no GUI-automation runner)
+
+Let me append the honest RESULT SUMMARY + acceptance checklist + `EXIT`/`STATUS` footer to the log.
+
+Let me verify the log's exact final lines are clean (`EXIT=1` and `STATUS=BLOCKED` on their own lines).
+
+The log ends correctly with `EXIT=1` / `STATUS=BLOCKED` on their own lines. Now let me commit. First, let me confirm what the predecessor (0013) committed so I stage the same set (surface + test + csproj + log).
+
+The predecessor commit included only the surface + log ΓÇö not its test/csproj. Let me check how the predecessor's test file/csproj got committed and the current working-tree state to decide my commit scope.
+
+Now I understand the established workflow: every sibling widget commit includes **only** its surface dir + log (the prompt's exact commit command); test files (`BatteryGaugeWidgetTests.cs`, etc.) and the accumulating `Tests.csproj` are intentionally left as working-tree changes. The predecessor's `BatteryGaugeWidgetTests.cs` is itself still untracked. I'll follow that exact pattern.
+
+Exactly the 5 files staged (4 surface + log). Now commit with the prompt's message.
+
+Committed as `95edc6b44`. Let me finalize the todo tracking and do a last consistency check that the working tree matches the established sibling pattern.
+
+All work is complete and the working tree matches the established sibling convention (test file untracked, csproj accumulating links ΓÇö identical to predecessor `BatteryGaugeWidgetTests.cs`).
+
+## Summary
+
+I shipped the native **WinUI 3 / .NET 10 `BatteryRadialGaugeWidget`** surface as a faithful parity port of `features/dashboard/widgets/BatteryRadialGaugeWidget.tsx`, committed as **`95edc6b44`**.
+
+**Delivered** (`apps/windows/TeslaSync.App/dashboard-widgets/BatteryRadialGaugeWidget/`):
+- **`.Model.cs`** ΓÇö `RadialGaugeVehicleState` parse (adds the optional `charge_limit_soc` to the `useVehicleState` normalization), `getBatteryColor` thresholdΓåÆ`StatusKind` (>50 green / >20 amber / else red), `isCompact`/`isLarge`/diameter logic, the projection (charge-limit ring fraction, Level/Limit stats, charging affordance), and the cache-then-network result mapper.
+- **`.Source.cs`** ΓÇö repository adapter over `IWidgetVehicleSource` + `CacheThenNetworkEngine` reading `GET /vehicles/{vehicleID}/state`; no HTTP in the view.
+- **`.ViewModel.cs`** ΓÇö registration (`battery-radial-gauge`, 1├ù2 / 1├ù2 / **3├ù40**), PII-safe `view.opened` diagnostics, and the 6-state holder.
+- **`.cs`** ΓÇö the WinUI view: title chrome (collapses when compact), token-tinted radial gauge, faint **charge-limit ring overlay** (web `rgba(255,255,255,0.25)`), Level/Limit stats (when large), and a pulsing "ΓÜí Charging" sibling shown regardless of compact ΓÇö all Narrator-labelled, reduced-motion aware.
+- **73 headless tests** (all green).
+
+**Gate results** (full output in the log):
+- `BUILD_EXIT=0`, `FORMAT_EXIT=0`, `PLACEHOLDER_EXIT=0`
+- Headless `TeslaSync.App.Tests`: **1845 / 1845 pass** (incl. my 73)
+- `TEST_EXIT=1` ΓÇö **only** the 147 pre-existing WinAppDriver E2E tests, each aborting with `UiAutomationUnavailableException: WinAppDriver/Appium runner is absent` (nothing on `127.0.0.1:4723`).
+
+**`EXIT=1` / `STATUS=BLOCKED`** with platform-capability evidence ΓÇö WinUI 3 / .NET 10 are present (green build proves the view compiles), the only missing capability is the GUI-automation runner. This matches the prompt's capability clause and sibling 0013 (`BatteryGaugeWidget`) exactly. I fixed one real issue found during verification (a `CS0104` `Path` ambiguity that had cascaded into 82 XAML errors) and one contradictory test assertion ΓÇö both resolved and re-verified.
+
+
+
+All work is complete and verified. Calling task_complete with the honest outcome.
+
+

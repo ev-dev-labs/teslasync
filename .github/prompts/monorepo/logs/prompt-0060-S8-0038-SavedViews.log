@@ -1,38 +1,61 @@
-Now I have all the patterns. Let me create the files. First, the CacheDomain entry:
+I'll start by exploring the repository structure and reading the key files to understand the task.
 
-Now the repository interface and helpers:
+Let me explore the existing structure to understand the patterns used by already-ported domains.
 
-Now the HTTP repository implementation:
+There's already a `savedviews` directory. Let me inspect it and study a recently-completed similar domain as a parity template.
 
-Now the state holder:
+Existing savedviews files are present but no log. Let me read them and check git status.
 
-Now the store test:
+The implementation already exists and was committed (`fc8ac6988`), but the log file `p1-s8-0038-savedviews.log` is deleted in the working tree. Let me investigate the full state: the S7 repository dependency, the committed log content, and a sibling log for format reference.
 
-Now the repository contract test:
+The entire task was already implemented and committed in `fc8ac6988` (8 files, 988 insertions) ΓÇö including the S7 repository, store, models, tests, and the log. Only the log file is now deleted in the working tree. Let me verify the committed implementation is intact and read the committed log + S7 repo + gate script.
 
-Let me verify a few API signatures before running the gate:
+The full task is already implemented and committed in `fc8ac6988`, and the working tree matches HEAD for all `apps/shared/core` files. The only anomaly in my scope is the **deleted log file** in the working tree. Per the Honesty Covenant, I'll genuinely run the gate to verify green rather than trust the committed log, then restore the log.
 
-Now let's run the gate. Starting with the tests:
+Let me probe the build environment and read the gate script + the committed CacheDomain entry.
 
-Tests pass. Now ktlint and placeholder checks:
+Java 21 is available, but there's no `gradlew` directly in `apps/shared/core`. Let me locate the actual Gradle root (settings.gradle.kts + gradlew wrapper).
 
-ktlint passes. Now the placeholder check:
+The Gradle root is `apps/shared` (wrapper + settings there). Let me confirm the `:core` project mapping, then run the real gate.
 
-All gates green. Now I'll write the log file and commit:
+Gradle root confirmed (`shared` ΓåÆ `:core`). Let me check the build file's targets (to anticipate Apple-target behavior on Windows), then kick off the real gate.
 
-done.txt was modified by the placeholder script ΓÇö it's outside my allowed files. Let me unstage it to keep the commit scoped:
+KMP project with Android + Apple targets; on Windows the Apple test tasks are host-skipped and commonTest runs via the Android unit tests. Let me run the real gate now, starting with `:core:allTests`.
 
-Done. P1/S8/0038 ΓÇö SavedViews state holder complete and committed.
+Tests pass ΓÇö `:core:allTests` BUILD SUCCESSFUL (Apple targets host-skipped on Windows, Android unit tests green). Now ktlint + placeholder check, plus a forced re-run of the SavedViews tests for genuine (non-cached) evidence.
 
-**What I built** (KMP shared core, web-hook parity with `useSavedViews.ts`):
-- `SavedViewModels.kt` ΓÇö `SavedView` (snake_case `@SerialName`), create/update inputs, and the `UpdateSavedViewArgs`/`DeleteSavedViewArgs`/`SetDefaultSavedViewArgs` bundles.
-- `SavedViewRepository.kt` (S7 port) + `savedViewListQuery`/`savedViewCacheKey` helpers, and `HttpSavedViewRepository.kt` (Ktor + offline cache).
-- `SavedViewsStore.kt` (S8 UI-free holder) ΓÇö per-`route` shared `StateFlow<Resource<ΓÇª>>` feeds, suspend `Result` mutations, each refreshing **only** the affected route (web `savedViewsKeys.list(route)`, never `all`).
-- Added `CacheDomain.SavedViews` (1m = web `STALE_TIMES.STANDARD` 60s).
-- Tests: `SavedViewsStoreTest` (fake repo: cacheΓåÆnetwork, per-route invalidate, failure-skips-refresh) + `SavedViewRepositoryContractTest` (MockEngine: exact endpoint/method/params/body + per-route evict).
+ktlint clean (LINT_EXIT=0). Now the placeholder gate and a forced (non-cached) re-run of the SavedViews test classes for genuine execution evidence.
 
-**Parity (5/5 hooks):** `useSavedViews` ΓåÆ `savedViews(route)` GET; `useCreateSavedView` POST; `useUpdateSavedView` PUT; `useDeleteSavedView` DELETE (204); `useSetDefaultSavedView` PUT `{is_default}`. SI preserved; no derivation ΓåÆ no golden vectors needed (parity locked by the C#-shared contract test).
+All gate steps pass with genuine (non-cached) evidence:
+- `:core:allTests` ΓåÆ TEST_EXIT=0 (Apple host-skipped, Android unit tests ran)
+- `:core:ktlintCheck` ΓåÆ LINT_EXIT=0
+- placeholder ΓåÆ PLACEHOLDER_COUNT=0, PH_EXIT=0
+- Forced rerun of both SavedViews test classes ΓåÆ executed (post-clean), FOCUS_EXIT=0
 
-**Gate:** `TEST_EXIT=0`, `LINT_EXIT=0`, `PH_EXIT=0` ΓåÆ `EXIT=0 / STATUS=DONE`. Committed (8 files, scoped to `apps/shared/core` + log; left the script's `done.txt` touch out).
+Let me confirm the test report shows both classes executed and the exact test counts.
+
+Genuine test evidence confirmed ΓÇö both SavedViews test classes executed and passed (no cache):
+- `SavedViewRepositoryContractTest`: 9 tests, 0 failures
+- `SavedViewsStoreTest`: 8 tests, 0 failures
+
+The implementation is complete and committed; only the log file needs restoring with my fresh gate evidence. Let me recreate it.
+
+Let me do a final parity cross-check confirmation and verify exactly what will be staged before committing (only my log + the already-committed `apps/shared/core`, nothing else).
+
+Confirmed: `apps/shared/core` is already fully committed (nothing to stage), and only my refreshed log differs. Committing per the prompt's exact command.
+
+Task complete. Here's what I found and did:
+
+**State discovered:** The entire S8-0038 SavedViews deliverable was already implemented and committed (`fc8ac6988`) ΓÇö store, models, S7 repository, both test suites, and the `CacheDomain` entry ΓÇö all intact (working tree matched HEAD). The only in-scope anomaly was the **gate log deleted in the working tree**.
+
+**Verification (genuinely run, not trusted):**
+- `:core:allTests` ΓåÆ **BUILD SUCCESSFUL**, `TEST_EXIT=0` (Apple targets host-skipped on Windows; Android unit tests executed)
+- `:core:ktlintCheck` ΓåÆ **BUILD SUCCESSFUL**, `LINT_EXIT=0`
+- `check-placeholders.ps1` ΓåÆ `PLACEHOLDER_COUNT=0`, `PH_EXIT=0`
+- Forced post-`clean` re-run: `SavedViewsStoreTest` **8/8** and `SavedViewRepositoryContractTest` **9/9** passing (0 failures)
+
+**Parity confirmed** ΓÇö all 5 web hooks map 1:1: `useSavedViews`ΓåÆ`savedViews(route)` (GET `/saved-views?route=`, 60s TTL), `useCreateSavedView` (POST, optionals omitted when null), `useUpdateSavedView` (PUT partial), `useDeleteSavedView` (DELETE 204), `useSetDefaultSavedView` (PUT `{is_default}`). Snake_case params, per-route invalidation, SI preserved, failed mutation refreshes nothing.
+
+**Action:** Recreated `p1-s8-0038-savedviews.log` with my actual gate evidence (ending `EXIT=0` / `STATUS=DONE`) and committed it (`395766865`). Left all out-of-scope working-tree log changes untouched.
 
 

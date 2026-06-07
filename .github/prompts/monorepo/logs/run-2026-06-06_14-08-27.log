@@ -1,0 +1,149 @@
+[2026-06-06 14:08:27] [18/2734] START  p1-shared/S4-0001-networking.prompt.md
+[2026-06-06 14:08:27] [18/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s4-0001-networking.log
+[2026-06-06 14:22:27] [18/2734] DONE in 14 min
+[2026-06-06 14:22:37] [19/2734] START  p1-shared/S4-0002-sse-client.prompt.md
+[2026-06-06 14:22:37] [19/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s4-0002-sse.log
+[2026-06-06 14:31:54] [19/2734] DONE in 9.3 min
+[2026-06-06 14:32:04] [20/2734] START  p1-shared/S5-0001-si-units-golden.prompt.md
+[2026-06-06 14:32:04] [20/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s5-0001-si-units.log
+[2026-06-06 14:40:54] [20/2734] DONE in 8.8 min
+[2026-06-06 14:41:04] [21/2734] START  p1-shared/S6-0001-auth.prompt.md
+[2026-06-06 14:41:04] [21/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s6-0001-auth.log
+[2026-06-06 14:54:43] [21/2734] DONE in 13.6 min
+[2026-06-06 14:54:53] [22/2734] START  p1-shared/S7-0001-offline-cache.prompt.md
+[2026-06-06 14:54:53] [22/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s7-0001-cache.log
+[2026-06-06 15:08:44] [22/2734] DONE in 13.8 min
+[2026-06-06 15:08:54] [23/2734] START  p1-shared/S8/S8-0001-AchievementUnlocks.prompt.md
+[2026-06-06 15:08:54] [23/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0001-achievementunlocks.log
+[2026-06-06 15:18:23] [23/2734] DONE in 9.5 min
+[2026-06-06 15:18:33] [24/2734] START  p1-shared/S8/S8-0002-Admin.prompt.md
+[2026-06-06 15:18:33] [24/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0002-admin.log
+[2026-06-06 15:28:29] [24/2734] DONE in 9.9 min
+[2026-06-06 15:28:39] [25/2734] START  p1-shared/S8/S8-0003-AiSettings.prompt.md
+[2026-06-06 15:28:39] [25/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0003-aisettings.log
+[2026-06-06 15:44:42] [25/2734] Cleaning up stale copilot PID 68616
+[2026-06-06 15:44:42] [25/2734] DONE in 16.1 min
+[2026-06-06 15:44:52] [26/2734] START  p1-shared/S8/S8-0004-AiUsage.prompt.md
+[2026-06-06 15:44:52] [26/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0004-aiusage.log
+[2026-06-06 15:57:52] [26/2734] DONE in 13 min
+[2026-06-06 15:58:02] [27/2734] START  p1-shared/S8/S8-0005-AlertMessageHelpers.prompt.md
+[2026-06-06 15:58:02] [27/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0005-alertmessagehelpers.log
+[2026-06-06 16:08:43] [27/2734] DONE in 10.7 min
+[2026-06-06 16:08:53] [28/2734] START  p1-shared/S8/S8-0006-Analytics.prompt.md
+[2026-06-06 16:08:53] [28/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0006-analytics.log
+[2026-06-06 16:18:10] [28/2734] DONE in 9.3 min
+[2026-06-06 16:18:20] [29/2734] START  p1-shared/S8/S8-0007-Annotations.prompt.md
+[2026-06-06 16:18:20] [29/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0007-annotations.log
+[2026-06-06 16:33:20] [29/2734] DONE in 15 min
+[2026-06-06 16:33:30] [30/2734] START  p1-shared/S8/S8-0008-Anomalies.prompt.md
+[2026-06-06 16:33:30] [30/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0008-anomalies.log
+[2026-06-06 16:44:33] [30/2734] Cleaning up stale copilot PID 64604
+[2026-06-06 16:44:33] [30/2734] DONE in 11 min
+[2026-06-06 16:44:43] [31/2734] START  p1-shared/S8/S8-0009-ApiHealth.prompt.md
+[2026-06-06 16:44:43] [31/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0009-apihealth.log
+[2026-06-06 16:57:37] [31/2734] DONE in 12.9 min
+[2026-06-06 16:57:47] [32/2734] START  p1-shared/S8/S8-0010-AuthMode.prompt.md
+[2026-06-06 16:57:47] [32/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0010-authmode.log
+[2026-06-06 17:10:59] [32/2734] DONE in 13.2 min
+[2026-06-06 17:11:09] [33/2734] START  p1-shared/S8/S8-0011-Automations.prompt.md
+[2026-06-06 17:11:09] [33/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0011-automations.log
+[2026-06-06 17:22:14] [33/2734] DONE in 11.1 min
+[2026-06-06 17:22:24] [34/2734] START  p1-shared/S8/S8-0012-Charging.prompt.md
+[2026-06-06 17:22:24] [34/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0012-charging.log
+[2026-06-06 17:34:09] [34/2734] DONE in 11.7 min
+[2026-06-06 17:34:19] [35/2734] START  p1-shared/S8/S8-0013-Chat.prompt.md
+[2026-06-06 17:34:19] [35/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0013-chat.log
+[2026-06-06 17:44:51] [35/2734] DONE in 10.5 min
+[2026-06-06 17:45:01] [36/2734] START  p1-shared/S8/S8-0014-Commands.prompt.md
+[2026-06-06 17:45:01] [36/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0014-commands.log
+[2026-06-06 17:55:34] [36/2734] DONE in 10.5 min
+[2026-06-06 17:55:44] [37/2734] START  p1-shared/S8/S8-0015-Dashboard.prompt.md
+[2026-06-06 17:55:44] [37/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0015-dashboard.log
+[2026-06-06 18:09:53] [37/2734] DONE in 14.1 min
+[2026-06-06 18:10:03] [38/2734] START  p1-shared/S8/S8-0016-DashboardLayouts.prompt.md
+[2026-06-06 18:10:03] [38/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0016-dashboardlayouts.log
+[2026-06-06 18:20:59] [38/2734] DONE in 10.9 min
+[2026-06-06 18:21:09] [39/2734] START  p1-shared/S8/S8-0017-DLQ.prompt.md
+[2026-06-06 18:21:09] [39/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0017-dlq.log
+[2026-06-06 18:32:00] [39/2734] DONE in 10.8 min
+[2026-06-06 18:32:10] [40/2734] START  p1-shared/S8/S8-0018-Driving.prompt.md
+[2026-06-06 18:32:10] [40/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0018-driving.log
+[2026-06-06 18:45:00] [40/2734] DONE in 12.8 min
+[2026-06-06 18:45:10] [41/2734] START  p1-shared/S8/S8-0019-Energy.prompt.md
+[2026-06-06 18:45:10] [41/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0019-energy.log
+[2026-06-06 18:55:52] [41/2734] DONE in 10.7 min
+[2026-06-06 18:56:02] [42/2734] START  p1-shared/S8/S8-0020-Exports.prompt.md
+[2026-06-06 18:56:02] [42/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0020-exports.log
+[2026-06-06 19:04:00] [42/2734] DONE in 8 min
+[2026-06-06 19:04:10] [43/2734] START  p1-shared/S8/S8-0021-FeatureFlags.prompt.md
+[2026-06-06 19:04:10] [43/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0021-featureflags.log
+[2026-06-06 19:18:04] [43/2734] Cleaning up stale copilot PID 83048
+[2026-06-06 19:18:04] [43/2734] DONE in 13.9 min
+[2026-06-06 19:18:14] [44/2734] START  p1-shared/S8/S8-0022-Feedback.prompt.md
+[2026-06-06 19:18:14] [44/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0022-feedback.log
+[2026-06-06 19:27:10] [44/2734] DONE in 8.9 min
+[2026-06-06 19:27:20] [45/2734] START  p1-shared/S8/S8-0023-FleetTelemetry.prompt.md
+[2026-06-06 19:27:20] [45/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0023-fleettelemetry.log
+[2026-06-06 19:38:05] [45/2734] DONE in 10.7 min
+[2026-06-06 19:38:15] [46/2734] START  p1-shared/S8/S8-0024-FSM.prompt.md
+[2026-06-06 19:38:15] [46/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0024-fsm.log
+[2026-06-06 19:46:56] [46/2734] DONE in 8.7 min
+[2026-06-06 19:47:06] [47/2734] START  p1-shared/S8/S8-0025-Guard.prompt.md
+[2026-06-06 19:47:06] [47/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0025-guard.log
+[2026-06-06 19:56:47] [47/2734] DONE in 9.7 min
+[2026-06-06 19:56:57] [48/2734] START  p1-shared/S8/S8-0026-Impersonation.prompt.md
+[2026-06-06 19:56:57] [48/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0026-impersonation.log
+[2026-06-06 20:07:35] [48/2734] DONE in 10.6 min
+[2026-06-06 20:07:45] [49/2734] START  p1-shared/S8/S8-0027-Incidents.prompt.md
+[2026-06-06 20:07:45] [49/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0027-incidents.log
+[2026-06-06 20:19:54] [49/2734] DONE in 12.1 min
+[2026-06-06 20:20:04] [50/2734] START  p1-shared/S8/S8-0028-IngestXRay.prompt.md
+[2026-06-06 20:20:04] [50/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0028-ingestxray.log
+[2026-06-06 20:28:54] [50/2734] DONE in 8.8 min
+[2026-06-06 20:29:04] [51/2734] START  p1-shared/S8/S8-0029-Locations.prompt.md
+[2026-06-06 20:29:04] [51/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0029-locations.log
+[2026-06-06 20:38:39] [51/2734] DONE in 9.6 min
+[2026-06-06 20:38:49] [52/2734] START  p1-shared/S8/S8-0030-LogStream.prompt.md
+[2026-06-06 20:38:49] [52/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0030-logstream.log
+[2026-06-06 20:47:21] [52/2734] DONE in 8.5 min
+[2026-06-06 20:47:31] [53/2734] START  p1-shared/S8/S8-0031-NotificationChannels.prompt.md
+[2026-06-06 20:47:31] [53/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0031-notificationchannels.log
+[2026-06-06 21:00:39] [53/2734] DONE in 13.1 min
+[2026-06-06 21:00:49] [54/2734] START  p1-shared/S8/S8-0032-Notifications.prompt.md
+[2026-06-06 21:00:49] [54/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0032-notifications.log
+[2026-06-06 21:08:48] [54/2734] DONE in 8 min
+[2026-06-06 21:08:58] [55/2734] START  p1-shared/S8/S8-0033-Onboarding.prompt.md
+[2026-06-06 21:08:58] [55/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0033-onboarding.log
+[2026-06-06 21:18:31] [55/2734] DONE in 9.5 min
+[2026-06-06 21:18:41] [56/2734] START  p1-shared/S8/S8-0034-OperatorConfidence.prompt.md
+[2026-06-06 21:18:41] [56/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0034-operatorconfidence.log
+[2026-06-06 21:30:31] [56/2734] DONE in 11.8 min
+[2026-06-06 21:30:41] [57/2734] START  p1-shared/S8/S8-0035-Pinned.prompt.md
+[2026-06-06 21:30:41] [57/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0035-pinned.log
+[2026-06-06 21:39:28] [57/2734] Cleaning up stale copilot PID 83312
+[2026-06-06 21:39:28] [57/2734] DONE in 8.8 min
+[2026-06-06 21:39:38] [58/2734] START  p1-shared/S8/S8-0036-Push.prompt.md
+[2026-06-06 21:39:38] [58/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0036-push.log
+[2026-06-06 21:47:55] [58/2734] DONE in 8.3 min
+[2026-06-06 21:48:05] [59/2734] START  p1-shared/S8/S8-0037-RbacMatrix.prompt.md
+[2026-06-06 21:48:05] [59/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0037-rbacmatrix.log
+[2026-06-06 21:54:58] [59/2734] DONE in 6.9 min
+[2026-06-06 21:55:08] [60/2734] START  p1-shared/S8/S8-0038-SavedViews.prompt.md
+[2026-06-06 21:55:08] [60/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0038-savedviews.log
+[2026-06-06 22:03:07] [60/2734] DONE in 8 min
+[2026-06-06 22:03:17] [61/2734] START  p1-shared/S8/S8-0039-Search.prompt.md
+[2026-06-06 22:03:17] [61/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0039-search.log
+[2026-06-06 22:12:10] [61/2734] DONE in 8.9 min
+[2026-06-06 22:12:20] [62/2734] START  p1-shared/S8/S8-0040-Sessions.prompt.md
+[2026-06-06 22:12:20] [62/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0040-sessions.log
+[2026-06-06 22:25:01] [62/2734] DONE in 12.7 min
+[2026-06-06 22:25:11] [63/2734] START  p1-shared/S8/S8-0041-Settings.prompt.md
+[2026-06-06 22:25:12] [63/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0041-settings.log
+[2026-06-06 22:42:21] [63/2734] DONE in 17.2 min
+[2026-06-06 22:42:31] [64/2734] START  p1-shared/S8/S8-0042-SettingsBackup.prompt.md
+[2026-06-06 22:42:31] [64/2734] Cleared stale artifact log D:\repos\teslasync\.github\prompts\monorepo\logs\p1-s8-0042-settingsbackup.log
+[2026-06-06 22:52:43] [64/2734] DONE in 10.2 min
+[2026-06-06 22:52:53] [104/2734] START  p2-windows/dashboard-widgets/W-0001-AlertFeedWidget.prompt.md
+[2026-06-06 23:38:48] [104/2734] Cleaning up stale copilot PID 28008
+[2026-06-06 23:38:48] [104/2734] LOG-GATE FAILED (artifact log .github\prompts\monorepo\logs\p2-windows-dashboard-widgets-0001-AlertFeedWidget.log: final EXIT=1, final STATUS=BLOCKED) after 45.9 min
+[2026-06-06 23:38:48] STOPPED at red prompt 104 (log-gate). Resume with: -StartFrom 104

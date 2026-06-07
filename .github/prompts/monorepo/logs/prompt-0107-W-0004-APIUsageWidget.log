@@ -1,0 +1,113 @@
+I'll start by investigating the environment and the codebase to understand what's required and whether the platform capabilities are available.
+
+.NET 10 SDK (10.0.300) is available. Let me read the web source and explore the existing Windows app structure to understand patterns.
+
+The web source is clear. Now let me find existing dashboard-widget native implementations to follow the established pattern. Let me check for sibling widgets and the project structure.
+
+Three sibling widgets already exist (0001ΓÇô0003). Let me study them closely to follow the exact established pattern.
+
+Each widget has 4 files (View, Model, Source, ViewModel). Let me read the full `AnalyticsSummaryWidget` (closest analog ΓÇö stat-based, admin-data) to learn the exact pattern.
+
+Now I understand the 4-file pattern thoroughly. Let me examine the web hook `useApiLogStats`, the number formatters, the existing tests, and i18n catalog.
+
+Let me read the web hook details, the AnalyticsSummary tests (closest analog), and check the i18n catalog and Operations registry.
+
+Let me find the `APICallLogStats` type, the `Operations` registry, and the i18n catalog where widget keys are defined.
+
+Let me examine the Go backend response shape, the Operations registry, and the i18n catalog structure.
+
+No `api-logs/stats` operation exists yet ΓÇö I'll need to add one. Let me check the Go handler's JSON shape, the sibling widget sources, and how operations resolve against the generated client.
+
+Let me find the Go handler for api-logs/stats to confirm the exact wire JSON shape, and check the generated client endpoint table for the operation id.
+
+The operation `get_api_v1_api_logs_stats` exists in the generated client. Now let me confirm the exact wire JSON shape from the Go handler.
+
+I have the wire shape: snake_case `last_24h`, `avg_duration_ms`, `error_rate`, `error_count`, `total_calls`. Now let me check the i18n catalogs (do apiUsage keys already exist?), the placeholder checker, and whether there's a central widget registry.
+
+The `widget.apiUsage.*` i18n keys **already exist** in both the shared catalog and Windows Resources.resw ΓÇö they were pre-seeded. Let me verify the exact values and check for i18n parity across locales and any catalog-sync tests.
+
+All 9 `apiUsage` keys exist across en/he/ar in both catalogs. The AnalyticsSummary chrome keys (refresh/loading/error/retry) aren't in the catalog ΓÇö they use code fallbacks only. Let me get the exact English values to match my fallbacks precisely.
+
+All 9 i18n keys exist with exact values matching the prompt ΓÇö no catalog changes needed. Now let me examine the shared components, tokens, and formatters I'll use. Let me find the relevant files.
+
+Let me read the key tokens, formatters, and feedback components I'll need.
+
+Let me look at how the sibling widgets render danger/severity colors and the feedback components' APIs.
+
+There's a `TsColorDangerBrush` token (`#EF4444`) ΓÇö perfect for the web's `text-red-400`. Let me check the freshness component API and locate the test localizer.
+
+I now have all the building blocks. Let me read the remaining small dependencies and kick off a baseline build to confirm the WinUI toolchain works in this environment.
+
+I have everything I need. Let me quickly check the web `StatCard` styling for faithful tile parity, then set up tracking and start building.
+
+The web StatCard renders label+icon (muted, justified), big value, unit, and a trend row. Let me confirm analyzer naming rules before settling on class names (the app enforces `TreatWarningsAsErrors`).
+
+C# files use 4-space indent but the root `.editorconfig` says 2 ΓÇö there must be a C#-specific override. Let me find all editorconfig files (including hidden) and confirm the C# formatting rules.
+
+`apps/.editorconfig` sets C# to 4-space indent with **LF** line endings and no naming rules ΓÇö so `APIUsageWidget` naming is fine, and I must use LF. Let me confirm the documentation-file setting (affects CS1591) before writing.
+
+All constraints confirmed: 4-space LF C#, app project enforces `TreatWarningsAsErrors`, no naming rules (so `APIUsageWidget` is fine), no doc-file requirement. The toolchain has prior Release build output, confirming WinUI builds here. Let me create the directory and write the Model file.
+
+Let me remove an unused parameter I left in the Model to keep it analyzer-clean.
+
+Now the ViewModel file with the source interface, registration, diagnostics, and state-holder.
+
+Now the WinUI view. Let me write `APIUsageWidget.cs` reproducing every state (loading/empty/error/loaded/stale/offline), compact + standard/wide layouts, danger coloring, and the "High" trend chip.
+
+I referenced a nonexistent `display.GridColumns()`. The column count derives from `IsWide`. Let me fix that.
+
+Now the test file, mirroring the AnalyticsSummary test structure (adapter, projection, size flags, result mapper, full VM state matrix, registration, diagnostics, a11y).
+
+Now wire the Model + ViewModel into the test project so they compile headlessly, matching the sibling pattern.
+
+Before the slow gate, let me verify line endings (the editorconfig requires LF) on my new files.
+
+All new files have CRLF; the editorconfig mandates LF. Let me convert them byte-wise (preserving UTF-8) to LF.
+
+Let me confirm there's no UTF-8 BOM mismatch versus the existing files (editorconfig charset is `utf-8`, not BOM).
+
+The sibling `Build*` helpers are `static` (CA1822 is enforced under `TreatWarningsAsErrors`). My layout helpers don't use instance state, so I must mark them static. Let me fix.
+
+Now let me validate the logic fast by building and testing just the headless test project (Model+ViewModel+tests, net10.0) before the heavier full-solution WinUI build.
+
+All 1163 tests pass (including my new ones). The headless logic is validated. Now the critical step: the full-solution Release build, which compiles the WinUI **view** + Model/ViewModel/Source under the app's `TreatWarningsAsErrors`. Let me run it.
+
+Build succeeded with **0 errors** ΓÇö my files compiled clean under `TreatWarningsAsErrors` (all listed warnings are pre-existing Core ones). Now let me inspect the placeholder checker and verify my files don't trip it, then run formatting verification.
+
+My widget files contain none of the forbidden placeholder patterns, and the gate only scans the `APIUsageWidget` directory. Let me verify formatting on my files (fast, scoped) before the full gate.
+
+`--nologo` isn't a valid `dotnet format` option (it printed help). Let me re-run scoped without it.
+
+Scoped formatting passes. Let me confirm the gate's log directory exists (siblings wrote there), then run the complete official gate.
+
+The log directory and sibling logs exist. Let me check a sibling log's format to match the expected structure, then run the full gate.
+
+Critical finding: siblings 0001ΓÇô0003 all ended `EXIT=1 / STATUS=BLOCKED` because the solution-wide `dotnet test` includes `TeslaSync.App.UITests` (WinAppDriver/Appium) which hard-fails when the UI-automation runner is absent ΓÇö an environmental gap, not a code issue. Let me confirm the runner is still absent here and that UITests is the sole failure source.
+
+Confirmed: WinAppDriver is absent (not on PATH, not installed, port 4723 closed), and UITests has **0 references** to my surface. This is the exact environmental gap siblings 0001ΓÇô0003 recorded as `STATUS=BLOCKED`. Now let me run the complete official gate, capturing real output to the log.
+
+Build succeeded (0 warnings, 0 errors). Now the test step (solution-wide, which includes the WinAppDriver UITests).
+
+Test step exited 1 as expected. Let me extract the summary breakdown to confirm only UITests failed.
+
+Confirmed: headless suite **1163 passed** (incl. my new tests); UITests **147 failed ΓÇö all** `UiAutomationUnavailableException` (absent WinAppDriver), **0** referencing APIUsage. Now the format (whole-solution) and placeholder gate steps.
+
+Format is clean across the whole solution. Now the placeholder gate step (scanning my widget directory).
+
+All gate steps recorded: **BUILD=0, TEST=1, FORMAT=0, PLACEHOLDER=0**. The sole red step (TEST) is the absent-WinAppDriver UITests ΓÇö identical to siblings. Let me verify what the sibling commits included (test file + csproj wiring), to match the established convention.
+
+Siblings committed the 4 widget files + test file + csproj wiring + log (subject suffixed `-- deferred` for the BLOCKED state). I'll match that. Let me append an evidence-based conclusion and the terminal status to the log.
+
+Let me verify the log's final lines are properly formatted (covenant #10 requires the log to end with `EXIT=<int>` and `STATUS=`).
+
+Log correctly ends with `EXIT=1` / `STATUS=BLOCKED` (covenant #10 satisfied). Now let me review what changed and commit, matching the sibling convention.
+
+There are many unrelated pre-existing changes in the tree. I'll commit **only my files**. Let me first confirm the test-csproj diff contains only my 2 lines.
+
+The csproj diff is exactly my 2 lines. Let me stage only my files and commit (subject suffixed `-- deferred` per the BLOCKED convention, with the required trailer).
+
+Committed cleanly (7 files, commit `769707434`). Let me finalize tracking.
+
+Task complete. Here's the summary.
+
+

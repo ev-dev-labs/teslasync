@@ -1,0 +1,139 @@
+I'll start by exploring the environment to understand what's available ΓÇö the web source, the native app structure, and the platform capabilities (WinUI 3 / .NET 10).
+
+.NET 10 SDK is present and `apps/windows` exists. Let me explore the Windows app structure and the web source.
+
+Now let me explore the existing Windows app structure ΓÇö particularly existing dashboard widgets to follow conventions, and the dependency layers (state holders, tokens, i18n).
+
+No `BatteryDegradationForecastWidget` yet. Let me examine the most similar existing widget (`BatteryCellsWidget`) to learn the conventions, plus look at its files.
+
+Excellent ΓÇö clear 4-file pattern. Now let me read the web data hook, the registry, the shared web widget components, and the test structure in parallel.
+
+Now let me read the energy types, the `useBatteryDegradation` hook, and the shared widget components (`WidgetTipCards`, `WidgetProps`).
+
+`AnomalyDetectorWidget` uses tip cards and list patterns ΓÇö the closest analog. Let me read it, the rest of the test, and find the i18n string catalog.
+
+Now let me examine the i18n facade, check existing widget keys in the catalog, and read the AnomalyDetectorWidget (closest analog with tip cards + risk lists).
+
+i18n keys already exist. Let me verify the forecast key values, check for the tier keys (healthy/normal/accelerated), read the localizer facade, and the AnomalyDetector view.
+
+The forecast i18n keys exist but tier keys (`healthy`/`normal`/`accelerated`) are missing. Let me check the web translation catalog (source of truth), look for any native i18n key-coverage test, and read the AnomalyDetector analog.
+
+The tier keys (`healthy`/`normal`/`accelerated`) aren't in the web catalog either ΓÇö they resolve via fallback. I'll add them to the native catalog for completeness. Now let me read the AnomalyDetector analog (risk lists + tip cards + score badges) and the Localization bridge.
+
+This is the ideal structural analog (compact number+badge / standard tip-cards). Let me read its Model, ViewModel, and Source.
+
+Now the Source (query-param analytics style) and ViewModel registration block ΓÇö plus I need the generated operation ID for `/analytics/battery-degradation`.
+
+Now let me read the ViewModel registration block, the csproj (to confirm file globbing), the AnomalyDetector test structure, and key shared components (TsBadge, TsStatCard, DisplayTokens).
+
+Let me read the remaining shared components and confirm project setup: TsStatCard, TsEmptyState/TsQueryError, StatusResources, ScalarFormatters, the csproj, and the AnomalyDetector test fakes.
+
+Let me check the number/date formatters, the csproj globbing, the AnomalyDetector test structure, and whether ar/he catalogs are translated.
+
+Key finding: the resw is **auto-generated** ("do not edit by hand"), so tier labels must resolve via localizer fallback (true web parity) ΓÇö I won't touch the catalog. Let me read the AnomalyDetector test to mirror, the test doubles, and the formatters.
+
+Let me read the date formatting convention, the AnomalyDetector test tail (source/query + projection patterns), and the test doubles.
+
+Let me verify the shared test doubles available in `TeslaSync.App.Tests.Data`.
+
+I have the full pattern. Now let me find verified Segoe Fluent glyphs already used in the codebase for the icons I need (TrendingDown, Thermometer, Lightning/Zap, Battery, Lightbulb, Warning), so I don't guess codepoints.
+
+Found Warning `\uE7BA`, Battery `\uE83F`, Zap `\uE945`. Need Thermometer, Lightbulb, TrendingDown. Let me search more broadly.
+
+Let me check for a central glyph registry and the RouteTable battery/analytics glyphs to reuse verified codepoints for header/thermometer/lightbulb.
+
+Let me harvest the full set of glyph constants already used across native widgets/components to pick verified codepoints.
+
+`\uE9CA` (Temperature) is verified. Let me rigorously verify candidate glyph codepoints against the actual Segoe Fluent/MDL2 fonts using WPF GlyphTypeface ΓÇö no guessing.
+
+All glyphs verified in both Segoe fonts. Final palette: TrendingDownΓåÆ`\uEB0F` (MarketDown), TemperatureΓåÆ`\uE9CA`, ZapΓåÆ`\uE945`, BatteryΓåÆ`\uE83F`, WarningΓåÆ`\uE7BA`, LightbulbΓåÆ`\uEA80`.
+
+Let me set up tracking, write the plan, and kick off a baseline build (Release, matching the gate) in the background while I implement.
+
+Now kicking off the baseline build (Release) in the background to confirm a green starting point while I implement.
+
+Baseline build is running. Now writing the implementation. Starting with `Model.cs` (pure logic: parse, projection, mapper).
+
+Baseline build finished ΓÇö let me confirm it's green before I add code.
+
+Green baseline confirmed (0 errors; the 17 warnings are all pre-existing in `TeslaSync.App.Core`, which doesn't treat warnings as errors). The `TeslaSync.App` project does (`TreatWarningsAsErrors=true`), so my widget files must be fully analyzer-clean and XML-documented. Let me check the test project's settings and any shared build props.
+
+Critical: the test project (`net10.0`, no WinUI) **explicitly links** each widget's Model/ViewModel/Source files via `<Compile Include>`. I must add my 3 logic files there too (required infra, same as every widget). The view `.cs` stays WinUI-only. Also must avoid `CA1308` (no `ToLowerInvariant`) ΓÇö I'll use `OrdinalIgnoreCase`.
+
+Now writing `Model.cs`:
+
+`Model.cs` written. Now the `ViewModel.cs` (interface, registration, diagnostics, state holder with the `hasData` gate):
+
+Now `Source.cs` (query-param analytics read, mirroring AnomalyDetectorSource):
+
+Now the WinUI view (`.cs`) ΓÇö the largest file, modeled on AnomalyDetector/BatteryCells with compact + standard layouts:
+
+Logic files done. Now linking the 3 WinUI-free files into the headless test project (required infra, same as every widget):
+
+Now the comprehensive test file, mirroring the AnomalyDetector/BatteryCells test structure:
+
+I referenced `StatusKind` in the test but need its `using`. Let me add it:
+
+Two correctness fixes before building: `when` is a contextual keyword that breaks the pattern (rename), align `hasCurrentHealth` with web's null-check, and make `BuildStandard` static (CA1822, since warnings are errors).
+
+Now let me build the solution (Release) to catch any compile/analyzer errors in my files before running the full gate.
+
+Only 3 `CA1859` errors (analyzer wants concrete return types for private helpers). Easy fix ΓÇö return `List<T>`/`StackPanel` from the private builders:
+
+Rebuilding to confirm clean compile:
+
+Build is green. Now running my test class to verify it passes:
+
+62/63 passed. The 1 failure is a **bug in my test, not the code**: "Deep battery discharge" contains "charge" (dis**charge**), so both web's `riskIcon` and my `RiskGlyph` correctly return Zap (the `charge` rule precedes `battery`). I'll fix the test to use a clean battery name and add a case documenting the web precedence quirk.
+
+All 64 tests pass. Let me update tracking and verify the gate's tooling paths exist before running the full gate.
+
+Let me check what the placeholder script flags and confirm my files are clean, then run the full gate.
+
+Placeholder check passes. Now running the **full gate** exactly as specified, capturing to the log file:
+
+BUILD_EXIT=0 (the 17 warnings are all pre-existing in `TeslaSync.App.Core`, none from my files). Now gate step 2 ΓÇö full test suite:
+
+Test run exited 1 ΓÇö let me find which tests failed (could be the UITests project needing a UI host, or a real failure).
+
+All 147 failures are in `TeslaSync.App.UITests` (0 passed) ΓÇö UI-automation tests needing a real UI host. Let me check whether my headless `App.Tests` (incl. my 64) passed, and capture the actual UITest error to confirm it's an environmental UI-host limitation, not my regression.
+
+`App.Tests`: **1605 passed, 0 failed** (includes my 64). `UITests`: 147/147 fail in <1ms each ΓÇö classic "no UI host" environmental failure. Let me capture the exact UITest error to document the cause.
+
+Confirmed: UITests fail with `UiAutomationUnavailableException` ΓÇö **WinAppDriver is absent on this runner** (nothing on 127.0.0.1:4723, exe not found). This is a pre-existing, environmental UI-automation-runner gap, entirely unrelated to my widget (my change touches no shell/UITests code). My surface's own verification is green: build 0 errors, **App.Tests 1605/1605 pass (incl. my 64)**.
+
+Let me complete the remaining gate steps (format, placeholder) and append to the log.
+
+FORMAT_EXITΓëá0 ΓÇö the issue is **line endings**: my newly created files have CRLF but the repo's `.editorconfig` enforces LF. Let me see which files are affected and the `.editorconfig` rule.
+
+Format failures are confined to my new files (ENDOFLINE = CRLFΓåÆLF). Let me confirm the rule and all affected files, then normalize line endings.
+
+Only `ENDOFLINE` (CRLFΓåÆLF) on my 5 `.cs` files. Let me normalize line endings byte-level (preserving encoding) for those files:
+
+All 5 files normalized to LF. Let me re-run format verify to confirm clean:
+
+FORMAT_EXIT=0 now. Current gate status: BUILD=0, FORMAT=0, PLACEHOLDER=0, **TEST=1** (solely the 147 WinAppDriver-dependent UITests; my surface's App.Tests are 1605/1605 green). 
+
+Let me regenerate a clean, authoritative gate log with a single fresh run of the exact gate, since the earlier log mixed the now-fixed format failure.
+
+BUILD_EXIT=0. Now the test step (full suite, ~3 min) appended to the log:
+
+Gate captured: BUILD=0, TEST=1, FORMAT=0, PLACEHOLDER=0. Now let me append the platform-capability evidence and the covenant-required `EXIT`/`STATUS` footer to the log.
+
+Let me verify the log footer is on clean separate lines (the covenant requires the log to end with `EXIT=<int>` and `STATUS=`).
+
+The log correctly ends with `EXIT=1` / `STATUS=BLOCKED`. Let me verify my change scope is clean (no accidental edits) and update tracking.
+
+My change scope is clean and additive (4 widget files + 1 test + csproj links + log); the many other uncommitted files are pre-existing sibling work. Let me check how the project's own UI-automation/acceptance-gate logs handle the WinAppDriver situation ΓÇö this confirms the established pattern.
+
+This is decisive confirmation. The sibling logs ΓÇö especially **`prompt-0113-W-0010-BatteryCellsWidget.log`** (the immediately-preceding widget) ΓÇö establish the exact pattern: on this runner, every widget gate is `BUILD=0, FORMAT=0, PLACEHOLDER=0`, headless unit suite fully green, and `TeslaSync.App.UITests` 147-fail on absent WinAppDriver ΓåÆ **`EXIT=1 / STATUS=BLOCKED`**, and each widget prompt **commits its own dir + test + log with an honest BLOCKED message**. My result matches siblings exactly. Let me check the branch/history before committing my deliverable.
+
+The HEAD commit is the sibling BatteryCellsWidget (0010) ΓÇö so widgets **do** commit their deliverable despite the sanctioned WinAppDriver-BLOCKED gate. Let me see exactly what that sibling committed (files + message) to mirror it precisely.
+
+Now I fully understand the established workflow: the sibling BatteryCells commit (HEAD) staged **only its widget dir + log** (test file and csproj stay in the working tree, exactly as the prompt's Commit section specifies), and committed despite the sanctioned WinAppDriver `STATUS=BLOCKED`. The code is green; the only red is the explicitly-sanctioned environmental UI-automation runner absence. I'll follow this proven precedent and the prompt's exact Commit spec.
+
+Committed as `776b1994d`, mirroring the sibling pattern exactly (4 widget files + log; test/csproj remain in the working tree as with every sibling). Let me do a final state verification.
+
+All verified. Let me mark tracking complete and finalize.
+
+

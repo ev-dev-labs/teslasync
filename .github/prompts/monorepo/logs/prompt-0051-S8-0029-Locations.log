@@ -1,61 +1,46 @@
-I'll start by exploring the relevant files: the web hook source and the existing shared core structure.
+I'll start by understanding the task and exploring the repository structure. Let me read the web source and explore the KMP shared core.
 
-Let me study an existing comparable domain to match the established pattern. Annotations looks similar (reads + mutations).
+Let me explore the existing presentation structure to understand the patterns already established.
 
-Now let me examine the S7 repository layer to understand the repo pattern, cache keys, and Resource type.
+A `locations` directory already exists. Let me examine its current contents and look at a similar completed domain for the established pattern.
 
-Now let me look at the CachingRepository base, CacheDomain enum, and a golden test to understand the full picture.
+Locations files already exist. Let me read them and compare against the savedviews reference pattern.
 
-Let me view the CacheDomain enum, web location types, ApiHttpClient, and check for any DI wiring/registry.
+The implementation files already exist and look thorough. Let me check git status, the log file, and verify the supporting infrastructure (repository, tests, golden vectors).
 
-Let me look at the geofence handler's BulkUpdate response shape and the Geofence/VisitedLocation Go models.
+Key finding: the log file `p1-s8-0029-locations.log` shows as **deleted** (unstaged) ΓÇö meaning it was committed before but removed from the working tree. The source files exist and are clean (committed). Let me investigate the history to understand the actual state.
 
-Let me check the web QueryClient default staleTime and the `safeArray` helper, plus look at how a simpler store without "as-data" derivation handles a single read + mutation. Let me also check the IncidentsStore (simpler) and check an existing repo contract test.
+The Locations work was already committed at `392fd66b6`, but the log file is deleted in the working tree and `done.txt` doesn't list it. Let me understand the git topology and verify completeness (tests, golden vectors, repository).
 
-Let me study the Guard domain (JsonElement feed + decode-in-store + enabled gate) and the Driving repo (mixed types) to pick the cleanest pattern.
+The Locations work is fully committed at `392fd66b6` (an ancestor of HEAD) ΓÇö source, repository, tests, and the C# port all exist. But the working tree has the log file deleted and `done.txt` modified. Let me examine the topology and the working-tree diffs to understand exactly what's going on.
 
-I have a complete understanding of the patterns. Let me set up a plan and create the files. First, add the CacheDomain entry.
+Now it's clear: the Locations work (`392fd66b6`) is a **complete, committed implementation 91 commits back** ΓÇö 9 files including source, repo, tests, golden test, and log. The working tree just has a stray deletion of the log file. Per the Honesty Covenant, I must **verify the gate is actually green now** (not assume), then restore consistency. Let me read the committed log, the tests, and supporting files.
 
-Now the models file:
+The committed log shows a **complete green gate run** (TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0, `=== PARITY ===` with all 3 hooks, EXIT=0/STATUS=DONE). The implementation is thorough and matches all 3 web hooks. Per the Honesty Covenant I must **re-verify the gate is green now** rather than trust the old log. Let me read the tests and the C# parity port to confirm coverage before running the gate.
 
-I made a mess of the mutation method. Let me fix it properly:
+All 3 hooks are ported with comprehensive tests (6 store tests + golden vectors) and the parity enumeration is complete. The implementation is correct and matches the web hooks exactly. Let me read the remaining files to fully confirm, then run the gate to verify it's **currently** green.
 
-Now the store:
+Implementation is complete, correct, and comprehensively tested (8 repo-contract tests + 6 store tests + golden vectors), matching all 3 web hooks exactly. The task was fully done at `392fd66b6`; only the working-tree log file is missing. Now I'll verify the gate is **currently** green (not assume) and regenerate the log. Let me confirm the tooling and the CacheDomain partition first.
 
-Now the tests. Store test first:
+No `gradlew` directly in `apps/shared/core`. Let me locate the Gradle wrapper and confirm the build module layout before running the gate.
 
-Now the golden test:
+Gradle root is `apps/shared` (wrapper there; `:core` is a subproject). The prompt's literal `Push-Location apps/shared/core` predates the wrapper location, so I'll run from `apps/shared` targeting `:core`. Let me run the full gate now, writing fresh output to the log, and capture all three exit codes.
 
-Now the repository contract test:
+Gate is **green now**: TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0. The `allTests` tasks were UP-TO-DATE (incremental). To honor "no red-as-green," let me force actual execution of the Locations tests to get fresh pass/fail evidence.
 
-Let me verify the gradle setup and a couple of API signatures before running the gate.
+Forced re-run passed (`RERUN_EXIT=0`, 18 tasks executed). Let me confirm the specific test counts from the results, then finalize the log.
 
-Running the Android (JVM) unit tests which execute commonTest ΓÇö this validates compilation and test logic:
+Fresh evidence confirms all 18 Locations tests pass (7 contract + 5 golden + 6 store, 0 failures). Gate is fully green. Now let me append the rerun evidence and the `=== PARITY ===` closing block to the log.
 
-Tests pass. Now let me run the full gate sequence and capture to the log file.
+Log finalized with full gate output, test evidence (18 tests, 0 failures), `=== PARITY ===` for all 3 hooks, and `EXIT=0`/`STATUS=DONE`. Now let me stage only the two allowed paths and verify what will be committed (the source is already committed and clean, so only the log should be staged).
 
-allTests green. Now ktlint and the placeholder check, plus a native compile to confirm common code compiles for Apple targets:
+Only the log file is staged (36 insertions/28 deletions vs the previously committed version); `apps/shared/core` is already committed and clean; the unrelated working-tree changes (done.txt, other logs) are correctly left unstaged. Let me commit with the prompt's exact message.
 
-Now the placeholder check and an Apple/native compile to confirm cross-platform compilation:
+Committed as `e2c550ca6`. The log file is clean and the gate is fully verified green. All acceptance criteria are met:
 
-All gates pass (TEST=0, LINT=0, PH=0, native compile OK). Let me finalize the log with the parity enumeration and commit.
-
-Done. P1/S8/0029 Locations state holder is complete and committed.
-
-**What was delivered** (cross-platform port of `web/src/api/hooks/useLocations.ts`, all 3 hooks):
-
-| Web hook | KMP API | Endpoint | Notes |
-|---|---|---|---|
-| `useLocations` | `LocationsStore.visitedLocations(vehicleId?)` | `GET /locations?vehicle_id=` | `enabled: !!vehicleId` gate, `safeArray`, key `locations:{id}` |
-| `useGeofences` | `LocationsStore.geofences()` | `GET /geofences` | `safeArray`, key `geofences` |
-| `useBulkGeofencesDelete` | `LocationsStore.bulkDeleteGeofences(ids)` | `POST /geofences/bulk {ids,op:delete}` | invalidates **geofences feed only** |
-
-**Files:** `CacheDomain.kt` (+`Locations`), `presentation/locations/{LocationModels,LocationsStore}.kt`, `data/repo/{LocationRepository,HttpLocationRepository}.kt`, plus 3 tests (store/golden/contract).
-
-**Faithful-to-wire choices:** modeled the real snake-case backend shapes (`VisitedLocation`, augmented `Geofence` with derived `latitude/longitude/radius`), not the drifted legacy camelCase UI types. SI preserved (`total_duration_s`, `radius` meters) ΓÇö conversion stays at the S5 render boundary. Derivations (`locationsEnabled`, `visitedLocationsKey`, `geofencesKey`, `geofenceBulkDeleteBody`) locked by golden vectors for KMPΓåöC# parity.
-
-**Gate (all green):** `TEST_EXIT=0`, `LINT_EXIT=0`, `PH_EXIT=0`; common compiles for `macosArm64`. Log at `.github/prompts/monorepo/logs/p1-s8-0029-locations.log` ends with `EXIT=0 / STATUS=DONE`. Committed as `392fd66b6`.
-
-(On this Windows host the Apple test-*run* tasks are `NO-SOURCE`; commonTest executed via the Android JVM unit-test path and Apple compilation was verified separately.)
+- Γ£à All **3 hooks** ported: `useLocations`ΓåÆ`visitedLocations`, `useGeofences`ΓåÆ`geofences`, `useBulkGeofencesDelete`ΓåÆ`bulkDeleteGeofences` ΓÇö matching endpoints, snake_case params, `safeArray` guard, query keys, and the `enabled: !!vehicleId` gate.
+- Γ£à Mutation invalidates **only** the geofences feed; both reads emit cacheΓåÆnetwork.
+- Γ£à Golden vectors lock the derivations (`locationsEnabled`, cache keys, bulk body); fake-repo + contract tests pass.
+- Γ£à `TEST_EXIT=0  LINT_EXIT=0  PH_EXIT=0`; **18 Locations tests, 0 failures**; `=== PARITY ===` enumerates all 3; log ends `EXIT=0`/`STATUS=DONE`.
 
 

@@ -1,72 +1,75 @@
-I'll start by exploring the relevant files: the web hook source and the existing KMP shared core structure.
+I'll start by exploring the repository structure to understand the task, the web source, and the existing KMP shared core patterns.
 
-Let me study existing patterns ΓÇö the Dashboard domain (closest) and a mutation-heavy domain like Annotations.
+The web hook is clear ΓÇö 1 query + 4 mutations against `/dashboard/layouts`. Now let me understand the existing KMP shared core structure and patterns from prior slices.
 
-The Annotations domain is the best mirror (parametered read + mutations). Let me read its full implementation and tests.
+Let me find existing ported state holders that have a similar CRUD shape (read + mutations) to use as a parity template.
 
-Now the test files, CacheDomain, CachingRepository, and net helpers.
+There's already a `dashboardlayouts` directory. Let me check whether it's a stub or complete, and look at a similar CRUD store (`savedviews`) as a parity template.
 
-Now the core infrastructure: CachingRepository, Resource, net helpers, and how opaque JSON blobs are modeled (Chat/Admin).
+The store and models already exist and look complete. Let me check the repository (S7), tests, log file, C# port, and golden vectors to determine what's actually done vs. missing.
 
-Now the net helpers, an opaque-JSON example (Chat), and the backend route + C# port location.
+Key finding: the log file shows as **deleted** (`D`) in git, and the source files already exist but don't appear in `git status` ΓÇö I need to understand the actual state. Let me investigate the git tracking of these files and check the S7 repository + tests.
 
-Let me check the backend response model and the C# port structure.
+The source + test files are committed, and the log exists in HEAD but was deleted from the working tree. Let me reconcile this ΓÇö check which commit introduced these files and what the deleted log contained.
 
-Let me check if there's a central DI/module wiring and the MapCacheStore test helper, plus net HttpMethodKind/jsonHeaders.
+The DashboardLayouts files were committed in `85d70ac4d`, but HEAD is the Dashboard (S8-0015) commit. The log was deleted from the working tree. Let me clarify the ancestry and read the repository, test, and the previous log content.
 
-I have a complete picture. This is a faithful port following the established Annotations pattern. Let me set up tracking and add the new cache domain.
+`85d70ac4d` is an ancestor but not in the recent 16 commits ΓÇö let me resolve this and read the actual implementation files (repository + test) plus the previous log content from HEAD.
 
-Now the models file:
+Now it's clear: this is a **replay** ΓÇö the source was built earlier (commit `85d70ac4d`, 90 commits back) and carried forward; HEAD's Dashboard commit only updated its log. The harness deleted `p1-s8-0016-dashboardlayouts.log` to signal I should replay S8-0016: verify the implementation, run the gate, regenerate the log, and commit.
 
-Now the repository interface with query/cache-key helpers:
+Let me read the repository, contract test, store test, and the format of the most recent replayed log.
 
-Now the HTTP implementation:
+The implementation is complete and high-quality ΓÇö all 5 hooks ported with full parity. Let me verify the contract test (parity lock), the cache TTL mapping, and read both the recent replay log format and the previous (deleted) log from HEAD.
 
-Now the Store:
+Contract test is comprehensive. Let me verify the cache TTL maps to the web `STALE_TIMES.SLOW`, and read the log format from the recent replay + the previous (deleted) log in HEAD.
 
-Now the two test files ΓÇö repository contract test and store test:
+I now understand the exact log format expected. Let me confirm which `STALE_TIMES.SLOW` the web hook uses (the cache comment claims 5 min, but grep showed two `SLOW` values), then read the previous deleted log from HEAD for its PARITY section.
 
-Now let me run the gate. First verifying the gradle setup location:
+Parity confirmed: `STALE_TIMES.SLOW = 5min` matches `CacheDomain.DashboardLayouts` TTL `5.minutes`. The implementation is complete. Now I must run the real gate (honesty covenant). Let me verify the tooling paths first.
 
-Module uses `:core` with Android + Apple targets. Let me run the gate from `apps/shared`. First the tests (long-running):
+The Gradle root is `apps/shared` (with `:core` module). Let me check the exact STEP command headers the recent replay log used, so I reproduce the gate faithfully.
 
-Tests pass (Apple targets skipped on Windows as expected; Android/JVM unit tests ran). Now ktlint and placeholder checks:
+I have the exact format. The replay runs gradle from `apps/shared`. Let me run the real gate now ΓÇö starting with `:core:allTests` (the long step), writing to the log file in the established format.
 
-ktlint style issues in the test. Let me auto-format:
+STEP 1 passed (`TEST_EXIT=0`). Tests are cached/up-to-date. Let me run STEP 2 (ktlint) and STEP 3 (placeholders), and in parallel confirm the actual DashboardLayouts test results from the JUnit XML reports.
 
-Lint clean. The formatter rewrote the test file ΓÇö let me verify tests still pass and run the placeholder check:
+Both DashboardLayouts test suites are green: **ContractTest 11/11, StoreTest 5/5** (debug + release), and **ktlint LINT_EXIT=0**. Now STEP 3 ΓÇö the placeholder check, capturing the counts.
 
-All three gates pass. Let me confirm my test classes actually executed (not silently skipped):
+All three gate steps pass: **TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0** (COUNT=0, ALLOWED=17). Let me verify the current log state, then append STEP 3, the detailed PARITY section, and the EXIT/STATUS footer.
 
-All 16 tests pass (11 contract + 5 store). Let me finalize the log with the parity enumeration and commit.
+Let me verify the appended log section reads correctly.
 
-`done.txt` was already staged before I started (out of my scope). Let me unstage it to match the commit spec exactly, then commit.
+The log is complete and correctly formatted, ending with `EXIT=0` / `STATUS=DONE`, enumerating all 5 hooks. Now let me verify the git state before committing exactly per the prompt's commit block (only `apps/shared/core` + the log file).
 
-Done. Committed successfully.
+Confirmed: `build/` is ignored, source is already committed, and only the log shows as modified. The commit will contain just the regenerated log ΓÇö matching the replay pattern. Let me stage exactly per the prompt and commit.
+
+Commit `d5c106152` created. Let me do a final verification that the log is now committed cleanly and the gate results are intact.
+
+All verified and clean. The slice is complete.
 
 ## Summary
 
-Ported the web `useDashboardLayouts` hook domain (5 hooks) to UI-free KMP shared-state holders, following the established Annotations port pattern. All gates pass: **TEST_EXIT=0, LINT_EXIT=0, PH_EXIT=0**.
+**P1/S8/0016 ΓÇö DashboardLayouts state holder** ΓÇö verified at full web-hook parity and committed (`d5c106152`).
 
-**New files (`apps/shared/core/**`):**
-- `DashboardLayoutModels.kt` ΓÇö `NamedDashboardLayout` (`@Serializable`, snake_case `@SerialName`, opaque `layout: JsonElement`), `Create`/`Update` inputs.
-- `DashboardLayoutRepository.kt` ΓÇö S7 port interface + `dashboardLayoutListQuery` / `dashboardLayoutCacheKey` (mirrors web `dashboardLayoutLibraryKeys.list(vehicleId ?? 'global')`).
-- `HttpDashboardLayoutRepository.kt` ΓÇö cache-then-network read + 4 mutations; each mutation `clear()`s the whole partition (web `invalidateQueries(...all)` analogue).
-- `DashboardLayoutsStore.kt` ΓÇö per-scope shared `StateFlow<Resource<ΓÇª>>` feeds + suspend `Result` mutations with `refreshAll()`.
-- Added `CacheDomain.DashboardLayouts` (5-min TTL = web `STALE_TIMES.SLOW`).
-- Two test files: 11 contract + 5 store = **16 tests green**.
+This was a **replay** slice: the KMP implementation already existed in branch history; the harness had deleted the log to trigger re-verification. I ran the **real gate** (honesty covenant ΓÇö no red-as-green) from the correct Gradle root (`apps/shared`) and regenerated the log.
 
-**Parity (all 5 hooks):**
-| Web hook | Holder/Repo | Endpoint |
-|---|---|---|
-| useNamedDashboardLayouts | namedLayouts | GET /dashboard/layouts[?vehicle_id=] |
-| useCreateDashboardLayout | createLayout | POST /dashboard/layouts |
-| useUpdateDashboardLayout | updateLayout | PUT /dashboard/layouts/{id} |
-| useDeleteDashboardLayout | deleteLayout | DELETE /dashboard/layouts/{id} (204) |
-| useApplyDashboardLayout | applyLayout | POST /dashboard/layouts/{id}/apply |
+**Gate results (actual):**
+- `:core:allTests` ΓåÆ **TEST_EXIT=0** (BUILD SUCCESSFUL)
+- `:core:ktlintCheck` ΓåÆ **LINT_EXIT=0**
+- `check-placeholders.ps1` ΓåÆ **PH_EXIT=0** (COUNT=0, ALLOWED=17)
 
-SI preserved (no unit-bearing fields; `layout` round-trips verbatim). No golden vectors needed ΓÇö the web hook has no `select`/derivation (matches the Dashboard/Anomalies/Commands no-derivation ports). Apple test targets are SKIPPED on the Windows host as expected. Out-of-scope `done.txt` was unstaged to keep the commit within the allowed file set.
+**Verified from JUnit XML** (debug + release): `DashboardLayoutsStoreTest` 5/5 and `DashboardLayoutRepositoryContractTest` 11/11 ΓÇö 0 failures.
 
-The task is fully complete and verified ΓÇö all gates pass and changes are committed.
+**All 5 hooks ported** (`=== PARITY ===`):
+- `useNamedDashboardLayouts` ΓåÆ `namedLayouts` ΓÇö `GET /dashboard/layouts[?vehicle_id=]`, `STALE_TIMES.SLOW (5min)` ΓåÆ `CacheDomain.DashboardLayouts` 5min TTL, cache-then-network
+- `useCreateDashboardLayout` ΓåÆ `POST /dashboard/layouts` (optional keys omitted) + invalidate-all
+- `useUpdateDashboardLayout` ΓåÆ `PUT /dashboard/layouts/{id}` (only-changed body) + invalidate-all
+- `useDeleteDashboardLayout` ΓåÆ `DELETE /dashboard/layouts/{id}` (204) + invalidate-all
+- `useApplyDashboardLayout` ΓåÆ `POST /dashboard/layouts/{id}/apply` + invalidate-all
+
+SI preserved (no unit-bearing fields; `layout` is an opaque JSON blob). No non-trivial derivation ΓåÆ no golden vectors required; the shared contract test (mirrored by the C# port) locks the query/cache-key helpers. Commit scoped exactly per the prompt (`apps/shared/core` + the log); no out-of-scope files touched.
+
+Log ends with **`EXIT=0` / `STATUS=DONE`**.
 
 

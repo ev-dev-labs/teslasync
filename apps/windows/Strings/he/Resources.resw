@@ -20616,6 +20616,39 @@
   <data name="translation.widget.analyticsSummary.totalDistance" xml:space="preserve">
     <value>Total Distance</value>
   </data>
+  <data name="translation.widget.batteryCells.avgTemp" xml:space="preserve">
+    <value>Avg Temp</value>
+  </data>
+  <data name="translation.widget.batteryCells.avgV" xml:space="preserve">
+    <value>Avg V</value>
+  </data>
+  <data name="translation.widget.batteryCells.cell" xml:space="preserve">
+    <value>Cell</value>
+  </data>
+  <data name="translation.widget.batteryCells.maxTemp" xml:space="preserve">
+    <value>Max Temp</value>
+  </data>
+  <data name="translation.widget.batteryCells.maxV" xml:space="preserve">
+    <value>Max V</value>
+  </data>
+  <data name="translation.widget.batteryCells.minTemp" xml:space="preserve">
+    <value>Min Temp</value>
+  </data>
+  <data name="translation.widget.batteryCells.minV" xml:space="preserve">
+    <value>Min V</value>
+  </data>
+  <data name="translation.widget.batteryCells.noCells" xml:space="preserve">
+    <value>No cell data</value>
+  </data>
+  <data name="translation.widget.batteryCells.noData" xml:space="preserve">
+    <value>No battery cell data</value>
+  </data>
+  <data name="translation.widget.batteryCells.spread" xml:space="preserve">
+    <value>Spread</value>
+  </data>
+  <data name="translation.widget.batteryCells.title" xml:space="preserve">
+    <value>Battery Cells</value>
+  </data>
   <data name="translation.widget.anomalyDetector.activeCount" xml:space="preserve">
     <value>{0} active</value>
   </data>
@@ -20910,8 +20943,32 @@
   <data name="translation.widget.chargeSessionChart.avg" xml:space="preserve">
     <value>Avg</value>
   </data>
+  <data name="translation.widget.chargeSessionChart.description" xml:space="preserve">
+    <value>Bar chart of recent charge sessions: energy per session, color-coded by charger type (home/SC/destination)</value>
+  </data>
   <data name="translation.widget.chargeSessionChart.empty" xml:space="preserve">
     <value>No charge sessions yet</value>
+  </data>
+  <data name="translation.widget.chargeSessionChart.error" xml:space="preserve">
+    <value>Couldn't load charge sessions</value>
+  </data>
+  <data name="translation.widget.chargeSessionChart.error.auth" xml:space="preserve">
+    <value>Sign in to view charge sessions</value>
+  </data>
+  <data name="translation.widget.chargeSessionChart.error.offline" xml:space="preserve">
+    <value>You're offline — showing the last cached charge sessions</value>
+  </data>
+  <data name="translation.widget.chargeSessionChart.loading" xml:space="preserve">
+    <value>Loading charge sessions</value>
+  </data>
+  <data name="translation.widget.chargeSessionChart.name" xml:space="preserve">
+    <value>Charge Session Chart</value>
+  </data>
+  <data name="translation.widget.chargeSessionChart.refresh" xml:space="preserve">
+    <value>Refresh charge sessions</value>
+  </data>
+  <data name="translation.widget.chargeSessionChart.retry" xml:space="preserve">
+    <value>Retry</value>
   </data>
   <data name="translation.widget.chargeSessionChart.sessions" xml:space="preserve">
     <value>Sessions</value>
@@ -20921,6 +20978,15 @@
   </data>
   <data name="translation.widget.chargeSessionChart.total" xml:space="preserve">
     <value>Total</value>
+  </data>
+  <data name="translation.widget.chargeSessionChart.type.dc" xml:space="preserve">
+    <value>DC Fast</value>
+  </data>
+  <data name="translation.widget.chargeSessionChart.type.home" xml:space="preserve">
+    <value>Home / AC</value>
+  </data>
+  <data name="translation.widget.chargeSessionChart.type.supercharger" xml:space="preserve">
+    <value>Supercharger</value>
   </data>
   <data name="translation.widget.chargeStatusLive" xml:space="preserve">
     <value>Charge Status</value>

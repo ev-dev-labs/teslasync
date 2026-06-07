@@ -1,55 +1,71 @@
-I'll start by understanding the task structure and exploring the relevant files.
+I'll start by exploring the repository structure and understanding the task dependencies. Let me look at the key files in parallel.
 
-I have the web source. Now let me understand the existing shared core architecture, especially prior slices' patterns.
+I have the web source. Now let me explore the KMP shared core structure and the dependency slices. Let me narrow the search.
 
-The codebase has an extensive established pattern. Let me study a representative existing slice and the supporting infrastructure.
+Let me examine the core source structure and existing slice implementations (S4-S7).
 
-Now let me study a complete existing slice with both reads and mutations, plus the test pattern and infra.
+There's already a settings implementation. Let me read the existing settings store, models, and repositories to understand the current state.
 
-Let me study a complete read+mutation slice (NotificationChannels) including its test, plus how ApiEndpoints and a golden test work.
+This task appears substantially implemented already. Let me check git state, tests, the C# port, the log file, and golden vectors to understand what's done vs. pending.
 
-Let me examine the networking helpers, CacheDomain, a test example, and the golden vector/placeholder infrastructure.
+Now I understand the situation. The implementation files exist, but the log file `p1-s8-0041-settings.log` was **deleted** in the working tree. Recent commits show a "restore + re-verify log" pattern. Let me check whether the implementation is committed and recover the deleted log's prior content.
 
-I used the wrong parameter. Let me view the CacheDomain file directly in sections.
+The implementation is committed (`ec8cb1fdd`). The working-tree change is just the **deleted log file** ΓÇö matching the recent "restore + re-verify log" commit pattern. Let me examine the committed log content and a peer "restore + re-verify" commit for the exact expected process.
 
-Good ΓÇö there's an existing `Settings` cache domain and a clear per-slice pattern. Let me read the web types/constants, an existing Store test, the golden-vector infra, and the placeholder script.
+The task was completed and committed in `ec8cb1fdd`. The working tree only has the **log file deleted** ΓÇö exactly the "restore + re-verify log" scenario from recent commits. Let me examine the most recent peer commit (Sessions) to follow the exact precedent.
 
-Let me check the `safeArray` helper and a few model/serialization details before writing.
+The pattern is clear: restore the log from HEAD, re-run the full gate, re-stamp fresh verification, commit only the log. The honesty covenant requires I actually run the gate. Let me first review the test files and placeholder checker to understand the verification, then run the gate.
 
-I have everything I need. Let me write the plan and create the implementation files.
+The implementation is complete and faithful ΓÇö all 20 hooks (9 reads + 11 mutations) are covered with tests (13 store tests + 5 golden tests). This is a "restore + re-verify log" task. I must actually run the gate per the honesty covenant. Let me set up tracking and check the build environment.
 
-Now the models file:
+Environment is good: Java 21, Android SDK configured, gradlew at `apps/shared`. Let me check the core module's build config to confirm targets work on Windows before launching the build.
 
-Now the repository interface with keys, query/body builders (golden-pinned):
+Core module declares Android + Apple targets. On Windows, Apple test tasks are auto-disabled by the Kotlin plugin, so `:core:allTests` runs the Android JVM unit tests (which execute commonTest). Recent "restore+re-verify" commits ran this successfully on this machine. Let me start the build now (it can be slow when cold).
 
-Now the golden test and the store test:
+Build is running. While it compiles, let me check the most recently re-verified peer log (Sessions) to match the exact re-stamp format.
 
-Now let me run the gate. First verify the gradle wrapper and run the tests.
+The background build completed. The Sessions re-verify confirms this runs on Windows (Apple klib compile tasks run, link/test tasks skip). Let me read the result.
 
-Let me verify my created files align with the test before the slow gradle run.
+`:core:allTests` succeeded (TEST_EXIT=0), but tests were UP-TO-DATE (cached). The honesty covenant requires genuinely re-executing them. Let me force a real re-run so the Settings tests actually execute.
 
-Everything aligns. Let me verify the golden test then run the gate.
+While the test re-run executes, let me run the independent placeholder check in parallel (it's a standalone PowerShell script, no gradle dependency).
 
-Now let me review the HTTP impl before running the gate.
+Placeholder gate clean (PLACEHOLDER_COUNT=0, PH_EXIT=0). The ALLOWED count grew from 13ΓåÆ17 simply because more stores exist now ΓÇö the scope is identical. Let me wait for the forced test re-run.
 
-All files are consistent with the existing infrastructure. Now running the gate.
+The forced re-run is genuinely recompiling and running tests now (the lone warning is a pre-existing deprecation in `SettingsBackupRepository.kt` ΓÇö a different store, not in scope). Let me wait for it to finish.
 
-Tests pass. Now ktlint and placeholder checks.
+All 38 tasks genuinely executed ΓÇö `testDebugUnitTest` and `testReleaseUnitTest` both ran (not cached), BUILD SUCCESSFUL, TEST_EXIT=0. Let me confirm the Settings test classes specifically passed by inspecting the JUnit result XML.
 
-ktlint formatting violations. Let me auto-format.
+Both S8 Settings test classes genuinely passed: **SettingsStoreTest=12, SettingsDerivationsGoldenTest=5** (note: the original committed log said "13" store tests ΓÇö there are actually 12 methods; my re-stamp will report the accurate count). Now let me run the ktlint gate.
 
-Formatted. Regenerating the log with a clean full gate run.
+ktlint passed (LINT_EXIT=0). All gate results are green. Now let me read the full re-verified Sessions log as the exact format template, plus pull the raw captured gate outputs for the new log.
 
-Both green. Now the placeholder check.
+I have the exact peer format. The Sessions re-verify used a clean **incremental** run (genuine test re-execution, no recompile noise) rather than `--rerun-tasks`. My `--rerun-tasks` run already proved the tests pass; now let me produce a clean peer-matching test section by forcing just the test task to re-run.
 
-All gates green. Now appending the PARITY section and final status to the log.
+Tests came `FROM-CACHE` (Gradle restored my earlier genuine run's results). For the cleanest peer-matching log where the test task plainly executes, let me do one final run with the build cache disabled.
 
-Log complete. Now committing.
+Clean genuine run: `testDebugUnitTest` and `testReleaseUnitTest` both executed (no cache, no warnings), BUILD SUCCESSFUL, TEST_EXIT=0. Now I have all gate outputs. Let me read the raw captured temp files to assemble the log with exact content.
 
-done.txt was already staged from before; the prompt's commit scope is only apps/shared/core + the log. Unstaging it to match.
+I have clean, self-consistent gate outputs (the `cleanTest*` prefix transparently shows the genuine forced re-execution; the "5 executed" count matches). Let me verify the web STALE_TIMES constants to ensure the PARITY section's numeric claims are accurate, and generate the timestamp.
 
-Staged set is exactly the allowed files. Committing.
+Confirmed: web `STALE_TIMES.FAST=30s, STANDARD=60s, SLOW=5min` ΓÇö exactly matching the repository TTLs and the PARITY claims. The PollingConfig has 22 fields (verified). Now I'll create the restored log with the genuine gate output and a corrected test count (12, not the original log's erroneous 13).
 
-Committed `ec8cb1fdd`. Task complete.
+Log restored. Let me verify it's well-formed (all gate markers present, 20 hooks enumerated) and review the diff against the previously committed version.
+
+All 8 gate markers present, all 20 hooks enumerated (1ΓÇô20), and the 20 hook names exactly match `useSettings.ts` (the extra 2 names are the `useQuery`/`useMutation` section labels). Let me review the diff against the committed version to confirm a clean re-stamp.
+
+The diff is a clean re-stamp: fresh DATE, current-tree gradle output (cleanTest prefix, 34s/5s timings), PLACEHOLDER_ALLOWED 13ΓåÆ17, and the single honesty correction `SettingsStoreTest (13ΓåÆ12)`. The PARITY content is otherwise byte-identical (the `22 fiel/lds` wrapping is just diff-display wrapping, present identically on both sides). Let me confirm the file has no real mid-word breaks and that no source changed.
+
+Everything checks out: log lines intact (the diff wrapping was display-only), 197 lines, **no `apps/shared/core` source changed**, and only the settings log is modified. Now let me stage **only** the settings log (per allowed-files scope) and commit, following the peer precedent. First, the commit distance for an accurate message.
+
+Implementation committed at `ec8cb1fdd` (89 commits back). Let me stage **only** the settings log and commit with the restore + re-verify message.
+
+Only the settings log is staged. Now let me commit.
+
+Committed as `eb5329d2e` ΓÇö exactly 1 file changed (the settings log only). Let me update tracking, clean up temp files, and do a final acceptance verification.
+
+All acceptance criteria verified and the task is complete. Let me confirm no open todos remain.
+
+All work complete and verified.
 
 
