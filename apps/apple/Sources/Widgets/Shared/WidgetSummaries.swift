@@ -147,6 +147,32 @@ public struct EnergySummary: Codable, Equatable, Sendable {
     }
 }
 
+/// Vehicle climate + security at a glance, for the watch companion's status row.
+/// Carries only booleans and an already-formatted temperature string — no SI
+/// internals, no coordinates, no PII.
+public struct ClimateSecuritySummary: Codable, Equatable, Sendable {
+    public let isLocked: Bool
+    public let isClimateOn: Bool
+    public let isSentryOn: Bool
+    /// Cabin temperature already formatted in the user's units, e.g. `"21°"`.
+    public let insideTempDisplay: String?
+    public let sampledAt: Date
+
+    public init(
+        isLocked: Bool,
+        isClimateOn: Bool,
+        isSentryOn: Bool,
+        insideTempDisplay: String?,
+        sampledAt: Date
+    ) {
+        self.isLocked = isLocked
+        self.isClimateOn = isClimateOn
+        self.isSentryOn = isSentryOn
+        self.insideTempDisplay = insideTempDisplay
+        self.sampledAt = sampledAt
+    }
+}
+
 /// Overall TeslaSync service health, mirroring `/system/health`.
 public struct SystemHealthSummary: Codable, Equatable, Sendable {
     public enum Level: String, Codable, Equatable, Sendable {

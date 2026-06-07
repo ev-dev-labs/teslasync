@@ -58,7 +58,8 @@ public struct WidgetSnapshotPublisher: Sendable {
             recentDrive: snapshot.recentDrive.map(redactDrive),
             alerts: snapshot.alerts.map(redactAlert),
             energy: snapshot.energy,
-            systemHealth: snapshot.systemHealth
+            systemHealth: snapshot.systemHealth,
+            climateSecurity: snapshot.climateSecurity
         )
     }
 

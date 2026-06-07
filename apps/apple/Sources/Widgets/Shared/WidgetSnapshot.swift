@@ -17,6 +17,7 @@ public struct TeslaSyncWidgetSnapshot: Codable, Equatable, Sendable {
     public let alerts: AlertSummary?
     public let energy: EnergySummary?
     public let systemHealth: SystemHealthSummary?
+    public let climateSecurity: ClimateSecuritySummary?
 
     /// The schema version this build writes and can read.
     public static let currentSchemaVersion = 1
@@ -29,7 +30,8 @@ public struct TeslaSyncWidgetSnapshot: Codable, Equatable, Sendable {
         recentDrive: RecentDriveSummary? = nil,
         alerts: AlertSummary? = nil,
         energy: EnergySummary? = nil,
-        systemHealth: SystemHealthSummary? = nil
+        systemHealth: SystemHealthSummary? = nil,
+        climateSecurity: ClimateSecuritySummary? = nil
     ) {
         self.schemaVersion = schemaVersion
         self.generatedAt = generatedAt
@@ -39,6 +41,7 @@ public struct TeslaSyncWidgetSnapshot: Codable, Equatable, Sendable {
         self.alerts = alerts
         self.energy = energy
         self.systemHealth = systemHealth
+        self.climateSecurity = climateSecurity
     }
 
     /// Whether this build can read the payload (same or older schema).
@@ -104,7 +107,18 @@ public extension TeslaSyncWidgetSnapshot {
                 healthyServices: 8,
                 totalServices: 8,
                 sampledAt: reference.addingTimeInterval(-45)
-            )
+            ),
+            climateSecurity: sampleClimateSecurity(reference: reference)
+        )
+    }
+
+    private static func sampleClimateSecurity(reference: Date) -> ClimateSecuritySummary {
+        ClimateSecuritySummary(
+            isLocked: true,
+            isClimateOn: false,
+            isSentryOn: true,
+            insideTempDisplay: "21°",
+            sampledAt: reference.addingTimeInterval(-90)
         )
     }
 }

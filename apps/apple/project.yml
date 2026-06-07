@@ -9,6 +9,7 @@ options:
   deploymentTarget:
     iOS: "18.0"
     macOS: "15.0"
+    watchOS: "11.0"
   createIntermediateGroups: true
   generateEmptyDirectories: true
   groupSortPosition: top
@@ -155,6 +156,68 @@ targets:
         INFOPLIST_KEY_NSHumanReadableCopyright: ""
         ENABLE_HARDENED_RUNTIME: YES
 
+  # ---- watchOS companion app ----
+  # A modern single-target SwiftUI watch app (WKApplication, no legacy WatchKit
+  # extension). It is intentionally KMP-`Shared`-free (like the widgets): it reads
+  # the cached glance summaries the phone delivers over WatchConnectivity and the
+  # shared App Group snapshot store, so it builds and tests without the Kotlin/Native
+  # toolchain. It runs independently of the companion app (P4/P8).
+  TeslaSyncWatch:
+    type: application
+    platform: watchOS
+    deploymentTarget: "11.0"
+    sources:
+      - path: TeslaSyncWatch
+      - path: Sources/Widgets/Shared
+      - path: Sources/WatchBridge
+      - path: Sources/Platform/Settings/MeasurementSystem.swift
+      - path: Sources/App/AppRoute.swift
+      - path: Sources/App/AppRouteParser.swift
+      - path: TeslaSyncWatchShared
+      - path: Localization
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.teslasync.app.watchkitapp
+        PRODUCT_MODULE_NAME: TeslaSyncWatch
+        INFOPLIST_FILE: Resources/Info-Watch.plist
+        CODE_SIGN_ENTITLEMENTS: Resources/TeslaSyncWatch.entitlements
+        INFOPLIST_KEY_CFBundleDisplayName: TeslaSync
+        INFOPLIST_KEY_WKApplication: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown"
+    dependencies:
+      - target: TeslaSyncWatchWidgets
+        embed: true
+
+  # ---- watchOS complication / widget extension ----
+  # The watch-face complications (accessory families). Reads the same cached snapshot
+  # the watch app writes to the watch App Group; no networking lives here.
+  TeslaSyncWatchWidgets:
+    type: app-extension
+    platform: watchOS
+    deploymentTarget: "11.0"
+    sources:
+      - path: TeslaSyncWatchWidgets
+      - path: Sources/Widgets/Shared
+      - path: TeslaSyncWatchShared
+      - path: Localization
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.teslasync.app.watchkitapp.widgets
+        PRODUCT_MODULE_NAME: TeslaSyncWatchWidgets
+        INFOPLIST_FILE: Resources/Info-WatchWidgets.plist
+        CODE_SIGN_ENTITLEMENTS: Resources/TeslaSyncWatchWidgets.entitlements
+        INFOPLIST_KEY_CFBundleDisplayName: TeslaSync
+
+  # ---- watchOS test bundle ----
+  TeslaSyncWatchTests:
+    type: bundle.unit-test
+    platform: watchOS
+    deploymentTarget: "11.0"
+    sources:
+      - path: Tests/Watch
+    dependencies:
+      - target: TeslaSyncWatch
+
   # ---- iOS test bundles ----
   TeslaSyncTests:
     type: bundle.unit-test
@@ -219,6 +282,22 @@ schemes:
       targets:
         - TeslaSync-macOSTests
         - TeslaSync-macOSUITests
+    run:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
+  TeslaSyncWatch:
+    build:
+      targets:
+        TeslaSyncWatch: all
+    test:
+      targets:
+        - TeslaSyncWatchTests
     run:
       config: Debug
     profile:

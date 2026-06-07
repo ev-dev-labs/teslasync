@@ -3,6 +3,9 @@ included:
   - Sources
   - Tests
   - TeslaSyncWidgets
+  - TeslaSyncWatch
+  - TeslaSyncWatchWidgets
+  - TeslaSyncWatchShared
 
 excluded:
   - Frameworks
@@ -38,3 +41,5 @@ type_name:
   max_length:
     warning: 50
     error: 60
+  excluded:
+    - TS
