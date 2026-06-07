@@ -1,13 +1,15 @@
 === P1/S8/0041 Settings state holder — gate run ===
-DATE=2026-06-05T11:09:58.5992604-07:00
+DATE=2026-06-06T22:37:49.5232637-07:00
+> Task :core:cleanTestDebugUnitTest
+> Task :core:cleanTestReleaseUnitTest
 > Task :core:kmpPartiallyResolvedDependenciesChecker
 > Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :core:downloadKotlinNativeDistribution UP-TO-DATE
 > Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
-> Task :core:compileKotlinIosSimulatorArm64
+> Task :core:compileKotlinIosSimulatorArm64 UP-TO-DATE
 > Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
-> Task :core:iosSimulatorArm64MainKlibrary
-> Task :core:compileTestKotlinIosSimulatorArm64
+> Task :core:iosSimulatorArm64MainKlibrary UP-TO-DATE
+> Task :core:compileTestKotlinIosSimulatorArm64 UP-TO-DATE
 > Task :core:computeLocalPackageDependencyInputFiles SKIPPED
 > Task :core:generateSyntheticLinkageSwiftPMImportProjectForCinteropsAndLdDump SKIPPED
 > Task :core:generateUmbrellaPackageIdentifierBasedResolutionForDefault SKIPPED
@@ -17,10 +19,10 @@ DATE=2026-06-05T11:09:58.5992604-07:00
 > Task :core:convertSyntheticImportProjectIntoDefFileIphonesimulator SKIPPED
 > Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
 > Task :core:iosSimulatorArm64Test SKIPPED
-> Task :core:compileKotlinMacosArm64
+> Task :core:compileKotlinMacosArm64 UP-TO-DATE
 > Task :core:macosArm64ProcessResources NO-SOURCE
-> Task :core:macosArm64MainKlibrary
-> Task :core:compileTestKotlinMacosArm64
+> Task :core:macosArm64MainKlibrary UP-TO-DATE
+> Task :core:compileTestKotlinMacosArm64 UP-TO-DATE
 > Task :core:convertSyntheticImportProjectIntoDefFileMacosx SKIPPED
 > Task :core:linkDebugTestMacosArm64 SKIPPED
 > Task :core:macosArm64Test SKIPPED
@@ -31,42 +33,43 @@ DATE=2026-06-05T11:09:58.5992604-07:00
 > Task :core:packageDebugResources UP-TO-DATE
 > Task :core:parseDebugLocalResources UP-TO-DATE
 > Task :core:generateDebugRFile UP-TO-DATE
+> Task :core:compileDebugKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileDebug UP-TO-DATE
+> Task :core:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:bundleLibCompileToJarDebug UP-TO-DATE
 > Task :core:preDebugUnitTestBuild UP-TO-DATE
 > Task :core:generateDebugUnitTestStubRFile UP-TO-DATE
+> Task :core:compileDebugUnitTestKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:koverFindJar UP-TO-DATE
+> Task :core:processDebugJavaRes UP-TO-DATE
+> Task :core:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :core:testDebugUnitTest
 > Task :core:preReleaseBuild UP-TO-DATE
 > Task :core:generateReleaseResValues UP-TO-DATE
 > Task :core:generateReleaseResources UP-TO-DATE
 > Task :core:packageReleaseResources UP-TO-DATE
 > Task :core:parseReleaseLocalResources UP-TO-DATE
 > Task :core:generateReleaseRFile UP-TO-DATE
+> Task :core:compileReleaseKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileRelease UP-TO-DATE
+> Task :core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :core:bundleLibCompileToJarRelease UP-TO-DATE
 > Task :core:preReleaseUnitTestBuild UP-TO-DATE
 > Task :core:generateReleaseUnitTestStubRFile UP-TO-DATE
+> Task :core:compileReleaseUnitTestKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileReleaseUnitTest UP-TO-DATE
-> Task :core:compileDebugKotlinAndroid
-> Task :core:compileDebugJavaWithJavac NO-SOURCE
-> Task :core:compileReleaseKotlinAndroid
-> Task :core:processDebugJavaRes UP-TO-DATE
-> Task :core:compileReleaseJavaWithJavac NO-SOURCE
-> Task :core:processReleaseJavaRes UP-TO-DATE
-> Task :core:bundleLibCompileToJarDebug
-> Task :core:bundleLibRuntimeToJarDebug
-> Task :core:bundleLibCompileToJarRelease
-> Task :core:bundleLibRuntimeToJarRelease
-> Task :core:compileDebugUnitTestKotlinAndroid
-> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
-> Task :core:processDebugUnitTestJavaRes UP-TO-DATE
-> Task :core:compileReleaseUnitTestKotlinAndroid
-> Task :core:testDebugUnitTest
 > Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processReleaseJavaRes UP-TO-DATE
 > Task :core:processReleaseUnitTestJavaRes UP-TO-DATE
 > Task :core:testReleaseUnitTest
 > Task :core:allTests NO-SOURCE
 
-BUILD SUCCESSFUL in 1m 32s
-37 actionable tasks: 15 executed, 22 up-to-date
+BUILD SUCCESSFUL in 34s
+40 actionable tasks: 5 executed, 35 up-to-date
 TEST_EXIT=0
 > Task :core:loadKtlintReporters UP-TO-DATE
 > Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
@@ -90,6 +93,10 @@ TEST_EXIT=0
 > Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
 > Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
 > Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonMainSourceSet UP-TO-DATE
+> Task :core:ktlintCommonMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonTestSourceSet UP-TO-DATE
+> Task :core:ktlintCommonTestSourceSetCheck UP-TO-DATE
 > Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
 > Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
 > Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
@@ -116,16 +123,12 @@ TEST_EXIT=0
 > Task :core:ktlintNativeMainSourceSetCheck SKIPPED
 > Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
 > Task :core:ktlintNativeTestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverCommonMainSourceSet
-> Task :core:ktlintCommonMainSourceSetCheck
-> Task :core:runKtlintCheckOverCommonTestSourceSet
-> Task :core:ktlintCommonTestSourceSetCheck
-> Task :core:ktlintCheck
+> Task :core:ktlintCheck UP-TO-DATE
 
-BUILD SUCCESSFUL in 20s
-16 actionable tasks: 4 executed, 12 up-to-date
+BUILD SUCCESSFUL in 5s
+16 actionable tasks: 16 up-to-date
 LINT_EXIT=0
-PLACEHOLDER_ALLOWED=13
+PLACEHOLDER_ALLOWED=17
 PLACEHOLDER_COUNT=0
 EXIT=0
 PH_EXIT=0
@@ -185,7 +188,7 @@ Derivations golden-pinned (KMP + C# parity, ADR-004), inlined in SettingsDerivat
 {"enabled":b}, gasPriceConfigBody {"poll_interval":iv}, apiSuspendBody {"suspended":b},
 settingsCarPrefsKey 'car-prefs:{id}'. The only client-side derivations in the web hook are these
 request shapes + the vehicles safeArray null-guard; no unit-bearing transforms exist (SI preserved).
-Tests: SettingsStoreTest (13, fake-repo: each read emits cache->network; each mutation delegates +
+Tests: SettingsStoreTest (12, fake-repo: each read emits cache->network; each mutation delegates +
 refreshes EXACTLY the right feed(s); no-invalidate mutations refresh nothing; feeds shared across
 observers; refresh of an unobserved feed is a no-op) + SettingsDerivationsGoldenTest (5) green.
 No network/cache touched in tests.
