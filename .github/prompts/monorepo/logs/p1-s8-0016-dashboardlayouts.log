@@ -1,13 +1,13 @@
-=== P1/S8/0016 DashboardLayouts gate ===
-
+=== GATE START 2026-06-06T18:16:57.7197316-07:00 ===
+=== STEP 1: ./gradlew :core:allTests (run from apps/shared; :core is the only subproject) ===
 > Task :core:kmpPartiallyResolvedDependenciesChecker
 > Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :core:downloadKotlinNativeDistribution UP-TO-DATE
 > Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
-> Task :core:compileKotlinIosSimulatorArm64
+> Task :core:compileKotlinIosSimulatorArm64 UP-TO-DATE
 > Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
-> Task :core:iosSimulatorArm64MainKlibrary
-> Task :core:compileTestKotlinIosSimulatorArm64
+> Task :core:iosSimulatorArm64MainKlibrary UP-TO-DATE
+> Task :core:compileTestKotlinIosSimulatorArm64 UP-TO-DATE
 > Task :core:computeLocalPackageDependencyInputFiles SKIPPED
 > Task :core:generateSyntheticLinkageSwiftPMImportProjectForCinteropsAndLdDump SKIPPED
 > Task :core:generateUmbrellaPackageIdentifierBasedResolutionForDefault SKIPPED
@@ -17,10 +17,10 @@
 > Task :core:convertSyntheticImportProjectIntoDefFileIphonesimulator SKIPPED
 > Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
 > Task :core:iosSimulatorArm64Test SKIPPED
-> Task :core:compileKotlinMacosArm64
+> Task :core:compileKotlinMacosArm64 UP-TO-DATE
 > Task :core:macosArm64ProcessResources NO-SOURCE
-> Task :core:macosArm64MainKlibrary
-> Task :core:compileTestKotlinMacosArm64
+> Task :core:macosArm64MainKlibrary UP-TO-DATE
+> Task :core:compileTestKotlinMacosArm64 UP-TO-DATE
 > Task :core:convertSyntheticImportProjectIntoDefFileMacosx SKIPPED
 > Task :core:linkDebugTestMacosArm64 SKIPPED
 > Task :core:macosArm64Test SKIPPED
@@ -31,43 +31,45 @@
 > Task :core:packageDebugResources UP-TO-DATE
 > Task :core:parseDebugLocalResources UP-TO-DATE
 > Task :core:generateDebugRFile UP-TO-DATE
+> Task :core:compileDebugKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileDebug UP-TO-DATE
+> Task :core:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:bundleLibCompileToJarDebug UP-TO-DATE
 > Task :core:preDebugUnitTestBuild UP-TO-DATE
 > Task :core:generateDebugUnitTestStubRFile UP-TO-DATE
+> Task :core:compileDebugUnitTestKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:koverFindJar UP-TO-DATE
+> Task :core:processDebugJavaRes UP-TO-DATE
+> Task :core:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :core:testDebugUnitTest FROM-CACHE
 > Task :core:preReleaseBuild UP-TO-DATE
 > Task :core:generateReleaseResValues UP-TO-DATE
 > Task :core:generateReleaseResources UP-TO-DATE
 > Task :core:packageReleaseResources UP-TO-DATE
 > Task :core:parseReleaseLocalResources UP-TO-DATE
 > Task :core:generateReleaseRFile UP-TO-DATE
+> Task :core:compileReleaseKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileRelease UP-TO-DATE
+> Task :core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :core:bundleLibCompileToJarRelease UP-TO-DATE
 > Task :core:preReleaseUnitTestBuild UP-TO-DATE
 > Task :core:generateReleaseUnitTestStubRFile UP-TO-DATE
+> Task :core:compileReleaseUnitTestKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileReleaseUnitTest UP-TO-DATE
-> Task :core:compileDebugKotlinAndroid
-> Task :core:compileDebugJavaWithJavac NO-SOURCE
-> Task :core:compileReleaseKotlinAndroid
-> Task :core:processDebugJavaRes
-> Task :core:compileReleaseJavaWithJavac NO-SOURCE
-> Task :core:bundleLibRuntimeToJarDebug
-> Task :core:bundleLibCompileToJarDebug
-> Task :core:processReleaseJavaRes
-> Task :core:bundleLibRuntimeToJarRelease
-> Task :core:bundleLibCompileToJarRelease
-> Task :core:compileDebugUnitTestKotlinAndroid
-> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
-> Task :core:processDebugUnitTestJavaRes
-> Task :core:compileReleaseUnitTestKotlinAndroid
-> Task :core:testDebugUnitTest
 > Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
-> Task :core:processReleaseUnitTestJavaRes
-> Task :core:testReleaseUnitTest
+> Task :core:processReleaseJavaRes UP-TO-DATE
+> Task :core:processReleaseUnitTestJavaRes UP-TO-DATE
+> Task :core:testReleaseUnitTest UP-TO-DATE
 > Task :core:allTests NO-SOURCE
 
-BUILD SUCCESSFUL in 38s
-37 actionable tasks: 19 executed, 18 up-to-date
+BUILD SUCCESSFUL in 3s
+38 actionable tasks: 1 executed, 1 from cache, 36 up-to-date
 TEST_EXIT=0
+=== STEP 2: ./gradlew ktlintCheck (run from apps/shared) ===
 > Task :core:loadKtlintReporters UP-TO-DATE
 > Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
 > Task :core:ktlintAndroidDebugSourceSetCheck SKIPPED
@@ -90,6 +92,10 @@ TEST_EXIT=0
 > Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
 > Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
 > Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonMainSourceSet UP-TO-DATE
+> Task :core:ktlintCommonMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonTestSourceSet UP-TO-DATE
+> Task :core:ktlintCommonTestSourceSetCheck UP-TO-DATE
 > Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
 > Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
 > Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
@@ -116,79 +122,49 @@ TEST_EXIT=0
 > Task :core:ktlintNativeMainSourceSetCheck SKIPPED
 > Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
 > Task :core:ktlintNativeTestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverCommonMainSourceSet
-> Task :core:ktlintCommonMainSourceSetCheck
-> Task :core:runKtlintCheckOverCommonTestSourceSet
+> Task :core:ktlintCheck UP-TO-DATE
 
-> Task :core:ktlintCommonTestSourceSetCheck FAILED
-D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:77:64 Missing newline after '{'
-D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:77:85 Missing newline after ';'
-D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:77:104 Missing newline before '}'
-D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:109:41 Expected newline before '.'
-D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:109:49 Expected newline before '.'
-D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:109:80 Expected newline before '.'
-D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:109:102 Expected newline before '.'
-D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:157:45 Expected newline before '.'
-D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:157:69 Expected newline before '.'
-D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:157:91 Expected newline before '.'
-D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:209:45 Expected newline before '.'
-D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:209:69 Expected newline before '.'
-D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\DashboardLayoutRepositoryContractTest.kt:209:91 Expected newline before '.'
-
-FAILURE: Build failed with an exception.
-
-* What went wrong:
-Execution failed for task ':core:ktlintCommonTestSourceSetCheck'.
-> A failure occurred while executing org.jlleitschuh.gradle.ktlint.worker.ConsoleReportWorkAction
-   > KtLint found code style violations. Please see the following reports:
-     - D:\repos\teslasync\apps\shared\core\build\reports\ktlint\ktlintCommonTestSourceSetCheck\ktlintCommonTestSourceSetCheck.txt
-
-* Try:
-> Run with --stacktrace option to get the stack trace.
-> Run with --info or --debug option to get more log output.
-> Run with --scan to get full insights.
-> Get more help at https://help.gradle.org.
-
-BUILD FAILED in 12s
-16 actionable tasks: 4 executed, 12 up-to-date
-LINT_EXIT=1
-> Task :core:runKtlintCheckOverMacosTestSourceSet NO-SOURCE
-> Task :core:ktlintMacosTestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverNativeMainSourceSet NO-SOURCE
-> Task :core:ktlintNativeMainSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
-> Task :core:ktlintNativeTestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverCommonTestSourceSet
-> Task :core:ktlintCommonTestSourceSetCheck
-> Task :core:ktlintCheck
-
-BUILD SUCCESSFUL in 9s
-16 actionable tasks: 2 executed, 14 up-to-date
+BUILD SUCCESSFUL in 2s
+16 actionable tasks: 16 up-to-date
 LINT_EXIT=0
-> Task :core:processReleaseUnitTestJavaRes UP-TO-DATE
-> Task :core:testReleaseUnitTest
-> Task :core:allTests NO-SOURCE
-
-BUILD SUCCESSFUL in 23s
-37 actionable tasks: 7 executed, 30 up-to-date
-TEST_EXIT=0
+=== STEP 3: ./apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin (stdout suppressed per gate; PLACEHOLDER_COUNT=0 PLACEHOLDER_ALLOWED=17) ===
 PH_EXIT=0
-
 === PARITY ===
-Web source: web/src/api/hooks/useDashboardLayouts.ts (5 hooks)
-Reads (1):
-  useNamedDashboardLayouts  -> DashboardLayoutsStore.namedLayouts / HttpDashboardLayoutRepository.namedLayouts
-      GET /dashboard/layouts [?vehicle_id=]  staleTime SLOW(5m) -> CacheDomain.DashboardLayouts TTL 5m
-      cache key mirrors dashboardLayoutLibraryKeys.list(vehicleId ?? 'global')
-Mutations (4):
-  useCreateDashboardLayout   -> createLayout  POST   /dashboard/layouts            invalidate all
-  useUpdateDashboardLayout   -> updateLayout  PUT    /dashboard/layouts/{id}       invalidate all
-  useDeleteDashboardLayout   -> deleteLayout  DELETE /dashboard/layouts/{id} (204) invalidate all
-  useApplyDashboardLayout    -> applyLayout   POST   /dashboard/layouts/{id}/apply invalidate all
-Derivation: none (web hook has no select; `layout` is an opaque blob round-tripped verbatim) ->
-  no golden vectors required (matches Dashboard/Anomalies/Commands no-derivation ports). SI preserved.
-Tests: 11 contract + 5 store = 16, all green (testDebugUnitTest + testReleaseUnitTest).
-Apple targets SKIPPED on Windows host (iosSimulatorArm64Test/macosArm64Test) — expected.
-
+Web source: web/src/api/hooks/useDashboardLayouts.ts (5 hooks = 1 read + 4 mutations)
+Reads ported (1/1):
+  [x] useNamedDashboardLayouts(vehicleId?) -> DashboardLayoutsStore.namedLayouts(vehicleId) / HttpDashboardLayoutRepository.namedLayouts(vehicleId)
+        endpoint: GET /api/v1/dashboard/layouts [?vehicle_id=<id>]  (vehicle_id sent only when non-null; snake_case)
+          [contract tests: namedLayoutsHitsLayoutsRootWithNoParamsWhenScopeless, namedLayoutsSendsVehicleIdWhenScoped]
+        query key intent: dashboardLayoutLibraryKeys.list(vehicleId ?? 'global') -> CacheDomain.DashboardLayouts key dashboardLayoutCacheKey(vehicleId) ("<id>" | "global")
+          [contract tests: namedLayoutsDecodesTypedRowsAndCachesUnderScopeKey, scopelessAndScopedReadsCacheUnderDistinctKeys]
+        staleTime: STALE_TIMES.SLOW (5 * 60_000ms = 5min) -> CacheDomain.DashboardLayouts TTL 5.minutes
+        response shape: List<NamedDashboardLayout> (id, user_id?, vehicle_id?, name, is_default, layout=opaque SavedDashboard JSON blob, created_at, updated_at)
+        derivation: none (web applies no select; `layout` is unknown, narrowed at the consumer) -> none in holder; no golden vector required
+Mutations ported (4/4) — every success invalidates `all` (web invalidateQueries(dashboardLayoutLibraryKeys.all = ['dashboard-layouts-library'])
+  => HttpDashboardLayoutRepository.clear() drops the whole CacheDomain.DashboardLayouts partition AND DashboardLayoutsStore.refreshAll() bumps every observed feed's trigger):
+  [x] useCreateDashboardLayout -> createLayout : POST   /api/v1/dashboard/layouts            body {name, layout, vehicle_id?, is_default?} (optional keys omitted when null); invalidate all
+          [contract tests: createLayoutPostsBodyAndInvalidatesWholePartition, createLayoutOmitsOptionalKeysWhenNull]
+  [x] useUpdateDashboardLayout -> updateLayout : PUT    /api/v1/dashboard/layouts/{id}       body only-changed {name?, is_default?, layout?} (id is path-only, mirrors web `{ id, ...patch }`); invalidate all
+          [contract tests: updateLayoutPutsByIdWithOnlyChangedFields, updateLayoutSendsLayoutBlobWhenProvided]
+  [x] useDeleteDashboardLayout -> deleteLayout : DELETE /api/v1/dashboard/layouts/{id}       204 No Content (empty body read as raw text + discarded); invalidate all
+          [contract test: deleteLayoutDeletesByIdAndInvalidatesWholePartition]
+  [x] useApplyDashboardLayout  -> applyLayout  : POST   /api/v1/dashboard/layouts/{id}/apply marks default for (user, vehicle) scope; invalidate all
+          [contract test: applyLayoutPostsApplyByIdAndInvalidatesWholePartition]
+  failure semantics: a failed mutation does NOT invalidate the cache [contract test: mutationFailureDoesNotInvalidate]
+SI preserved: no unit-bearing fields in this domain — `layout` is an opaque SavedDashboard JSON blob round-tripped verbatim; no _mi/_mph/_kwh/_kw/_psi keys in any DTO or cached payload. No SI conversion at this layer; display formatting is the S5 render boundary's job.
+Cache->network: read emits Loading (cache slot) then Success (network) [DashboardLayoutsStoreTest.readEmitsCacheThenNetwork; contract namedLayoutsDecodesTypedRowsAndCachesUnderScopeKey]
+Cross-platform parity: query + cache-key derivations (dashboardLayoutListQuery / dashboardLayoutCacheKey) are trivial string ops locked by the shared DashboardLayoutRepositoryContractTest, which the Windows C# port mirrors. No non-trivial derivation exists, so no new S5-style golden vectors are required (matches the Dashboard/Anomalies/Commands no-derivation ports).
+Tests (16 total per variant, all green; counts verified from JUnit XML testDebugUnitTest + testReleaseUnitTest):
+  DashboardLayoutsStoreTest (5/5 fake-repo): readEmitsCacheThenNetwork, sameScopeSharesUpstreamAndDistinctScopesAreDistinctFeeds, createDelegatesAndRefreshesEveryObservedFeed, updateDeleteAndApplyDelegateAndRefreshObservedFeeds, refreshAllIsNoOpWhenNothingIsObserved
+  DashboardLayoutRepositoryContractTest (11/11 endpoint/param/body/invalidate): namedLayoutsHitsLayoutsRootWithNoParamsWhenScopeless, namedLayoutsSendsVehicleIdWhenScoped, namedLayoutsDecodesTypedRowsAndCachesUnderScopeKey, scopelessAndScopedReadsCacheUnderDistinctKeys, createLayoutPostsBodyAndInvalidatesWholePartition, createLayoutOmitsOptionalKeysWhenNull, updateLayoutPutsByIdWithOnlyChangedFields, updateLayoutSendsLayoutBlobWhenProvided, deleteLayoutDeletesByIdAndInvalidatesWholePartition, applyLayoutPostsApplyByIdAndInvalidatesWholePartition, mutationFailureDoesNotInvalidate
+  Apple targets (iosSimulatorArm64Test / macosArm64Test) SKIPPED on Windows host — expected.
+Artifacts:
+  apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/dashboardlayouts/DashboardLayoutModels.kt (NamedDashboardLayout, CreateDashboardLayoutInput, UpdateDashboardLayoutInput)
+  apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/dashboardlayouts/DashboardLayoutsStore.kt (S8 state holder; 1 read feed + 4 mutations + refreshAll)
+  apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/DashboardLayoutRepository.kt (S7 interface + dashboardLayoutListQuery + dashboardLayoutCacheKey)
+  apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpDashboardLayoutRepository.kt (cache-then-network impl; mutations clear() whole partition)
+  apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/cache/CacheDomain.kt (DashboardLayouts domain, 5.minutes TTL)
+  tests: DashboardLayoutsStoreTest.kt (5 fake-repo tests), DashboardLayoutRepositoryContractTest.kt (11 endpoint/shape/invalidate tests)
+Gate results: TEST_EXIT=0  LINT_EXIT=0  PH_EXIT=0
 EXIT=0
 STATUS=DONE
