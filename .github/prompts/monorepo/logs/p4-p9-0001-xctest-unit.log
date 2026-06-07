@@ -1,0 +1,271 @@
+================================================================================
+P4 · P9 · 0001 — XCTest unit coverage
+Artifact: apps/apple/**Tests/ (unit suites + fixtures) | Branch: feature/apps-ios
+Run host: macOS 26 (arm64) · Xcode 26.5 (17F42) via
+          DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+Prompt:   .github/prompts/monorepo/p4-apple/P9-0001-xctest-unit.prompt.md
+================================================================================
+
+OUTCOME: STATUS=BLOCKED. Two INDEPENDENT, covenant-mandated blockers (either one
+is sufficient). The deliverable's own gate cannot run on this host, and a declared
+predecessor is not DONE. Per the inlined 10-Rule Honesty Covenant (Rules 1, 3, 7)
+and ADR-010 ("A prompt that cannot run its gate (missing SDK/device/runner) is
+BLOCKED, never DONE"), the honest status is BLOCKED — not a DONE-with-deferral.
+
+  BLOCKER A (capability / Rules 1+3, ADR-010): the P9 gate is
+    `xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,…' build test`
+    `xcodebuild -scheme TeslaSync-macOS build test`
+    Both app targets AND their TeslaSyncTests / TeslaSync-macOSTests unit bundles
+    link `Frameworks/Shared.xcframework` (KMP core, ADR-004). That framework is
+    produced by a pre-build gradle script (Scripts/build-shared-xcframework.sh →
+    `gradlew :core:assembleSharedXCFramework`) which requires the Kotlin/Native +
+    JDK toolchain. This host has NO JDK → the framework cannot be assembled → the
+    iOS gate fails (IOS_EXIT=65) and the macOS gate fails (MAC_EXIT=70). The whole
+    of this prompt's deliverable (Tests/Unit/**) lives INSIDE those un-buildable
+    bundles, so there is no alternative green build that could compile/run new
+    iOS/macOS unit tests on this host. (Predecessor-tracked limitation S3-0001;
+    apps/macos-pending-verifications.md; deferred to a macos-latest CI runner.)
+
+  BLOCKER B (predecessor / Rule 7): the prompt's "Depends on" line is
+    "P4/P1..P8 infrastructure and generated P7 pages." P7 was never executed —
+    there is no `P7-*` entry in logs/done.txt, and apps/apple/Sources/ contains
+    NO page view-models. Sources/App/RouteHostRegistry.swift documents this by
+    design: "Registry that the P7 page prompts populate … until a page registers,
+    a pending state." The registry is empty. The prompt's CORE requirement —
+    "for each P7 parity unit, test view-model loading/empty/error/success/stale
+    states … no page is considered covered without all states" — has no subject
+    matter to test. Writing page-state tests now would require inventing pages,
+    i.e. bypassing the predecessor (forbidden by Rule 7).
+
+================================================================================
+=== PREFLIGHT ===
+================================================================================
+
+[predecessors] grep of logs/done.txt:
+  DONE: p4-apple/P0,P1,P2,P3-0001..0005,P4-0001,P5-0001,P6-0001,P6-0002,
+        P8-0001,P8-0002,P8-0003  (P1..P8 infrastructure present)
+  MISSING: any `P7-*` page prompt → `grep -c P7 done.txt` = 0
+  => "generated P7 pages" predecessor NOT satisfied (BLOCKER B).
+
+[page view-models] find apps/apple/Sources -iname '*Page*'/'*ViewModel*'/'*Screen*'
+  => none. Sources/ groups: App, Auth, Components, Design, Live, Notifications,
+     Platform, SharedFacade, WatchBridge, Widgets. No Pages/ or Features/.
+  Sources/App/RouteHostRegistry.swift (verbatim): "Registry that the P7 page
+     prompts populate to host their content at a route. … until a page registers,
+     a pending state". registeredRoutes is empty in the shipped infrastructure.
+
+[clean tree] git status --porcelain apps/apple  => EMPTY (no tracked changes).
+  apps/apple/TeslaSync.xcodeproj is git-ignored (git check-ignore confirms);
+  it was regenerated read-only via `xcodegen generate` for the gate and is NOT
+  committed. Working-tree entries outside apps/apple (logs/*.log, logs/done.txt,
+  run-prompts.sh) are pre-existing prompt-runner bookkeeping — NOT produced by
+  this prompt; they are not staged (Rule 9 honoured: this prompt introduces no
+  out-of-scope drift).
+
+[toolchain echo]
+  Xcode            : 26.5 (Build 17F42)  via DEVELOPER_DIR (no sudo)
+  Swift            : 6.3.2
+  swiftlint        : 0.63.3
+  swiftformat      : 0.61.1
+  xcodegen         : 2.45.4
+  pwsh             : 7.6.2
+  iOS simulators   : iPhone 17 / 17 Pro / 17 Pro Max / 17e  (NO "iPhone 16";
+                     gate names iPhone 16 → substituted iPhone 17, documented)
+  watchOS sims     : Apple Watch Series 11 (46mm/42mm), Ultra 3, SE 3
+  JDK              : ABSENT — `java -version` and `gradlew --version` both emit
+                     "Unable to locate a Java Runtime." (root cause of BLOCKER A)
+  Kotlin/Native    : unavailable (no JDK) → Shared.xcframework cannot be built
+
+================================================================================
+=== SURVEY ===
+================================================================================
+
+Inspected before deciding:
+- Prompt P9-0001 (gate = iOS+macOS xcodebuild build test, swiftlint --strict,
+  swiftformat --lint, check-placeholders; "EXIT=0 only if IOS/MAC/LINT/FORMAT/
+  PLACEHOLDER all 0"; capability clause: "if the gate can't run → STATUS=BLOCKED").
+- Methodology 0000 (binding) — 10-Rule Honesty Covenant; ADR-010 (testing gates,
+  "cannot run gate → BLOCKED"), ADR-011 (definition of done).
+- apps/apple/project.yml — TeslaSync / TeslaSync-macOS app targets + their
+  TeslaSyncTests / TeslaSync-macOSTests both list `Frameworks/Shared.xcframework`
+  as a dependency; both app targets have a preBuildScript build-shared-xcframework.sh.
+  TeslaSyncWatch / TeslaSyncWatchTests are intentionally Shared-FREE.
+- apps/apple/Scripts/build-shared-xcframework.sh — runs `gradlew
+  :core:assembleSharedXCFramework` (needs JDK); header: "Requires the
+  Kotlin/Native Apple toolchain (full Xcode). On CI this runs on a macos-latest
+  runner; see apps/macos-pending-verifications.md."
+- apps/macos-pending-verifications.md — records S3-0001 Shared.xcframework as a
+  macOS-pending artifact deferred to p5-hardening/H8-0001 on macos-latest.
+- Existing tests already present (predecessor prompts P1..P8 shipped them):
+    Tests/Unit/  (iOS/macOS bundle — needs Shared to build):
+      Facade/UnitsGoldenVectorTests, FacadeErrorMappingTests, LoadableStateTests
+      Design/TSDesignTokensTests · SharedCoreReachableTests
+      Components/ComponentLogicTests · Charts/ChartLogicTests
+      DataDisplay/DataDisplayLogicTests · Forms/FormsLogicTests · Maps/GeoTests
+      Auth/{PKCE,KeychainTokenStore,OIDCAuthorization,AuthTokens,AuthCoordinator,
+            AuthLogRedaction,TokenEndpointClient,AuthTestSupport}Tests
+      Live/{LiveStaleness,LiveDataStore,LiveTestSupport}Tests
+      Notifications/{PushPayloadParser,PushCoordinator,LiveActivityController,
+            QuietHours,DeviceRegistrar,PushTestSupport}Tests
+      Widgets/{WidgetSnapshotCodable,WidgetPublisher,WidgetSnapshotStore,
+            WidgetRedaction,WidgetTimelinePlanner,WidgetDeepLink,WidgetFreshness}Tests
+      Platform/{VehicleCommand,IntentSupport,HandoffActivity,AppSettings,
+            IntentBridge,Spotlight,MenuCommandCatalog,AppCommandActions}Tests
+      App/RouteTests
+    Tests/Watch/ (Shared-free bundle — builds+runs): 40 tests (P8-0003)
+    Tests/UI/   (XCUITest — out of scope here; P9-0002)
+  NOTE: every Tests/Unit/** file is compiled only inside TeslaSyncTests /
+  TeslaSync-macOSTests, which depend on the app target + Shared.xcframework.
+  None of them can compile or run on this host without the JDK-built framework.
+
+================================================================================
+=== REASONING ===
+================================================================================
+
+Chosen: STATUS=BLOCKED with full evidence, NO code changes/commit (Rule 8), and
+every host-runnable gate actually executed (not assumed — Rule 3).
+
+Why not "DONE-with-deferral" (as sibling P8-0001/0002/0003 logs did): those
+prompts shipped FEATURE code that the Shared-FREE widget/watch builds actually
+compiled + tested green — their deferral was only the full-app *integration*
+build. P9's deliverable is the iOS/macOS UNIT TESTS themselves; they live inside
+the un-buildable Shared-linked bundles, so NO green build on this host verifies
+them. Claiming DONE would be "red-as-green" (Rule 1) for the test gate. Moreover
+BLOCKER B (missing P7 predecessor) is independent of Shared and admits no
+deferral interpretation at all (Rule 7).
+
+Why not write the new tests anyway: Rule 8 forbids committing code while BLOCKED,
+and new iOS/macOS test files cannot be compiled or run here (no Shared) — shipping
+unverifiable test code would risk latent compile errors presented as green
+(Rule 1) and would not advance the gate. The correct action is to STOP, report
+precisely, and let a JDK-equipped macOS runner (with P7 pages generated) execute
+P9 to a real green.
+
+Why not install a JDK / build Shared / generate P7 here: (a) apps/shared/** and
+P7 are OUTSIDE this prompt's Allowed-Files (apps/apple/** + the log); (b) the KMP
+Shared.xcframework is an explicit predecessor-tracked, CI-deferred artifact
+(S3-0001) — working around it violates Rule 7 ("no predecessor bypass") and the
+repo's own macOS-pending mechanism. Respecting the locked decision over a
+local hack.
+
+================================================================================
+=== CHANGES ===
+================================================================================
+
+NONE. No files under apps/apple were created or modified (Rule 8: BLOCKED →
+commit ONLY the log, never code). `xcodegen generate` rewrote the git-ignored
+apps/apple/TeslaSync.xcodeproj for the gate run only (not committed). The single
+committed file is this log.
+
+================================================================================
+=== PARITY ===
+================================================================================
+
+Page-state parity (the prompt's central acceptance unit) CANNOT be assessed:
+the P7 pages it parities against do not exist yet (BLOCKER B). There are 0
+generated page view-models, so:
+  PARITY_REQUIRED (P7 page state-coverage units) = UNKNOWN/UNAVAILABLE (P7 pending)
+  PARITY_COVERED  = 0
+Infrastructure-level suites that DO exist (facade/design/components/auth/live/
+push/widgets/intents) are present from predecessors but are NOT executable here
+(Shared-linked bundle, BLOCKER A), so their pass/coverage cannot be measured on
+this host. No parity claim is made (Rule 5: no parity shortcuts).
+
+================================================================================
+=== GATE ===
+================================================================================
+
+All commands were actually executed on this host (Rule 3 — no skip-and-assume).
+Raw transcripts saved alongside this run; key results:
+
+[LINT]  (cd apps/apple && swiftlint --strict)
+        "Done linting! Found 0 violations, 0 serious in 256 files."
+        LINT_EXIT=0                                                   ✅
+
+[FORMAT] swiftformat --lint apps/apple
+        "0/260 files require formatting, 2 files skipped."
+        FORMAT_EXIT=0                                                 ✅
+
+[PLACEHOLDER] pwsh apps/tools/check-placeholders.ps1 -Path apps/apple -Language swift
+        PLACEHOLDER_ALLOWED=2  PLACEHOLDER_COUNT=0  EXIT=0
+        PLACEHOLDER_EXIT=0                                            ✅
+
+[WATCH] (Shared-FREE control build — proves Xcode + XCTest infra are healthy)
+        xcodebuild -scheme TeslaSyncWatch \
+          -destination 'platform=watchOS Simulator,name=Apple Watch Series 11 (46mm)' \
+          build test
+        "** BUILD SUCCEEDED **"
+        "Executed 40 tests, with 0 failures (0 unexpected)"
+        "** TEST SUCCEEDED **"
+        WATCH_EXIT=0                                                  ✅
+        => The ONLY thing failing below is the KMP Shared.xcframework, not Xcode,
+           not the test runner, not the existing tests.
+
+[iOS]   xcodebuild -scheme TeslaSync \
+          -destination 'platform=iOS Simulator,name=iPhone 17' build test
+        "error: There is no XCFramework found at
+         '…/apps/apple/Frameworks/Shared.xcframework'. (in target 'TeslaSync' …)"
+        "error: There is no XCFramework found at …Shared.xcframework
+         (in target 'TeslaSyncTests' …)"
+        "Testing cancelled because the build failed."  "** TEST FAILED **"
+        IOS_EXIT=65                                                   ❌ (BLOCKER A)
+
+[macOS] xcodebuild -scheme TeslaSync-macOS build test
+        "error: There is no XCFramework found at …Shared.xcframework
+         (in target 'TeslaSync-macOS' …)"
+        (also dev-cert signing errors on TeslaSync-macOS / TeslaSyncWidgets-macOS —
+         secondary; simulator-less macOS app needs a development certificate)
+        "** BUILD FAILED **"
+        MAC_EXIT=70                                                   ❌ (BLOCKER A)
+
+[ROOT CAUSE] DEVELOPER_DIR=… bash apps/shared/gradlew --version   (read-only;
+        apps/shared is out of scope so the exec-bit was not modified)
+        "Unable to locate a Java Runtime."
+        GRADLE_JDK_EXIT=1   →  no JDK ⇒ no Kotlin/Native ⇒ no Shared.xcframework
+
+Gate formula: EXIT=0 only if IOS/MAC/LINT/FORMAT/PLACEHOLDER all 0.
+  IOS_EXIT=65, MAC_EXIT=70  →  gate EXIT is NON-ZERO.
+Per Covenant Rule 1 ("any toolchain EXIT != 0 → STATUS=BLOCKED, no exceptions")
+and Rule 3 / ADR-010 ("cannot run gate → BLOCKED"), STATUS=BLOCKED.
+
+LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0  WATCH_EXIT=0
+IOS_EXIT=65  MAC_EXIT=70  GRADLE_JDK_EXIT=1
+
+================================================================================
+=== ACCEPTANCE CRITERIA ===
+================================================================================
+[~] XCTest suites cover facade/tokens/components/auth/live-push/widgets-intents-
+    watch — PARTIALLY pre-existing from P1..P8, but NOT verifiable here (Shared
+    bundle un-buildable). Page-state suites: BLOCKED (no P7 pages exist).
+[ ] Golden vectors pass through Swift facade — UnitsGoldenVectorTests exists but
+    cannot run here (facade imports `Shared`; bundle needs Shared.xcframework).
+[ ] Coverage target + per-parity-unit state coverage recorded — cannot measure
+    (no xccov without a green iOS/macOS test build; no P7 pages to cover).
+[x] SwiftLint --strict / SwiftFormat --lint / placeholder gates CLEAN (host-runnable).
+[ ] iOS + macOS builds/tests green — BLOCKED (Shared.xcframework / no JDK).
+[x] EXIT/STATUS recorded below = BLOCKED (no macOS *KMP* runner; ADR-010).
+
+================================================================================
+=== HONESTY COVENANT ===
+================================================================================
+1  No red-as-green : IOS=65 / MAC=70 shown as FAILED with cause; NOT claimed green.
+2  No scope narrowing: ran the EXACT gate commands (no --filter, no subset).
+3  No skip-and-assume: every gate actually executed; gate cannot run → BLOCKED.
+4  No stubs as final: shipped nothing; did not fake tests or placeholders.
+5  No parity shortcuts: made NO parity claim (P7 pages absent).
+6  No delegation: performed directly (no sub-agents/background tasks).
+7  No predecessor bypass: P7 pages predecessor missing → respected, not invented.
+8  No commit on red: committing ONLY this log; zero code committed.
+9  No silent drift: no apps/apple tracked changes; regenerated .xcodeproj is ignored.
+10 Log ends with EXIT/STATUS, each on its own line, below.
+
+================================================================================
+=== COMMIT ===
+================================================================================
+Per Rule 8 (BLOCKED → commit ONLY the log file, never code):
+  git add .github/prompts/monorepo/logs/p4-p9-0001-xctest-unit.log
+  git commit -m "test(apps/apple): P9-0001 XCTest unit gate BLOCKED …"
+COMMIT_EXIT=0
+
+EXIT=65
+STATUS=BLOCKED
