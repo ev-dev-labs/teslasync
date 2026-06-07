@@ -84,3 +84,29 @@ Acceptance Criteria
 
 EXIT=0
 STATUS=DONE
+
+=== RE-VERIFICATION (2026-06-06) ===
+This slice was already implemented + committed at 335d4b80e (89 commits before HEAD); its log had
+been removed from the working tree and was restored from HEAD. The full gate was re-run against the
+current tree to confirm none of the 89 intervening core slices caused drift. No apps/shared/core
+source changed (`git status --porcelain apps/shared/core` is empty) -- only this log was updated with
+the fresh evidence below.
+  ./gradlew :core:allTests                          -> BUILD SUCCESSFUL; TEST_EXIT=0
+  ./gradlew :core:testDebugUnitTest --rerun-tasks \
+        --tests 'io.teslasync.shared.core.presentation.search.*' \
+        --tests 'io.teslasync.shared.core.data.repo.SearchRepositoryContractTest'
+      (commonTest executes on the androidTarget JVM unit-test target; the iosSimulatorArm64 /
+       macosArm64 targets are SKIPPED on Windows) -> BUILD SUCCESSFUL; 18 tasks executed; TEST_EXIT=0
+      build/test-results/testDebugUnitTest/*Search*.xml:
+        SearchRepositoryContractTest tests=5  failures=0 errors=0 skipped=0
+        SearchGoldenTest             tests=8  failures=0 errors=0 skipped=0
+        SearchStoreTest              tests=6  failures=0 errors=0 skipped=0
+        total                        tests=19 failures=0
+  ./gradlew :core:ktlintCheck                        -> BUILD SUCCESSFUL; LINT_EXIT=0
+  check-placeholders.ps1 -Path apps/shared/core -Language kotlin -> PLACEHOLDER_COUNT=0; PH_EXIT=0
+
+All 1 hook ported (useGlobalSearch) + 3 derivations golden-pinned (planSearch, searchQuery,
+searchCacheKey). TEST/LINT/PH all 0.
+
+EXIT=0
+STATUS=DONE
