@@ -1,94 +1,149 @@
-P1 · S8 · 0031 — NotificationChannels shared state holder
-=========================================================
-Web source : web/src/api/hooks/useNotificationChannels.ts
+================================================================================
+P1 · S8 · 0031 — NotificationChannels shared state holder (web-hook parity)
+================================================================================
+Web source : web/src/api/hooks/useNotificationChannels.ts  (4 hooks the file ADDS)
 Output     : apps/shared/core/src/commonMain/.../presentation/notificationchannels/**
              apps/shared/core/src/commonMain/.../data/repo/NotificationChannelsRepository.kt
              apps/shared/core/src/commonMain/.../data/repo/HttpNotificationChannelsRepository.kt
              apps/shared/core/src/commonTest/.../presentation/notificationchannels/**
              apps/shared/core/src/commonTest/.../data/repo/NotificationChannelsRepositoryContractTest.kt
              apps/shared/core/spec/notification-channels-golden.json   (shared C#/KMP vectors)
+Depends    : P1/S4 (networking), P1/S6 (auth), P1/S7 (cache/repos), P1/S5 (units, N/A here)
+ADR refs   : ADR-004 (cross-platform parity), ADR-006, ADR-013
+Host       : Windows (JDK 21 Temurin) — JVM/Android-host execution + ktlint over all
+             source sets (incl. apple). Apple/native *execution* needs a macOS host (CI).
 
-Files created
--------------
+--- Status ---
+The NotificationChannels shared state holder already exists in HEAD (introduced at
+0fc01b250, "feat(apps/shared): NotificationChannels state holder at web-hook parity
+(P1/S8)") and is unchanged on disk (git diff --stat HEAD -- apps/shared/core == empty).
+This run RE-VERIFIES it end-to-end on the Windows host and restores this gate log (the
+file had been removed from the working tree). No red-as-green: every number below is
+from a real gate invocation captured today (PLACEHOLDER_ALLOWED is the current 17, not
+a copied value).
+
+--- Artifacts (present + tracked) ---
 commonMain/presentation/notificationchannels/NotificationChannelModels.kt
-  - NotificationChannel sealed union (@JsonClassDiscriminator("kind"); discord/slack/telegram/
-    email/webhook/ntfy/pushover) — the web NotificationChannel union, kind consumed as the
-    discriminator (no colliding `kind` property; webhook filter is `is NotificationChannel.Webhook`).
-  - WebhookTestResult / WebhookSignaturePreviewRequest / WebhookSignaturePreviewResult DTOs.
-commonMain/presentation/notificationchannels/NotificationChannelsStore.kt  (S8 holder)
-commonMain/data/repo/NotificationChannelsRepository.kt   (S7 port + channelsKey/filter/body derivations)
-commonMain/data/repo/HttpNotificationChannelsRepository.kt (Ktor + cache impl)
+  - NotificationChannel sealed union (@JsonClassDiscriminator("kind"); discord/slack/
+    telegram/email/webhook/ntfy/pushover) — the web NotificationChannel union; the wire
+    `kind` is consumed as the discriminator (no colliding `kind` property), so the web
+    `ch.kind === 'webhook'` filter becomes an `is NotificationChannel.Webhook` check.
+  - WebhookTestResult / WebhookSignaturePreviewRequest / WebhookSignaturePreviewResult.
+commonMain/presentation/notificationchannels/NotificationChannelsStore.kt   (S8 holder)
+commonMain/data/repo/NotificationChannelsRepository.kt   (S7 port + channelsKey / filter /
+                                                          webhookTestBody derivations)
+commonMain/data/repo/HttpNotificationChannelsRepository.kt (Ktor + offline-cache impl)
 commonTest/presentation/notificationchannels/NotificationChannelsStoreTest.kt
 commonTest/presentation/notificationchannels/NotificationChannelsGoldenTest.kt
 commonTest/data/repo/NotificationChannelsRepositoryContractTest.kt
 spec/notification-channels-golden.json
 
+--- Endpoint / shape parity cross-check (verified today) ---
+GET  /notifications                              -> channel list (web useNotificationChannels)
+POST /notifications/{id}/webhook-test            -> internal/api/router.go:3387 (WebhookTest)
+POST /notifications/webhooks/preview-signature   -> internal/api/router.go:3375 (WebhookSignaturePreview)
+NotificationChannel union (7 kinds) + WebhookTestResult / WebhookSignaturePreviewRequest /
+WebhookSignaturePreviewResult fields match web/src/types/notifications.ts and
+web/src/api/types.ts L817-841 verbatim (snake_case wire names via @SerialName).
+
 === PARITY ===
 Reads / queries (3/3 ported):
   [x] useWebhookChannels
-        store    : NotificationChannelsStore.webhookChannels() : StateFlow<Resource<List<NotificationChannel.Webhook>>>
+        store    : NotificationChannelsStore.webhookChannels()
+                   : StateFlow<Resource<List<NotificationChannel.Webhook>>>
         endpoint : GET /notifications  (web useNotificationChannels list; transport adds /api/v1)
         cache    : CacheDomain.Notifications, key="channels"  (web notificationKeys.channels)
-        derived  : filterWebhookChannels() = list.filterIsInstance<Webhook>()  (web `kind === 'webhook'`,
-                   order-preserving) applied to every Resource emission (cached/loading/fresh).
-        emit     : cache -> network (Resource.Loading[cached] -> Resource.Success/Error), shared feed.
-        SI       : channel config fields are non-unit strings/bools — round-trip verbatim, no conversion.
+        derived  : filterWebhookChannels() = list.filterIsInstance<Webhook>() (web
+                   `kind === 'webhook'`, order-preserving) applied to EVERY Resource emission
+                   (cached / loading / fresh) — data is always a (possibly empty) list.
+        emit     : cache -> network (Resource.Loading[cached] -> Resource.Success/Error), one
+                   shared feed (SharingStarted.WhileSubscribed) across observers.
+        SI       : channel config fields are non-unit strings/bools — round-trip verbatim,
+                   no conversion (S5 N/A).
   [x] useWebhookSignaturePreview
-        store    : NotificationChannelsStore.previewWebhookSignature(secret, body) : Result<WebhookSignaturePreviewResult>
+        store    : NotificationChannelsStore.previewWebhookSignature(secret, body)
+                   : Result<WebhookSignaturePreviewResult>
         endpoint : POST /notifications/webhooks/preview-signature
-        body     : { secret, body } — both fields always serialize (web JSON.stringify(body)).
+        body     : { secret, body } — both fields ALWAYS serialize (web JSON.stringify(body)),
+                   empty body string included.
         invalidates: NOTHING (web mutation has no onSuccess invalidate). Pure utility.
   [x] useInvalidateWebhookChannels
         store    : NotificationChannelsStore.invalidateWebhookChannels()
-        action   : bumps the channel feed trigger -> re-collects cache->network (web invalidateQueries
-                   notificationKeys.channels). No-op when the feed is unobserved.
+        action   : bumps the channel-feed trigger -> re-collects cache->network (web
+                   invalidateQueries notificationKeys.channels). No-op when feed is unobserved.
 Mutations / actions (1/1 ported):
   [x] useTestWebhookChannel
-        store    : NotificationChannelsStore.testWebhookChannel(id, title?, message?) : Result<WebhookTestResult>
+        store    : NotificationChannelsStore.testWebhookChannel(id, title?, message?)
+                   : Result<WebhookTestResult>
         endpoint : POST /notifications/{id}/webhook-test
         body     : webhookTestBody(title, message) — a key included ONLY when value != null AND
-                   trim() != '' (web guard); VERBATIM untrimmed value sent; all-blank => NO body
-                   (server defaults). Mirrors the web mutationFn attaching a body only when present.
-        contract : endpoint answers HTTP 200 in every delivery outcome, so a non-2xx RECEIVER decodes
-                   to a success Result with `success == false` (status_code/error populated), NOT a
-                   request failure — verified by webhookTestReturnsStructuredResultOnReceiverFailure.
+                   trim() != '' (web guard); the VERBATIM untrimmed value is sent; an all-blank
+                   pair => NO body (server defaults). Mirrors the web mutationFn attaching a
+                   body/Content-Type only when at least one field is present.
+        contract : the endpoint answers HTTP 200 in every delivery outcome, so a non-2xx
+                   RECEIVER decodes to a success Result with `success == false`
+                   (status_code/error populated), NOT a request failure; a real 5xx from the
+                   API endpoint itself IS a Result failure.
         invalidates: NOTHING (web mutation renders the result inline; no onSuccess invalidate).
 
 Web-parity notes (NOT silent drift)
-  - useNotificationChannels / useSaveChannel / useDeleteChannel / useToggleChannel / useTestChannel
-    are RE-EXPORTS from the useNotifications domain (a separate hook file/domain) — out of scope for
-    this NotificationChannels slice, which ports only the 4 webhook-specific hooks the file ADDS.
-  - useMutationToast / notificationKeys / type re-exports are render-layer / cross-domain plumbing,
-    not data behavior; reproduced as the holder's invalidate semantics, not as separate APIs.
+  - useNotificationChannels / useSaveChannel / useDeleteChannel / useToggleChannel /
+    useTestChannel are RE-EXPORTS from the useNotifications domain (separate hook file/domain,
+    ported by S8-0032) — out of scope for this slice, which ports only the 4 webhook-specific
+    hooks the file ADDS.
+  - useMutationToast / notificationKeys / type re-exports are render-layer / cross-domain
+    plumbing, not data behaviour; reproduced as the holder's invalidate semantics, not as
+    separate APIs.
 
 Cross-platform golden vectors (ADR-004)
   spec/notification-channels-golden.json (mirrored inline in NotificationChannelsGoldenTest):
     - channelsKey == "channels"
     - webhookTestBody: empty / blankTitle / titleOnly / messageOnly / both / untrimmed (6 rows)
     - filterWebhookChannels: 6-kind mixed list -> webhook ids [2,5], order preserved
-    - WebhookSignaturePreviewRequest serializes both fields even with empty body
+    - WebhookSignaturePreviewRequest serializes both fields even with an empty body
 
 === GATE ===
-# JVM/Android-host test execution (commonTest runs as Android local unit test).
-# Apple/native test *execution* requires a macOS host (CI); compiled + ktlint-clean here.
-gradlew :core:ktlintCheck                                  -> BUILD SUCCESSFUL
-gradlew :core:testDebugUnitTest (full host suite)          -> BUILD SUCCESSFUL
-  NotificationChannelsGoldenTest             tests=6  failures=0 errors=0
-  NotificationChannelsStoreTest              tests=7  failures=0 errors=0
-  NotificationChannelsRepositoryContractTest tests=9  failures=0 errors=0
+# cwd = apps/shared ; project = :core (root project "shared", include(":core")).
+# commonTest executes as the Android local (JVM) unit test; apple/native test EXECUTION
+# requires a macOS host (CI) but is compiled + ktlint-clean here.
+
+$ ./gradlew :core:allTests --console=plain
+  > Task :core:testDebugUnitTest      (executes commonTest on the JVM/Android host)
+  > Task :core:testReleaseUnitTest
+  > Task :core:iosSimulatorArm64Test  SKIPPED   (needs macOS host)
+  > Task :core:macosArm64Test         SKIPPED   (needs macOS host)
+  > Task :core:allTests               (aggregate)
+  BUILD SUCCESSFUL
+ALLTESTS_EXIT=0
+
+$ ./gradlew :core:testDebugUnitTest --rerun-tasks --console=plain   (full host suite, forced)
+  BUILD SUCCESSFUL
+  TOTAL across 181 test classes: tests=1340 failures=0 errors=0 skipped=0
+  NotificationChannels slice (forced rerun + full-suite, identical):
+    NotificationChannelsGoldenTest                 tests=6  failures=0 errors=0
+    NotificationChannelsStoreTest                  tests=7  failures=0 errors=0
+    NotificationChannelsRepositoryContractTest     tests=9  failures=0 errors=0
 TEST_EXIT=0
+
+$ ./gradlew :core:ktlintCheck --console=plain                       -> BUILD SUCCESSFUL
+$ ./gradlew :core:runKtlintCheckOverCommonMainSourceSet \
+            :core:runKtlintCheckOverCommonTestSourceSet --rerun-tasks  (forced re-lint)
+                                                                    -> BUILD SUCCESSFUL
 LINT_EXIT=0
-check-placeholders.ps1 -Path apps/shared/core -Language kotlin
-  PLACEHOLDER_ALLOWED=13
+
+$ ./apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
+  PLACEHOLDER_ALLOWED=17
   PLACEHOLDER_COUNT=0
 PH_EXIT=0
 
 Acceptance
   [x] 4/4 hooks ported with matching endpoint/params/derivation; SI preserved (no unit fields).
-  [x] Mutations invalidate the correct keys (none, per web); the invalidate action refreshes the list;
-      reads emit cache->network.
-  [x] Golden vectors extended for KMP+C# parity (spec json + inline); fake-repo tests green.
-  [x] ktlint + placeholder clean; PARITY enumerates all 4 hooks.
+  [x] Mutations invalidate the correct keys (none, per web); the invalidate action refreshes
+      the list; reads emit cache->network (NotificationChannelsRepositoryContractTest +
+      NotificationChannelsStoreTest).
+  [x] Golden vectors extended for KMP+C# parity (spec json + inline golden test); fake-repo
+      tests green.
+  [x] ktlint + placeholder clean; PARITY enumerates all 4 hooks covered.
 
 EXIT=0
 STATUS=DONE
