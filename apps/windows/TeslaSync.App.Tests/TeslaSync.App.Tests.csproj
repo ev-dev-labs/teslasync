@@ -26,6 +26,21 @@
   </ItemGroup>
 
   <!--
+    P2 dashboard-widgets: the AlertFeedWidget's UI-thread-free logic (the alert DTO/parse, the
+    drill-through map, the projection, the result mapper, and the state-holder view-model) lives in
+    the WinUI app project but is WinUI-free by construction. Link those two source files in so the
+    headless (net10.0) test project verifies the adapter + per-state transitions row-for-row without
+    a UI host — the same pattern used for the Core widget logic. The WinUI view itself is exercised
+    by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\AnalyticsSummaryWidget\AnalyticsSummaryWidget.Model.cs" Link="Widgets\AnalyticsSummaryWidget\AnalyticsSummaryWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\AnalyticsSummaryWidget\AnalyticsSummaryWidget.ViewModel.cs" Link="Widgets\AnalyticsSummaryWidget\AnalyticsSummaryWidget.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     Language-neutral SI golden vectors (apps/shared/spec/units-golden.json) copied
     next to the test assembly so the C# behavior port is verified row-for-row
     against the web truth (ADR-004), exactly as the shared Kotlin port is.
