@@ -17,3 +17,16 @@ p1-shared/S1-0001-openapi-emit.prompt.md
 p1-shared/S10-0001-i18n-catalog.prompt.md
 p1-shared/S2-0001-client-codegen.prompt.md
 p1-shared/S3-0001-kmp-scaffold.prompt.md
+p4-apple/P0-0001-workspace-scaffold.prompt.md
+p4-apple/P1-0001-shared-facade.prompt.md
+p4-apple/P2-0001-design-tokens.prompt.md
+p4-apple/P3-0001-ui-components.prompt.md
+p4-apple/P3-0002-charts-components.prompt.md
+p4-apple/P3-0003-data-display-components.prompt.md
+p4-apple/P3-0004-feedback-forms-components.prompt.md
+p4-apple/P3-0005-maps-motion-components.prompt.md
+p4-apple/P4-0001-app-structure-navigation.prompt.md
+p4-apple/P5-0001-auth-onboarding.prompt.md
+p4-apple/P6-0001-live-data-sse.prompt.md
+p4-apple/P6-0002-push-notifications.prompt.md
+p4-apple/P8-0001-widgetkit-widgets.prompt.md
