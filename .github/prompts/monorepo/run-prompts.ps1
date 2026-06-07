@@ -304,6 +304,13 @@ function Test-LogSaysRed {
 #        - physical device / specific hardware     -> 'hardware-deferred'
 #        - generic "runner is (absent|not installed)" -> 'generic-runner'
 #
+#      OR (FALLBACK) when BLOCKED_REASON= is entirely missing, sentinel matches
+#      are also tried against the full log body — agents commonly write prose
+#      evidence like "the WinAppDriver runner is absent on this host" without
+#      the structured marker. Implicit matches are tagged with a '-implicit'
+#      suffix (e.g. 'windows-ui-deferred-implicit') so audit CSV rows are
+#      distinguishable from explicit-marker matches.
+#
 # Note: EXIT= is intentionally NOT required to be non-zero. Real-world agents
 # emit `EXIT=0` + `STATUS=BLOCKED` when every host-runnable step was green and
 # only the cross-host verification is deferred (e.g. P1/S3 KMP scaffold).
@@ -328,11 +335,21 @@ function Test-LogIsDeferredBlocked {
     # guards below then reject the log if ANY other real-red signal is present
     # (parity gap, [FAIL], COMMIT_EXIT, UNEXPECTED_COUNT) — so compound BLOCKEDs
     # with mixed real+deferred reasons stay red.
+    #
+    # FALLBACK: if BLOCKED_REASON= is missing entirely, scan the full log body
+    # for sentinel phrases. Agents commonly write prose evidence ("the
+    # WinAppDriver runner is absent on this host") without the structured
+    # marker; this fallback catches those cases. Empty BLOCKED_REASON= (marker
+    # present but value blank) is still treated as an authoring bug → no-reason.
     $reasonMatch = [regex]::Match($content,
         '(?ms)^BLOCKED_REASON\s*=\s*(.+?)(?=^[A-Z][A-Z_0-9]*\s*=|^==+|\z)')
-    if (-not $reasonMatch.Success) { return @($false, '', 'no-reason') }
-    $reason = $reasonMatch.Groups[1].Value.Trim()
-    if ($reason.Length -eq 0) { return @($false, '', 'no-reason') }
+    $hasMarker = $reasonMatch.Success
+    if ($hasMarker) {
+        $reason = $reasonMatch.Groups[1].Value.Trim()
+        if ($reason.Length -eq 0) { return @($false, '', 'no-reason') }
+    } else {
+        $reason = ''
+    }
 
     # Hardening guards: a STATUS=BLOCKED with a deferred sentinel is sanctioned
     # ONLY if no OTHER real-red signal is present in the same log. Compound
@@ -371,9 +388,16 @@ function Test-LogIsDeferredBlocked {
         @{ Cat='hardware-deferred';   Pat='physical\s*device.*required|hardware.*required|hololens|vision\s*pro' },
         @{ Cat='generic-runner';      Pat='runner\s+is\s+(?:not\s*installed|absent)|automation\s*runner.*absent' }
     )
+    # Match against the precise BLOCKED_REASON= text when present; otherwise
+    # against the full log body. The hardening guards above (parity gap,
+    # [FAIL], commit failure, drift) already ran against $content, so any
+    # compound failure has been rejected before we reach this fallback.
+    $matchTarget = if ($hasMarker) { $reason } else { $content }
+    $suffix      = if ($hasMarker) { '' } else { '-implicit' }
     foreach ($s in $sentinels) {
-        if ($reason -match "(?i)$($s.Pat)") {
-            return @($true, $reason, $s.Cat)
+        if ($matchTarget -match "(?i)$($s.Pat)") {
+            $displayReason = if ($hasMarker) { $reason } else { '(implicit from log body — no BLOCKED_REASON= marker)' }
+            return @($true, $displayReason, ($s.Cat + $suffix))
         }
     }
 
@@ -486,6 +510,27 @@ if ($SelfTest) {
     Assert-Deferred 'parity-met-deferred-ok' `
         "PARITY_REQUIRED=10`nPARITY_COVERED=10`nEXIT=0`nSTATUS=BLOCKED`nBLOCKED_REASON=macOS runner required for xcframework packaging." `
         $true 'macos-deferred'
+
+    # ---- Implicit (prose-only) fallback: agents writing prose evidence without BLOCKED_REASON= marker ----
+
+    Assert-Deferred 'implicit-winappdriver-prose' `
+        "BUILD_EXIT=0`nTEST_EXIT=1`nFORMAT_EXIT=0`nPLACEHOLDER_EXIT=0`nThe TeslaSync.App.UITests project requires WinAppDriver/Appium runner, which is absent on this host (nothing listening on :4723).`nEXIT=1`nSTATUS=BLOCKED" `
+        $true 'windows-ui-deferred-implicit'
+
+    Assert-Deferred 'implicit-macos-prose' `
+        "BUILD_EXIT=0`nThe xcframework assembly step requires a macOS runner (Xcode is not available on this Windows host).`nEXIT=1`nSTATUS=BLOCKED" `
+        $true 'macos-deferred-implicit'
+
+    # Implicit fallback must NOT auto-handle when a real-red guard fires.
+    # Here: implicit winappdriver prose + a parity gap → has-parity-gap (still red).
+    Assert-Deferred 'implicit-prose-but-parity-gap' `
+        "PARITY_REQUIRED=100`nPARITY_COVERED=42`nBUILD_EXIT=0`nThe WinAppDriver runner is absent on this host.`nEXIT=1`nSTATUS=BLOCKED" `
+        $false 'has-parity-gap'
+
+    # No BLOCKED_REASON marker, no recognizable sentinel in body → unrecognized
+    Assert-Deferred 'implicit-no-sentinel' `
+        "BUILD_EXIT=0`nTEST_EXIT=1`nPredecessor S3 has not yet run.`nEXIT=1`nSTATUS=BLOCKED" `
+        $false 'unrecognized'
 
     Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
 
