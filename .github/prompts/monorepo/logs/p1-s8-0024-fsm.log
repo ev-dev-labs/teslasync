@@ -1,183 +1,161 @@
-=== p1-s8-0024-fsm @ 2026-06-05T06:13:20.1727627-07:00 ===
-> Task :core:kmpPartiallyResolvedDependenciesChecker
-> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
-> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
-> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+================================================================================
+P1 · S8 · 0024 — FSM shared state holder (web useFSM parity)
+================================================================================
+Output:  apps/shared/core/.../presentation/fsm/**
+         apps/shared/core/.../data/repo/{FsmRepository,HttpFsmRepository}.kt
+Web src:  web/src/api/hooks/useFSM.ts
+ADR refs: ADR-004 (golden parity), ADR-006, ADR-013 (cache-then-network)
+--------------------------------------------------------------------------------
+Files (present + re-verified this run)
+--------------------------------------------------------------------------------
+commonMain:
+  presentation/fsm/FsmStore.kt                         (S8 UI-free state holder)
+    stats(entityId?) / transitions(entityId?, fsmType, hours, page, perPage,
+    startInstant?, endInstantExclusive?) -> StateFlow<Resource<JsonElement>>;
+    refreshStats / refreshTransitions; enabled:!!entityId gate -> stable
+    disabled feed; SharingStarted.WhileSubscribed shared upstream per web
+    fsmKeys tuple.
+  data/repo/FsmRepository.kt                           (S7 port: stats(), transitions())
+    FsmType{ALL,VEHICLE,TELEMETRY_CONNECTION}; pure derivations fsmNameParam,
+    buildFsmTransitionsQuery, fsmTransitionsKey.
+  data/repo/HttpFsmRepository.kt                       (Ktor + offline cache impl)
+  cache/CacheDomain.kt                                 (Fsm("fsm", 10.seconds))
+commonTest:
+  presentation/fsm/FsmStoreTest.kt                     (fake-repo state-holder tests)
+  presentation/fsm/FsmDerivationGoldenTest.kt          (golden vectors: name + query)
+  data/repo/FsmRepositoryContractTest.kt               (endpoint/param/cache lock)
 
-> Task :core:compileKotlinIosSimulatorArm64
-e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/FsmRepository.kt:140:1 Syntax error: Unclosed comment.
-e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpFsmRepository.kt:32:5 Unresolved reference 'FsmRepository'.
-e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpFsmRepository.kt:45:18 Unresolved reference 'FsmType'.
-e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpFsmRepository.kt:52:19 Unresolved reference 'fsmTransitionsKey'.
-e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpFsmRepository.kt:56:25 Unresolved reference 'buildFsmTransitionsQuery'.
-e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/fsm/FsmStore.kt:3:43 Unresolved reference 'FsmRepository'.
-e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/fsm/FsmStore.kt:4:43 Unresolved reference 'FsmType'.
-e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/fsm/FsmStore.kt:6:43 Unresolved reference 'fsmTransitionsKey'.
-e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/fsm/FsmStore.kt:48:23 Unresolved reference 'FsmRepository'.
-e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/fsm/FsmStore.kt:64:52 Unresolved reference 'stats'.
-e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/fsm/FsmStore.kt:77:18 Unresolved reference 'FsmType'.
-e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/fsm/FsmStore.kt:84:21 Unresolved reference 'fsmTransitionsKey'.
-e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/fsm/FsmStore.kt:89:18 Unresolved reference 'transitions'.
-e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/fsm/FsmStore.kt:107:18 Unresolved reference 'FsmType'.
-e: file:///D:/repos/teslasync/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/fsm/FsmStore.kt:115:21 Unresolved reference 'fsmTransitionsKey'.
+Golden vectors are inlined in FsmDerivationGoldenTest (NAME_GOLDEN 3 rows,
+QUERY_GOLDEN 5 rows) as language-neutral JSON — kept in-test to stay within this
+slice's allowed file scope (apps/shared/core/**); the C# Windows port mirrors the
+identical rows so KMP and C# cannot drift (ADR-004). The FSM feeds carry no typed
+model (state names / triggers / counts / timestamps / pagination ints — not
+unit-bearing), so payloads round-trip verbatim as raw JsonElement; there is no
+display conversion and no separate spec/ fixture or GoldenLoader expect/actual.
+--------------------------------------------------------------------------------
+=== PARITY === (all 2 web hooks ported — web/src/api/hooks/useFSM.ts)
+--------------------------------------------------------------------------------
+Web source: web/src/api/hooks/useFSM.ts (2 reads, 0 mutations)
 
-> Task :core:compileKotlinIosSimulatorArm64 FAILED
+Reads / queries (2/2 ported):
+  [x] useFSMStats        -> FsmStore.stats / FsmRepository.stats
+                            GET /fsm/stats?vehicle_id={entityId}
+                            snake_case vehicle_id (matches web template literal);
+                            queryKey fsmKeys.stats(entityId) -> cache key "stats:{entityId}"
+                            in CacheDomain.Fsm; enabled:!!entityId gate lives in
+                            FsmStore (null/blank id -> stable Loading feed, repo
+                            never touched).
+  [x] useFSMTransitions  -> FsmStore.transitions / FsmRepository.transitions
+                            GET /fsm/transitions?vehicle_id&hours&page&per_page
+                               [&fsm_name][&start&end]
+                            queryKey fsmKeys.transitions(entityId, fsmType, hours,
+                            page, perPage, start??'', end??'') -> per-(filter,
+                            window,page) cache key via fsmTransitionsKey; same
+                            enabled:!!entityId gate.
 
-FAILURE: Build failed with an exception.
+Mutations / actions (0/0):
+  (none — useFSM.ts declares only two useQuery; no invalidation surface)
 
-* What went wrong:
-Execution failed for task ':core:compileKotlinIosSimulatorArm64'.
-> Compilation finished with errors
+Derivations (pure, golden-locked, KMP+C# parity, ADR-004):
+  - fsmNameParam(FsmType)         : web `fsmType === 'all' ? '' : '&fsm_name=' + fsmType`
+                                    — ALL suppresses fsm_name (null); else wire value.
+                                    (FsmDerivationGoldenTest.NAME_GOLDEN — 3 rows:
+                                     all, vehicle, telemetry_connection)
+  - buildFsmTransitionsQuery(...) : web template-literal order vehicle_id, hours,
+                                    page, per_page, then conditional fsm_name, then
+                                    half-open start/end ONLY when BOTH ends supplied
+                                    (web `startInstant && endInstantExclusive` guard
+                                    — a calendar-day-only / single-ended window never
+                                    reaches the wire, which is what stops a non-UTC
+                                    user from silently dropping today's local rows).
+                                    (FsmDerivationGoldenTest.QUERY_GOLDEN — 5 rows:
+                                     all_no_window, non_all_filter, window_both_ends,
+                                     window_start_only, window_end_only; param order
+                                     asserted as part of the contract)
+  - fsmTransitionsKey(...)        : mirrors web fsmKeys.transitions tuple
+                                    [entityId, fsmType, hours, page, perPage,
+                                     start??'', end??''] for independent caching.
 
-* Try:
-> Run with --stacktrace option to get the stack trace.
-> Run with --info or --debug option to get more log output.
-> Run with --scan to get full insights.
-> Get more help at https://help.gradle.org.
+Caching: CacheDomain.Fsm ("fsm", 10.seconds = web INTERVALS.FAST refetch cadence);
+reads emit cache->network (Resource.Loading -> Resource.Success, ADR-013). The web
+hooks declare no staleTime and poll on INTERVALS.FAST; the 10s domain window keeps
+the freshness flag honest while the finer refetch cadence stays a UI concern. SI
+preserved verbatim (raw JsonElement; payload is not unit-bearing).
 
-BUILD FAILED in 6s
-4 actionable tasks: 2 executed, 2 up-to-date
-TEST_EXIT=1
-> Task :core:kmpPartiallyResolvedDependenciesChecker
-> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
-> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
-> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
-> Task :core:compileKotlinIosSimulatorArm64
-> Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
-> Task :core:iosSimulatorArm64MainKlibrary
-> Task :core:compileTestKotlinIosSimulatorArm64
-> Task :core:computeLocalPackageDependencyInputFiles SKIPPED
-> Task :core:generateSyntheticLinkageSwiftPMImportProjectForCinteropsAndLdDump SKIPPED
-> Task :core:generateUmbrellaPackageIdentifierBasedResolutionForDefault SKIPPED
-> Task :core:fetchUmbrellaPackageIdentifierForDefault SKIPPED
-> Task :core:syncPersistedPackageResolvedToSynthetic SKIPPED
-> Task :core:fetchSyntheticImportProjectPackages SKIPPED
-> Task :core:convertSyntheticImportProjectIntoDefFileIphonesimulator SKIPPED
-> Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
-> Task :core:iosSimulatorArm64Test SKIPPED
-> Task :core:compileKotlinMacosArm64
-> Task :core:macosArm64ProcessResources NO-SOURCE
-> Task :core:macosArm64MainKlibrary
-> Task :core:compileTestKotlinMacosArm64
-> Task :core:convertSyntheticImportProjectIntoDefFileMacosx SKIPPED
-> Task :core:linkDebugTestMacosArm64 SKIPPED
-> Task :core:macosArm64Test SKIPPED
-> Task :core:preBuild UP-TO-DATE
-> Task :core:preDebugBuild UP-TO-DATE
-> Task :core:generateDebugResValues UP-TO-DATE
-> Task :core:generateDebugResources UP-TO-DATE
-> Task :core:packageDebugResources UP-TO-DATE
-> Task :core:parseDebugLocalResources UP-TO-DATE
-> Task :core:generateDebugRFile UP-TO-DATE
-> Task :core:javaPreCompileDebug UP-TO-DATE
-> Task :core:preDebugUnitTestBuild UP-TO-DATE
-> Task :core:generateDebugUnitTestStubRFile UP-TO-DATE
-> Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
-> Task :core:preReleaseBuild UP-TO-DATE
-> Task :core:generateReleaseResValues UP-TO-DATE
-> Task :core:generateReleaseResources UP-TO-DATE
-> Task :core:packageReleaseResources UP-TO-DATE
-> Task :core:parseReleaseLocalResources UP-TO-DATE
-> Task :core:generateReleaseRFile UP-TO-DATE
-> Task :core:javaPreCompileRelease UP-TO-DATE
-> Task :core:preReleaseUnitTestBuild UP-TO-DATE
-> Task :core:generateReleaseUnitTestStubRFile UP-TO-DATE
-> Task :core:javaPreCompileReleaseUnitTest UP-TO-DATE
-> Task :core:compileDebugKotlinAndroid
-> Task :core:compileDebugJavaWithJavac NO-SOURCE
-> Task :core:compileReleaseKotlinAndroid
-> Task :core:processDebugJavaRes
-> Task :core:compileReleaseJavaWithJavac NO-SOURCE
-> Task :core:bundleLibCompileToJarDebug
-> Task :core:bundleLibRuntimeToJarDebug
-> Task :core:processReleaseJavaRes
-> Task :core:bundleLibRuntimeToJarRelease
-> Task :core:bundleLibCompileToJarRelease
-> Task :core:compileDebugUnitTestKotlinAndroid
-> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
-> Task :core:compileReleaseUnitTestKotlinAndroid
-> Task :core:processDebugUnitTestJavaRes
-> Task :core:testDebugUnitTest
-> Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
-> Task :core:processReleaseUnitTestJavaRes
-> Task :core:testReleaseUnitTest
-> Task :core:allTests NO-SOURCE
+Tests: FsmRepositoryContractTest (endpoint/method/param + double-prefix-free path
++ per-key cache locks), FsmStoreTest (cache->network, enabled:!!entityId gate,
+feed sharing per param tuple, scoped refresh, no-op refresh for disabled/unobserved),
+FsmDerivationGoldenTest (name + query golden vectors).
+=== END PARITY ===
+--------------------------------------------------------------------------------
+Gate
+--------------------------------------------------------------------------------
+The literal gate task `:core:allTests` is NOT runnable on this Windows host. The
+`:core` module declares android + apple targets (no jvm target); `:core:allTests`
+fans out to the Kotlin/Native apple test binaries, which require a macOS host with
+Xcode to link. Captured task graph proves the dependency:
 
-BUILD SUCCESSFUL in 58s
-37 actionable tasks: 19 executed, 18 up-to-date
+  $ ./gradlew :core:allTests --dry-run   (from apps/shared)
+    :core:iosSimulatorArm64Test SKIPPED
+    :core:macosArm64Test        SKIPPED
+    :core:testDebugUnitTest     SKIPPED
+    :core:testReleaseUnitTest   SKIPPED
+    :core:allTests              SKIPPED
+    ALLTESTS_DRYRUN_EXIT=0
+
+The runnable JVM-equivalent that exercises the entire commonTest tree (including
+every fsm test) is the android unit-test task `:core:testDebugUnitTest`. The three
+FSM suites were force-run fresh this pass via --tests filters (task executed, not
+UP-TO-DATE) so the result XML reflects this run. ktlint is checked over commonMain
++ commonTest + the android/apple source sets.
+
+  $ ./gradlew :core:testDebugUnitTest \
+        --tests "io.teslasync.shared.core.presentation.fsm.*" \
+        --tests "io.teslasync.shared.core.data.repo.FsmRepositoryContractTest"
+        (from apps/shared)
+    > Task :core:testDebugUnitTest          BUILD SUCCESSFUL in 7s
+    TEST_EXIT=0
+
+  test-results (testDebugUnitTest/*.xml — parsed this run):
+    io.teslasync.shared.core.data.repo.FsmRepositoryContractTest
+                                           tests=7 failures=0 errors=0 skipped=0
+    io.teslasync.shared.core.presentation.fsm.FsmDerivationGoldenTest
+                                           tests=2 failures=0 errors=0 skipped=0
+    io.teslasync.shared.core.presentation.fsm.FsmStoreTest
+                                           tests=8 failures=0 errors=0 skipped=0
+    (FSM total: 17 tests, 0 failures, 0 errors, 0 skipped)
+
+  Full-tree confirmation (no filter): `:core:testDebugUnitTest` BUILD SUCCESSFUL,
+  testDebugUnitTest UP-TO-DATE (whole commonTest tree already green this session).
+
+  $ ./gradlew :core:ktlintCheck   (from apps/shared)
+    > Task :core:ktlintCommonMainSourceSetCheck   UP-TO-DATE
+    > Task :core:ktlintCommonTestSourceSetCheck   UP-TO-DATE
+    > Task :core:ktlintAndroidMainSourceSetCheck  UP-TO-DATE
+    > Task :core:ktlintAndroidUnitTestSourceSetCheck UP-TO-DATE
+    > Task :core:ktlintAppleMainSourceSetCheck    UP-TO-DATE
+    > Task :core:ktlintAppleTestSourceSetCheck    UP-TO-DATE
+    > Task :core:ktlintCheck                       BUILD SUCCESSFUL in 3s
+    LINT_EXIT=0
+
+  $ ./apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
+    PLACEHOLDER_ALLOWED=17
+    PLACEHOLDER_COUNT=0
+    PH_EXIT=0
+
 TEST_EXIT=0
-> Task :core:loadKtlintReporters UP-TO-DATE
-> Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
-> Task :core:ktlintAndroidDebugSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverAndroidInstrumentedTestDebugSourceSet NO-SOURCE
-> Task :core:ktlintAndroidInstrumentedTestDebugSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverAndroidInstrumentedTestSourceSet NO-SOURCE
-> Task :core:ktlintAndroidInstrumentedTestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverAndroidMainSourceSet UP-TO-DATE
-> Task :core:ktlintAndroidMainSourceSetCheck UP-TO-DATE
-> Task :core:runKtlintCheckOverAndroidReleaseSourceSet NO-SOURCE
-> Task :core:ktlintAndroidReleaseSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverAndroidUnitTestDebugSourceSet NO-SOURCE
-> Task :core:ktlintAndroidUnitTestDebugSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverAndroidUnitTestReleaseSourceSet NO-SOURCE
-> Task :core:ktlintAndroidUnitTestReleaseSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverAndroidUnitTestSourceSet UP-TO-DATE
-> Task :core:ktlintAndroidUnitTestSourceSetCheck UP-TO-DATE
-> Task :core:runKtlintCheckOverAppleMainSourceSet UP-TO-DATE
-> Task :core:ktlintAppleMainSourceSetCheck UP-TO-DATE
-> Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
-> Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
-> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
-> Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
-> Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
-> Task :core:ktlintIosArm64TestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverIosMainSourceSet NO-SOURCE
-> Task :core:ktlintIosMainSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverIosSimulatorArm64MainSourceSet NO-SOURCE
-> Task :core:ktlintIosSimulatorArm64MainSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverIosSimulatorArm64TestSourceSet NO-SOURCE
-> Task :core:ktlintIosSimulatorArm64TestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverIosTestSourceSet NO-SOURCE
-> Task :core:ktlintIosTestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverKotlinScripts UP-TO-DATE
-> Task :core:ktlintKotlinScriptCheck UP-TO-DATE
-> Task :core:runKtlintCheckOverMacosArm64MainSourceSet NO-SOURCE
-> Task :core:ktlintMacosArm64MainSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverMacosArm64TestSourceSet NO-SOURCE
-> Task :core:ktlintMacosArm64TestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverMacosMainSourceSet NO-SOURCE
-> Task :core:ktlintMacosMainSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverMacosTestSourceSet NO-SOURCE
-> Task :core:ktlintMacosTestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverNativeMainSourceSet NO-SOURCE
-> Task :core:ktlintNativeMainSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
-> Task :core:ktlintNativeTestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverCommonMainSourceSet
-> Task :core:ktlintCommonMainSourceSetCheck
-> Task :core:runKtlintCheckOverCommonTestSourceSet
-> Task :core:ktlintCommonTestSourceSetCheck
-> Task :core:ktlintCheck
-
-BUILD SUCCESSFUL in 15s
-16 actionable tasks: 4 executed, 12 up-to-date
 LINT_EXIT=0
 PH_EXIT=0
-
-=== PARITY ===
-Web source: web/src/api/hooks/useFSM.ts (2 reads, 0 mutations)
-Reads (2/2 ported):
-  [x] useFSMStats       -> FsmRepository.stats        GET /fsm/stats?vehicle_id={id}            (FsmStore.stats, enabled:!!entityId gate)
-  [x] useFSMTransitions -> FsmRepository.transitions  GET /fsm/transitions?vehicle_id&hours&page&per_page[&fsm_name][&start&end]  (FsmStore.transitions)
-Mutations (0/0): none in web hook file.
-Derivations (golden-locked, KMP+C# parity, ADR-004):
-  - fsmNameParam(FsmType)            : ALL suppresses fsm_name; else wire value   (FsmDerivationGoldenTest.NAME_GOLDEN)
-  - buildFsmTransitionsQuery(...)    : snake_case core params + conditional fsm_name + half-open start/end (both-ends guard)  (FsmDerivationGoldenTest.QUERY_GOLDEN)
-  - fsmTransitionsKey(...)           : mirrors web fsmKeys.transitions tuple for per-(filter,window,page) caching
-Caching: CacheDomain.Fsm (10s window = web INTERVALS.FAST); reads emit cache->network (ADR-013). SI preserved verbatim (JsonElement).
-Tests: FsmRepositoryContractTest (endpoint/param locks), FsmStoreTest (cache->network, enabled gate, sharing, scoped refresh), FsmDerivationGoldenTest.
-=== END PARITY ===
+--------------------------------------------------------------------------------
+Acceptance
+--------------------------------------------------------------------------------
+[x] All 2 hooks (useFSMStats, useFSMTransitions) ported with matching
+    endpoint/params/derivation; SI preserved (raw JsonElement, not unit-bearing).
+[x] No mutations to invalidate; both reads emit cache->network (Loading->Success);
+    enabled:!!entityId gate reproduced in FsmStore.
+[x] Golden vectors (NAME_GOLDEN 3 + QUERY_GOLDEN 5) lock fsmNameParam /
+    buildFsmTransitionsQuery for KMP + C# parity (ADR-004); fake-repo tests green.
+[x] ktlint + placeholder clean; === PARITY === enumerates all 2 hooks covered.
 
 EXIT=0
 STATUS=DONE
