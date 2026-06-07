@@ -1,39 +1,193 @@
-=== P1/S8/0017 — DLQ shared state holder gate ===
-
-Output:  apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/dlq/DlqStore.kt
-         apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/DlqRepository.kt
-         apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpDlqRepository.kt
-         apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/cache/CacheDomain.kt (added Dlq, 15s TTL)
-Tests:   apps/shared/core/src/commonTest/.../data/repo/DlqRepositoryContractTest.kt        (7)
-         apps/shared/core/src/commonTest/.../presentation/dlq/DlqStoreTest.kt              (7)
-         apps/shared/core/src/commonTest/.../presentation/dlq/DlqDerivationGoldenTest.kt   (2)
-Web src:  web/src/api/hooks/useDLQ.ts
+=== P1/S8/0017 — DLQ shared state holder gate (re-verification run) ===
+Date: 2026-06-06T18:25:48.8667063-07:00
+Output:  apps/shared/core/.../presentation/dlq/DlqStore.kt
+         apps/shared/core/.../data/repo/DlqRepository.kt
+         apps/shared/core/.../data/repo/HttpDlqRepository.kt
+         apps/shared/core/.../cache/CacheDomain.kt (Dlq, 15s TTL)
+Tests:   DlqRepositoryContractTest (7), DlqStoreTest (7), DlqDerivationGoldenTest (2)
+Web src: web/src/api/hooks/useDLQ.ts
 
 === GATE ===
-:core:allTests        BUILD SUCCESSFUL    TEST_EXIT=0
-:core:ktlintCheck     BUILD SUCCESSFUL    LINT_EXIT=0
-check-placeholders    PLACEHOLDER_COUNT=0 PH_EXIT=0
+> Task :core:kmpPartiallyResolvedDependenciesChecker
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:compileKotlinIosSimulatorArm64 UP-TO-DATE
+> Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
+> Task :core:iosSimulatorArm64MainKlibrary UP-TO-DATE
+> Task :core:compileTestKotlinIosSimulatorArm64 UP-TO-DATE
+> Task :core:computeLocalPackageDependencyInputFiles SKIPPED
+> Task :core:generateSyntheticLinkageSwiftPMImportProjectForCinteropsAndLdDump SKIPPED
+> Task :core:generateUmbrellaPackageIdentifierBasedResolutionForDefault SKIPPED
+> Task :core:fetchUmbrellaPackageIdentifierForDefault SKIPPED
+> Task :core:syncPersistedPackageResolvedToSynthetic SKIPPED
+> Task :core:fetchSyntheticImportProjectPackages SKIPPED
+> Task :core:convertSyntheticImportProjectIntoDefFileIphonesimulator SKIPPED
+> Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
+> Task :core:iosSimulatorArm64Test SKIPPED
+> Task :core:compileKotlinMacosArm64 UP-TO-DATE
+> Task :core:macosArm64ProcessResources NO-SOURCE
+> Task :core:macosArm64MainKlibrary UP-TO-DATE
+> Task :core:compileTestKotlinMacosArm64 UP-TO-DATE
+> Task :core:convertSyntheticImportProjectIntoDefFileMacosx SKIPPED
+> Task :core:linkDebugTestMacosArm64 SKIPPED
+> Task :core:macosArm64Test SKIPPED
+> Task :core:preBuild UP-TO-DATE
+> Task :core:preDebugBuild UP-TO-DATE
+> Task :core:generateDebugResValues UP-TO-DATE
+> Task :core:generateDebugResources UP-TO-DATE
+> Task :core:packageDebugResources UP-TO-DATE
+> Task :core:parseDebugLocalResources UP-TO-DATE
+> Task :core:generateDebugRFile UP-TO-DATE
+> Task :core:compileDebugKotlinAndroid UP-TO-DATE
+> Task :core:javaPreCompileDebug UP-TO-DATE
+> Task :core:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:generateDebugUnitTestStubRFile UP-TO-DATE
+> Task :core:compileDebugUnitTestKotlinAndroid UP-TO-DATE
+> Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:koverFindJar UP-TO-DATE
+> Task :core:processDebugJavaRes UP-TO-DATE
+> Task :core:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :core:testDebugUnitTest UP-TO-DATE
+> Task :core:preReleaseBuild UP-TO-DATE
+> Task :core:generateReleaseResValues UP-TO-DATE
+> Task :core:generateReleaseResources UP-TO-DATE
+> Task :core:packageReleaseResources UP-TO-DATE
+> Task :core:parseReleaseLocalResources UP-TO-DATE
+> Task :core:generateReleaseRFile UP-TO-DATE
+> Task :core:compileReleaseKotlinAndroid UP-TO-DATE
+> Task :core:javaPreCompileRelease UP-TO-DATE
+> Task :core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :core:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :core:preReleaseUnitTestBuild UP-TO-DATE
+> Task :core:generateReleaseUnitTestStubRFile UP-TO-DATE
+> Task :core:compileReleaseUnitTestKotlinAndroid UP-TO-DATE
+> Task :core:javaPreCompileReleaseUnitTest UP-TO-DATE
+> Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :core:processReleaseJavaRes UP-TO-DATE
+> Task :core:processReleaseUnitTestJavaRes UP-TO-DATE
+> Task :core:testReleaseUnitTest UP-TO-DATE
+> Task :core:allTests NO-SOURCE
 
-DLQ test results (testDebugUnitTest):
-  DlqRepositoryContractTest   tests=7 failures=0 errors=0 skipped=0
-  DlqStoreTest                tests=7 failures=0 errors=0 skipped=0
-  DlqDerivationGoldenTest     tests=2 failures=0 errors=0 skipped=0
+BUILD SUCCESSFUL in 4s
+38 actionable tasks: 1 executed, 37 up-to-date
+TEST_EXIT=0
+> Task :core:loadKtlintReporters UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidInstrumentedTestSourceSet NO-SOURCE
+> Task :core:ktlintAndroidInstrumentedTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidMainSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAndroidReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestDebugSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestDebugSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestReleaseSourceSet NO-SOURCE
+> Task :core:ktlintAndroidUnitTestReleaseSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverAndroidUnitTestSourceSet UP-TO-DATE
+> Task :core:ktlintAndroidUnitTestSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleMainSourceSet UP-TO-DATE
+> Task :core:ktlintAppleMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
+> Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
+> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonMainSourceSet UP-TO-DATE
+> Task :core:ktlintCommonMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonTestSourceSet UP-TO-DATE
+> Task :core:ktlintCommonTestSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosMainSourceSet NO-SOURCE
+> Task :core:ktlintIosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosSimulatorArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintIosSimulatorArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverIosTestSourceSet NO-SOURCE
+> Task :core:ktlintIosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverKotlinScripts UP-TO-DATE
+> Task :core:ktlintKotlinScriptCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverMacosArm64MainSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64MainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosArm64TestSourceSet NO-SOURCE
+> Task :core:ktlintMacosArm64TestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosMainSourceSet NO-SOURCE
+> Task :core:ktlintMacosMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverMacosTestSourceSet NO-SOURCE
+> Task :core:ktlintMacosTestSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeMainSourceSet NO-SOURCE
+> Task :core:ktlintNativeMainSourceSetCheck SKIPPED
+> Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
+> Task :core:ktlintNativeTestSourceSetCheck SKIPPED
+> Task :core:ktlintCheck UP-TO-DATE
 
-=== PARITY === (all 4 web useDLQ hooks ported, SI preserved)
-  [1] useDLQList   -> DlqStore.list()           -> GET /system/dlq
-                      staleTime MODERATE(15s)/refetch STANDARD(30s) -> Dlq domain 15s TTL (S7)
-  [2] useDLQEntry  -> DlqStore.entry(id,enabled) -> GET /system/dlq/{id}
-                      staleTime STATIC; enabled gate `enabled && numericId>0` reproduced
-                      (disabled => stable non-fetching Loading); numericId guard = dlqEntryNumericId (golden)
-  [3] useDLQAudit  -> DlqStore.audit(dlqId,limit)-> scoped GET /system/dlq/{id}/audit?limit
-                      OR global GET /system/dlq/audit?limit; scoped/path = dlqAuditScoped/dlqAuditPath (golden);
-                      default limit 50 (PAGINATION.DEFAULT_LIMIT); distinct query keys per (scope,limit)
-  [4] useDLQReplay -> DlqStore.replay(id)        -> POST /system/dlq/{id}/replay
-                      invalidateQueries(['system','dlq']) => HttpDlqRepository clears whole Dlq partition;
-                      DlqStore refreshes EVERY observed feed; 403/sudo surfaced via Result failure
-Mutations: 1 (replay). Reads emit cache->network (ADR-013). Values SI; conversion display-only (S5).
-Golden vectors (DlqDerivationGoldenTest, inlined, language-neutral) lock entry-id guard + audit scoping
-for KMP+C# parity (ADR-004).
+BUILD SUCCESSFUL in 3s
+16 actionable tasks: 16 up-to-date
+LINT_EXIT=0
+PH_EXIT=0
+
+=== DLQ TESTS (forced fresh run: gradlew :core:testDebugUnitTest --rerun-tasks --tests <3 DLQ classes>) ===
+BUILD SUCCESSFUL in 45s — 18 actionable tasks: 18 executed (not cached)
+  DlqRepositoryContractTest        tests=7 failures=0 errors=0 skipped=0 time=2.12s
+    [PASS] listHitsSystemDlq
+    [PASS] entryHitsSystemDlqWithId
+    [PASS] globalAuditHitsSystemDlqAuditWithLimit
+    [PASS] globalAuditUsedForNonPositiveId
+    [PASS] scopedAuditHitsPerEntryAuditWithLimit
+    [PASS] replayPostsReplayAndInvalidatesWholePartition
+    [PASS] replayFailureDoesNotInvalidate
+  DlqStoreTest                     tests=7 failures=0 errors=0 skipped=0 time=0.433s
+    [PASS] readEmitsCacheThenNetwork
+    [PASS] sameFeedIsSharedAcrossCallers
+    [PASS] entryGateReturnsStableDisabledFeedForNonPositiveOrDisabled
+    [PASS] enabledEntryFetchesViaGuardedNumericId
+    [PASS] globalAndScopedAuditTargetTheirOwnKeys
+    [PASS] replayDelegatesAndRefreshesEveryObservedFeed
+    [PASS] replayIsANoOpRefreshForUnobservedFeeds
+  DlqDerivationGoldenTest          tests=2 failures=0 errors=0 skipped=0 time=0.046s
+    [PASS] entryNumericIdGuardMatchesEveryGoldenRow
+    [PASS] auditScopingAndPathMatchEveryGoldenRow
+  DLQ TOTAL: tests=16 failures=0 errors=0 skipped=0
+
+=== PARITY === (all 4 web useDLQ hooks ported; SI preserved; values display-converted only at render, S5)
+Web constants verified: STALE_TIMES.MODERATE=15000ms, STALE_TIMES.STATIC=Infinity,
+  INTERVALS.STANDARD=30000ms, PAGINATION.DEFAULT_LIMIT=50.
+  [1] useDLQList   -> DlqStore.list()              -> GET /system/dlq
+                      web staleTime MODERATE(15s)+refetch STANDARD(30s) -> CacheDomain.Dlq 15s TTL (S7);
+                      contract: DlqRepositoryContractTest.listHitsSystemDlq.
+  [2] useDLQEntry  -> DlqStore.entry(id, enabled)  -> GET /system/dlq/{id}
+                      enabled gate nabled && numericId>0 reproduced (disabled => stable, non-fetching
+                      Loading feed, repo never touched); numericId guard = dlqEntryNumericId (golden-locked);
+                      web staleTime STATIC collapsed to the conservative 15s partition window (documented in
+                      CacheDomain.kt: never shows immutable-stale as fresh). contract: entryHitsSystemDlqWithId.
+  [3] useDLQAudit  -> DlqStore.audit(dlqId, limit) -> scoped GET /system/dlq/{id}/audit?limit=N
+                      OR global GET /system/dlq/audit?limit=N; scoped decision = dlqAuditScoped, path =
+                      dlqAuditPath (both golden-locked); default limit 50 (PAGINATION.DEFAULT_LIMIT); distinct
+                      query keys per (scope,limit). contract: global/scoped/non-positive audit tests.
+  [4] useDLQReplay -> DlqStore.replay(id): Result   -> POST /system/dlq/{id}/replay   [MUTATION]
+                      invalidateQueries(['system','dlq']) => HttpDlqRepository clears the WHOLE Dlq partition
+                      on success, then DlqStore refreshes EVERY observed feed (list+entry+audit). Toast/sudo/
+                      403 handling is a UI concern (out of scope for a UI-free holder); surfaced via Result
+                      failure. contract: replayPostsReplayAndInvalidatesWholePartition, replayFailureDoesNotInvalidate.
+NOTE: the prompt header lists useDLQReplay under reads (mutations=0); the real web file
+  (web/src/api/hooks/useDLQ.ts) declares it as a POST mutation, so it is ported faithfully as 1 mutation
+  (no parity shortcut / no scope narrowing — Honesty Covenant #2,#5).
+Reads emit cache->network (ADR-013). DLQ payloads are not unit-bearing -> round-trip verbatim (SI safe).
+Golden vectors (DlqDerivationGoldenTest, inlined, language-neutral JSON) lock the entry-id guard + audit
+  scoping for KMP+C# parity (ADR-004); the Windows C# port mirrors the identical rows.
+
+Implementation already committed at 3c0f879ea (ancestor of HEAD); this run re-verifies the gate green
+after the working-tree log was regenerated.
 
 EXIT=0
 STATUS=DONE
