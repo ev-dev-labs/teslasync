@@ -109,6 +109,34 @@ android {
 // The XCFramework("Shared") DSL above registers the `assembleSharedXCFramework`
 // task used by the gate; no extra wiring needed here.
 
+// P1/S2 — Typed API client codegen (ADR-003/ADR-004).
+//
+// The kotlinx.serialization DTOs under api/generated/** are reproduced from the
+// frozen OpenAPI contract (api/openapi/teslasync.openapi.json); they are generated
+// (never hand-edited) and git-ignored (apps/**/generated/). Regenerate them before
+// every Kotlin compilation so a clean checkout — or the Apple pre-build that runs
+// assembleSharedXCFramework — always compiles against output that matches the spec.
+// Generator: apps/tools/codegen/gen-clients.ps1 (pwsh, pinned tooling; the same
+// script drift-gates via -Check).
+val openApiSpec = rootProject.layout.projectDirectory.file("../../api/openapi/teslasync.openapi.json")
+val codegenScript = rootProject.layout.projectDirectory.file("../tools/codegen/gen-clients.ps1")
+val generatedApiDir = layout.projectDirectory.dir("src/commonMain/kotlin/io/teslasync/shared/core/api/generated")
+
+val generateApiClient by tasks.registering(Exec::class) {
+    description = "Regenerate the typed Kotlin API client from the OpenAPI contract (P1/S2)."
+    group = "codegen"
+    inputs.file(openApiSpec)
+    inputs.file(codegenScript)
+    outputs.dir(generatedApiDir)
+    commandLine("pwsh", "-NoProfile", "-File", codegenScript.asFile.absolutePath)
+}
+
+// Every Kotlin compilation (common metadata, the three Apple targets, Android,
+// and the test compilations) depends on freshly generated client sources.
+tasks.matching { it.name.startsWith("compile") && it.name.contains("Kotlin") }.configureEach {
+    dependsOn(generateApiClient)
+}
+
 // P1/S7 offline cache (ADR-013): one typed SQLDelight database shared by every
 // platform. Generated into build/generated (excluded from ktlint).
 sqldelight {
