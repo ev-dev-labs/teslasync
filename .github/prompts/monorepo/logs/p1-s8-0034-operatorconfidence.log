@@ -1,6 +1,7 @@
 === P1/S8/0034 OperatorConfidence state holder — gate log ===
-date: 2026-06-05T09:03:01.9858803-07:00
+date: 2026-06-06T21:27:20.0566919-07:00
 branch: feature/apps
+head: 8e031935c
 
 === :core:allTests ===
 > Task :core:kmpPartiallyResolvedDependenciesChecker
@@ -44,9 +45,10 @@ branch: feature/apps
 > Task :core:compileDebugUnitTestKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
 > Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:koverFindJar UP-TO-DATE
 > Task :core:processDebugJavaRes UP-TO-DATE
 > Task :core:processDebugUnitTestJavaRes UP-TO-DATE
-> Task :core:testDebugUnitTest UP-TO-DATE
+> Task :core:testDebugUnitTest FROM-CACHE
 > Task :core:preReleaseBuild UP-TO-DATE
 > Task :core:generateReleaseResValues UP-TO-DATE
 > Task :core:generateReleaseResources UP-TO-DATE
@@ -68,8 +70,8 @@ branch: feature/apps
 > Task :core:testReleaseUnitTest UP-TO-DATE
 > Task :core:allTests NO-SOURCE
 
-BUILD SUCCESSFUL in 4s
-37 actionable tasks: 1 executed, 36 up-to-date
+BUILD SUCCESSFUL in 3s
+38 actionable tasks: 1 executed, 1 from cache, 36 up-to-date
 TEST_EXIT=0
 
 === :core:ktlintCheck ===
@@ -127,37 +129,51 @@ TEST_EXIT=0
 > Task :core:ktlintNativeTestSourceSetCheck SKIPPED
 > Task :core:ktlintCheck UP-TO-DATE
 
-BUILD SUCCESSFUL in 3s
+BUILD SUCCESSFUL in 2s
 16 actionable tasks: 16 up-to-date
 LINT_EXIT=0
 
 === check-placeholders (kotlin) ===
-PLACEHOLDER_ALLOWED=13
+PLACEHOLDER_ALLOWED=17
 PLACEHOLDER_COUNT=0
 EXIT=0
 PH_EXIT=0
 
+=== forced re-run evidence (--rerun-tasks, not cache) ===
+:core:testDebugUnitTest --rerun-tasks  BUILD SUCCESSFUL
+  data.repo.OperatorConfidenceRepositoryContractTest          tests=14 failures=0 errors=0 skipped=0
+  presentation.operatorconfidence.OperatorConfidenceStoreTest tests=5  failures=0 errors=0 skipped=0
+  presentation.operatorconfidence.OperatorConfidenceAuditLogQueryGoldenTest tests=2 failures=0 errors=0 skipped=0
+  total = 21 passing, 0 failing
+
 === PARITY ===
 Web source: web/src/api/hooks/useOperatorConfidence.ts (10 reads, 0 mutations)
-KMP port:   apps/shared/core/.../presentation/operatorconfidence + data/repo/OperatorConfidenceRepository
+KMP port:   apps/shared/core/.../presentation/operatorconfidence/{OperatorConfidenceModels,OperatorConfidenceStore}.kt
+            apps/shared/core/.../data/repo/{OperatorConfidenceRepository,HttpOperatorConfidenceRepository}.kt
 
-Reads (10/10 ported — endpoint | params | per-read staleTime->TTL):
- 1 useSchemaDrift        -> schemaDrift()        GET /admin/observability/schema-drift            (STANDARD 60s)
- 2 useSlowQueries        -> slowQueries()        GET /admin/observability/slow-queries   order_by,limit (MODERATE 15s)
- 3 useVehicleCost        -> vehicleCost()        GET /admin/observability/vehicle-cost   limit,since?  (STANDARD 60s)
- 4 useDiskForecast       -> diskForecast()       GET /admin/observability/disk-forecast           (STANDARD 60s)
- 5 useSecretRotation     -> secretRotation()     GET /admin/observability/secret-rotation         (STANDARD 60s)
- 6 useAuditLog           -> auditLog()           GET /admin/audit-log                    buildAuditLogQuery (MODERATE 15s)
- 7 useAuditCategories    -> auditCategories()    GET /admin/audit-log/categories                  (EXTENDED 10m)
- 8 useAuditActions       -> auditActions()       GET /admin/audit-log/actions                     (EXTENDED 10m)
- 9 useAuditChainVerify   -> auditChainVerify()   GET /admin/audit-log/verify             limit,since? (FAST 30s)
-10 useGDPRExport         -> gdprExport()         GET /admin/gdpr/exports/{id}                     (QUICK 10s)
+Reads (10/10 ported — web hook -> store/repo fn | endpoint | params | staleTime->cache TTL):
+ 1 useSchemaDrift      -> schemaDrift()      GET /admin/observability/schema-drift        (-)                STANDARD 60s -> TTL_STANDARD
+ 2 useSlowQueries      -> slowQueries()      GET /admin/observability/slow-queries        order_by,limit     MODERATE 15s -> TTL_MODERATE
+ 3 useVehicleCost      -> vehicleCost()      GET /admin/observability/vehicle-cost        limit,since?       STANDARD 60s -> TTL_STANDARD
+ 4 useDiskForecast     -> diskForecast()     GET /admin/observability/disk-forecast       (-)                STANDARD 60s -> TTL_STANDARD
+ 5 useSecretRotation   -> secretRotation()   GET /admin/observability/secret-rotation     (-)                STANDARD 60s -> TTL_STANDARD
+ 6 useAuditLog         -> auditLog()         GET /admin/audit-log                         buildAuditLogQuery MODERATE 15s -> TTL_MODERATE
+ 7 useAuditCategories  -> auditCategories()  GET /admin/audit-log/categories              (-)                EXTENDED 10m -> TTL_EXTENDED
+ 8 useAuditActions     -> auditActions()     GET /admin/audit-log/actions                 (-)                EXTENDED 10m -> TTL_EXTENDED
+ 9 useAuditChainVerify -> auditChainVerify() GET /admin/audit-log/verify                  limit,since?       FAST 30s     -> TTL_FAST
+10 useGDPRExport       -> gdprExport()       GET /admin/gdpr/exports/{id}                 path id            QUICK 10s    -> TTL_QUICK
 
-Mutations: 0/0 (web hook file declares none) -> no invalidation surface.
-Derivation golden-vectored: buildAuditLogQuery -> auditLogQuery (OperatorConfidenceAuditLogQueryGoldenTest, 8 vectors, KMP+C# parity).
-Envelope: fetchEnvelope {data:T} unwrap reproduced (HttpOperatorConfidenceRepository.envelope); cached payload stored unwrapped+verbatim (SI preserved).
-snake_case params verified by OperatorConfidenceRepositoryContractTest (14 tests). Reads emit cache->network (OperatorConfidenceStoreTest, 5 tests).
-Tests: 21 passing (14 contract + 5 store + 2 golden) x {debug,release} Android JVM; native targets skipped on Windows host.
+Mutations: 0/0 (web hook file declares zero) -> no invalidation surface; per-feed refresh*() = web refetch()/refetchInterval seam.
+SI: control-plane payloads carry no unit-bearing fields (SHA/counts/ms/ISO/severity strings) -> round-trip verbatim, no S5 conversion.
+Params snake_case (order_by, limit, since, entity_type, entity_id, offset, categories/actors/actions comma-joined); no /api/v1 double-prefix
+  -> locked by OperatorConfidenceRepositoryContractTest (14 tests, MockEngine URL asserts).
+Envelope: web fetchEnvelope {data:T} unwrap reproduced (HttpOperatorConfidenceRepository.envelope); unwrapped payload cached verbatim.
+Reads emit cache->network; per-key shared/refreshable feeds; refresh only re-collects observed feed -> OperatorConfidenceStoreTest (5 tests).
+Derivation golden-vectored: buildAuditLogQuery -> auditLogQuery, 8 language-neutral vectors (empty, all_filters, blank_strings_omitted,
+  multi_value_joined, single_categories, zero_entity_id_emitted, offset_only, limit_zero_emitted) -> OperatorConfidenceAuditLogQueryGoldenTest
+  (2 tests); inlined per the AdminSafeArrayGoldenTest precedent so the Windows C# port mirrors the identical rows (ADR-004).
+
+Tests: 21 passing (14 contract + 5 store + 2 golden) x {debug,release} Android JVM; iOS/macOS native targets skipped on Windows host.
 
 EXIT=0
 STATUS=DONE
