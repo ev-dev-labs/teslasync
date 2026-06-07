@@ -21,6 +21,7 @@ its environmental gap, so the deliverable is contractually complete.
 |---|---|---|---|---|
 | `p1-shared/S3-0001-kmp-scaffold` | `5317ebcb1` | Produce `Shared.xcframework` binary (Kotlin/Native links Apple frameworks on macOS only) | `cd apps/shared && ./gradlew :core:assembleSharedXCFramework` | `p5-hardening/H8-0001-store-packaging` on `macos-latest` |
 | `p2-windows/W9-0002-ui-automation-winappdriver` | `c41cb7f29` | Run 147 `[Category=UIAutomation]` xUnit tests against packaged app (WinAppDriver/Appium runner absent on dev host) | `powershell apps/windows/run-ui-automation.ps1` | Windows runner with WinAppDriver + packaged-app install (CI: `windows-latest` matrix lane) |
+| `p2-windows/dashboard-widgets/W-0001-AlertFeedWidget` | `7b9575079` | Run the WinAppDriver-driven `TeslaSync.App.UITests` (147 cases incl. page-state matrix) against the packaged AlertFeedWidget; host-runnable gates (build, format, placeholder, 1010/1010 headless tests) are all green | `powershell apps/windows/run-ui-automation.ps1` | Windows runner with WinAppDriver provisioned (same as W9-0002) |
 
 ## Resolution protocol
 
