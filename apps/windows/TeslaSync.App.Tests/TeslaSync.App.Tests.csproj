@@ -38,6 +38,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AnalyticsSummaryWidget\AnalyticsSummaryWidget.Model.cs" Link="Widgets\AnalyticsSummaryWidget\AnalyticsSummaryWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AnalyticsSummaryWidget\AnalyticsSummaryWidget.ViewModel.cs" Link="Widgets\AnalyticsSummaryWidget\AnalyticsSummaryWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\AnomalyDetectorWidget\AnomalyDetectorWidget.Model.cs" Link="Widgets\AnomalyDetectorWidget\AnomalyDetectorWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\AnomalyDetectorWidget\AnomalyDetectorWidget.ViewModel.cs" Link="Widgets\AnomalyDetectorWidget\AnomalyDetectorWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\AnomalyDetectorWidget\AnomalyDetectorWidget.Source.cs" Link="Widgets\AnomalyDetectorWidget\AnomalyDetectorWidget.Source.cs" />
   </ItemGroup>
 
   <!--
