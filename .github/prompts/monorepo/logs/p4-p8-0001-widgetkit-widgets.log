@@ -1,24 +1,28 @@
 ===================================================================
  P4/P8 · 0001 — Apple WidgetKit widgets — execution log
- Date:        2026-06-07T06:23:03Z
- Host:        macOS 26.5.1 (arm64)
- Repo HEAD:   29b647cc (feat(apps/apple): add WidgetKit widgets (P4/P8))
+ Date:        2026-06-07T07:40:11Z
+ Host:        macOS 26.5.1 (arm64) — Mac Studio
+ Repo HEAD:   b545d750 (feat(apps/apple): add WidgetKit widgets (P4/P8))
+ Branch:      feature/apps-ios
  Toolchain:   Apple Swift 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
-              swiftlint 0.63.3  swiftformat 0.61.1  xcodegen 2.45.4  pwsh 7.x
+              swiftlint 0.63.3   swiftformat 0.61.1   xcodegen 2.45.4   pwsh 7.6.2
 ===================================================================
 
-CAPABILITY DETERMINATION (per prompt: requires macOS + Xcode + signing)
+CAPABILITY DETERMINATION (prompt clause: "requires macOS + Xcode and signing for
+extensions; if the gate can't run -> STATUS=BLOCKED")
   active developer dir: /Library/Developer/CommandLineTools
-  SDK in use:           /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+  macOS SDK in use:     /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+  iphonesimulator SDK:  ABSENT ("xcrun: error: SDK \"iphonesimulator\" cannot be located")
   -> Full Xcode.app is NOT installed (CommandLineTools only). There is no iOS
-     Simulator runtime and no code-signing identities for app extensions.
-  -> The two `xcodebuild ... build test` halves of the gate CANNOT run, so per
-     the prompt's capability clause this artifact terminates STATUS=BLOCKED.
-  -> All widget code is written + committed (HEAD 29b647cc) and EVERY
-     host-runnable gate is green — the apps/macos-pending-verifications.md
-     pattern. The xcodebuild iOS+macOS build/test, the #Preview light/dark +
-     Dynamic-Type snapshot checks, and on-device signing are deferred to a
-     macos-latest runner with full Xcode (ADR-012 CI matrix).
+     Simulator runtime, no #Preview macro plugin, and no code-signing identities
+     for app extensions.
+  -> The two `xcodebuild ... build test` halves of the gate CANNOT run, so per the
+     prompt's capability clause this artifact terminates STATUS=BLOCKED.
+  -> All widget code is committed (HEAD b545d750) and EVERY host-runnable gate is
+     green (re-run from scratch this session — not inherited). The xcodebuild
+     iOS+macOS build/test, the #Preview light/dark + Dynamic-Type snapshot checks,
+     and on-device signing are deferred to a macos-latest runner with full Xcode
+     (ADR-012 CI matrix; apps/macos-pending-verifications.md pattern).
 
 ===================== REQUIRED GATE (verbatim) =====================
 
@@ -30,16 +34,16 @@ IOS_EXIT=1
   xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
 MAC_EXIT=1
 
------ swiftlint --strict (run in apps/apple; .swiftlint.yml includes TeslaSyncWidgets) -----
+----- swiftlint --strict   (cwd apps/apple; .swiftlint.yml includes Sources, Tests, TeslaSyncWidgets) -----
   Linting 'EnergySnapshotWidget.swift' (182/182)
   Done linting! Found 0 violations, 0 serious in 182 files.
 LINT_EXIT=0
 
 ----- swiftformat --lint apps/apple -----
-  Reading config file at /Users/.../apps/apple/.swiftformat
   SwiftFormat completed in 0.05s.
   0/186 files require formatting, 2 files skipped.
 FORMAT_EXIT=0
+  (2 skipped = generated/opted-out sources carrying `// swiftformat:disable all`.)
 
 ----- ./apps/tools/check-placeholders.ps1 -Path apps/apple -Language swift -----
   PLACEHOLDER_ALLOWED=1
@@ -47,72 +51,93 @@ FORMAT_EXIT=0
   EXIT=0
 PLACEHOLDER_EXIT=0
   (PLACEHOLDER_ALLOWED=1 = the single Apple-required WidgetKit TimelineProvider
-   `placeholder(in:)` method, opted out with an explicit `// parity:allow` reason
-   in TeslaSyncWidgets/Provider/TeslaSyncTimelineProvider.swift. 0 real stubs.)
-
-  check-placeholders self-test (--SelfTest): all assertions PASS, SELFTEST_EXIT=0.
+   `placeholder(in:)` method, opted out with an explicit `// parity:allow` reason in
+   TeslaSyncWidgets/Provider/TeslaSyncTimelineProvider.swift. 0 real stubs.)
 
 Gate rule: EXIT=0 only if IOS/MAC/LINT/FORMAT/PLACEHOLDER all 0.
-  IOS_EXIT=1 MAC_EXIT=1 LINT_EXIT=0 FORMAT_EXIT=0 PLACEHOLDER_EXIT=0  => EXIT != 0 (BLOCKED).
+  IOS_EXIT=1 MAC_EXIT=1 LINT_EXIT=0 FORMAT_EXIT=0 PLACEHOLDER_EXIT=0  => EXIT=1 (BLOCKED).
+  The only red is the unavailable Xcode runner; no code/lint/format/test failure.
 
 =========== ADDITIONAL HOST VERIFICATION (beyond the gate) ===========
 Because the two xcodebuild halves cannot run, these host-runnable checks were
-executed to prove the Swift actually compiles AND the test logic actually
-passes against the real production types on this host.
+executed THIS session to prove the Swift actually compiles AND the test logic
+actually passes against the real production types on this host.
 
------ xcodegen generate (validates project.yml + the 2 app-extension targets) -----
-  ⚙️  Generating plists...  ⚙️  Generating project...  ⚙️  Writing project...
-  Created project at apps/apple/TeslaSync.xcodeproj   (.xcodeproj is git-ignored)
-  new app-extension targets present in generated project:
+----- xcodegen generate (validates project.yml + the 2 widget app-extension targets) -----
+  Created project at apps/apple/TeslaSync.xcodeproj   (.xcodeproj is git-ignored — confirmed via `git check-ignore`)
+  widget app-extension targets present in generated project:
     - TeslaSyncWidgets         (iOS,  io.teslasync.app.widgets)
     - TeslaSyncWidgets-macOS   (macOS, io.teslasync.app.macos.widgets)
 XCODEGEN_EXIT=0
 
------ swiftc -typecheck  (macOS SDK resolves SwiftUI + WidgetKit; -swift-version 6) -----
+----- swiftc -typecheck  (macOS SDK resolves SwiftUI + WidgetKit; -swift-version 6, -parse-as-library) -----
   scope: TeslaSyncWidgets/**.swift (minus WidgetPreviews.swift) + Sources/Widgets/Shared/**.swift
-         + Sources/Widgets/WidgetSnapshotPublisher.swift + design/generated/apple/Tokens.swift
-  23 production sources type-check clean against arm64-apple-macos15.0.
-  (WidgetPreviews.swift is excluded: its #Preview macro plugin ships only with
-   full Xcode. The macOS target compiles out #if os(iOS) Lock-Screen accessory
-   code; those iOS-only paths are exercised by the deferred iOS xcodebuild gate.)
+         + Sources/Widgets/WidgetSnapshotPublisher.swift + ../design/generated/apple/Tokens.swift
+  24 production sources type-check clean against arm64-apple-macos15.0.
 TYPECHECK_WIDGETS_EXIT=0
 
------ widget unit tests EXECUTED on host via a minimal XCTest shim -----
-  Full XCTest ships only with Xcode (no such module 'XCTest' under CommandLineTools),
+  WidgetPreviews.swift, typechecked together with the set above, emits ONLY:
+    "external macro implementation type 'PreviewsMacros.Common' could not be found
+     for macro 'Preview(...)'; plugin for module 'PreviewsMacros' not found"
+  i.e. the #Preview macro plugin ships only with full Xcode. No other diagnostics
+  remain in the file -> its real compilation is correctly deferred to the Xcode gate.
+
+----- correctness fix caught on host (latent compile error the deferred gate would hit) -----
+  WidgetPreviews.swift previously applied `.environment(\.widgetFamily, .systemMedium)`
+  to three plain-view #Previews. `EnvironmentValues.widgetFamily` is GET-ONLY, so the
+  key path is a `KeyPath`, not a `WritableKeyPath`, and `.environment(_:_:)` does NOT
+  type-check on it. Proven by isolating the expression against the macOS SDK:
+    error: cannot convert value of type 'KeyPath<EnvironmentValues, WidgetFamily>'
+           to expected argument type 'WritableKeyPath<EnvironmentValues, V>'
+  Fix: removed the three invalid modifiers (the only correct minimal change). The
+  remaining `.environment(\.colorScheme, .dark)` / `(\.dynamicTypeSize, .accessibility3)`
+  are writable and retained, so the dark-mode + Dynamic-Type preview intent is kept.
+  Swept the whole app: no other `.environment(\.widgetFamily,...)` usages exist.
+  After the fix, swiftlint/swiftformat remain green and the file's only remaining
+  diagnostic is the full-Xcode #Preview macro plugin (above).
+
+----- widget unit tests EXECUTED on host via a faithful XCTest shim -----
+  Full XCTest ships only with Xcode ("no such module 'XCTest'" under CommandLineTools),
   so the 8 real test files in Tests/Unit/Widgets/ were compiled UNCHANGED (only the
-  `import XCTest` / `@testable import TeslaSync` lines stripped for single-module
-  linking) against the REAL production types behind a faithful XCTest stand-in,
-  then run. This proves test LOGIC, not the deferred xcodebuild test gate.
-  Coverage: deep-link route resolution, fresh/stale/offline timeline transitions,
-  reload-date scheduling, VIN/coordinate redaction, freshness policy, snapshot
-  Codable round-trip + schema guard, App Group store save/load/clear, publisher
-  redaction + WidgetCenter reload.
+  `import XCTest` -> `import Foundation` swap and the `@testable import TeslaSync` line
+  removed, for single-module linking) against the REAL production types behind a
+  minimal XCTest stand-in, then run. This proves test LOGIC, not the deferred
+  xcodebuild test gate.
+  Coverage: deep-link route resolution vs the real AppRouteParser/AppRoute,
+  fresh/stale/offline timeline transitions, reload-date scheduling (sooner while
+  charging), VIN + coordinate redaction, freshness policy + transition boundaries,
+  snapshot Codable round-trip + forward-schema guard, App Group store save/load/clear,
+  publisher redaction + WidgetCenter reload counting.
+  COMPILE_EXIT=0
   WIDGET_TESTS_TOTAL=38
   WIDGET_TESTS_PASSED=38
   WIDGET_TESTS_FAILED=0
 HOST_TESTS_EXIT=0
 
------ localization completeness (Localizable.xcstrings) -----
+----- localization completeness (Localization/Localizable.xcstrings) -----
   widget.* keys referenced in Swift : 45
   widget.* keys defined in catalog  : 45
   referenced-but-undefined          : 0
 LOCALIZATION_EXIT=0
 
------ deep-link end-to-end wiring (honest, no networking in extension) -----
+----- deep-link end-to-end wiring (honest; no networking in the extension) -----
   WidgetDeepLink (6 cases) -> teslasync://<segment> ->
     AppRouteParser.parse(url:) -> AppRoute {vehicles, charging, trips,
     notifications, energy, system}. Cross-checked in WidgetDeepLinkTests (PASS).
-  App side: Info-iOS.plist registers CFBundleURLSchemes=teslasync;
-    TeslaSyncApp.swift `.onOpenURL` routes the URL via AppRouteParser.
-  Entitlements: App Group group.io.teslasync.app present in app + widget
-    entitlements for BOTH iOS and macOS targets.
+  App side: Info-iOS.plist registers CFBundleURLSchemes=teslasync
+    (CFBundleURLName io.teslasync.app.deeplink); Sources/TeslaSyncApp.swift
+    `.onOpenURL { url in if let route = AppRouteParser.parse(url: url) ... }`.
+  Privacy: links carry only a route host, no query/identifiers (asserted in tests).
+  Entitlements: App Group group.io.teslasync.app present in BOTH app entitlements
+    (iOS + macOS) AND BOTH widget entitlements (iOS + macOS) — verified.
 
 ===================== DELIVERABLE INVENTORY =====================
 Widgets (6, each a StaticConfiguration over one shared TeslaSyncTimelineProvider):
   vehicle status · charging progress · recent drive · alert count · energy · system health
-Families: systemSmall / systemMedium / systemLarge (RecentDrive & Energy: system;
-  Vehicle & Charging: system + accessories; Alerts & System health: glanceable);
-  accessoryCircular/Rectangular/Inline on iOS only (#if os(iOS)); macOS = system families.
+Families: systemSmall / systemMedium / systemLarge (+ systemExtraLarge where applicable);
+  Vehicle & Charging: system + accessories; Alerts & System health: glanceable
+  (small/medium + accessories); Recent drive & Energy: system. accessoryCircular/
+  Rectangular/Inline are iOS-only (#if os(iOS)); macOS compiles to system families.
 Shared snapshot layer (app writes App Group cache, widgets read; no networking):
   Sources/Widgets/Shared/WidgetAppGroup.swift
   Sources/Widgets/Shared/WidgetDeepLink.swift
@@ -136,9 +161,10 @@ Unit tests (8 files, 38 tests — all PASS on host, see above):
   Tests/Unit/Widgets/Widget{DeepLink,Freshness,Publisher,Redaction,
     SnapshotCodable,SnapshotStore,TimelinePlanner}Tests.swift + WidgetTestSupport.swift
 Config: project.yml (+TeslaSyncWidgets, +TeslaSyncWidgets-macOS), Info-Widgets.plist,
-  TeslaSyncWidgets(.entitlements / -macOS.entitlements) app-group, app entitlements +app-group,
-  Info-iOS.plist + Info-macOS.plist (teslasync:// scheme), .swiftlint.yml +TeslaSyncWidgets,
-  TeslaSyncApp.swift .onOpenURL deep-link routing, Localizable.xcstrings +45 widget keys.
+  TeslaSyncWidgets(.entitlements / -macOS.entitlements) app-group, app entitlements
+  +app-group, Info-iOS.plist + Info-macOS.plist (teslasync:// scheme), .swiftlint.yml
+  +TeslaSyncWidgets, TeslaSyncApp.swift .onOpenURL deep-link routing, design tokens
+  (Color.TS / Font.TS / TSSpacing), Localizable.xcstrings +45 widget keys.
 
 ===================== ACCEPTANCE CRITERIA =====================
 [x] WidgetKit extension covers all 6 listed widgets + their families; iOS + macOS
@@ -149,7 +175,8 @@ Config: project.yml (+TeslaSyncWidgets, +TeslaSyncWidgets-macOS), Info-Widgets.p
     enforced on write (publisher); localization complete (45/45 keys); accessibility
     labels/values on rings, chips, metrics, accessories.
 [x] SwiftLint --strict + SwiftFormat --lint + placeholder gate all clean on host;
-    additionally swiftc -typecheck clean and all 38 unit tests executed + PASS on host.
+    additionally swiftc -typecheck clean and all 38 unit tests executed + PASS on host;
+    a latent read-only-`widgetFamily` compile error in the previews was caught + fixed.
 [~] iOS + macOS xcodebuild build/test: BLOCKED — no Xcode.app / iOS Simulator /
     signing identities on this CommandLineTools-only host. Deferred to macos-latest.
 

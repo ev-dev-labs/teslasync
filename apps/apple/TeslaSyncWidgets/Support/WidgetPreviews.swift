@@ -76,20 +76,19 @@ extension TeslaSyncWidgetEntry {
     }
 #endif
 
-// Dark mode + Dynamic Type checks on the entry views directly (family fixed).
+// Dark mode + Dynamic Type checks on the entry views directly. The entry view reads
+// `widgetFamily` from the environment, which defaults to `.systemMedium` in this
+// preview context (the value is read-only and cannot be set on a plain-view #Preview).
 #Preview("Vehicle · Dark", traits: .fixedLayout(width: 360, height: 170)) {
     VehicleStatusEntryView(entry: .preview(.fresh))
-        .environment(\.widgetFamily, .systemMedium)
         .environment(\.colorScheme, .dark)
 }
 
 #Preview("Vehicle · XL Type", traits: .fixedLayout(width: 360, height: 170)) {
     VehicleStatusEntryView(entry: .preview(.stale))
-        .environment(\.widgetFamily, .systemMedium)
         .environment(\.dynamicTypeSize, .accessibility3)
 }
 
 #Preview("Offline · Medium", traits: .fixedLayout(width: 360, height: 170)) {
     VehicleStatusEntryView(entry: .previewOffline())
-        .environment(\.widgetFamily, .systemMedium)
 }
