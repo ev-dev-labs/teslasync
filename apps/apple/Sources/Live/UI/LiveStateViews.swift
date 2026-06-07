@@ -23,7 +23,7 @@ public struct LiveConnectionBadge: View {
         .accessibilityLabel(Text(Self.label(for: status)))
     }
 
-    static func label(for status: LiveStatus) -> LocalizedStringKey {
+    nonisolated static func label(for status: LiveStatus) -> LocalizedStringKey {
         if status.isStale { return "live.status.stale" }
         switch status.phase {
         case .open: return "live.status.live"

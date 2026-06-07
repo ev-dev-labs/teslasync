@@ -14,7 +14,7 @@ public enum LiveConnectionState: Equatable, Sendable {
     case closed
 
     /// Maps the shared enum by its Kotlin entry name (robust to interop casing).
-    public init?(_ connection: SharedConnection) {
+    public init?(_ connection: Shared.Connection) {
         switch connection.name {
         case "Connecting": self = .connecting
         case "Open": self = .open
@@ -36,7 +36,7 @@ public enum LiveConnectionState: Equatable, Sendable {
 
 /// Discriminator over the shared `LiveEvent` taxonomy
 /// (`io.teslasync.shared.core.net.sse.LiveEvent`). The strongly-typed payloads
-/// stay on the underlying `SharedLiveEvent`; this kind lets SwiftUI route an
+/// stay on the underlying `Shared.LiveEvent`; this kind lets SwiftUI route an
 /// event without re-parsing it.
 public enum LiveEventKind: Equatable, Sendable {
     case connected
@@ -54,23 +54,23 @@ public enum LiveEventKind: Equatable, Sendable {
 public struct LiveEvent {
     public let id: String?
     public let kind: LiveEventKind
-    public let raw: SharedLiveEvent
+    public let raw: Shared.LiveEvent
 
-    public init(_ event: SharedLiveEvent) {
+    public init(_ event: Shared.LiveEvent) {
         id = event.id
         raw = event
         kind = Self.classify(event)
     }
 
-    private static func classify(_ event: SharedLiveEvent) -> LiveEventKind {
+    private static func classify(_ event: Shared.LiveEvent) -> LiveEventKind {
         switch event {
-        case is SharedLiveEventConnected: .connected
-        case is SharedLiveEventHeartbeat: .heartbeat
-        case is SharedLiveEventVehicleUpdate: .vehicleUpdate
-        case is SharedLiveEventAlert: .alert
-        case is SharedLiveEventExportStatus: .exportStatus
-        case is SharedLiveEventAchievementUnlocked: .achievementUnlocked
-        case is SharedLiveEventSignal: .signal
+        case is Shared.LiveEventConnected: .connected
+        case is Shared.LiveEventHeartbeat: .heartbeat
+        case is Shared.LiveEventVehicleUpdate: .vehicleUpdate
+        case is Shared.LiveEventAlert: .alert
+        case is Shared.LiveEventExportStatus: .exportStatus
+        case is Shared.LiveEventAchievementUnlocked: .achievementUnlocked
+        case is Shared.LiveEventSignal: .signal
         default: .unknown
         }
     }

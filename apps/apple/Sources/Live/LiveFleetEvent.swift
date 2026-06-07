@@ -72,7 +72,7 @@ public struct LiveAlert: Equatable, Sendable {
 
 /// Native, Shared-free projection of the shared `LiveEvent` taxonomy. Page
 /// consumers and the live store reduce these into their own snapshot; the
-/// production adapter maps each `SharedLiveEvent` case into one of these.
+/// production adapter maps each `Shared.LiveEvent` case into one of these.
 ///
 /// The `kind` discriminator on `LiveEnvelope` is derived from this so callers can
 /// route without a full pattern match when they only need the category.

@@ -66,19 +66,19 @@ public extension LoadableState {
     ///   - transform: maps the raw Kotlin payload to `Value` (returning `nil`
     ///     marks the state empty).
     static func from(
-        _ resource: SharedResource,
+        _ resource: Shared.Resource,
         transform: (Any) -> Value?
     ) -> LoadableState {
         let stale = resource.stale
         switch resource {
-        case let success as SharedResourceSuccess:
+        case let success as Shared.ResourceSuccess<AnyObject>:
             if let mapped = transform(success.data) {
                 return .loaded(mapped, stale: stale)
             }
             return .empty(stale: stale)
-        case let loading as SharedResourceLoading:
+        case let loading as Shared.ResourceLoading<AnyObject>:
             return .loading(cached: loading.cached.flatMap(transform), stale: stale)
-        case let failure as SharedResourceError:
+        case let failure as Shared.ResourceError<AnyObject>:
             return .failed(
                 FacadeError.from(failure.error),
                 cached: failure.cached.flatMap(transform),

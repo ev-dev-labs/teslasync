@@ -51,12 +51,9 @@ targets:
     dependencies:
       - framework: Frameworks/Shared.xcframework
         embed: false
+      - sdk: libsqlite3.tbd
       - target: TeslaSyncActivities
       - target: TeslaSyncWidgets
-    preBuildScripts:
-      - path: Scripts/build-shared-xcframework.sh
-        name: "Build KMP Shared.xcframework"
-        basedOnDependencyAnalysis: false
 
   # ---- macOS app ----
   TeslaSync-macOS:
@@ -81,11 +78,8 @@ targets:
     dependencies:
       - framework: Frameworks/Shared.xcframework
         embed: false
+      - sdk: libsqlite3.tbd
       - target: TeslaSyncWidgets-macOS
-    preBuildScripts:
-      - path: Scripts/build-shared-xcframework.sh
-        name: "Build KMP Shared.xcframework"
-        basedOnDependencyAnalysis: false
 
   # ---- iOS Live Activities widget extension ----
   # The lock-screen / Dynamic Island UI for the charging / drive / command Live
@@ -228,6 +222,7 @@ targets:
       - target: TeslaSync
       - framework: Frameworks/Shared.xcframework
         embed: false
+      - sdk: libsqlite3.tbd
 
   TeslaSyncUITests:
     type: bundle.ui-testing
@@ -247,6 +242,7 @@ targets:
       - target: TeslaSync-macOS
       - framework: Frameworks/Shared.xcframework
         embed: false
+      - sdk: libsqlite3.tbd
 
   TeslaSync-macOSUITests:
     type: bundle.ui-testing
@@ -261,10 +257,20 @@ schemes:
     build:
       targets:
         TeslaSync: all
+      preActions:
+        - name: Stage Shared.xcframework
+          script: |
+            "${PROJECT_DIR}/Scripts/build-shared-xcframework.sh"
+          settingsTarget: TeslaSync
     test:
       targets:
         - TeslaSyncTests
         - TeslaSyncUITests
+      preActions:
+        - name: Stage Shared.xcframework
+          script: |
+            "${PROJECT_DIR}/Scripts/build-shared-xcframework.sh"
+          settingsTarget: TeslaSync
     run:
       config: Debug
     profile:
@@ -278,10 +284,20 @@ schemes:
     build:
       targets:
         TeslaSync-macOS: all
+      preActions:
+        - name: Stage Shared.xcframework
+          script: |
+            "${PROJECT_DIR}/Scripts/build-shared-xcframework.sh"
+          settingsTarget: TeslaSync-macOS
     test:
       targets:
         - TeslaSync-macOSTests
         - TeslaSync-macOSUITests
+      preActions:
+        - name: Stage Shared.xcframework
+          script: |
+            "${PROJECT_DIR}/Scripts/build-shared-xcframework.sh"
+          settingsTarget: TeslaSync-macOS
     run:
       config: Debug
     profile:

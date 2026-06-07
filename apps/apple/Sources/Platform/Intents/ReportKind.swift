@@ -44,13 +44,15 @@ extension ReportKind: AppEnum {
     }
 
     public static var caseDisplayRepresentations: [ReportKind: DisplayRepresentation] {
-        var map: [ReportKind: DisplayRepresentation] = [:]
-        for kind in allCases {
-            map[kind] = DisplayRepresentation(
-                title: kind.titleResource,
-                image: .init(systemName: kind.systemImage)
-            )
-        }
-        return map
+        [
+            .charging: DisplayRepresentation(title: "intent.report.charging", image: .init(systemName: "bolt.fill")),
+            .driving: DisplayRepresentation(title: "intent.report.driving", image: .init(systemName: "speedometer")),
+            .energy: DisplayRepresentation(title: "intent.report.energy", image: .init(systemName: "battery.100")),
+            .battery: DisplayRepresentation(
+                title: "intent.report.battery",
+                image: .init(systemName: "cross.case.fill")
+            ),
+            .trips: DisplayRepresentation(title: "intent.report.trips", image: .init(systemName: "map.fill"))
+        ]
     }
 }

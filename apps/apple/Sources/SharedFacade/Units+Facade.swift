@@ -14,6 +14,7 @@ public struct UnitPreferences: Equatable, Sendable {
     public var power: String
     public var locale: String?
     public var precision: Int?
+    public var emptyDisplay: String?
 
     public init(
         distance: String,
@@ -24,7 +25,8 @@ public struct UnitPreferences: Equatable, Sendable {
         duration: String,
         power: String,
         locale: String? = nil,
-        precision: Int? = nil
+        precision: Int? = nil,
+        emptyDisplay: String? = nil
     ) {
         self.distance = distance
         self.speed = speed
@@ -35,6 +37,7 @@ public struct UnitPreferences: Equatable, Sendable {
         self.power = power
         self.locale = locale
         self.precision = precision
+        self.emptyDisplay = emptyDisplay
     }
 }
 
@@ -44,64 +47,64 @@ public struct UnitPreferences: Equatable, Sendable {
 /// identical numbers (verified by the golden-vector tests). This facade only
 /// bridges Swift values into the shared functions.
 ///
-/// > KMP interop note: top-level Kotlin functions are exported on `SharedUnitsKt`
+/// > KMP interop note: top-level Kotlin functions are exported on `Shared.UnitsKt`
 /// > and enums are built from their `label` via the `fromLabel` companion — names
 /// > inferred from source, pinned on the macOS build.
 public enum Units {
     public static func convertDistance(_ meters: Double, _ prefs: UnitPreferences) -> Double {
-        SharedUnitsKt.convertDistanceFromSI(meters: meters, to: distanceUnit(prefs.distance))
+        Shared.UnitsKt.convertDistanceFromSI(meters: meters, to: distanceUnit(prefs.distance))
     }
 
     public static func convertSpeed(_ mps: Double, _ prefs: UnitPreferences) -> Double {
-        SharedUnitsKt.convertSpeedFromSI(mps: mps, to: speedUnit(prefs.speed))
+        Shared.UnitsKt.convertSpeedFromSI(mps: mps, to: speedUnit(prefs.speed))
     }
 
     public static func convertTemperature(_ celsius: Double, _ prefs: UnitPreferences) -> Double {
-        SharedUnitsKt.convertTempFromSI(celsius: celsius, to: temperatureUnit(prefs.temperature))
+        Shared.UnitsKt.convertTempFromSI(celsius: celsius, to: temperatureUnit(prefs.temperature))
     }
 
     public static func convertPressure(_ kpa: Double, _ prefs: UnitPreferences) -> Double {
-        SharedUnitsKt.convertPressureFromSI(kpa: kpa, to: pressureUnit(prefs.pressure))
+        Shared.UnitsKt.convertPressureFromSI(kpa: kpa, to: pressureUnit(prefs.pressure))
     }
 
     public static func convertEnergy(_ wh: Double, _ prefs: UnitPreferences) -> Double {
-        SharedUnitsKt.convertEnergyFromSI(wh: wh, to: energyUnit(prefs.energy))
+        Shared.UnitsKt.convertEnergyFromSI(wh: wh, to: energyUnit(prefs.energy))
     }
 
     public static func convertDuration(_ seconds: Double, _ prefs: UnitPreferences) -> Double {
-        SharedUnitsKt.convertDurationFromSI(seconds: seconds, to: durationUnit(prefs.duration))
+        Shared.UnitsKt.convertDurationFromSI(seconds: seconds, to: durationUnit(prefs.duration))
     }
 
     public static func convertPower(_ watts: Double, _ prefs: UnitPreferences) -> Double {
-        SharedUnitsKt.convertPowerFromSI(watts: watts, to: powerUnit(prefs.power))
+        Shared.UnitsKt.convertPowerFromSI(watts: watts, to: powerUnit(prefs.power))
     }
 
     public static func formatDistance(_ meters: Double?, _ prefs: UnitPreferences) -> String {
-        SharedUnitsKt.formatDistance(meters: boxed(meters), pref: composite(prefs), precision: nil)
+        Shared.UnitsKt.formatDistance(meters: boxed(meters), pref: composite(prefs), precision: nil)
     }
 
     public static func formatSpeed(_ mps: Double?, _ prefs: UnitPreferences) -> String {
-        SharedUnitsKt.formatSpeed(mps: boxed(mps), pref: composite(prefs), precision: nil)
+        Shared.UnitsKt.formatSpeed(mps: boxed(mps), pref: composite(prefs), precision: nil)
     }
 
     public static func formatTemperature(_ celsius: Double?, _ prefs: UnitPreferences) -> String {
-        SharedUnitsKt.formatTemperature(celsius: boxed(celsius), pref: composite(prefs), precision: nil)
+        Shared.UnitsKt.formatTemperature(celsius: boxed(celsius), pref: composite(prefs), precision: nil)
     }
 
     public static func formatPressure(_ kpa: Double?, _ prefs: UnitPreferences) -> String {
-        SharedUnitsKt.formatPressure(kpa: boxed(kpa), pref: composite(prefs), precision: nil)
+        Shared.UnitsKt.formatPressure(kpa: boxed(kpa), pref: composite(prefs), precision: nil)
     }
 
     public static func formatEnergy(_ wh: Double?, _ prefs: UnitPreferences) -> String {
-        SharedUnitsKt.formatEnergy(wh: boxed(wh), pref: composite(prefs), precision: nil)
+        Shared.UnitsKt.formatEnergy(wh: boxed(wh), pref: composite(prefs), precision: nil)
     }
 
     public static func formatDuration(_ seconds: Double?, _ prefs: UnitPreferences) -> String {
-        SharedUnitsKt.formatDuration(seconds: boxed(seconds), pref: composite(prefs), precision: nil)
+        Shared.UnitsKt.formatDuration(seconds: boxed(seconds), pref: composite(prefs), precision: nil)
     }
 
     public static func formatPower(_ watts: Double?, _ prefs: UnitPreferences) -> String {
-        SharedUnitsKt.formatPower(watts: boxed(watts), pref: composite(prefs), precision: nil)
+        Shared.UnitsKt.formatPower(watts: boxed(watts), pref: composite(prefs), precision: nil)
     }
 }
 
@@ -110,37 +113,37 @@ extension Units {
         value.map(KotlinDouble.init(value:))
     }
 
-    static func distanceUnit(_ label: String) -> SharedDistanceUnitPref {
-        SharedDistanceUnitPref.companion.fromLabel(label: label)
+    static func distanceUnit(_ label: String) -> Shared.DistanceUnitPref {
+        Shared.DistanceUnitPref.companion.fromLabel(label: label)
     }
 
-    static func speedUnit(_ label: String) -> SharedSpeedUnitPref {
-        SharedSpeedUnitPref.companion.fromLabel(label: label)
+    static func speedUnit(_ label: String) -> Shared.SpeedUnitPref {
+        Shared.SpeedUnitPref.companion.fromLabel(label: label)
     }
 
-    static func temperatureUnit(_ label: String) -> SharedTemperatureUnitPref {
-        SharedTemperatureUnitPref.companion.fromLabel(label: label)
+    static func temperatureUnit(_ label: String) -> Shared.TemperatureUnitPref {
+        Shared.TemperatureUnitPref.companion.fromLabel(label: label)
     }
 
-    static func pressureUnit(_ label: String) -> SharedPressureUnitPref {
-        SharedPressureUnitPref.companion.fromLabel(label: label)
+    static func pressureUnit(_ label: String) -> Shared.PressureUnitPref {
+        Shared.PressureUnitPref.companion.fromLabel(label: label)
     }
 
-    static func energyUnit(_ label: String) -> SharedEnergyUnitPref {
-        SharedEnergyUnitPref.companion.fromLabel(label: label)
+    static func energyUnit(_ label: String) -> Shared.EnergyUnitPref {
+        Shared.EnergyUnitPref.companion.fromLabel(label: label)
     }
 
-    static func durationUnit(_ label: String) -> SharedDurationUnitPref {
-        SharedDurationUnitPref.companion.fromLabel(label: label)
+    static func durationUnit(_ label: String) -> Shared.DurationUnitPref {
+        Shared.DurationUnitPref.companion.fromLabel(label: label)
     }
 
-    static func powerUnit(_ label: String) -> SharedPowerUnitPref {
-        SharedPowerUnitPref.companion.fromLabel(label: label)
+    static func powerUnit(_ label: String) -> Shared.PowerUnitPref {
+        Shared.PowerUnitPref.companion.fromLabel(label: label)
     }
 
     /// Builds the shared composite `UnitPref` from Swift preferences.
-    static func composite(_ prefs: UnitPreferences) -> SharedUnitPref {
-        SharedUnitPref(
+    static func composite(_ prefs: UnitPreferences) -> Shared.UnitPref {
+        Shared.UnitPref(
             distance: distanceUnit(prefs.distance),
             speed: speedUnit(prefs.speed),
             temperature: temperatureUnit(prefs.temperature),
@@ -149,8 +152,8 @@ extension Units {
             duration: durationUnit(prefs.duration),
             power: powerUnit(prefs.power),
             locale: prefs.locale,
-            precision: prefs.precision.map(KotlinInt.init(value:)),
-            emptyDisplay: nil
+            precision: prefs.precision.map { KotlinInt(value: Int32($0)) },
+            emptyDisplay: prefs.emptyDisplay
         )
     }
 }

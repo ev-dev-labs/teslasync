@@ -24,8 +24,12 @@ final class PushNotificationsUITests: XCTestCase {
 
         app.buttons["push.demo.requestAuth"].tap()
         let authorized = NSPredicate(format: "label == %@", "authorized")
-        expectation(for: authorized, evaluatedWith: status)
-        waitForExpectations(timeout: 5)
+        let expectation = expectation(for: authorized, evaluatedWith: status)
+        XCTAssertEqual(
+            XCTWaiter().wait(for: [expectation], timeout: 5),
+            .completed,
+            "requesting authorization flips the demo status to authorized"
+        )
     }
 
     func testForegroundChargingPushShowsBannerThenDeepLinks() {

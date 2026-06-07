@@ -14,6 +14,12 @@ final class UnitsGoldenVectorTests: XCTestCase {
         let duration: String
         let power: String
         let locale: String?
+        let precision: Int?
+        let emptyDisplay: String?
+    }
+
+    private struct Options: Decodable {
+        let precision: Int?
     }
 
     private struct GoldenCase: Decodable {
@@ -21,9 +27,10 @@ final class UnitsGoldenVectorTests: XCTestCase {
         let formatter: String
         let quantity: String
         let system: String
-        let inputSi: Double
+        let inputSi: Double?
         let preference: Preference
-        let expectedValue: Double
+        let options: Options?
+        let expectedValue: Double?
         let expectedFormatted: String
     }
 
@@ -40,12 +47,18 @@ final class UnitsGoldenVectorTests: XCTestCase {
                 energy: golden.preference.energy,
                 duration: golden.preference.duration,
                 power: golden.preference.power,
-                locale: golden.preference.locale
+                locale: golden.preference.locale,
+                precision: golden.options?.precision ?? golden.preference.precision,
+                emptyDisplay: golden.preference.emptyDisplay
             )
-            let label = "\(golden.quantity)/\(golden.system) input=\(golden.inputSi)"
+            let label = "\(golden.quantity)/\(golden.system) input=\(String(describing: golden.inputSi))"
 
-            let value = convert(golden.quantity, golden.inputSi, prefs)
-            XCTAssertEqual(value, golden.expectedValue, accuracy: 1e-6, "convert \(label)")
+            // Conversion parity is asserted only for finite, non-null inputs with an
+            // expected value — null-input rows exercise the empty-display path below.
+            if let inputSi = golden.inputSi, inputSi.isFinite, let expectedValue = golden.expectedValue {
+                let value = convert(golden.quantity, inputSi, prefs)
+                XCTAssertEqual(value, expectedValue, accuracy: 1e-6, "convert \(label)")
+            }
 
             let formatted = format(golden.quantity, golden.inputSi, prefs)
             XCTAssertEqual(formatted, golden.expectedFormatted, "format \(label)")
@@ -65,7 +78,7 @@ final class UnitsGoldenVectorTests: XCTestCase {
         }
     }
 
-    private func format(_ quantity: String, _ inputSi: Double, _ prefs: UnitPreferences) -> String {
+    private func format(_ quantity: String, _ inputSi: Double?, _ prefs: UnitPreferences) -> String {
         switch quantity {
         case "distance": Units.formatDistance(inputSi, prefs)
         case "speed": Units.formatSpeed(inputSi, prefs)

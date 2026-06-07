@@ -34,13 +34,13 @@ public final class AppContainer {
 
     /// Host platform identity from the shared core — also proves the link works.
     public var platformName: String {
-        SharedPlatform.shared.name
+        Shared.Platform.shared.name
     }
 
     /// Wraps any holder `StateFlow` into an `@Observable` model. Domain facades
     /// call this so every screen binds through one consistent adapter.
     public func model<State>(
-        from flow: SharedKotlinx_coroutines_coreStateFlow,
+        from flow: Shared.Kotlinx_coroutines_coreStateFlow,
         transform: @escaping (Any) -> State?
     ) -> StateHolderModel<State> {
         StateHolderModel(flow: flow, transform: transform)
@@ -49,12 +49,12 @@ public final class AppContainer {
     /// Convenience: project a holder's `StateFlow<Resource<T>>` straight into an
     /// observable `LoadableState` model.
     public func loadable<Value>(
-        from flow: SharedKotlinx_coroutines_coreStateFlow,
+        from flow: Shared.Kotlinx_coroutines_coreStateFlow,
         as _: Value.Type = Value.self,
         map: @escaping (Any) -> Value?
     ) -> StateHolderModel<LoadableState<Value>> {
         StateHolderModel(flow: flow) { raw in
-            guard let resource = raw as? SharedResource else { return nil }
+            guard let resource = raw as? Shared.Resource else { return nil }
             return LoadableState.from(resource, transform: map)
         }
     }

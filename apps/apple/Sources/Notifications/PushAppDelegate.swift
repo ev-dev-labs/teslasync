@@ -24,7 +24,7 @@
 
     // MARK: - Foreground presentation + taps (cross-platform)
 
-    extension PushAppDelegate: UNUserNotificationCenterDelegate {
+    extension PushAppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
         public func userNotificationCenter(
             _: UNUserNotificationCenter,
             willPresent notification: UNNotification
@@ -56,7 +56,7 @@
     // MARK: - APNs token lifecycle (platform-specific signatures)
 
     #if os(iOS)
-        extension PushAppDelegate: UIApplicationDelegate {
+        extension PushAppDelegate: @preconcurrency UIApplicationDelegate {
             public func application(
                 _: UIApplication,
                 didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]? = nil
@@ -81,7 +81,7 @@
         }
 
     #elseif os(macOS)
-        extension PushAppDelegate: NSApplicationDelegate {
+        extension PushAppDelegate: @preconcurrency NSApplicationDelegate {
             public func applicationDidFinishLaunching(_: Notification) {
                 bindNotificationCenter()
             }

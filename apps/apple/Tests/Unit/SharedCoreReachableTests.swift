@@ -10,7 +10,7 @@ import XCTest
 /// survived the XCFramework packaging.
 final class SharedCoreReachableTests: XCTestCase {
     func testPlatformNameIsReachableAndNonBlank() {
-        let name = SharedPlatform.shared.name
+        let name = Shared.Platform.shared.name
         XCTAssertFalse(
             name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
             "Shared core Platform.name must be non-blank — proves the xcframework is linked"

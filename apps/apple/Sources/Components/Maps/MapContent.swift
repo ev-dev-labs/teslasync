@@ -3,6 +3,7 @@ import MapKit
 import SwiftUI
 
 /// Route polyline content to embed in a `Map { … }` (web `Polyline`).
+@MainActor
 @MapContentBuilder
 public func tsPolyline(
     _ coordinates: [CLLocationCoordinate2D],
@@ -14,6 +15,7 @@ public func tsPolyline(
 }
 
 /// Filled circle overlay content (web `Circle`).
+@MainActor
 @MapContentBuilder
 public func tsCircle(center: CLLocationCoordinate2D, radius: Double, colorIndex: Int = 2) -> some MapContent {
     MapCircle(center: center, radius: radius)
@@ -22,6 +24,7 @@ public func tsCircle(center: CLLocationCoordinate2D, radius: Double, colorIndex:
 }
 
 /// Polygon (rectangle/area) overlay content (web `Rectangle`).
+@MainActor
 @MapContentBuilder
 public func tsRectangle(corners: [CLLocationCoordinate2D], colorIndex: Int = 1) -> some MapContent {
     MapPolygon(coordinates: corners)
@@ -30,6 +33,7 @@ public func tsRectangle(corners: [CLLocationCoordinate2D], colorIndex: Int = 1) 
 }
 
 /// Groups map content (web `FeatureGroup`).
+@MainActor
 @MapContentBuilder
 public func tsFeatureGroup(@MapContentBuilder _ content: () -> some MapContent) -> some MapContent {
     content()

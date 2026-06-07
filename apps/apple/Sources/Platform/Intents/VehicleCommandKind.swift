@@ -82,13 +82,47 @@ extension VehicleCommandKind: AppEnum {
     }
 
     public static var caseDisplayRepresentations: [VehicleCommandKind: DisplayRepresentation] {
-        var map: [VehicleCommandKind: DisplayRepresentation] = [:]
-        for kind in allCases {
-            map[kind] = DisplayRepresentation(
-                title: kind.titleResource,
-                image: .init(systemName: kind.systemImage)
+        [
+            .wake: DisplayRepresentation(title: "intent.command.wake", image: .init(systemName: "moon.zzz.fill")),
+            .climateOn: DisplayRepresentation(title: "intent.command.climateOn", image: .init(systemName: "fan.fill")),
+            .climateOff: DisplayRepresentation(
+                title: "intent.command.climateOff",
+                image: .init(systemName: "fan.slash.fill")
+            ),
+            .lockDoors: DisplayRepresentation(title: "intent.command.lockDoors", image: .init(systemName: "lock.fill")),
+            .unlockDoors: DisplayRepresentation(
+                title: "intent.command.unlockDoors",
+                image: .init(systemName: "lock.open.fill")
+            ),
+            .startCharging: DisplayRepresentation(
+                title: "intent.command.startCharging",
+                image: .init(systemName: "bolt.fill")
+            ),
+            .stopCharging: DisplayRepresentation(
+                title: "intent.command.stopCharging",
+                image: .init(systemName: "bolt.slash.fill")
+            ),
+            .flashLights: DisplayRepresentation(
+                title: "intent.command.flashLights",
+                image: .init(systemName: "headlight.high.beam.fill")
+            ),
+            .honkHorn: DisplayRepresentation(
+                title: "intent.command.honkHorn",
+                image: .init(systemName: "speaker.wave.2.fill")
+            ),
+            .ventWindows: DisplayRepresentation(title: "intent.command.ventWindows", image: .init(systemName: "wind")),
+            .closeWindows: DisplayRepresentation(
+                title: "intent.command.closeWindows",
+                image: .init(systemName: "windshield.front.and.wiper")
+            ),
+            .openChargePort: DisplayRepresentation(
+                title: "intent.command.openChargePort",
+                image: .init(systemName: "powerplug.fill")
+            ),
+            .closeChargePort: DisplayRepresentation(
+                title: "intent.command.closeChargePort",
+                image: .init(systemName: "powerplug")
             )
-        }
-        return map
+        ]
     }
 }

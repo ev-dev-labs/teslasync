@@ -8,10 +8,10 @@ import Shared
 /// so SwiftUI features branch on one Swift `Error` instead of raw Kotlin types.
 ///
 /// > KMP interop note: Kotlin/Native exports the framework's types with the
-/// > framework-name prefix, so `ApiError.Http` is `SharedApiErrorHttp` in Swift.
+/// > framework-name prefix, so `ApiError.Http` is `Shared.ApiError.Http` in Swift.
 /// > These symbol names are inferred from the Kotlin source; they are pinned on
 /// > the macOS Xcode build (see logs/p4-p1-0001-shared-facade.log).
-public enum FacadeError: Error, Equatable, Sendable {
+public enum FacadeError: Swift.Error, Equatable, Sendable {
     /// Transport failure before any HTTP response was produced.
     case network(message: String)
     /// The request exceeded the client's configured timeout.
@@ -47,10 +47,10 @@ public enum FacadeError: Error, Equatable, Sendable {
 public extension FacadeError {
     /// Maps any error surfaced from the KMP framework into a `FacadeError`.
     ///
-    /// Handles both direct bridging (`error as? SharedApiError`) and the
+    /// Handles both direct bridging (`error as? Shared.ApiError`) and the
     /// `NSError.userInfo["KotlinException"]` wrapping Kotlin/Native uses for
     /// `@Throws` suspend functions.
-    static func from(_ error: Error) -> FacadeError {
+    static func from(_ error: Swift.Error) -> FacadeError {
         if error is CancellationError {
             return .cancelled
         }
@@ -67,29 +67,41 @@ public extension FacadeError {
         return .unknown(message: nsError.localizedDescription)
     }
 
-    private static func unwrapApiError(_ error: Error) -> SharedApiError? {
-        if let direct = error as? SharedApiError {
+    /// Maps a Kotlin `Throwable` into a `FacadeError`.
+    ///
+    /// `Resource.Error` carries its failure as a `Shared.KotlinThrowable`, which
+    /// Kotlin/Native does not bridge to Swift's `Error`, so it can't flow through
+    /// `from(_:Swift.Error)`. The throwable may still be an `ApiError` subclass.
+    static func from(_ throwable: Shared.KotlinThrowable) -> FacadeError {
+        if let apiError = throwable as? Shared.ApiError {
+            return map(apiError)
+        }
+        return .unknown(message: throwable.message ?? "Unknown error")
+    }
+
+    private static func unwrapApiError(_ error: Swift.Error) -> Shared.ApiError? {
+        if let direct = error as? Shared.ApiError {
             return direct
         }
         let nsError = error as NSError
-        return nsError.userInfo["KotlinException"] as? SharedApiError
+        return nsError.userInfo["KotlinException"] as? Shared.ApiError
     }
 
-    private static func map(_ apiError: SharedApiError) -> FacadeError {
+    private static func map(_ apiError: Shared.ApiError) -> FacadeError {
         switch apiError {
-        case let http as SharedApiErrorHttp:
+        case let http as Shared.ApiError.Http:
             let status = Int(http.status)
             if status == 401 {
                 return .auth(message: http.message ?? "Authentication required")
             }
             return .api(status: status, code: http.code, body: http.body)
-        case is SharedApiErrorTimeout:
+        case is Shared.ApiError.Timeout:
             return .timeout(message: apiError.message ?? "Request timed out")
-        case is SharedApiErrorDecode:
+        case is Shared.ApiError.Decode:
             return .decode(message: apiError.message ?? "Failed to decode response")
-        case is SharedApiErrorCircuitOpen:
+        case is Shared.ApiError.CircuitOpen:
             return .circuitOpen
-        case is SharedApiErrorNetwork:
+        case is Shared.ApiError.Network:
             return .network(message: apiError.message ?? "Network request failed")
         default:
             return .unknown(message: apiError.message ?? "Unknown error")

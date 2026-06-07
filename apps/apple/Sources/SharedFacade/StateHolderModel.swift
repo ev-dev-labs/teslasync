@@ -15,7 +15,7 @@ public final class StateHolderModel<State> {
     /// The latest projected state, or `nil` before the first emission.
     public private(set) var state: State?
 
-    @ObservationIgnored private let flow: SharedKotlinx_coroutines_coreStateFlow
+    @ObservationIgnored private let flow: Shared.Kotlinx_coroutines_coreStateFlow
     @ObservationIgnored private let transform: (Any) -> State?
     @ObservationIgnored private var task: Task<Void, Never>?
 
@@ -23,7 +23,7 @@ public final class StateHolderModel<State> {
     ///   - flow: the holder's `StateFlow` (already constructed by the container).
     ///   - transform: maps each raw Kotlin snapshot to `State` (`nil` is ignored).
     public init(
-        flow: SharedKotlinx_coroutines_coreStateFlow,
+        flow: Shared.Kotlinx_coroutines_coreStateFlow,
         transform: @escaping (Any) -> State?
     ) {
         self.flow = flow

@@ -15,22 +15,22 @@ import Shared
 @MainActor
 @Observable
 public final class VehicleSettingsModel {
-    @ObservationIgnored private let store: SharedVehicleSettingsStore
+    @ObservationIgnored private let store: VehicleSettingsStore
     @ObservationIgnored private let vehicleID: String
-    @ObservationIgnored private let holder: StateHolderModel<LoadableState<SharedVehicleSettingsResponse>>
+    @ObservationIgnored private let holder: StateHolderModel<LoadableState<VehicleSettingsResponse>>
 
-    public init(store: SharedVehicleSettingsStore, vehicleID: String) {
+    public init(store: VehicleSettingsStore, vehicleID: String) {
         self.store = store
         self.vehicleID = vehicleID
         let flow = store.vehicleSettings(vehicleId: vehicleID)
         holder = StateHolderModel(flow: flow) { raw in
-            guard let resource = raw as? SharedResource else { return nil }
-            return LoadableState.from(resource) { $0 as? SharedVehicleSettingsResponse }
+            guard let resource = raw as? Resource else { return nil }
+            return LoadableState.from(resource) { $0 as? VehicleSettingsResponse }
         }
     }
 
     /// The current cache-then-network state for this vehicle's settings.
-    public var settings: LoadableState<SharedVehicleSettingsResponse> {
+    public var settings: LoadableState<VehicleSettingsResponse> {
         holder.state ?? .idle
     }
 
