@@ -16,6 +16,7 @@ Artifacts created
 - data/repo/SavedViewRepository.kt   (S7 port + savedViewListQuery + savedViewCacheKey)
 - data/repo/HttpSavedViewRepository.kt (Ktor + offline cache, ADR-013)
 - cache/CacheDomain.kt: + SavedViews("saved_views", 1.minutes)  [web STALE_TIMES.STANDARD = 60s]
+
 Tests:
 - presentation/savedviews/SavedViewsStoreTest.kt  (fake repo: cache->network reads, per-route invalidate)
 - data/repo/SavedViewRepositoryContractTest.kt    (MockEngine: endpoint/method/params/body + per-route evict)
@@ -52,7 +53,34 @@ Golden vectors: NONE required — the web hook applies no select/derivation/clie
 so there is no non-trivial derivation for KMP+C# to drift on. Parity is locked instead by the
 shared repository contract test (endpoints/params/bodies/keys) that also pins the future C# port.
 
-Gate results: TEST_EXIT=0  LINT_EXIT=0  PH_EXIT=0 (PLACEHOLDER_ALLOWED=13, PLACEHOLDER_COUNT=0)
+=== GATE (re-verified on Windows runner) ===
+$ ./gradlew :core:allTests --console=plain
+  > Task :core:testDebugUnitTest        (executed)
+  > Task :core:testReleaseUnitTest
+  > Task :core:iosSimulatorArm64Test    SKIPPED (Apple target host-skip on Windows; klib compiled)
+  > Task :core:macosArm64Test           SKIPPED (Apple target host-skip on Windows; klib compiled)
+  > Task :core:allTests
+  BUILD SUCCESSFUL
+TEST_EXIT=0
+
+$ ./gradlew :core:ktlintCheck --console=plain
+  BUILD SUCCESSFUL
+LINT_EXIT=0
+
+$ ./apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
+  PLACEHOLDER_ALLOWED=17
+  PLACEHOLDER_COUNT=0
+PH_EXIT=0
+
+Focused re-run (forced, post cleanTestDebugUnitTest — non-cached proof):
+$ ./gradlew :core:cleanTestDebugUnitTest :core:testDebugUnitTest \
+      --tests "io.teslasync.shared.core.presentation.savedviews.SavedViewsStoreTest" \
+      --tests "io.teslasync.shared.core.data.repo.SavedViewRepositoryContractTest"
+  BUILD SUCCESSFUL
+  TEST-…SavedViewsStoreTest.xml:              tests=8 failures=0 errors=0 skipped=0
+  TEST-…SavedViewRepositoryContractTest.xml:  tests=9 failures=0 errors=0 skipped=0
+
+Gate results: TEST_EXIT=0  LINT_EXIT=0  PH_EXIT=0 (PLACEHOLDER_ALLOWED=17, PLACEHOLDER_COUNT=0)
 :core:allTests BUILD SUCCESSFUL (testDebugUnitTest + testReleaseUnitTest executed;
  iosSimulatorArm64/macosArm64 compiled, host-skip on this Windows runner).
 
