@@ -218,3 +218,29 @@ Files: commonMain presentation/rbacmatrix/{RbacMatrixModels,RbacMatrixStore}.kt,
 
 EXIT=0
 STATUS=DONE
+
+=== RE-VERIFICATION (2026-06-06) ===
+This slice was already implemented + committed at 4a13fe089 (89 commits before HEAD); its log had
+been removed from the working tree and was restored from HEAD. The full gate was re-run against the
+current tree to confirm none of the 89 intervening core slices caused drift. No apps/shared/core
+source changed (`git status --porcelain apps/shared/core` is empty) -- only this log was updated with
+the fresh evidence below.
+  ./gradlew :core:allTests                          -> BUILD SUCCESSFUL; TEST_EXIT=0
+  ./gradlew :core:testDebugUnitTest --rerun-tasks \
+        --tests 'io.teslasync.shared.core.presentation.rbacmatrix.*' \
+        --tests 'io.teslasync.shared.core.data.repo.RbacRepositoryContractTest'
+      (commonTest executes on the androidTarget JVM unit-test target; the iosSimulatorArm64 /
+       macosArm64 targets are SKIPPED on Windows) -> BUILD SUCCESSFUL; 18 tasks executed; TEST_EXIT=0
+      build/test-results/testDebugUnitTest/*Rbac*.xml:
+        RbacRepositoryContractTest tests=6  failures=0 errors=0 skipped=0
+        RbacMatrixGoldenTest       tests=7  failures=0 errors=0 skipped=0
+        RbacMatrixStoreTest        tests=8  failures=0 errors=0 skipped=0
+        total                      tests=21 failures=0
+  ./gradlew :core:ktlintCheck                        -> BUILD SUCCESSFUL; LINT_EXIT=0
+  check-placeholders.ps1 -Path apps/shared/core -Language kotlin -> PLACEHOLDER_COUNT=0; PH_EXIT=0
+
+All 2 hooks ported (useRbacMatrix, useUpsertRbacCells) + 2 helpers (isRbacOpenMode, diffMatrices).
+TEST/LINT/PH all 0.
+
+EXIT=0
+STATUS=DONE
