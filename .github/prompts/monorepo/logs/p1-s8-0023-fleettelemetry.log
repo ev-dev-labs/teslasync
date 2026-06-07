@@ -6,7 +6,7 @@ Output:  apps/shared/core/.../presentation/fleettelemetry/**
 Web src:  web/src/api/hooks/useFleetTelemetry.ts
 ADR refs: ADR-004 (golden parity), ADR-006, ADR-013 (cache-then-network)
 --------------------------------------------------------------------------------
-Files created
+Files (present + re-verified this run)
 --------------------------------------------------------------------------------
 commonMain:
   presentation/fleettelemetry/FleetTelemetryModels.kt
@@ -16,8 +16,7 @@ commonMain:
   presentation/fleettelemetry/FleetTelemetryStore.kt   (S8 UI-free state holder)
   data/repo/FleetTelemetryRepository.kt                (S7 port: coverage())
   data/repo/HttpFleetTelemetryRepository.kt            (Ktor + offline cache impl)
-edited:
-  cache/CacheDomain.kt                                 (+ FleetTelemetry("fleet_telemetry", 5.minutes))
+  cache/CacheDomain.kt                                 (FleetTelemetry("fleet_telemetry", 5.minutes))
 spec:
   spec/fleet-telemetry-coverage-golden.json            (6 normalize vectors)
 commonTest:
@@ -37,7 +36,7 @@ Reads / queries (1):
                            GET /tesla/fleet-telemetry/coverage  (no params)
                            hook path carries NO /api/v1 (request() auto-prefixes);
                            contract test locks final path /api/v1/tesla/fleet-telemetry/coverage
-                           (no double prefix).
+                           (no double prefix — assertFalse contains "/api/v1/api/v1").
                            queryKey ['fleet-telemetry','coverage'] -> single cache key "coverage"
                            in CacheDomain.FleetTelemetry.
                            staleTime STALE_TIMES.SLOW (5 min) -> domain TTL 5.minutes.
@@ -53,25 +52,53 @@ Mutations / actions (0):
 --------------------------------------------------------------------------------
 Gate
 --------------------------------------------------------------------------------
-On this Windows host `:core:allTests` (fans out to apple/native test binaries that
-cannot link without a macOS host) is not runnable; the JVM-equivalent that exercises
-the entire commonTest tree is the android unit-test task `:core:testDebugUnitTest`.
-ktlint is checked over commonMain + commonTest + the android/apple test source sets.
+The literal gate task `:core:allTests` is NOT runnable on this Windows host. The
+`:core` module declares android + apple targets (no jvm target); `:core:allTests`
+fans out to the Kotlin/Native apple test binaries, which require a macOS host with
+Xcode to link. Captured task graph proves the dependency:
 
-$ ./gradlew :core:testDebugUnitTest :core:ktlintCheck   (from apps/shared)
-  > Task :core:testDebugUnitTest                 BUILD SUCCESSFUL
-  > Task :core:ktlintCommonMainSourceSetCheck
-  > Task :core:ktlintCommonTestSourceSetCheck
-  > Task :core:ktlintCheck                       BUILD SUCCESSFUL
+  $ ./gradlew :core:allTests --dry-run   (from apps/shared)
+    :core:compileTestKotlinIosSimulatorArm64 SKIPPED
+    :core:linkDebugTestIosSimulatorArm64    SKIPPED
+    :core:iosSimulatorArm64Test             SKIPPED
+    :core:compileTestKotlinMacosArm64       SKIPPED
+    :core:linkDebugTestMacosArm64           SKIPPED
+    :core:macosArm64Test                    SKIPPED
+    :core:testDebugUnitTest                 SKIPPED
+    :core:testReleaseUnitTest               SKIPPED
+    :core:allTests                          SKIPPED
+    ALLTESTS_DRYRUN_EXIT=0
 
-  test-results (testDebugUnitTest):
-    FleetTelemetryRepositoryContractTest   tests=4 failures=0 errors=0 skipped=0
-    FleetTelemetryGoldenTest               tests=2 failures=0 errors=0 skipped=0
-    FleetTelemetryStoreTest                tests=5 failures=0 errors=0 skipped=0
+The runnable JVM-equivalent that exercises the entire commonTest tree (including
+every fleettelemetry test) is the android unit-test task `:core:testDebugUnitTest`.
+ktlint is checked over commonMain + commonTest + the android/apple source sets.
 
-$ ./apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
-    PLACEHOLDER_ALLOWED=13
+  $ ./gradlew :core:testDebugUnitTest   (from apps/shared)
+    > Task :core:testDebugUnitTest          BUILD SUCCESSFUL in 4s
+    TEST_EXIT=0
+
+  test-results (testDebugUnitTest/*.xml — parsed this run):
+    io.teslasync.shared.core.data.repo.FleetTelemetryRepositoryContractTest
+                                           tests=4 failures=0 errors=0 skipped=0
+    io.teslasync.shared.core.presentation.fleettelemetry.FleetTelemetryGoldenTest
+                                           tests=2 failures=0 errors=0 skipped=0
+    io.teslasync.shared.core.presentation.fleettelemetry.FleetTelemetryStoreTest
+                                           tests=5 failures=0 errors=0 skipped=0
+
+  $ ./gradlew :core:ktlintCheck   (from apps/shared)
+    > Task :core:ktlintCommonMainSourceSetCheck   UP-TO-DATE
+    > Task :core:ktlintCommonTestSourceSetCheck   UP-TO-DATE
+    > Task :core:ktlintAndroidMainSourceSetCheck  UP-TO-DATE
+    > Task :core:ktlintAndroidUnitTestSourceSetCheck UP-TO-DATE
+    > Task :core:ktlintAppleMainSourceSetCheck    UP-TO-DATE
+    > Task :core:ktlintAppleTestSourceSetCheck    UP-TO-DATE
+    > Task :core:ktlintCheck                       BUILD SUCCESSFUL in 3s
+    LINT_EXIT=0
+
+  $ ./apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
+    PLACEHOLDER_ALLOWED=17
     PLACEHOLDER_COUNT=0
+    PH_EXIT=0
 
 TEST_EXIT=0
 LINT_EXIT=0
@@ -80,10 +107,10 @@ PH_EXIT=0
 Acceptance
 --------------------------------------------------------------------------------
 [x] All 1 hooks ported with matching endpoint/params/derivation; SI preserved.
-[x] Reads emit cache->network (Loading[cache slot] -> Success); no mutations -> no invalidation.
-[x] Golden vectors extended for the normalize derivation (KMP+C# parity); fake-repo tests green.
+[x] No mutations to invalidate; the single read emits cache->network (Loading->Success).
+[x] Golden vectors (6) extended for the normalize derivation (KMP + C# parity, ADR-004);
+    fake-repo tests green.
 [x] ktlint + placeholder clean; === PARITY === enumerates all 1 hooks covered.
-[x] EXIT=0 / STATUS=DONE.
 
 EXIT=0
 STATUS=DONE
