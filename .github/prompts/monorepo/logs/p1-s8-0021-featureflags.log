@@ -1,12 +1,12 @@
-=== P1/S8/0021 FeatureFlags gate 2026-06-05T05:31:56.1370585-07:00 ===
+=== P1/S8/0021 FeatureFlags gate 2026-06-06T19:12:48.5514978-07:00 ===
 > Task :core:kmpPartiallyResolvedDependenciesChecker
 > Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :core:downloadKotlinNativeDistribution UP-TO-DATE
 > Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
-> Task :core:compileKotlinIosSimulatorArm64
+> Task :core:compileKotlinIosSimulatorArm64 UP-TO-DATE
 > Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
-> Task :core:iosSimulatorArm64MainKlibrary
-> Task :core:compileTestKotlinIosSimulatorArm64
+> Task :core:iosSimulatorArm64MainKlibrary UP-TO-DATE
+> Task :core:compileTestKotlinIosSimulatorArm64 UP-TO-DATE
 > Task :core:computeLocalPackageDependencyInputFiles SKIPPED
 > Task :core:generateSyntheticLinkageSwiftPMImportProjectForCinteropsAndLdDump SKIPPED
 > Task :core:generateUmbrellaPackageIdentifierBasedResolutionForDefault SKIPPED
@@ -16,10 +16,10 @@
 > Task :core:convertSyntheticImportProjectIntoDefFileIphonesimulator SKIPPED
 > Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
 > Task :core:iosSimulatorArm64Test SKIPPED
-> Task :core:compileKotlinMacosArm64
+> Task :core:compileKotlinMacosArm64 UP-TO-DATE
 > Task :core:macosArm64ProcessResources NO-SOURCE
-> Task :core:macosArm64MainKlibrary
-> Task :core:compileTestKotlinMacosArm64
+> Task :core:macosArm64MainKlibrary UP-TO-DATE
+> Task :core:compileTestKotlinMacosArm64 UP-TO-DATE
 > Task :core:convertSyntheticImportProjectIntoDefFileMacosx SKIPPED
 > Task :core:linkDebugTestMacosArm64 SKIPPED
 > Task :core:macosArm64Test SKIPPED
@@ -30,42 +30,43 @@
 > Task :core:packageDebugResources UP-TO-DATE
 > Task :core:parseDebugLocalResources UP-TO-DATE
 > Task :core:generateDebugRFile UP-TO-DATE
+> Task :core:compileDebugKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileDebug UP-TO-DATE
+> Task :core:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:bundleLibCompileToJarDebug UP-TO-DATE
 > Task :core:preDebugUnitTestBuild UP-TO-DATE
 > Task :core:generateDebugUnitTestStubRFile UP-TO-DATE
+> Task :core:compileDebugUnitTestKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:koverFindJar UP-TO-DATE
+> Task :core:processDebugJavaRes UP-TO-DATE
+> Task :core:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :core:testDebugUnitTest FROM-CACHE
 > Task :core:preReleaseBuild UP-TO-DATE
 > Task :core:generateReleaseResValues UP-TO-DATE
 > Task :core:generateReleaseResources UP-TO-DATE
 > Task :core:packageReleaseResources UP-TO-DATE
 > Task :core:parseReleaseLocalResources UP-TO-DATE
 > Task :core:generateReleaseRFile UP-TO-DATE
+> Task :core:compileReleaseKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileRelease UP-TO-DATE
+> Task :core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :core:bundleLibCompileToJarRelease UP-TO-DATE
 > Task :core:preReleaseUnitTestBuild UP-TO-DATE
 > Task :core:generateReleaseUnitTestStubRFile UP-TO-DATE
+> Task :core:compileReleaseUnitTestKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileReleaseUnitTest UP-TO-DATE
-> Task :core:compileDebugKotlinAndroid
-> Task :core:compileDebugJavaWithJavac NO-SOURCE
-> Task :core:compileReleaseKotlinAndroid
-> Task :core:processDebugJavaRes
-> Task :core:compileReleaseJavaWithJavac NO-SOURCE
-> Task :core:bundleLibRuntimeToJarDebug
-> Task :core:bundleLibCompileToJarDebug
-> Task :core:processReleaseJavaRes
-> Task :core:bundleLibCompileToJarRelease
-> Task :core:bundleLibRuntimeToJarRelease
-> Task :core:compileDebugUnitTestKotlinAndroid
-> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
-> Task :core:processDebugUnitTestJavaRes
-> Task :core:compileReleaseUnitTestKotlinAndroid
-> Task :core:testDebugUnitTest
 > Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
-> Task :core:processReleaseUnitTestJavaRes
-> Task :core:testReleaseUnitTest
+> Task :core:processReleaseJavaRes UP-TO-DATE
+> Task :core:processReleaseUnitTestJavaRes UP-TO-DATE
+> Task :core:testReleaseUnitTest UP-TO-DATE
 > Task :core:allTests NO-SOURCE
 
-BUILD SUCCESSFUL in 44s
-37 actionable tasks: 19 executed, 18 up-to-date
+BUILD SUCCESSFUL in 4s
+38 actionable tasks: 1 executed, 1 from cache, 36 up-to-date
 TEST_EXIT=0
 > Task :core:loadKtlintReporters UP-TO-DATE
 > Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
@@ -89,6 +90,10 @@ TEST_EXIT=0
 > Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
 > Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
 > Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonMainSourceSet UP-TO-DATE
+> Task :core:ktlintCommonMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonTestSourceSet UP-TO-DATE
+> Task :core:ktlintCommonTestSourceSetCheck UP-TO-DATE
 > Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
 > Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
 > Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
@@ -115,28 +120,40 @@ TEST_EXIT=0
 > Task :core:ktlintNativeMainSourceSetCheck SKIPPED
 > Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
 > Task :core:ktlintNativeTestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverCommonMainSourceSet
-> Task :core:ktlintCommonMainSourceSetCheck
-> Task :core:runKtlintCheckOverCommonTestSourceSet
-> Task :core:ktlintCommonTestSourceSetCheck
-> Task :core:ktlintCheck
+> Task :core:ktlintCheck UP-TO-DATE
 
-BUILD SUCCESSFUL in 11s
-16 actionable tasks: 4 executed, 12 up-to-date
+BUILD SUCCESSFUL in 2s
+16 actionable tasks: 16 up-to-date
 LINT_EXIT=0
+--- placeholder check ---
+PLACEHOLDER_ALLOWED=17
+PLACEHOLDER_COUNT=0
+EXIT=0
 PH_EXIT=0
+--- forced test re-run (not cached): :core:testDebugUnitTest --tests *FeatureFlag* --rerun-tasks ---
+BUILD SUCCESSFUL  (18 actionable tasks: 18 executed)
+FeatureFlagsRepositoryContractTest  tests=8 failures=0 errors=0 skipped=0
+FeatureFlagsGoldenTest              tests=4 failures=0 errors=0 skipped=0
+FeatureFlagsStoreTest               tests=7 failures=0 errors=0 skipped=0
 
-=== PARITY === (web/src/api/hooks/useFeatureFlags.ts → KMP shared core, all 5 hooks)
+=== PARITY ===
+Web source: web/src/api/hooks/useFeatureFlags.ts (5 hooks)
+KMP port:   apps/shared/core/src/commonMain/.../presentation/featureflags/{FeatureFlagsStore,FeatureFlagModels}.kt
+            apps/shared/core/src/commonMain/.../data/repo/{FeatureFlagsRepository,HttpFeatureFlagsRepository}.kt
+
 Reads (3):
-  useFlags        -> FeatureFlagsStore.flags()        / repo.flags()        GET /system/flags
-  useFlag         -> FeatureFlagsStore.flag(key)      / repo.flag(key)      GET /system/flags/{key}
-  useFlagChanges  -> FeatureFlagsStore.flagChanges()  / repo.flagChanges()  GET /system/flags/changes | /system/flags/{key}/changes?limit=
-Mutations (2):
-  useSetFlag      -> FeatureFlagsStore.setFlag()      / repo.setFlag()      PUT  /system/flags/{key} {value,reason}  invalidate ['system','flags']
-  useDeleteFlag   -> FeatureFlagsStore.deleteFlag()   / repo.deleteFlag()   DELETE /system/flags/{key}?reason=       invalidate ['system','flags']
-Derivations golden-locked (KMP+C# parity): flagChangesScoped, flagChangesCacheKey, flagsListCacheKey, flagCacheKey
-SI preserved: flag values carried as raw JsonElement (verbatim), no unit conversion at this layer.
+  [x] useFlags       -> FeatureFlagsStore.flags()                 | GET /system/flags                                                   -> FeatureFlagsListResponse
+  [x] useFlag        -> FeatureFlagsStore.flag(key)               | GET /system/flags/{key}  (non-blank-key gate; web enabled guard)    -> FeatureFlagEntry
+  [x] useFlagChanges -> FeatureFlagsStore.flagChanges(flagKey,lim)| GET /system/flags/changes?limit | /system/flags/{key}/changes?limit -> FeatureFlagChangesResponse
 
-GATE: TEST_EXIT=0 LINT_EXIT=0 PH_EXIT=0
+Mutations (2):
+  [x] useSetFlag     -> FeatureFlagsStore.setFlag(key,value,reason) | PUT    /system/flags/{key} body {value,reason} -> FeatureFlagWriteResponse | invalidate ['system','flags'] (whole partition)
+  [x] useDeleteFlag  -> FeatureFlagsStore.deleteFlag(key,reason)    | DELETE /system/flags/{key}?reason              -> FeatureFlagWriteResponse | invalidate ['system','flags'] (whole partition)
+
+Derivations locked by golden vectors (KMP + Windows C# parity, ADR-004):
+  flagChangesScoped (null/empty=>global), flagChangesCacheKey (__all__ sentinel + participating limit), flagsListCacheKey, flagCacheKey
+SI preserved: flag values carried verbatim as JsonElement (web FeatureFlagValue=unknown); no unit-bearing fields; display formatting is the S5 render boundary's job.
+
+TEST_EXIT=0  LINT_EXIT=0  PH_EXIT=0
 EXIT=0
 STATUS=DONE
