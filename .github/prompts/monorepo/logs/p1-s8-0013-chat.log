@@ -1,29 +1,37 @@
 === P1/S8/0013 Chat state holder gate ===
-TEST_EXIT=0
-LINT_EXIT=0
-PLACEHOLDER CHECK:
-PLACEHOLDER_ALLOWED=13
-PLACEHOLDER_COUNT=0
-EXIT=0
-PH_EXIT=0
+Host: Windows (JVM/Android unit-test source set is the common-code coverage surface;
+iosSimulatorArm64Test/macosArm64Test are SKIPPED on the Windows host).
 
-GATE SUMMARY: TEST_EXIT=0 LINT_EXIT=0 PH_EXIT=0
+--- ./gradlew :core:allTests (then forced :core:testDebugUnitTest :core:testReleaseUnitTest --rerun-tasks) ---
+BUILD SUCCESSFUL
+33 actionable tasks: 33 executed
+TEST_EXIT=0
 
 Test breakdown (testDebugUnitTest + testReleaseUnitTest, identical):
   ChatRepositoryContractTest  tests=10 failures=0 errors=0
   ChatStoreTest               tests=8  failures=0 errors=0
   ChatGoldenTest              tests=9  failures=0 errors=0
-Native targets (iosSimulatorArm64Test/macosArm64Test) SKIPPED on the Windows host;
-JVM/Android unit-test source set is the common-code coverage surface and is green.
+  total                       tests=27 failures=0 errors=0
+
+--- ./gradlew :core:ktlintCheck --rerun-tasks ---
+BUILD SUCCESSFUL
+LINT_EXIT=0
+
+--- ./apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin ---
+PLACEHOLDER_ALLOWED=17
+PLACEHOLDER_COUNT=0
+PH_EXIT=0
+
+GATE SUMMARY: TEST_EXIT=0 LINT_EXIT=0 PH_EXIT=0
 
 === PARITY ===
 Ported web/src/api/hooks/useChat.ts (2 reads, 3 mutations) -> UI-free KMP state holder
 ChatStore over the S7 ChatRepository. Endpoints/params/bodies verified against
 web/src/api/devtools.ts (the chat exports useChat wraps), internal/api/router.go
-(/chatbot Route block), and internal/api/chatbot/dtos.go (RenameSession 200 {id,title};
+(/chatbot route block), and the chatbot DTOs (RenameSession 200 {id,title};
 DeleteSession 204). Wire types ported verbatim from web/src/api/types.ts.
 
-Reads (2) — cache-then-network StateFlow<Resource<T>>:
+Reads (2) -- cache-then-network StateFlow<Resource<T>>:
  1. useChatSessions -> store.chatSessions()           GET /chatbot/sessions
         -> List<ChatSessionInfo>, cached under CHAT_SESSIONS_KEY ('sessions')
         = web chatKeys.sessions() ['chat','sessions']
@@ -38,34 +46,24 @@ Mutations (3):
         body: {title}; id percent-encoded (encodeURIComponent analogue via encodeURLPathPart)
         -> repo optimistic setQueryData patch of the cached session list
            (matching row title = normalizeChatTitle(title)) + store refreshSessions()
+           (invalidateQueries(chatKeys.sessions()) analogue).
  4. useDeleteChatSession -> store.deleteChatSession(sessionId)        DELETE /chatbot/sessions/{id}
-        204 No Content -> repo optimistic setQueryData patch (row removed) +
-           evict(history key) (removeQueries(history) analogue) + store refreshSessions()
- 5. useSendChatMessage  -> store.sendChatMessage(input)               POST /chatbot
-        body: {message} (+ session_id only when present; an absent id is dropped from the
-        wire body, mirroring JSON.stringify of an undefined value) -> ChatResponse,
-        NO cache interaction (web leaves onSuccess to the caller for the typewriter reveal;
-        asserted: a send does not refresh the sessions feed).
+        204 No Content -> repo optimistic setQueryData patch (matching row removed)
+           + evict(chatHistoryKey(id)) (removeQueries(history) analogue) + store refreshSessions().
+ 5. useSendChatMessage -> store.sendChatMessage(input)                POST /chatbot
+        body: {message, session_id?} (session_id dropped when null, JSON.stringify parity);
+        no cache interaction (web hook leaves onSuccess to the caller for the typewriter reveal).
 
-Optimistic-update/invalidate semantics: web rename/delete call setQueryData (instant local
-patch of chatKeys.sessions()) THEN invalidateQueries(chatKeys.sessions()) (refetch). Ported
-faithfully: the repository performs the cache patch on the data layer (the setQueryData
-analogue) and the store's refreshSessions() bumps the sessions feed's trigger (the
-invalidate analogue) — so the refresh's Loading emission carries the already-corrected list
-while the network reload runs, and cacheThenNetwork always re-fetches so no stale value is
-served as fresh. A failed mutation leaves the cache untouched (asserted). A feed nobody
-observes is a no-op refresh (asserted).
-
-Derivations golden-locked (KMP+C# parity, ChatGoldenTest, ADR-004):
+Derivations golden-locked (KMP + Windows C# parity, ADR-004):
   - normalizeChatTitle    (trim; empty/all-whitespace -> null; inner spaces kept)
   - applyRenameToSessions (matching row's title normalised, others untouched, no-match unchanged)
   - applyDeleteToSessions (matching row removed, no-match unchanged)
   - chatHistoryKey / chatHistoryQuery (web chatKeys.history tuple + session_id snake_case query)
 
-SI preserved: chat fields are ids/timestamps/titles/message text — not unit-bearing — so they
+SI preserved: chat fields are ids/timestamps/titles/message text -- not unit-bearing -- so they
 round-trip verbatim (sessions cached as typed List<ChatSessionInfo>, history as
 List<ChatMessage>, each decoded per-feed off a raw JsonElement partition); conversion is
-display-only (S5). New cache domain Chat = 30s (web useChat uses default staleTime 0 = always
+display-only (S5). Cache domain Chat = 30s (web useChat uses default staleTime 0 = always
 refetch on mount and never polls; 30s keeps the freshness flag honest without thrashing while
 cacheThenNetwork still refetches on every refresh).
 
@@ -74,8 +72,8 @@ Files (apps/shared/core/**):
   commonMain data/repo/ChatRepository.kt (interface + CHAT_SESSIONS_KEY + chatHistoryKey + chatHistoryQuery)
   commonMain data/repo/HttpChatRepository.kt
   commonMain presentation/chat/ChatStore.kt
-  commonMain cache/CacheDomain.kt (+ Chat)
-  commonMain data/repo/CachingRepository.kt (+ protected evict(key) — removeQueries analogue)
+  commonMain cache/CacheDomain.kt (Chat domain entry)
+  commonMain data/repo/CachingRepository.kt (protected evict(key) -- removeQueries analogue)
   commonTest data/repo/ChatRepositoryContractTest.kt
   commonTest presentation/chat/ChatStoreTest.kt
   commonTest presentation/chat/ChatGoldenTest.kt
