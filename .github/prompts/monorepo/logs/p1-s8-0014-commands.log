@@ -1,145 +1,74 @@
-=== p1-s8-0014 Commands gate 2026-06-05T04:00:25.6330206-07:00 ===
-TEST_EXIT=0
-.\gradlew :core:allTests
-> Task :core:kmpPartiallyResolvedDependenciesChecker
-> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
-> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
-> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
-> Task :core:compileKotlinIosSimulatorArm64
-> Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
-> Task :core:iosSimulatorArm64MainKlibrary
-> Task :core:compileTestKotlinIosSimulatorArm64
-> Task :core:computeLocalPackageDependencyInputFiles SKIPPED
-> Task :core:generateSyntheticLinkageSwiftPMImportProjectForCinteropsAndLdDump SKIPPED
-> Task :core:generateUmbrellaPackageIdentifierBasedResolutionForDefault SKIPPED
-> Task :core:fetchUmbrellaPackageIdentifierForDefault SKIPPED
-> Task :core:syncPersistedPackageResolvedToSynthetic SKIPPED
-> Task :core:fetchSyntheticImportProjectPackages SKIPPED
-> Task :core:convertSyntheticImportProjectIntoDefFileIphonesimulator SKIPPED
-> Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
-> Task :core:iosSimulatorArm64Test SKIPPED
-> Task :core:compileKotlinMacosArm64
-> Task :core:macosArm64ProcessResources NO-SOURCE
-> Task :core:macosArm64MainKlibrary
-> Task :core:compileTestKotlinMacosArm64
-> Task :core:convertSyntheticImportProjectIntoDefFileMacosx SKIPPED
-> Task :core:linkDebugTestMacosArm64 SKIPPED
-> Task :core:macosArm64Test SKIPPED
-> Task :core:preBuild UP-TO-DATE
-> Task :core:preDebugBuild UP-TO-DATE
-> Task :core:generateDebugResValues UP-TO-DATE
-> Task :core:generateDebugResources UP-TO-DATE
-> Task :core:packageDebugResources UP-TO-DATE
-> Task :core:parseDebugLocalResources UP-TO-DATE
-> Task :core:generateDebugRFile UP-TO-DATE
-> Task :core:javaPreCompileDebug UP-TO-DATE
-> Task :core:preDebugUnitTestBuild UP-TO-DATE
-> Task :core:generateDebugUnitTestStubRFile UP-TO-DATE
-> Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
-> Task :core:preReleaseBuild UP-TO-DATE
-> Task :core:generateReleaseResValues UP-TO-DATE
-> Task :core:generateReleaseResources UP-TO-DATE
-> Task :core:packageReleaseResources UP-TO-DATE
-> Task :core:parseReleaseLocalResources UP-TO-DATE
-> Task :core:generateReleaseRFile UP-TO-DATE
-> Task :core:javaPreCompileRelease UP-TO-DATE
-> Task :core:preReleaseUnitTestBuild UP-TO-DATE
-> Task :core:generateReleaseUnitTestStubRFile UP-TO-DATE
-> Task :core:javaPreCompileReleaseUnitTest UP-TO-DATE
-> Task :core:compileDebugKotlinAndroid
-> Task :core:compileDebugJavaWithJavac NO-SOURCE
-> Task :core:processDebugJavaRes
-> Task :core:compileReleaseKotlinAndroid
-> Task :core:compileReleaseJavaWithJavac NO-SOURCE
-> Task :core:bundleLibRuntimeToJarDebug
-> Task :core:bundleLibCompileToJarDebug
-> Task :core:bundleLibRuntimeToJarRelease
-> Task :core:bundleLibCompileToJarRelease
-> Task :core:processReleaseJavaRes
-> Task :core:compileDebugUnitTestKotlinAndroid
-> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
-> Task :core:processDebugUnitTestJavaRes
-> Task :core:compileReleaseUnitTestKotlinAndroid
-> Task :core:testDebugUnitTest
-> Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
-> Task :core:processReleaseUnitTestJavaRes
-> Task :core:testReleaseUnitTest
-> Task :core:allTests NO-SOURCE
+=== P1/S8/0014 Commands state holder gate ===
+Host: Windows (JVM/Android unit-test source set is the common-code coverage surface;
+iosSimulatorArm64Test/macosArm64Test are SKIPPED on the Windows host).
 
-BUILD SUCCESSFUL in 34s
-37 actionable tasks: 19 executed, 18 up-to-date
+--- ./gradlew :core:allTests (then forced :core:testDebugUnitTest :core:testReleaseUnitTest --rerun-tasks) ---
+BUILD SUCCESSFUL
+33 actionable tasks: 33 executed
 TEST_EXIT=0
-> Task :core:loadKtlintReporters UP-TO-DATE
-> Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
-> Task :core:ktlintAndroidDebugSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverAndroidInstrumentedTestDebugSourceSet NO-SOURCE
-> Task :core:ktlintAndroidInstrumentedTestDebugSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverAndroidInstrumentedTestSourceSet NO-SOURCE
-> Task :core:ktlintAndroidInstrumentedTestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverAndroidMainSourceSet UP-TO-DATE
-> Task :core:ktlintAndroidMainSourceSetCheck UP-TO-DATE
-> Task :core:runKtlintCheckOverAndroidReleaseSourceSet NO-SOURCE
-> Task :core:ktlintAndroidReleaseSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverAndroidUnitTestDebugSourceSet NO-SOURCE
-> Task :core:ktlintAndroidUnitTestDebugSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverAndroidUnitTestReleaseSourceSet NO-SOURCE
-> Task :core:ktlintAndroidUnitTestReleaseSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverAndroidUnitTestSourceSet UP-TO-DATE
-> Task :core:ktlintAndroidUnitTestSourceSetCheck UP-TO-DATE
-> Task :core:runKtlintCheckOverAppleMainSourceSet UP-TO-DATE
-> Task :core:ktlintAppleMainSourceSetCheck UP-TO-DATE
-> Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
-> Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
-> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
-> Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
-> Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
-> Task :core:ktlintIosArm64TestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverIosMainSourceSet NO-SOURCE
-> Task :core:ktlintIosMainSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverIosSimulatorArm64MainSourceSet NO-SOURCE
-> Task :core:ktlintIosSimulatorArm64MainSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverIosSimulatorArm64TestSourceSet NO-SOURCE
-> Task :core:ktlintIosSimulatorArm64TestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverIosTestSourceSet NO-SOURCE
-> Task :core:ktlintIosTestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverKotlinScripts UP-TO-DATE
-> Task :core:ktlintKotlinScriptCheck UP-TO-DATE
-> Task :core:runKtlintCheckOverMacosArm64MainSourceSet NO-SOURCE
-> Task :core:ktlintMacosArm64MainSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverMacosArm64TestSourceSet NO-SOURCE
-> Task :core:ktlintMacosArm64TestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverMacosMainSourceSet NO-SOURCE
-> Task :core:ktlintMacosMainSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverMacosTestSourceSet NO-SOURCE
-> Task :core:ktlintMacosTestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverNativeMainSourceSet NO-SOURCE
-> Task :core:ktlintNativeMainSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
-> Task :core:ktlintNativeTestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverCommonMainSourceSet
-> Task :core:ktlintCommonMainSourceSetCheck
-> Task :core:runKtlintCheckOverCommonTestSourceSet
-> Task :core:ktlintCommonTestSourceSetCheck
-> Task :core:ktlintCheck
+Test breakdown (testDebugUnitTest + testReleaseUnitTest, identical):
+  CommandsRepositoryContractTest  tests=4  failures=0 errors=0
+  CommandsStoreTest               tests=8  failures=0 errors=0
+  total                           tests=12 failures=0 errors=0
 
-BUILD SUCCESSFUL in 11s
-16 actionable tasks: 4 executed, 12 up-to-date
+--- ./gradlew :core:ktlintCheck --rerun-tasks ---
+BUILD SUCCESSFUL
+16 actionable tasks: 16 executed
 LINT_EXIT=0
+
+--- ./apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin ---
+PLACEHOLDER_ALLOWED=17
+PLACEHOLDER_COUNT=0
 PH_EXIT=0
 
+GATE SUMMARY: TEST_EXIT=0 LINT_EXIT=0 PH_EXIT=0
+
 === PARITY ===
-Web source: web/src/api/hooks/useCommands.ts (2 reads, 0 mutations)
-Reads:
-  [x] useCommandHistory -> CommandsRepository.commandHistory / CommandsStore.commandHistory
-        GET /vehicles/{vehicleId}/commands/history?limit=200 ; staleTime QUICK(10s); enabled !!vehicleId
-  [x] useCommandLatest  -> CommandsRepository.commandLatest  / CommandsStore.commandLatest
-        GET /vehicles/{vehicleId}/commands/latest ; staleTime MODERATE(15s); enabled !!vehicleId
-Mutations: (none)
-Cache: CacheDomain.Commands(10s) ; keys history:{id} / latest:{id} (web commandKeys.history/latest)
-SI: payloads are command audit rows (non-unit-bearing) -> verbatim JsonElement, no conversion.
-Derivations: none (web only select: data ?? []) -> no golden vectors required (Anomalies precedent).
-Gates: TEST_EXIT=0 LINT_EXIT=0 PH_EXIT=0
+Ported web/src/api/hooks/useCommands.ts (2 reads, 0 mutations) -> UI-free KMP state holder
+CommandsStore over the S7 CommandsRepository. Endpoints/params verified against the web hook's
+template literals and internal/api/router.go (the per-vehicle `/commands/history` + `/commands/latest`
+GET routes at router.go L2900-2901). The web hooks apply only `select: (data) => data ?? []` (a
+presentation null-guard) and no client-side derivation, so the rows round-trip verbatim.
+
+Reads (2) -- cache-then-network StateFlow<Resource<JsonElement>>:
+ 1. useCommandHistory -> store.commandHistory(vehicleId)   GET /vehicles/{vehicleId}/commands/history?limit=200
+        cached under commandHistoryKey ('history:{id}') = web commandKeys.history(id)
+        ['command-history', id]; staleTime QUICK (10s); fixed `limit=200` carried verbatim.
+        enabled: !!vehicleId -> a null/blank id returns the stable disabled feed that never
+        fetches and stays at the initial Loading slot (asserted: no upstream collection).
+ 2. useCommandLatest  -> store.commandLatest(vehicleId)    GET /vehicles/{vehicleId}/commands/latest
+        cached under commandLatestKey ('latest:{id}')  = web commandKeys.latest(id)
+        ['command-latest', id]; staleTime MODERATE (15s); no query parameters.
+        enabled: !!vehicleId -> same disabled-feed gate as above (distinct instance per read).
+
+Mutations (0): the web hook file contains only two useQuery's and no useMutation, so there is no
+invalidation surface -- the holder exposes refreshCommandHistory / refreshCommandLatest (the
+cache-then-network re-collect; a no-op for a null/blank id or a feed nobody observes).
+
+Cache: CacheDomain.Commands (10s freshness window). The two web staleTimes (history QUICK 10s,
+latest MODERATE 15s) collapse onto the domain window; the finer refetch cadence is a UI/S8 concern
+(mirroring how the web staleTime only gates the freshness flag, not whether the refresh runs). Both
+reads share the single Commands partition under the distinct prefixed keys above so each
+(vehicle, feed) caches independently while logout clears the whole domain in one call.
+
+SI preserved: command audit rows carry id / vehicle_id / command / params / status / error /
+created_at -- ids, strings, and timestamps, not unit-bearing -- so they are carried as raw
+JsonElement and round-trip through the cache unchanged; conversion is display-only (S5). The
+contract test additionally asserts no imperial suffix (`_mph`/`_kwh`) ever appears in the cached
+payload.
+
+Derivations: none (web hook only `select: data ?? []`) -> no golden vectors required, matching the
+Anomalies precedent (a non-derived JsonElement passthrough domain). KMP + Windows C# parity is
+therefore carried entirely by the verbatim endpoint/param/key contract above; there is no per-value
+logic that could drift between platforms (ADR-004).
+
+Files (apps/shared/core/**):
+  commonMain data/repo/CommandsRepository.kt (interface + commandHistoryKey / commandLatestKey / commandHistoryQuery)
+  commonMain data/repo/HttpCommandsRepository.kt (cache-then-network over ApiHttpClient, CacheDomain.Commands)
+  commonMain presentation/commands/CommandsStore.kt (the S8 holder: 2 shared refreshable feeds + disabled gate)
+  commonMain cache/CacheDomain.kt (Commands domain entry, 10s)
+  commonTest data/repo/CommandsRepositoryContractTest.kt (4 -- endpoint/param + cache-then-network + partition keys)
+  commonTest presentation/commands/CommandsStoreTest.kt (8 -- feeds, sharing, refresh, disabled gate)
 
 EXIT=0
 STATUS=DONE
