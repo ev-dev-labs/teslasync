@@ -84,6 +84,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargeSessionChartWidget\ChargeSessionChartWidget.Model.cs" Link="Widgets\ChargeSessionChartWidget\ChargeSessionChartWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargeSessionChartWidget\ChargeSessionChartWidget.ViewModel.cs" Link="Widgets\ChargeSessionChartWidget\ChargeSessionChartWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargeSessionChartWidget\ChargeSessionChartWidget.Source.cs" Link="Widgets\ChargeSessionChartWidget\ChargeSessionChartWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargingOptimizerWidget\ChargingOptimizerWidget.Model.cs" Link="Widgets\ChargingOptimizerWidget\ChargingOptimizerWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargingOptimizerWidget\ChargingOptimizerWidget.ViewModel.cs" Link="Widgets\ChargingOptimizerWidget\ChargingOptimizerWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargingOptimizerWidget\ChargingOptimizerWidget.Source.cs" Link="Widgets\ChargingOptimizerWidget\ChargingOptimizerWidget.Source.cs" />
   </ItemGroup>
 
   <!--
