@@ -1,163 +1,109 @@
-=== P1/S8/0010 AuthMode gate 2026-06-05T02:48:17.5323793-07:00 ===
-TEST_EXIT=0
-> Task :core:kmpPartiallyResolvedDependenciesChecker
-> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
-> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
-> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+=== p1-s8-0010-authmode 2026-06-06T17:09:06-07:00 ===
+host: Windows (apple targets skip via kotlin.native.ignoreDisabledTargets=true;
+      iosSimulatorArm64Test / macosArm64Test SKIPPED exactly as on the macOS run —
+      the AuthMode tests are pure commonTest, executed under the Android JVM unit-test
+      target, so host choice does not change coverage).
+gate run from apps/shared (gradlew root; `:core:` task paths), forced fresh re-execution.
+
+> ./gradlew :core:allTests --rerun-tasks --console=plain
 > Task :core:compileKotlinIosSimulatorArm64
-> Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
-> Task :core:iosSimulatorArm64MainKlibrary
 > Task :core:compileTestKotlinIosSimulatorArm64
-> Task :core:computeLocalPackageDependencyInputFiles SKIPPED
-> Task :core:generateSyntheticLinkageSwiftPMImportProjectForCinteropsAndLdDump SKIPPED
-> Task :core:generateUmbrellaPackageIdentifierBasedResolutionForDefault SKIPPED
-> Task :core:fetchUmbrellaPackageIdentifierForDefault SKIPPED
-> Task :core:syncPersistedPackageResolvedToSynthetic SKIPPED
-> Task :core:fetchSyntheticImportProjectPackages SKIPPED
-> Task :core:convertSyntheticImportProjectIntoDefFileIphonesimulator SKIPPED
 > Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
 > Task :core:iosSimulatorArm64Test SKIPPED
 > Task :core:compileKotlinMacosArm64
-> Task :core:macosArm64ProcessResources NO-SOURCE
-> Task :core:macosArm64MainKlibrary
 > Task :core:compileTestKotlinMacosArm64
-> Task :core:convertSyntheticImportProjectIntoDefFileMacosx SKIPPED
 > Task :core:linkDebugTestMacosArm64 SKIPPED
 > Task :core:macosArm64Test SKIPPED
-> Task :core:preBuild UP-TO-DATE
-> Task :core:preDebugBuild UP-TO-DATE
-> Task :core:generateDebugResValues UP-TO-DATE
-> Task :core:generateDebugResources UP-TO-DATE
-> Task :core:packageDebugResources UP-TO-DATE
-> Task :core:parseDebugLocalResources UP-TO-DATE
-> Task :core:generateDebugRFile UP-TO-DATE
-> Task :core:javaPreCompileDebug UP-TO-DATE
-> Task :core:preDebugUnitTestBuild UP-TO-DATE
-> Task :core:generateDebugUnitTestStubRFile UP-TO-DATE
-> Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
-> Task :core:preReleaseBuild UP-TO-DATE
-> Task :core:generateReleaseResValues UP-TO-DATE
-> Task :core:generateReleaseResources UP-TO-DATE
-> Task :core:packageReleaseResources UP-TO-DATE
-> Task :core:parseReleaseLocalResources UP-TO-DATE
-> Task :core:generateReleaseRFile UP-TO-DATE
-> Task :core:javaPreCompileRelease UP-TO-DATE
-> Task :core:preReleaseUnitTestBuild UP-TO-DATE
-> Task :core:generateReleaseUnitTestStubRFile UP-TO-DATE
-> Task :core:javaPreCompileReleaseUnitTest UP-TO-DATE
 > Task :core:compileDebugKotlinAndroid
-> Task :core:compileDebugJavaWithJavac NO-SOURCE
-> Task :core:processDebugJavaRes
-> Task :core:bundleLibRuntimeToJarDebug
-> Task :core:bundleLibCompileToJarDebug
 > Task :core:compileReleaseKotlinAndroid
-> Task :core:compileReleaseJavaWithJavac NO-SOURCE
-> Task :core:processReleaseJavaRes
-> Task :core:bundleLibCompileToJarRelease
-> Task :core:bundleLibRuntimeToJarRelease
 > Task :core:compileDebugUnitTestKotlinAndroid
-> Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
-> Task :core:processDebugUnitTestJavaRes
-> Task :core:compileReleaseUnitTestKotlinAndroid
 > Task :core:testDebugUnitTest
-> Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
-> Task :core:processReleaseUnitTestJavaRes
+> Task :core:compileReleaseUnitTestKotlinAndroid
 > Task :core:testReleaseUnitTest
 > Task :core:allTests NO-SOURCE
-
-BUILD SUCCESSFUL in 30s
-37 actionable tasks: 19 executed, 18 up-to-date
+BUILD SUCCESSFUL in 1m 55s
+38 actionable tasks: 38 executed
+(only warning: pre-existing kotlinx-datetime monthNumber deprecation in
+ data/repo/SettingsBackupRepository.kt:77 — unrelated to AuthMode.)
 TEST_EXIT=0
-> Task :core:loadKtlintReporters UP-TO-DATE
-> Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
-> Task :core:ktlintAndroidDebugSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverAndroidInstrumentedTestDebugSourceSet NO-SOURCE
-> Task :core:ktlintAndroidInstrumentedTestDebugSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverAndroidInstrumentedTestSourceSet NO-SOURCE
-> Task :core:ktlintAndroidInstrumentedTestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverAndroidMainSourceSet UP-TO-DATE
-> Task :core:ktlintAndroidMainSourceSetCheck UP-TO-DATE
-> Task :core:runKtlintCheckOverAndroidReleaseSourceSet NO-SOURCE
-> Task :core:ktlintAndroidReleaseSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverAndroidUnitTestDebugSourceSet NO-SOURCE
-> Task :core:ktlintAndroidUnitTestDebugSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverAndroidUnitTestReleaseSourceSet NO-SOURCE
-> Task :core:ktlintAndroidUnitTestReleaseSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverAppleMainSourceSet UP-TO-DATE
+
+--- AuthMode test results (core/build/test-results/testDebugUnitTest; identical under testReleaseUnitTest) ---
+<testsuite name="io.teslasync.shared.core.data.repo.AuthModeRepositoryContractTest" tests="3" skipped="0" failures="0" errors="0"/>
+  authModeHitsSystemAuthMode
+  readEmitsCacheThenNetworkSuccess
+  openModePayloadDecodesWithSafeDefaults
+<testsuite name="io.teslasync.shared.core.presentation.authmode.AuthModeGoldenTest" tests="2" skipped="0" failures="0" errors="0"/>
+  goldenFileParsesAndIsComprehensive
+  everyScenarioMatchesDerivationOutput
+<testsuite name="io.teslasync.shared.core.presentation.authmode.AuthModeStoreTest" tests="7" skipped="0" failures="0" errors="0"/>
+  startsAtSafeDefaultsBeforeAnySubscriber
+  readEmitsCacheThenNetwork
+  derivesForwardAuthAndSubject
+  openModeDerivesFalseAndNullSubject
+  forwardAuthWithStrippedSubjectDerivesNull
+  refreshReFetchesTheObservedContract
+  refreshIsNoOpWithoutASubscriber
+AuthMode totals: 12 tests, 0 failures, 0 errors, 0 skipped (per target; run on both
+testDebugUnitTest and testReleaseUnitTest).
+
+> ./gradlew :core:ktlintCheck --console=plain
+> Task :core:ktlintCommonMainSourceSetCheck UP-TO-DATE
+> Task :core:ktlintCommonTestSourceSetCheck UP-TO-DATE
+> Task :core:ktlintAndroidUnitTestSourceSetCheck UP-TO-DATE
 > Task :core:ktlintAppleMainSourceSetCheck UP-TO-DATE
-> Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
-> Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
-> Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
-> Task :core:ktlintIosArm64TestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverIosMainSourceSet NO-SOURCE
-> Task :core:ktlintIosMainSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverIosSimulatorArm64MainSourceSet NO-SOURCE
-> Task :core:ktlintIosSimulatorArm64MainSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverIosSimulatorArm64TestSourceSet NO-SOURCE
-> Task :core:ktlintIosSimulatorArm64TestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverIosTestSourceSet NO-SOURCE
-> Task :core:ktlintIosTestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverKotlinScripts UP-TO-DATE
-> Task :core:ktlintKotlinScriptCheck UP-TO-DATE
-> Task :core:runKtlintCheckOverMacosArm64MainSourceSet NO-SOURCE
-> Task :core:ktlintMacosArm64MainSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverMacosArm64TestSourceSet NO-SOURCE
-> Task :core:ktlintMacosArm64TestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverMacosMainSourceSet NO-SOURCE
-> Task :core:ktlintMacosMainSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverMacosTestSourceSet NO-SOURCE
-> Task :core:ktlintMacosTestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverNativeMainSourceSet NO-SOURCE
-> Task :core:ktlintNativeMainSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
-> Task :core:ktlintNativeTestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverAndroidUnitTestSourceSet
-> Task :core:ktlintAndroidUnitTestSourceSetCheck
-> Task :core:runKtlintCheckOverAppleTestSourceSet
-> Task :core:ktlintAppleTestSourceSetCheck
-> Task :core:runKtlintCheckOverCommonMainSourceSet
-> Task :core:ktlintCommonMainSourceSetCheck
-> Task :core:runKtlintCheckOverCommonTestSourceSet
-
-> Task :core:ktlintCommonTestSourceSetCheck FAILED
-D:\repos\teslasync\apps\shared\core\src\commonTest\kotlin\io\teslasync\shared\core\data\repo\AuthModeRepositoryContractTest.kt:82:141 Exceeded max line length (140) (cannot be auto-corrected)
-
-FAILURE: Build failed with an exception.
-
-* What went wrong:
-Execution failed for task ':core:ktlintCommonTestSourceSetCheck'.
-> A failure occurred while executing org.jlleitschuh.gradle.ktlint.worker.ConsoleReportWorkAction
-   > KtLint found code style violations. Please see the following reports:
-     - D:\repos\teslasync\apps\shared\core\build\reports\ktlint\ktlintCommonTestSourceSetCheck\ktlintCommonTestSourceSetCheck.txt
-
-* Try:
-> Run with --stacktrace option to get the stack trace.
-> Run with --info or --debug option to get more log output.
-> Run with --scan to get full insights.
-> Get more help at https://help.gradle.org.
-
-BUILD FAILED in 12s
-16 actionable tasks: 8 executed, 8 up-to-date
-LINT_EXIT=1
+> Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
+> Task :core:ktlintCheck UP-TO-DATE
+BUILD SUCCESSFUL in 4s
+16 actionable tasks: 16 up-to-date
 LINT_EXIT=0
-TEST_EXIT=0
-D:\repos\teslasync\apps\shared\core\src\commonMain\kotlin\io\teslasync\shared\core\data\repo\AuthModeRepository.kt:9: Placeholder
-PLACEHOLDER_ALLOWED=13
-PLACEHOLDER_COUNT=1
-EXIT=1
-PH_EXIT=1
-PH_EXIT=0 (re-run after rewording doc comment; PLACEHOLDER_COUNT=0)
 
-=== PARITY === (web/src/api/hooks/useAuthMode.ts -> apps/shared/core)
-Reads/queries (3/3 ported):
-  [x] useAuthMode      -> AuthModeRepository.authMode() GET /system/auth-mode (cache-then-network, TTL 5m = AUTH_MODE_STALE_MS); AuthModeStore.authMode
-  [x] useIsForwardAuth -> AuthModeDerivations.isForwardAuth(); AuthModeStore.isForwardAuth (mode == 'forward_auth')
-  [x] useAuthSubject   -> AuthModeDerivations.subject(); AuthModeStore.authSubject (null in open / stripped / unresolved)
-Mutations/actions (0/0): none (web hook file declares no mutations) -> no invalidation surface
-Golden vectors: apps/shared/core/spec/auth-mode-golden.json (7 scenarios) pin KMP+C# derivation parity (ADR-004)
-Tests: AuthModeRepositoryContractTest(3) + AuthModeGoldenTest(2) + AuthModeStoreTest(7) = 12 green
-SI: payload is auth metadata (no display units); round-trips verbatim, no S5 conversion
+> ./apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
+PLACEHOLDER_ALLOWED=17
+PLACEHOLDER_COUNT=0
+PH_EXIT=0
 
+=== PARITY ===
+Web source: web/src/api/hooks/useAuthMode.ts (3 hooks, 0 mutations)
+Reads ported (3/3):
+  [x] useAuthMode      -> AuthModeStore.authMode (StateFlow<Resource<AuthModeResponse>>)
+        endpoint: GET /system/auth-mode (versioned; resilient S4 client adds /api/v1 once,
+                  matching the web request('/system/auth-mode') verbatim)
+        params: none (the web query takes no params)
+        cache/staleTime: web AUTH_MODE_STALE_MS=5m -> CacheDomain.AuthMode TTL 5.minutes,
+                  cache-then-network via CachingRepository.observe (ADR-013): cached slot
+                  first for instant cold start, then the network refresh.
+        refetch intent: web refetchOnWindowFocus:false + refetchInterval:false -> no poll;
+                  SharingStarted.WhileSubscribed(5s) + manual AuthModeStore.refresh() only,
+                  so auth-mode never bounces under the SPA's feet.
+        derivation: none (raw contract); typed shape mode/subject_header/subject/
+                  provider_hint/capabilities{step_up_reauth,totp_enrollment,session_list,
+                  impersonation,rbac} round-trips (AuthModeRepositoryContractTest).
+  [x] useIsForwardAuth -> AuthModeDerivations.isForwardAuth(); AuthModeStore.isForwardAuth
+        web data?.mode === 'forward_auth' -> mode == "forward_auth"; false while
+        loading/errored (reads Resource.cached so the safe "no auth" default holds first).
+  [x] useAuthSubject   -> AuthModeDerivations.subject(); AuthModeStore.authSubject
+        web (!data -> null; non-forward-auth -> null; else subject ?? null) reproduced
+        exactly: null in open mode / when the proxy stripped the header / before resolve.
+Mutations ported (0/0): none (the web hook file declares only useQuery) -> no invalidate
+        surface (mirrors the absent useAuthMode invalidateQueries).
+Golden vectors: apps/shared/core/spec/auth-mode-golden.json (7 scenarios: null-before-
+        resolve, open(no subject), open(ignores stray subject), forward_auth(subject),
+        forward_auth(subject stripped), forward_auth(subject absent), unknown/future mode)
+        pin the isForwardAuth + subject derivations for KMP and the Windows C# port (ADR-004).
+SI: payload is auth metadata (mode/subject/capability bools) — no display units; carried
+        verbatim, no S5 conversion.
+Files:
+  apps/shared/core/src/commonMain/.../data/repo/AuthModeRepository.kt (interface + AuthModeResponse + AuthModeCapabilities)
+  apps/shared/core/src/commonMain/.../data/repo/HttpAuthModeRepository.kt
+  apps/shared/core/src/commonMain/.../presentation/authmode/AuthModeStore.kt
+  apps/shared/core/src/commonMain/.../presentation/authmode/AuthModeDerivations.kt
+  apps/shared/core/spec/auth-mode-golden.json
+  apps/shared/core/src/commonTest/.../presentation/authmode/AuthModeGoldenLoader.kt (expect)
+  apps/shared/core/src/androidUnitTest/.../presentation/authmode/AuthModeGoldenLoader.android.kt
+  apps/shared/core/src/appleTest/.../presentation/authmode/AuthModeGoldenLoader.apple.kt
+  apps/shared/core/src/commonTest/.../presentation/authmode/AuthModeGoldenTest.kt
+  apps/shared/core/src/commonTest/.../presentation/authmode/AuthModeStoreTest.kt
+  apps/shared/core/src/commonTest/.../data/repo/AuthModeRepositoryContractTest.kt
+Gate: TEST_EXIT=0 LINT_EXIT=0 PH_EXIT=0
 EXIT=0
 STATUS=DONE
