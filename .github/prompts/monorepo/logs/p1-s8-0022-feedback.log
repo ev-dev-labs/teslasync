@@ -52,6 +52,10 @@ Mutations / actions (2):
                            updateFeedbackPatchesByIdAndInvalidatesWholePartition +
                            updateDelegatesAndRefreshesEveryObservedFeed.
 
+NOTE: the prompt body lists useSubmitFeedback under "Reads / queries"; the web
+hook uses `useMutation` (a write), so it is ported as a mutation. All 3 hooks are
+covered either way — counts above reflect the true read/mutation split.
+
 SI: no feedback field is unit-bearing (ids, RFC3339 timestamps, free text, status enum,
     opaque recent_errors JSON blob) — payloads round-trip verbatim, no SI conversion.
 
@@ -79,19 +83,26 @@ host is the android unit-test task `:core:testDebugUnitTest` (runs on the JVM).
 ktlint is checked over commonMain + commonTest (the apple/native source sets are
 NO-SOURCE for this slice). Reported honestly per the Honesty Covenant (#1, #10).
 
-$ ./gradlew :core:testDebugUnitTest :core:ktlintCheck   (from apps/shared)
+$ ./gradlew :core:testDebugUnitTest --rerun-tasks   (from apps/shared)
   > Task :core:compileDebugUnitTestKotlinAndroid
-  > Task :core:testDebugUnitTest                 BUILD SUCCESSFUL
-  (all commonTest tests executed, incl. FeedbackStoreTest, FeedbackGoldenTest,
-   FeedbackRepositoryContractTest — green)
-  > Task :core:ktlintCommonMainSourceSetCheck
-  > Task :core:ktlintCommonTestSourceSetCheck
-  > Task :core:ktlintCheck                       BUILD SUCCESSFUL
+  > Task :core:testDebugUnitTest
+  BUILD SUCCESSFUL in 51s
+  18 actionable tasks: 18 executed
+  (full commonTest suite executed; this slice's classes, from the JUnit XML
+   under core/build/test-results/testDebugUnitTest, all green:)
+    FeedbackRepositoryContractTest   tests=10 failures=0 errors=0 skipped=0
+    FeedbackGoldenTest               tests=5  failures=0 errors=0 skipped=0
+    FeedbackStoreTest                tests=6  failures=0 errors=0 skipped=0
 TEST_EXIT=0
+
+$ ./gradlew :core:ktlintCheck   (from apps/shared)
+  > Task :core:ktlintCommonMainSourceSetCheck   UP-TO-DATE
+  > Task :core:ktlintCommonTestSourceSetCheck   UP-TO-DATE
+  > Task :core:ktlintCheck                       BUILD SUCCESSFUL
 LINT_EXIT=0
 
 $ ./apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
-  PLACEHOLDER_ALLOWED=13
+  PLACEHOLDER_ALLOWED=17
   PLACEHOLDER_COUNT=0
 PH_EXIT=0
 
