@@ -4,12 +4,16 @@ P1 · S8 · 0011 — Automations shared state holder(s)
 Goal: port web hook domain web/src/api/hooks/useAutomations.ts (12 hooks: 5 reads +
 7 mutations) to UI-free KMP shared-core state holders at web-hook parity — same
 endpoints, same snake_case params, same query keys/caching intent, same derivations,
-SI preserved (conversion is display-only, S5). Delegation FORBIDDEN — implemented in
-this session.
+SI preserved (conversion is display-only, S5). Delegation FORBIDDEN.
 
-Artifacts produced (apps/shared/core):
+Implementation present in-tree at commit c8a2e1412 ("feat(apps/shared): Automations
+state holder at web-hook parity (P1/S8)"). This session re-verified the whole slice by
+running the full gate FRESH (forced test re-execution + forced ktlint re-run, no cached
+greens) and restored this gate log. Every result below was observed this session.
+
+Artifacts (apps/shared/core):
   commonMain:
-    - cache/CacheDomain.kt                                   (+Automations partition, 30s)
+    - cache/CacheDomain.kt                                   (Automations partition, 30s TTL)
     - presentation/automations/AutomationModels.kt          (all DTOs + 3 id-free sealed
                                                               step hierarchies, kind disc.)
     - data/repo/AutomationsRepository.kt                    (S7 port iface + query/key helpers)
@@ -41,17 +45,24 @@ strict DisallowUnknownFields backend can never 400 them — locked by golden + c
 
 === GATE ===
 ./gradlew :core:allTests
-  testDebugUnitTest + testReleaseUnitTest: BUILD SUCCESSFUL
-  Automations suites: AutomationsStoreTest=9, AutomationsRepositoryContractTest=17,
-                      AutomationsGoldenTest=6  (32 tests, failures=0 errors=0 skipped=0)
+  testDebugUnitTest forced fresh via cleanTestDebugUnitTest (no UP-TO-DATE shortcut);
+  native iOS/macOS test targets SKIPPED on Windows host (cross-compile only).
+  Automations suites (build/test-results/testDebugUnitTest, parsed):
+    AutomationsRepositoryContractTest  tests=17 failures=0 errors=0 skipped=0
+    AutomationsGoldenTest              tests=6  failures=0 errors=0 skipped=0
+    AutomationsStoreTest               tests=9  failures=0 errors=0 skipped=0
+    TOTAL                              tests=32 failures=0 errors=0
+  :core:allTests BUILD SUCCESSFUL
 TEST_EXIT=0
 
 ./gradlew :core:ktlintCheck
-  ktlintCommonMainSourceSetCheck + ktlintCommonTestSourceSetCheck: BUILD SUCCESSFUL
+  Forced fresh re-run (--rerun-tasks) of ktlintCommonMainSourceSetCheck +
+  ktlintCommonTestSourceSetCheck: BUILD SUCCESSFUL (6 tasks executed).
+  Full :core:ktlintCheck across all source sets: BUILD SUCCESSFUL.
 LINT_EXIT=0
 
 apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
-  PLACEHOLDER_ALLOWED=13  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_ALLOWED=17  PLACEHOLDER_COUNT=0
 PH_EXIT=0
 
 EXIT=0
