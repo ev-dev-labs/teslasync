@@ -1,25 +1,36 @@
 === P1/S8/0020 — Exports shared state holder gate ===
-
 Output:  apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/exports/ExportModels.kt
          apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/presentation/exports/ExportsStore.kt
          apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/ExportsRepository.kt
          apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/HttpExportsRepository.kt
-         apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/cache/CacheDomain.kt (added Exports, 5s TTL)
+         apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/cache/CacheDomain.kt (Exports, 5s TTL)
 Tests:   apps/shared/core/src/commonTest/.../data/repo/ExportsRepositoryContractTest.kt    (16)
          apps/shared/core/src/commonTest/.../presentation/exports/ExportsStoreTest.kt      (7)
          apps/shared/core/src/commonTest/.../presentation/exports/ExportsGoldenTest.kt     (9)
 Web src:  web/src/api/hooks/useExports.ts + web/src/types/export.ts
 
 === GATE ===
+Build root apps/shared (rootProject "shared", module :core); gradlew lives at apps/shared/gradlew.
 :core:allTests        BUILD SUCCESSFUL    TEST_EXIT=0
 :core:ktlintCheck     BUILD SUCCESSFUL    LINT_EXIT=0
-check-placeholders    PLACEHOLDER_COUNT=0 PH_EXIT=0
+check-placeholders    PLACEHOLDER_COUNT=0 PH_EXIT=0   (PLACEHOLDER_ALLOWED=17)
 
-Exports test results (testDebugUnitTest + testReleaseUnitTest, JVM/Android targets;
-apple/native targets NO-SOURCE on this Windows host):
-  ExportsRepositoryContractTest  tests=16 failures=0 errors=0 skipped=0
-  ExportsStoreTest               tests=7  failures=0 errors=0 skipped=0
-  ExportsGoldenTest              tests=9  failures=0 errors=0 skipped=0
+Honesty note: on re-verification `:core:allTests` reported every task UP-TO-DATE / the
+aggregate as NO-SOURCE (the module was already built and the inputs are unchanged from the
+committed Exports slice). To produce genuine, non-cached evidence for this slice the Exports
+test classes were force-re-run on the JVM/Android debug target:
+  ./gradlew :core:cleanTestDebugUnitTest :core:testDebugUnitTest \
+      --tests "io.teslasync.shared.core.presentation.exports.*" \
+      --tests "io.teslasync.shared.core.data.repo.ExportsRepositoryContractTest"
+  -> 3 tasks executed (testDebugUnitTest ran fresh), BUILD SUCCESSFUL, exit 0.
+Apple/native targets (iosSimulatorArm64Test, macosArm64Test, *Native*) are SKIPPED / NO-SOURCE
+on this Windows host; JVM + Android (testDebugUnitTest / testReleaseUnitTest) carry the run.
+
+Exports test results (fresh testDebugUnitTest, parsed from build/test-results/testDebugUnitTest):
+  ExportsRepositoryContractTest  tests=16 failures=0 errors=0 skipped=0  time=2.509s
+  ExportsStoreTest               tests=7  failures=0 errors=0 skipped=0  time=0.602s
+  ExportsGoldenTest              tests=9  failures=0 errors=0 skipped=0  time=0.013s
+  total                          tests=32 failures=0 errors=0 skipped=0
 
 === PARITY === (all 13 web useExports hooks ported, SI/raw preserved)
 Reads (6) -> ExportsStore feeds, cache-then-network via HttpExportsRepository (ADR-013):
