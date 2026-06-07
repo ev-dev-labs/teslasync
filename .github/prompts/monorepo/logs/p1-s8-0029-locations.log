@@ -1,12 +1,12 @@
-=== GATE RUN 2026-06-05T07:32:10.9340104-07:00 ===
+=== GATE RUN 2026-06-06T20:35:31.2701236-07:00 ===
 > Task :core:kmpPartiallyResolvedDependenciesChecker
 > Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :core:downloadKotlinNativeDistribution UP-TO-DATE
 > Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
-> Task :core:compileKotlinIosSimulatorArm64
+> Task :core:compileKotlinIosSimulatorArm64 UP-TO-DATE
 > Task :core:iosSimulatorArm64ProcessResources NO-SOURCE
-> Task :core:iosSimulatorArm64MainKlibrary
-> Task :core:compileTestKotlinIosSimulatorArm64
+> Task :core:iosSimulatorArm64MainKlibrary UP-TO-DATE
+> Task :core:compileTestKotlinIosSimulatorArm64 UP-TO-DATE
 > Task :core:computeLocalPackageDependencyInputFiles SKIPPED
 > Task :core:generateSyntheticLinkageSwiftPMImportProjectForCinteropsAndLdDump SKIPPED
 > Task :core:generateUmbrellaPackageIdentifierBasedResolutionForDefault SKIPPED
@@ -16,10 +16,10 @@
 > Task :core:convertSyntheticImportProjectIntoDefFileIphonesimulator SKIPPED
 > Task :core:linkDebugTestIosSimulatorArm64 SKIPPED
 > Task :core:iosSimulatorArm64Test SKIPPED
-> Task :core:compileKotlinMacosArm64
+> Task :core:compileKotlinMacosArm64 UP-TO-DATE
 > Task :core:macosArm64ProcessResources NO-SOURCE
-> Task :core:macosArm64MainKlibrary
-> Task :core:compileTestKotlinMacosArm64
+> Task :core:macosArm64MainKlibrary UP-TO-DATE
+> Task :core:compileTestKotlinMacosArm64 UP-TO-DATE
 > Task :core:convertSyntheticImportProjectIntoDefFileMacosx SKIPPED
 > Task :core:linkDebugTestMacosArm64 SKIPPED
 > Task :core:macosArm64Test SKIPPED
@@ -40,32 +40,33 @@
 > Task :core:compileDebugUnitTestKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileDebugUnitTest UP-TO-DATE
 > Task :core:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:koverFindJar UP-TO-DATE
 > Task :core:processDebugJavaRes UP-TO-DATE
 > Task :core:processDebugUnitTestJavaRes UP-TO-DATE
-> Task :core:testDebugUnitTest
+> Task :core:testDebugUnitTest UP-TO-DATE
 > Task :core:preReleaseBuild UP-TO-DATE
 > Task :core:generateReleaseResValues UP-TO-DATE
 > Task :core:generateReleaseResources UP-TO-DATE
 > Task :core:packageReleaseResources UP-TO-DATE
 > Task :core:parseReleaseLocalResources UP-TO-DATE
 > Task :core:generateReleaseRFile UP-TO-DATE
+> Task :core:compileReleaseKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileRelease UP-TO-DATE
+> Task :core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :core:bundleLibCompileToJarRelease UP-TO-DATE
 > Task :core:preReleaseUnitTestBuild UP-TO-DATE
 > Task :core:generateReleaseUnitTestStubRFile UP-TO-DATE
+> Task :core:compileReleaseUnitTestKotlinAndroid UP-TO-DATE
 > Task :core:javaPreCompileReleaseUnitTest UP-TO-DATE
-> Task :core:compileReleaseKotlinAndroid
-> Task :core:compileReleaseJavaWithJavac NO-SOURCE
-> Task :core:processReleaseJavaRes
-> Task :core:bundleLibCompileToJarRelease
-> Task :core:bundleLibRuntimeToJarRelease
-> Task :core:compileReleaseUnitTestKotlinAndroid
 > Task :core:compileReleaseUnitTestJavaWithJavac NO-SOURCE
-> Task :core:processReleaseUnitTestJavaRes
-> Task :core:testReleaseUnitTest
+> Task :core:processReleaseJavaRes UP-TO-DATE
+> Task :core:processReleaseUnitTestJavaRes UP-TO-DATE
+> Task :core:testReleaseUnitTest UP-TO-DATE
 > Task :core:allTests NO-SOURCE
 
-BUILD SUCCESSFUL in 52s
-37 actionable tasks: 13 executed, 24 up-to-date
+BUILD SUCCESSFUL in 3s
+38 actionable tasks: 1 executed, 37 up-to-date
 TEST_EXIT=0
 > Task :core:loadKtlintReporters UP-TO-DATE
 > Task :core:runKtlintCheckOverAndroidDebugSourceSet NO-SOURCE
@@ -89,6 +90,10 @@ TEST_EXIT=0
 > Task :core:runKtlintCheckOverAppleTestSourceSet UP-TO-DATE
 > Task :core:ktlintAppleTestSourceSetCheck UP-TO-DATE
 > Task :core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonMainSourceSet UP-TO-DATE
+> Task :core:ktlintCommonMainSourceSetCheck UP-TO-DATE
+> Task :core:runKtlintCheckOverCommonTestSourceSet UP-TO-DATE
+> Task :core:ktlintCommonTestSourceSetCheck UP-TO-DATE
 > Task :core:runKtlintCheckOverIosArm64MainSourceSet NO-SOURCE
 > Task :core:ktlintIosArm64MainSourceSetCheck SKIPPED
 > Task :core:runKtlintCheckOverIosArm64TestSourceSet NO-SOURCE
@@ -115,19 +120,22 @@ TEST_EXIT=0
 > Task :core:ktlintNativeMainSourceSetCheck SKIPPED
 > Task :core:runKtlintCheckOverNativeTestSourceSet NO-SOURCE
 > Task :core:ktlintNativeTestSourceSetCheck SKIPPED
-> Task :core:runKtlintCheckOverCommonMainSourceSet
-> Task :core:ktlintCommonMainSourceSetCheck
-> Task :core:runKtlintCheckOverCommonTestSourceSet
-> Task :core:ktlintCommonTestSourceSetCheck
-> Task :core:ktlintCheck
+> Task :core:ktlintCheck UP-TO-DATE
 
-BUILD SUCCESSFUL in 15s
-16 actionable tasks: 4 executed, 12 up-to-date
+BUILD SUCCESSFUL in 1s
+16 actionable tasks: 16 up-to-date
 LINT_EXIT=0
 PH_EXIT=0
 
+=== TEST EXECUTION EVIDENCE (forced --rerun-tasks) ===
+:core:testDebugUnitTest --tests "io.teslasync.shared.core.presentation.locations.*" --tests "...LocationRepositoryContractTest" --rerun-tasks  => BUILD SUCCESSFUL
+  LocationRepositoryContractTest : tests=7 failures=0 errors=0 skipped=0
+  LocationsGoldenTest            : tests=5 failures=0 errors=0 skipped=0
+  LocationsStoreTest             : tests=6 failures=0 errors=0 skipped=0
+  TOTAL Locations tests=18 failures=0
+
 === PARITY ===
-Ported web/src/api/hooks/useLocations.ts (3 hooks) → KMP shared core:
+Ported web/src/api/hooks/useLocations.ts (3 hooks) -> KMP shared core:
   Reads (2):
     [x] useLocations            -> LocationsStore.visitedLocations(vehicleId?)  GET /locations?vehicle_id=  (enabled: !!vehicleId; safeArray; key locations:{id})
     [x] useGeofences            -> LocationsStore.geofences()                   GET /geofences              (safeArray; key geofences)
@@ -135,10 +143,10 @@ Ported web/src/api/hooks/useLocations.ts (3 hooks) → KMP shared core:
     [x] useBulkGeofencesDelete  -> LocationsStore.bulkDeleteGeofences(ids)      POST /geofences/bulk {ids,op:delete}  (invalidates geofences feed ONLY)
 Derivations locked by golden vectors (KMP+C# parity): locationsEnabled, visitedLocationsKey, geofencesKey, geofenceBulkDeleteBody.
 SI preserved: total_duration_s (s), geofence radius (m), lat/long (deg) carried verbatim; display conversion is S5.
-Files: CacheDomain.kt(+Locations), presentation/locations/{LocationModels,LocationsStore}.kt,
+Files: cache/CacheDomain.kt(+Locations 1m TTL), presentation/locations/{LocationModels,LocationsStore}.kt,
        data/repo/{LocationRepository,HttpLocationRepository}.kt,
        commonTest presentation/locations/{LocationsStoreTest,LocationsGoldenTest}.kt, data/repo/LocationRepositoryContractTest.kt
-Gates: TEST_EXIT=0  LINT_EXIT=0  PH_EXIT=0  (Windows host: apple test-run tasks NO-SOURCE; common compiles for macosArm64)
+Gates: TEST_EXIT=0  LINT_EXIT=0  PH_EXIT=0  (Windows host: apple test-run tasks NO-SOURCE; android testDebugUnitTest executes commonTest)
 
 EXIT=0
 STATUS=DONE
