@@ -192,3 +192,29 @@ LINT_EXIT=0
 PH_EXIT=0
 EXIT=0
 STATUS=DONE
+
+=== RE-VERIFICATION (2026-06-06) ===
+This slice was already implemented + committed at d92404925 (89 commits before HEAD); its log had
+been removed from the working tree and was restored from HEAD. The full gate was re-run against the
+current tree to confirm none of the 89 intervening core slices caused drift. No apps/shared/core
+source changed (`git diff HEAD --stat apps/shared/core` is empty) -- only this log was updated with
+the fresh evidence below.
+  ./gradlew :core:allTests                          -> BUILD SUCCESSFUL; TEST_EXIT=0
+  ./gradlew :core:testDebugUnitTest --rerun-tasks \
+        --tests 'io.teslasync.shared.core.presentation.push.*' \
+        --tests 'io.teslasync.shared.core.data.repo.PushRepositoryContractTest'
+      (commonTest executes on the androidTarget JVM unit-test target; the iosSimulatorArm64 /
+       macosArm64 targets are SKIPPED on Windows) -> BUILD SUCCESSFUL; 18 tasks executed; TEST_EXIT=0
+      build/test-results/testDebugUnitTest/*Push*.xml:
+        PushRepositoryContractTest tests=11 failures=0 errors=0 skipped=0
+        PushGoldenTest             tests=6  failures=0 errors=0 skipped=0
+        PushStoreTest              tests=8  failures=0 errors=0 skipped=0
+        total                      tests=25 failures=0
+  ./gradlew :core:ktlintCheck                        -> BUILD SUCCESSFUL; LINT_EXIT=0
+  check-placeholders.ps1 -Path apps/shared/core -Language kotlin -> PLACEHOLDER_COUNT=0; PH_EXIT=0
+
+All 4 hooks ported (usePushPublicKey, usePushSubscriptions, useSubscribePush, useUnsubscribePush).
+TEST/LINT/PH all 0.
+
+EXIT=0
+STATUS=DONE
