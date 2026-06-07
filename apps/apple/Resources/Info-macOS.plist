@@ -13,5 +13,9 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSUserActivityTypes</key>
+	<array>
+		<string>io.teslasync.app.route</string>
+	</array>
 </dict>
 </plist>

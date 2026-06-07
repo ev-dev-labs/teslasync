@@ -1,0 +1,212 @@
+===================================================================
+ P4/P8 · 0002 — App Intents, Shortcuts, Handoff, menus & Settings — execution log
+ Date:        2026-06-07T18:15:43Z
+ Host:        macOS 26.5.1 (arm64) — full Xcode present
+ Repo HEAD:   4cefe8d8 (pre-commit; this prompt's changes are staged on top)
+ Branch:      feature/apps-ios
+ Toolchain:   Apple Swift 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+              Xcode 26.5 (Build 17F42) — macOS SDK 26.5, iOS Simulator SDK 26.5
+              swiftlint 0.63.3   swiftformat 0.61.1   xcodegen 2.45.4   pwsh 7.6.2
+===================================================================
+
+CAPABILITY DETERMINATION
+  The prompt's gate is two `xcodebuild ... build test` invocations (iOS + macOS)
+  plus swiftlint / swiftformat / placeholder. Running the two xcodebuild halves
+  end-to-end additionally requires the KMP `Shared.xcframework` that BOTH app
+  targets link. That framework is produced by the project's Gradle pre-build step
+  (`Scripts/build-shared-xcframework.sh` -> `:core:assembleSharedXCFramework`),
+  which needs a JDK + the Android SDK (the `:core` module applies
+  `com.android.library`) + the Kotlin/Native Apple toolchain. This host has:
+      - NO JDK        (`/usr/bin/java` -> "Unable to locate a Java Runtime")
+      - NO Android SDK (ANDROID_HOME unset; ~/Library/Android/sdk absent)
+      - NO ~/.konan, NO ~/.gradle caches (Gradle never bootstrapped here)
+  `Shared.xcframework` is the exact artifact `apps/macos-pending-verifications.md`
+  + ADR-012 already DEFER to a `macos-latest` CI runner (row: "Shared.xcframework
+  — actual binary produced"). Producing it would also require out-of-scope edits to
+  `apps/shared` (this prompt's allowed files are `apps/apple/**` + this log).
+
+  Therefore the two `xcodebuild build test` halves are recorded
+  DEFERRED-macOS-pending — the SAME convention every preceding Apple prompt
+  (P0,P1,P2,P3×5,P4,P5,P6×2,P8-0001) used to reach STATUS=DONE. They are NOT faked
+  green. Because full Xcode 26.5 IS installed here, the App-Intents/Handoff/menus/
+  Settings code was instead compiled + unit-tested against the REAL macOS & iOS
+  SDKs this session (see "ADDITIONAL HOST VERIFICATION"), going beyond what a
+  CommandLineTools-only host could check.
+
+===================== REQUIRED GATE =====================
+
+--- xcodebuild iOS + macOS build/test — DEFERRED to macos-latest CI (NOT faked) ----
+#   xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+#   xcodebuild -scheme TeslaSync-macOS build test
+IOS_BUILD_TEST=DEFERRED-macOS-pending
+MAC_BUILD_TEST=DEFERRED-macOS-pending
+  Reason: links KMP Shared.xcframework (needs JDK+Android SDK+Kotlin/Native,
+  out-of-scope `apps/shared` build) + extension signing. Transitively covered by
+  the existing apps/macos-pending-verifications.md Shared.xcframework row (ADR-012).
+
+--- swiftlint --strict   (cwd apps/apple; lints Sources, Tests, TeslaSyncWidgets) ---
+  Done linting! Found 0 violations, 0 serious in 222 files.
+LINT_EXIT=0
+
+--- swiftformat --lint apps/apple ---
+  SwiftFormat completed. 0/226 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+--- ./apps/tools/check-placeholders.ps1 -Path apps/apple -Language swift ---
+  PLACEHOLDER_ALLOWED=1
+  PLACEHOLDER_COUNT=0
+  EXIT=0
+PLACEHOLDER_EXIT=0
+  (The single ALLOWED is the pre-existing WidgetKit `placeholder(in:)` opt-out in
+   TeslaSyncWidgets — 0 real stubs across the new Platform code.)
+
+===================== ADDITIONAL HOST VERIFICATION (beyond the gate) =====================
+
+The new code is deliberately Shared-FREE (it depends only on AppRoute, the widget
+App-Group snapshot layer, AuthState, the shared UI components + design tokens, and
+its own seams), so it type-checks + runs against the REAL macOS/iOS SDKs without the
+KMP framework — the same island technique the accepted P8-0001 artifact used.
+
+--- real macOS SDK + iOS SDK type-check of the new code + its real dependencies ---
+  export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+  xcrun --sdk macosx       swiftc -typecheck -swift-version 6 -target arm64-apple-macos15.0     <island>
+  xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6 -target arm64-apple-ios18.0-simulator <island>
+  island = 32 new Sources/Platform/** + Sources/Auth/** (real AuthCoordinator, for
+  the biometric bridge) + Sources/App/{AppRoute,AppRouteParser,RouteHostRegistry} +
+  Sources/Components/** + Sources/Widgets/Shared/** + Sources/Design + design tokens
+  (102 files). AppIntents / CoreSpotlight / UniformTypeIdentifiers resolve from the SDK.
+  result: 0 errors on BOTH macOS and iOS SDKs.
+MAC_SDK_TYPECHECK_EXIT=0
+IOS_SDK_TYPECHECK_EXIT=0
+
+--- full-app type-check incl. TeslaSyncApp.swift (Shared interface shim) ---
+  To exercise the App's Scene composition (WindowGroup + macOS Settings scene +
+  combined .commands{} + the new integration modifiers), the whole app was
+  type-checked with a minimal `Shared` interface shim (the SharedApiError surface
+  FacadeError.swift consumes) + a stub for the one Shared-linked view TeslaSyncApp
+  references in a UI-test branch (LiveDemoView). 141 files.
+  result: 0 errors in TeslaSyncApp.swift and all Sources/Platform/** code.
+  PRE-EXISTING latent strict-concurrency findings surfaced (NOT this prompt's code,
+  NOT in scope — the deferred xcodebuild gate covers them app-wide for every prompt):
+    * Sources/Notifications/PushAppDelegate.swift (P4/P6 364831b4): 4 errors —
+      UNUserNotificationCenterDelegate params non-Sendable into @MainActor impl.
+      LEFT AS-IS (unrelated push subsystem; changing delegate isolation has runtime
+      implications outside this prompt's scope).
+FULLAPP_MYCODE_TYPECHECK_EXIT=0
+
+--- unit tests EXECUTED on host via a faithful XCTest shim ---
+  The 8 new Tests/Unit/Platform/*.swift (+ the existing App/RouteTests.swift) were
+  compiled UNCHANGED (only `import XCTest`->`import Foundation`, `@testable import`
+  dropped for single-module linking) against the REAL production types behind a
+  minimal XCTest stand-in, then run.
+  Coverage: IntentBridge App-Group round-trips + single-consume + clear; the
+  VehicleCommandGate (needs-auth / unknown-perms-allowed / permitted / not-permitted);
+  VehicleCommandKind metadata + sensitive set; VehicleCommandRequest Codable;
+  Preview/Unavailable commanders; ReportKind routing; VehicleEntity directory;
+  IntentSnapshotReader; TeslaSyncIntentError mapping; Handoff build/parse/eligibility
+  + Universal-Link fallback + round-trip; SpotlightIndexer item identity + privacy
+  gate (index vs delete-domain) + searchable-item activity; RecentRoutesStore order
+  /dedupe/cap/privacy/clear; MenuCommandCatalog 7-category completeness + shortcut
+  uniqueness + display glyphs + route/command coverage; AppCommandActions gating +
+  confirmation + dispatch; AppSettings defaults + Codable + lenient-forward decode;
+  AppSettingsModel persistence + change hook + biometric reconciliation + cache clear;
+  MeasurementSystem labels.
+  COMPILE_EXIT=0
+  PLATFORM_TESTS_TOTAL=74
+  PLATFORM_TESTS_PASSED=74
+  PLATFORM_TESTS_FAILED=0
+HOST_TESTS_EXIT=0
+
+--- xcodegen generate (validates project.yml absorbs the new sources) ---
+  Created project at apps/apple/TeslaSync.xcodeproj (.xcodeproj is git-ignored).
+  All 32 new Sources/Platform/** + 8 Tests/Unit/Platform/** files are in the
+  TeslaSync (iOS), TeslaSync-macOS, and test target build phases. No project.yml
+  change needed (App Intents live in the app target; entitlement/plist files already
+  sourced).
+XCODEGEN_EXIT=0
+
+--- localization completeness (Localization/Localizable.xcstrings) ---
+  +177 new keys added (en = translated; ar/he = needs_review placeholders, matching
+  the catalog's bootstrapped pattern). Diff is additions-only (4071 insertions, 0
+  deletions); catalog remains valid JSON (8036 keys).
+  referenced-by-new-code keys (simple + dynamic + interpolated %@/%lld): 167
+  defined-in-catalog                                                   : 167
+  referenced-but-undefined                                             : 0
+LOCALIZATION_EXIT=0
+
+--- entitlements / Info.plist (Universal Links + Handoff) ---
+  plutil -lint OK on Info-iOS.plist, Info-macOS.plist, TeslaSync.entitlements,
+  TeslaSync-macOS.entitlements.
+  + com.apple.developer.associated-domains = applinks:app.teslasync.io  (iOS + macOS)
+  + NSUserActivityTypes = [io.teslasync.app.route]                      (iOS + macOS)
+  (App Group group.io.teslasync.app + teslasync:// scheme already present.)
+
+===================== BUGS FOUND + FIXED (via the real Xcode compile) =====================
+  1. AppSettingsView.panel(_:_:) passed a NON-escaping @ViewBuilder closure into an
+     escaping component closure — invisible to `swiftc -typecheck`, a hard error in
+     full compile (and in the deferred xcodebuild). Marked `@escaping`. (mine)
+  2. TeslaSyncShortcuts phrases were authored as key-strings
+     ("intent.phrase.x.1 \(.applicationName)"). AppShortcutPhrase treats the literal
+     as the SPOKEN phrase, so Siri would have matched the raw key. Rewritten as real
+     natural-language phrases. (mine)
+  3. Sources/App/RouteHostRegistry.swift (PRE-EXISTING P4/P4 b414508d) had a Swift-6
+     `static let defaultValue = AppRouteHostRegistry()` non-Sendable global error —
+     the navigation infra my Settings route-registration directly extends. Applied the
+     canonical minimal fix `nonisolated(unsafe) static let defaultValue` (the default
+     is an immutable empty registry). Tightly coupled to this prompt's change; the rest
+     of the Shared-free app is strict-concurrency clean (proven: 53-file baseline = 0).
+
+===================== DELIVERABLE INVENTORY =====================
+App Intents / Shortcuts (Sources/Platform/Intents/, 16 files):
+  IntentBridge (App-Group cross-process channel: pending route/command/refresh,
+    non-PII auth flag, backend-permitted command mirror) · VehicleCommandKind (AppEnum,
+    13 safe commands) · VehicleCommandGate (pure auth+permission decision) ·
+    VehicleCommanding seam (+ Preview/Unavailable impls) · VehicleCommandRequest/Outcome ·
+    VehicleEntity + VehicleDirectoryStore (AppEntity/EntityQuery, non-PII) · ReportKind
+    (AppEnum) · IntentSupport (snapshot reader + localized errors) · IntentSnippets ·
+    7 intents: OpenVehicle, OpenLiveMap, ViewChargingStatus, ShowLatestAlert,
+    RefreshVehicleState, ExportReport, StartVehicleCommand (auth+permission+confirm) ·
+    TeslaSyncShortcuts (AppShortcutsProvider).
+Handoff / continuity (Sources/Platform/Handoff/, 2): HandoffActivity (route NSUserActivity
+  build/parse, Handoff+Spotlight+prediction eligibility, Universal-Link webpageURL) ·
+  RouteActivityModifier (.advertiseRouteActivity / .onContinueRouteActivity).
+Spotlight / recents (Sources/Platform/Spotlight/, 2): SpotlightIndexer (CoreSpotlight
+  route shortcuts, privacy-gated, searchable-item continuation) · RecentRoutesStore.
+macOS menus / commands (Sources/Platform/Menus/, 4): MenuCommandCatalog (File/View/
+  Navigate/Vehicle/Commands/Window/Help spec + shortcuts) · AppCommandActions (@Observable
+  gate/confirm/dispatch) · AppMenuCommands (Commands tree, ⌘ shortcuts) · MenuHelpViews
+  (Help + Keyboard-Shortcuts sheets).
+Settings (Sources/Platform/Settings/, 7): MeasurementSystem · AppSettings (Codable,
+  forward-compatible) · AppSettingsStore (UserDefaults + InMemory) · AppSettingsModel
+  (@Observable) · AppSettingsView (Appearance/Units/Notifications/Privacy/Security/Cache/
+  Diagnostics) · SettingsScene (macOS Settings scene + iOS route registration) ·
+  AuthBiometricBridge (AuthCoordinator -> biometric seam).
+Integration (Sources/Platform/PlatformIntegration.swift): handoff advertise/restore +
+  Spotlight continuation + recents + intent-drain on scene-active + command/help
+  presentation modifiers.
+App wiring: Sources/TeslaSyncApp.swift (combined commands, macOS Settings scene, iOS
+  settings route, platform integration, auth<->intent mirror, command executor).
+Resources: associated-domains (iOS+macOS entitlements) + NSUserActivityTypes (iOS+macOS
+  plists). Localization: +177 keys. Tests: 8 files / 66 Platform tests.
+
+===================== ACCEPTANCE CRITERIA =====================
+[x] App Intents/Shortcuts complete (open vehicle, charging status, start command,
+    refresh state, latest alert, live map, export report), safe (auth + permission +
+    confirmation, no PII / no privileged networking in the extension — commands are
+    enqueued and executed in-app), localized, and tested.
+[x] Handoff (route NSUserActivity), Spotlight + recent pages, Universal-Link / route
+    restoration, and the complete macOS File/View/Navigate/Vehicle/Commands/Window/
+    Help command menus with keyboard shortcuts + sidebar toggle.
+[x] Settings scene covers appearance, units, notifications, privacy/analytics opt-in,
+    biometric unlock, cache/offline, developer diagnostics — all through the shared
+    settings facade (no business logic in views).
+[x] SwiftLint --strict (0/222) + SwiftFormat --lint (0/226) + placeholder (0 real) clean;
+    additionally 0-error type-check vs the real macOS AND iOS 26.5 SDKs, 74/74 unit tests
+    executed + PASS on host, xcodegen clean, localization 167/167, plists valid.
+[~] iOS + macOS xcodebuild build/test: DEFERRED-macOS-pending — needs the KMP
+    Shared.xcframework (JDK+Android SDK+Kotlin/Native, out-of-scope apps/shared build)
+    + extension signing. Runs on macos-latest CI (ADR-012); transitively tracked by the
+    existing apps/macos-pending-verifications.md Shared.xcframework row.
+
+EXIT=0
+STATUS=DONE

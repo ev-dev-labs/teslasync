@@ -22,7 +22,10 @@ public struct AppRouteHostRegistry {
 }
 
 private struct AppRouteHostRegistryKey: EnvironmentKey {
-    static let defaultValue = AppRouteHostRegistry()
+    /// The default is an immutable, empty registry; concurrent reads of it are safe.
+    /// `nonisolated(unsafe)` is the canonical escape hatch for an EnvironmentKey whose
+    /// default holds non-Sendable view-builder closures (Swift 6 complete concurrency).
+    nonisolated(unsafe) static let defaultValue = AppRouteHostRegistry()
 }
 
 public extension EnvironmentValues {

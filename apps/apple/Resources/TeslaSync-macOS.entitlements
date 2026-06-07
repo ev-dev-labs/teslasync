@@ -8,5 +8,9 @@
 	<array>
 		<string>group.io.teslasync.app</string>
 	</array>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:app.teslasync.io</string>
+	</array>
 </dict>
 </plist>

@@ -16,7 +16,23 @@ struct TeslaSyncApp: App {
     #endif
 
     @State private var selection: AppRoute? = .dashboard
-    @State private var auth = AuthCoordinator.bootstrap()
+    @State private var auth: AuthCoordinator
+    @State private var settingsModel: AppSettingsModel
+    @State private var commandActions = AppCommandActions()
+    @State private var commanding: any VehicleCommanding = UnavailableVehicleCommanding()
+
+    init() {
+        let coordinator = AuthCoordinator.bootstrap()
+        _auth = State(initialValue: coordinator)
+        _settingsModel = State(initialValue: AppSettingsModel(
+            biometric: coordinator,
+            onClearCache: {
+                WidgetSnapshotStore().clear()
+                RecentRoutesStore().clear()
+                VehicleDirectoryStore().clear()
+            }
+        ))
+    }
 
     private var isLiveDemo: Bool {
         ProcessInfo.processInfo.arguments.contains("-uiTestLiveDemo")
@@ -32,10 +48,15 @@ struct TeslaSyncApp: App {
         }
         .commands {
             AppCommands(selection: $selection)
+            AppMenuCommands(selection: $selection, actions: commandActions)
         }
         #if os(macOS)
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
+        #endif
+
+        #if os(macOS)
+            TeslaSyncSettingsScene(model: settingsModel, onOpenNotifications: { selection = .notifications })
         #endif
     }
 
@@ -48,7 +69,18 @@ struct TeslaSyncApp: App {
                 .teslaSyncTheme()
         } else {
             RootView(coordinator: auth, selection: $selection)
-                .task { connectPush() }
+                .environment(\.routeHosts, SettingsRouteRegistration.registry(
+                    model: settingsModel,
+                    onOpenNotifications: { selection = .notifications }
+                ))
+                .platformIntegration(selection: $selection, settingsModel: settingsModel, onCommand: runCommand)
+                .commandActionsPresentation(commandActions)
+                .task {
+                    connectPush()
+                    configureCommandActions()
+                    syncIntentMirror()
+                }
+                .onChange(of: auth.state) { _, _ in syncIntentMirror() }
                 .onChange(of: pushDelegate.runtime.coordinator?.pendingRoute) { _, route in
                     if let route {
                         selection = route
@@ -61,6 +93,36 @@ struct TeslaSyncApp: App {
                     }
                 }
         }
+    }
+
+    /// Wires the menu/command hub to the app's command executor + refresh signals.
+    private func configureCommandActions() {
+        commandActions.onRefresh = {
+            NotificationCenter.default.post(name: .teslaSyncRefreshRequested, object: nil)
+        }
+        commandActions.onPrint = {
+            NotificationCenter.default.post(name: .teslaSyncPrintRequested, object: nil)
+        }
+        commandActions.onRunCommand = { kind in
+            runCommand(VehicleCommandRequest(kind: kind))
+        }
+    }
+
+    /// Executes a (confirmed) vehicle command via the injected commander and
+    /// surfaces the outcome. The default commander reports `.unavailable` until the
+    /// command facade is wired (P7) — never a silent success.
+    private func runCommand(_ request: VehicleCommandRequest) {
+        Task { @MainActor in
+            commandActions.lastOutcome = await commanding.perform(request)
+        }
+    }
+
+    /// Mirrors the non-sensitive auth flag to the App Group (for out-of-process
+    /// intent gating) and to the command menu's enablement.
+    private func syncIntentMirror() {
+        let authenticated = auth.state.showsAppContent
+        IntentBridge.shared.setAuthenticated(authenticated)
+        commandActions.isAuthenticated = authenticated
     }
 
     /// Wires the push runtime to the app's auth + API base URL once at launch. The
