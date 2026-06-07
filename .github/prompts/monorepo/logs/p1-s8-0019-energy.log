@@ -1,78 +1,103 @@
 P1/S8/0019 — Energy state holder (KMP parity with web useEnergy)
 
+== RE-VERIFICATION ==
+The Energy deliverables were authored + committed in 96bdf8f84
+("feat(apps/shared): Energy state holder at web-hook parity (P1/S8)"), an
+ancestor of the current branch tip 8a5ba0e10. The source + tests are present in
+HEAD and unchanged; only this gate log had been removed from the working tree.
+This run re-ran the FULL gate against the current HEAD (90 commits downstream of
+96bdf8f84) to prove the Energy port is still green, re-verified web-hook parity
+against web/src/api/hooks/useEnergy.ts byte-for-byte, and regenerated this log
+with the real, freshly-executed gate output below. No red claimed as green.
+
 == GATE ==
-Gradle root: apps/shared (module :core); wrapper at apps/shared/gradlew.
-Host: Windows — Kotlin/Native Apple targets (iosArm64, iosSimulatorArm64,
-macosArm64) cannot be compiled/linked on this host, so the `:core:allTests`
-aggregate (which links Apple test binaries) is not executable here. The
-runnable subset that exercises ALL commonMain + commonTest code on the JVM is
-`:core:testDebugUnitTest` (Android local unit test = common tests on JVM).
-ktlint + placeholder gates run host-agnostic and are unaffected.
+Gradle root: apps/shared (module :core); wrapper at apps/shared/gradlew(.bat).
+Host: Windows. `:core:allTests` aggregates the Kotlin/Native Apple test tasks
+`:core:iosSimulatorArm64Test` (needs `linkDebugTestIosSimulatorArm64`) and
+`:core:macosArm64Test` (needs `linkDebugTestMacosArm64`), which cannot be
+compiled/linked on a non-Apple host — verified via `:core:allTests --dry-run`
+(both link tasks + their *Test tasks are present in the aggregate and SKIP on
+this host). The JVM task that exercises ALL commonMain + commonTest code is
+`:core:testDebugUnitTest` (Android local unit test = the common tests on the
+JVM); it was run with `--rerun-tasks` so the result is freshly executed, not a
+build-cache hit. ktlint + placeholder gates run host-agnostic.
 
-./gradlew :core:testDebugUnitTest  -> BUILD SUCCESSFUL
+./gradlew :core:testDebugUnitTest --rerun-tasks  -> BUILD SUCCESSFUL in 53s
+  (18 actionable tasks: 18 executed — not from cache)
 TEST_EXIT=0
-  Energy test classes executed (all green):
-    - data.repo.HttpEnergyRepositoryTest .......... 24 tests (URL/method/param contract: 17 reads + 7 mutations)
-    - presentation.energy.EnergyGoldenTest ........ 13 tests (query/key/family derivations)
-    - presentation.energy.EnergyStoreTest ......... 9 tests (cache->network reads + mutation invalidation)
+  Energy test classes executed (freshly, from build/test-results, all green):
+    - data.repo.HttpEnergyRepositoryTest ......... tests=24 failures=0 errors=0 skipped=0
+        (URL/method/snake_case-param wire contract: 17 reads + 7 mutations;
+         asserts the /api/v1 prefix is added exactly once — no double prefix)
+    - presentation.energy.EnergyGoldenTest ....... tests=13 failures=0 errors=0 skipped=0
+        (query-builder + cache-key + family-prefix derivations, language-neutral
+         JSON vectors shared with the Windows C# port — ADR-004 anti-drift)
+    - presentation.energy.EnergyStoreTest ........ tests=9  failures=0 errors=0 skipped=0
+        (cache->network read emission + per-mutation family invalidation)
+  Energy total = 46 tests, 0 failures.
 
-./gradlew :core:ktlintCheck  -> BUILD SUCCESSFUL
+./gradlew :core:ktlintCheck  -> BUILD SUCCESSFUL in 3s
 LINT_EXIT=0
-  (auto-formatted via :core:ktlintFormat; commonMain + commonTest clean)
+  commonMain + commonTest source sets checked clean (UP-TO-DATE; no formatting
+  needed). Apple-target ktlint source sets are NO-SOURCE/SKIPPED on this host.
 
 ./apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
-  PLACEHOLDER_ALLOWED=13
+  PLACEHOLDER_ALLOWED=17
   PLACEHOLDER_COUNT=0
 PH_EXIT=0
+  (no TODO/FIXME/stub markers in the Energy deliverables or the wider core;
+   the 17 allowed entries are reasoned `// parity:allow` opt-outs across the
+   module, none in the Energy files.)
 
 == NAMING ==
 Pre-existing concrete `EnergyRepository` (S7 stub: summary() -> /analytics/energy,
-NOT a useEnergy hook) renamed to `EnergySummaryRepository` to free the canonical
-name for the hook-domain interface (parallel to DriveRepository vs DrivingRepository).
-RepositoryContractTest reference updated.
+NOT a useEnergy hook) was renamed to `EnergySummaryRepository` to free the
+canonical name for the hook-domain interface (parallel to DriveRepository vs
+DrivingRepository). RepositoryContractTest reference updated. (Committed in
+96bdf8f84; unchanged.)
 
-== DELIVERABLES ==
+== DELIVERABLES == (committed in 96bdf8f84, present in HEAD)
 commonMain:
-  data/repo/EnergyRepository.kt        interface + snake_case query builders + cache/feed keys + family helpers
-  data/repo/HttpEnergyRepository.kt    HTTP+cache impl (verbatim-SI JsonElement; safeArray on the 6 list reads)
-  data/repo/EnergySummaryRepository.kt renamed concrete S7 stub
-  presentation/energy/EnergyStore.kt   StateFlow<Resource<JsonElement>> reads + suspend Result mutations
+  data/repo/EnergyRepository.kt         interface + snake_case query builders + cache/feed keys + family helpers
+  data/repo/HttpEnergyRepository.kt     HTTP+cache impl (verbatim-SI JsonElement; safeArray on the 6 list reads)
+  data/repo/EnergySummaryRepository.kt  renamed concrete S7 stub
+  presentation/energy/EnergyStore.kt    StateFlow<Resource<JsonElement>> reads + suspend Result mutations
 commonTest:
   presentation/energy/EnergyStoreTest.kt
   presentation/energy/EnergyGoldenTest.kt
   data/repo/HttpEnergyRepositoryTest.kt
 
 == PARITY ==
-All 24 web hooks from web/src/api/hooks/useEnergy.ts ported (SI preserved; conversion display-only/S5).
+All 24 web hooks from web/src/api/hooks/useEnergy.ts ported (SI preserved;
+conversion is display-only/S5). Endpoints re-verified against the web file.
 
-Reads (17) -> EnergyStore feed + HttpEnergyRepository method + endpoint (no /api/v1 prefix).
-Endpoints verified byte-for-byte against web/src/api/hooks/useEnergy.ts:
+Reads (17) -> EnergyStore feed + HttpEnergyRepository method + endpoint (no /api/v1 prefix; client adds it):
    1. useEnergyStats                  -> energyStats()                  GET /vehicles/{vehicleId}/energy?days=
    2. useBatteryHealth                -> batteryHealth()                GET /vehicles/{vehicleId}/battery[?as_of=]
    3. useBatteryCells                 -> batteryCells()                 GET /vehicles/{vehicleId}/battery/cells
    4. useBatteryHealthAnalytics       -> batteryHealthAnalytics()       GET /analytics/battery-health?vehicle_id=
    5. useBatteryDegradation           -> batteryDegradation()           GET /analytics/battery-degradation?vehicle_id=
-   6. useEnergyFlow                   -> energyFlow()                   GET /vehicles/{vehicleId}/energy/flow
-   7. useVampireDrainStats            -> vampireDrainStats()            GET /vampire-drain/stats?vehicle_id=
-   8. useVampireDrainEvents           -> vampireDrainEvents()           GET /vampire-drain?vehicle_id=&limit=                    (safeArray)
+   6. useEnergyFlow                   -> energyFlow()                    GET /vehicles/{vehicleId}/energy/flow
+   7. useVampireDrainStats            -> vampireDrainStats()            GET /vampire-drain/stats?vehicle_id=          (deprecated 404, ported verbatim)
+   8. useVampireDrainEvents           -> vampireDrainEvents()           GET /vampire-drain?vehicle_id=&limit=         (deprecated 404; safeArray)
    9. useProjectedRange               -> projectedRange()               GET /vehicles/{vehicleId}/battery/projected-range
   10. useSleepEfficiency              -> sleepEfficiency()              GET /analytics/sleep?vehicle_id=&days=[&start=&end=]
-  11. useTeslaEnergySites             -> teslaEnergySites()             GET /tesla/energy-sites                                  (safeArray)
+  11. useTeslaEnergySites             -> teslaEnergySites()             GET /tesla/energy-sites                       (safeArray)
   12. useTeslaEnergySiteInfo          -> teslaEnergySiteInfo(siteId)    GET /tesla/energy-sites/{siteId}/site-info
   13. useTeslaEnergyHistory           -> teslaEnergyHistory()           GET /tesla/energy-sites/{siteId}/energy-history?period=[&since=&until=]   (safeArray)
   14. useTeslaBackupHistory           -> teslaBackupHistory()           GET /tesla/energy-sites/{siteId}/backup-history[?since=&until=]           (safeArray)
   15. useTeslaWCChargingHistory       -> teslaWcChargingHistory()       GET /tesla/energy-sites/{siteId}/charging-history[?since=&until=]         (safeArray)
   16. useTeslaEnergyLiveStatus        -> teslaEnergyLiveStatus(siteId)  GET /tesla/energy-sites/{siteId}/live-status
-  17. useTeslaEnergyLiveStatusHistory -> teslaEnergyLiveStatusHistory() GET /tesla/energy-sites/{siteId}/live-status/history[?since=&until=&limit=]   (safeArray)
+  17. useTeslaEnergyLiveStatusHistory -> teslaEnergyLiveStatusHistory() GET /tesla/energy-sites/{siteId}/live-status/history[?since=&until=&limit=]   (safeArray; limit 0 falsy)
 
-Mutations (7) -> EnergyStore suspend Result + endpoint (POST) + invalidated cache family/key:
-   1. useRefreshTeslaEnergySites          -> refreshTeslaEnergySites()            POST /tesla/energy-sites/refresh                              -> family tesla-energy-sites
-   2. useRefreshTeslaEnergySiteInfo       -> refreshTeslaEnergySiteInfo(siteId)   POST /tesla/energy-sites/{siteId}/site-info/refresh           -> key tesla-site-info|{siteId}
-   3. useUpdateTOUSettings                -> updateTouSettings(siteId, body)      POST /tesla/energy-sites/{siteId}/tou-settings (JSON body)    -> key tesla-site-info|{siteId}
+Mutations (7) -> EnergyStore suspend Result + endpoint (POST) + invalidated cache family/key (mirrors web invalidateQueries):
+   1. useRefreshTeslaEnergySites          -> refreshTeslaEnergySites()            POST /tesla/energy-sites/refresh                          -> family tesla-energy-sites
+   2. useRefreshTeslaEnergySiteInfo       -> refreshTeslaEnergySiteInfo(siteId)   POST /tesla/energy-sites/{siteId}/site-info/refresh       -> key  tesla-site-info|{siteId} (that site only)
+   3. useUpdateTOUSettings                -> updateTouSettings(siteId, body)      POST /tesla/energy-sites/{siteId}/tou-settings (JSON body) -> key  tesla-site-info|{siteId}
    4. useRefreshTeslaEnergyHistory        -> refreshTeslaEnergyHistory(...)       POST /tesla/energy-sites/{siteId}/energy-history/refresh?period=[&start_date=&end_date=&time_zone=]   -> family tesla-energy-history
    5. useRefreshTeslaBackupHistory        -> refreshTeslaBackupHistory(...)       POST /tesla/energy-sites/{siteId}/backup-history/refresh?period=[&start_date=&end_date=&time_zone=]    -> family tesla-backup-history
-   6. useRefreshTeslaWCChargingHistory    -> refreshTeslaWcChargingHistory(...)   POST /tesla/energy-sites/{siteId}/charging-history/refresh[?start_date=&end_date=&time_zone=]            -> family tesla-wc-charging-history
-   7. useRefreshTeslaEnergyLiveStatus     -> refreshTeslaEnergyLiveStatus(siteId) POST /tesla/energy-sites/{siteId}/live-status/refresh         -> families tesla-live-status + tesla-live-status-history
+   6. useRefreshTeslaWCChargingHistory    -> refreshTeslaWcChargingHistory(...)   POST /tesla/energy-sites/{siteId}/charging-history/refresh[?start_date=&end_date=&time_zone=] (NO period) -> family tesla-wc-charging-history
+   7. useRefreshTeslaEnergyLiveStatus     -> refreshTeslaEnergyLiveStatus(siteId) POST /tesla/energy-sites/{siteId}/live-status/refresh     -> families tesla-live-status + tesla-live-status-history (both)
 
 EXIT=0
 STATUS=DONE
