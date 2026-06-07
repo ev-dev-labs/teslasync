@@ -86,32 +86,41 @@ SI: no bundle/result field is unit-bearing (schema_version, RFC3339 exported_at,
     round-trip verbatim — no SI conversion at this layer; display formatting is S5's job.
 
 --------------------------------------------------------------------------------
-GATE
+GATE  (re-verified 2026-06-06T22:47:57-07:00 — log restored from HEAD; apps/shared/core source unchanged since f53e8defa)
 --------------------------------------------------------------------------------
-NOTE ON HOST: this repo's :core module targets androidTarget + apple
-(iosArm64, iosSimulatorArm64, macosArm64) — there is NO jvm target. Apple
-Kotlin/Native targets cannot be compiled or run on this Windows host, so
-`:core:allTests` (which fans out to the apple test binaries) is not runnable
-here. The runnable equivalent that EXECUTES the full commonTest suite on this
-host is the android unit-test task `:core:testDebugUnitTest` (runs on the JVM).
-ktlint is checked over commonMain + commonTest (the apple/native source sets are
-NO-SOURCE for this slice). Reported honestly per the Honesty Covenant (#1, #10).
+HOST NOTE: this repo's :core module targets androidTarget + apple (iosArm64,
+iosSimulatorArm64, macosArm64) — there is NO jvm target. On this Windows host the
+apple Kotlin/Native test binaries are auto-disabled by the Kotlin plugin, so the
+canonical `:core:allTests` runs with iosSimulatorArm64Test / macosArm64Test
+SKIPPED while still EXECUTING the full commonTest suite via the JVM android
+unit-test tasks (:core:testDebugUnitTest + :core:testReleaseUnitTest). ktlint
+covers commonMain + commonTest (apple/native source sets are NO-SOURCE for this
+slice). Reported honestly per the Honesty Covenant (#1, #10).
 
-$ ./gradlew :core:testDebugUnitTest :core:ktlintCheck   (from apps/shared)
-  > Task :core:compileDebugKotlinAndroid              (w: monthNumber deprecation only)
-  > Task :core:compileDebugUnitTestKotlinAndroid
-  > Task :core:testDebugUnitTest                      BUILD SUCCESSFUL
-    (all commonTest tests executed, incl. SettingsBackupStoreTest [8],
-     SettingsBackupGoldenTest [6], SettingsBackupRepositoryContractTest [6] — green)
-  > Task :core:ktlintCommonMainSourceSetCheck
-  > Task :core:ktlintCommonTestSourceSetCheck
-  > Task :core:ktlintCheck                            BUILD SUCCESSFUL
-  BUILD SUCCESSFUL
+$ ./gradlew :core:cleanTestDebugUnitTest :core:cleanTestReleaseUnitTest :core:allTests --no-build-cache   (from apps/shared)
+  > Task :core:iosSimulatorArm64Test SKIPPED
+  > Task :core:macosArm64Test SKIPPED
+  > Task :core:testDebugUnitTest                      (executed — forced via cleanTest + --no-build-cache)
+  > Task :core:testReleaseUnitTest                    (executed)
+  > Task :core:allTests
+  BUILD SUCCESSFUL in 30s
+  40 actionable tasks: 5 executed, 35 up-to-date
+  commonTest suites executed for this slice
+  (JUnit XML under core/build/test-results/testDebugUnitTest):
+    SettingsBackupStoreTest               tests=8 failures=0 errors=0 skipped=0
+    SettingsBackupGoldenTest              tests=6 failures=0 errors=0 skipped=0
+    SettingsBackupRepositoryContractTest  tests=6 failures=0 errors=0 skipped=0
 TEST_EXIT=0
+
+$ ./gradlew :core:ktlintCheck   (from apps/shared)
+  > Task :core:ktlintCommonMainSourceSetCheck         UP-TO-DATE
+  > Task :core:ktlintCommonTestSourceSetCheck         UP-TO-DATE
+  > Task :core:ktlintCheck                            UP-TO-DATE
+  BUILD SUCCESSFUL in 2s
 LINT_EXIT=0
 
 $ ./apps/tools/check-placeholders.ps1 -Path apps/shared/core -Language kotlin
-  PLACEHOLDER_ALLOWED=13
+  PLACEHOLDER_ALLOWED=17
   PLACEHOLDER_COUNT=0
 PH_EXIT=0
 
