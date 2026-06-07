@@ -1,0 +1,47 @@
+=== P2 Dashboard widget 0005 AuditLogWidget (Windows) ===
+date: 2026-06-07T02:58:19.0033349-07:00
+env : .NET 10.0.300 ; WinUI 3 (Microsoft.WindowsAppSDK) ; target net10.0-windows10.0.19041.0
+web source: web/src/features/dashboard/widgets/AuditLogWidget.tsx
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+BUILD_EXIT=0
+
+--- TEST: dotnet test apps/windows/TeslaSync.App.Tests (headless; csproj links AuditLogWidget Model/ViewModel/Source) ---
+Passed!  - Failed:     0, Passed:  1221, Skipped:     0, Total:  1221, Duration: 545 ms - TeslaSync.App.Tests.dll (net10.0)
+AuditLogWidgetTests: 58 tests (parse adapters, SecurityFlag JS semantics, severity inference, buildSecurityTitle,
+  merged projection, result mappers, full state matrix, source vehicle resolution + request shapes, registration,
+  diagnostics view.opened, accessibility names) — all pass.
+TEST_EXIT=0
+
+--- TEST (full-solution disclosure): dotnet test apps/windows/TeslaSync.sln ---
+Passed!  - Failed:     0, Passed:  1221, Skipped:     0, Total:  1221, Duration: 589 ms - TeslaSync.App.Tests.dll (net10.0)
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 127 ms - TeslaSync.App.UITests.dll (net10.0)
+evidence: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+NOTE: the 147 TeslaSync.App.UITests failures are the generic WinAppDriver UI-automation harness.
+      They are environment-gated (require a WinAppDriver/Appium runner on 127.0.0.1:4723 + a deployed MSIX +
+      an interactive desktop), pre-existing (identical at baseline), and 0 relate to AuditLogWidget — every one
+      throws UiAutomationUnavailableException before any test logic runs. WinUI 3 + .NET 10 ARE present (BUILD and
+      the headless suite pass); only the UI-automation RUNNER is absent on this host.
+FULL_SLN_TEST_EXIT=1 (solely from the absent WinAppDriver runner; TeslaSync.App.Tests = 1221/1221 pass)
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/dashboard-widgets/AuditLogWidget ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- SUMMARY ---
+AuditLogWidget deliverable COMPLETE and verified on every gate it controls:
+  BUILD_EXIT=0 (0 warnings / 0 errors under TreatWarningsAsErrors + .NET analyzers)
+  TEST_EXIT=0 (headless 1221/1221, incl. 58 new AuditLogWidget tests covering all 6 states)
+  FORMAT_EXIT=0    PLACEHOLDER_EXIT=0
+Out-of-scope/environment: the full-solution dotnet test also runs the WinAppDriver UI-automation harness,
+  which is unavailable on this runner (see evidence above); 0 of those failures relate to this widget.
+
+EXIT=0
+STATUS=DONE
