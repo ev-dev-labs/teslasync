@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Number formatting (port of web fmtNumber / fmtInt)
 
-@MainActor
-final class BatteryHealthNumberFormatTests: XCTestCase {
+@MainActor final class BatteryHealthNumberFormatTests: XCTestCase {
     private let enUS = Locale(identifier: "en-US")
 
     func testDefaultPrecisionIsTwoDecimals() {
@@ -59,8 +58,7 @@ final class BatteryHealthNumberFormatTests: XCTestCase {
 
 // MARK: - Battery colour band (web STATUS_COLORS ladder)
 
-@MainActor
-final class BatteryBandTests: XCTestCase {
+@MainActor final class BatteryBandTests: XCTestCase {
     func testThresholds() {
         XCTAssertEqual(BatteryBand.forLevel(100), .good)
         XCTAssertEqual(BatteryBand.forLevel(60), .good)
@@ -73,8 +71,7 @@ final class BatteryBandTests: XCTestCase {
 
 // MARK: - Battery pill projection (web BatteryPill inline maths)
 
-@MainActor
-final class BatteryPillProjectionTests: XCTestCase {
+@MainActor final class BatteryPillProjectionTests: XCTestCase {
     func testRoundsLevelAndDerivesBandAndFraction() {
         let start = BatteryPillProjection.make(kind: .chargeStart, value: 42.4)
         XCTAssertEqual(start.level, 42)
@@ -104,8 +101,7 @@ final class BatteryPillProjectionTests: XCTestCase {
 
 // MARK: - Tile builders (web BatteryHealthSection composition)
 
-@MainActor
-final class BatteryHealthTilesTests: XCTestCase {
+@MainActor final class BatteryHealthTilesTests: XCTestCase {
     private let metrics = BatteryHealthMetrics(
         batteryStart: 42.4,
         batteryEnd: 78.9,
@@ -142,8 +138,7 @@ final class BatteryHealthTilesTests: XCTestCase {
 
 // MARK: - Projection: phase resolution + overlays
 
-@MainActor
-final class BatteryHealthProjectionTests: XCTestCase {
+@MainActor final class BatteryHealthProjectionTests: XCTestCase {
     private func metrics(count: Int) -> BatteryHealthMetrics {
         BatteryHealthMetrics(batteryStart: 40, batteryEnd: 80, chargingSessionCount: count, chargeEnergyAdded: 100)
     }
@@ -197,8 +192,7 @@ final class BatteryHealthProjectionTests: XCTestCase {
 
 // MARK: - State holder: wiring + telemetry
 
-@MainActor
-final class BatteryHealthModelTests: XCTestCase {
+@MainActor final class BatteryHealthModelTests: XCTestCase {
     private func metrics(count: Int) -> BatteryHealthMetrics {
         BatteryHealthMetrics(batteryStart: 40, batteryEnd: 80, chargingSessionCount: count, chargeEnergyAdded: 100)
     }
@@ -246,8 +240,7 @@ final class BatteryHealthModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class BatteryHealthAccessibilityTests: XCTestCase {
+@MainActor final class BatteryHealthAccessibilityTests: XCTestCase {
     func testTileSummaryJoinsLabelAndValue() {
         let summary = BatteryHealthAccessibility.tileSummary(
             label: "Avg Battery at Charge End",

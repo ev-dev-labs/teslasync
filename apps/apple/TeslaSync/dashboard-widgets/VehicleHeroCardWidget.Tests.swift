@@ -21,8 +21,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web widget)
 
-@MainActor
-final class VehicleHeroAdapterTests: XCTestCase {
+@MainActor final class VehicleHeroAdapterTests: XCTestCase {
     private let vehicle = VehicleHeroVehicleDTO(
         displayName: "Bluebird", vin: "5YJ3E1EA7KF000000", model: "Model 3", trimBadging: "Long Range"
     )
@@ -136,8 +135,7 @@ final class VehicleHeroAdapterTests: XCTestCase {
 
 // MARK: - Status classification (FSM theme parity)
 
-@MainActor
-final class VehicleHeroStatusTests: XCTestCase {
+@MainActor final class VehicleHeroStatusTests: XCTestCase {
     func testKnownStatesMapToToneAndLabel() {
         XCTAssertEqual(VehicleHeroStatus.classify("online").tone, .success)
         XCTAssertEqual(VehicleHeroStatus.classify("driving").tone, .info)
@@ -161,8 +159,7 @@ final class VehicleHeroStatusTests: XCTestCase {
 
 // MARK: - Layout resolution (web isCompact / isWide / isTall)
 
-@MainActor
-final class VehicleHeroLayoutTests: XCTestCase {
+@MainActor final class VehicleHeroLayoutTests: XCTestCase {
     func testCompactOnlyAtOneByOne() {
         XCTAssertEqual(VehicleHeroLayout.resolve(cols: 1, rows: 1), .compact)
         XCTAssertEqual(VehicleHeroLayout.resolve(cols: 0, rows: 0), .compact)
@@ -179,8 +176,7 @@ final class VehicleHeroLayoutTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class VehicleHeroPhaseTests: XCTestCase {
+@MainActor final class VehicleHeroPhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         XCTAssertEqual(VehicleHeroModel.resolvePhase(status: .loading, hasVehicle: false), .loading)
         XCTAssertEqual(VehicleHeroModel.resolvePhase(status: .loading, hasVehicle: true), .content)
@@ -193,8 +189,7 @@ final class VehicleHeroPhaseTests: XCTestCase {
     }
 }
 
-@MainActor
-final class VehicleHeroModelTests: XCTestCase {
+@MainActor final class VehicleHeroModelTests: XCTestCase {
     private let vehicle = VehicleHeroVehicleDTO(displayName: "Bluebird", vin: "VIN", model: "Model 3")
 
     private func makeModel(
@@ -296,8 +291,7 @@ final class VehicleHeroModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class VehicleHeroRegistryTests: XCTestCase {
+@MainActor final class VehicleHeroRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = VehicleHeroCardWidget.registration
         XCTAssertEqual(registration.id, "vehicle-hero-card")
@@ -327,8 +321,7 @@ final class VehicleHeroRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class VehicleHeroAccessibilityTests: XCTestCase {
+@MainActor final class VehicleHeroAccessibilityTests: XCTestCase {
     private let vehicle = VehicleHeroVehicleDTO(displayName: "Bluebird", vin: "VIN", model: "Model 3")
 
     func testSummaryIncludesEveryReadout() {

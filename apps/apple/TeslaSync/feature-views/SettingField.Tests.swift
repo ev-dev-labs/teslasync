@@ -32,8 +32,7 @@ private let echoTranslate: @Sendable (String, String) -> String = { _, fallback 
 
 // MARK: - Help projection: render branches (web <HelpIcon> text ladder)
 
-@MainActor
-final class SettingFieldHelpProjectionTests: XCTestCase {
+@MainActor final class SettingFieldHelpProjectionTests: XCTestCase {
     func testNilHelpDoesNotRender() {
         let projection = SettingFieldHelpResolver.resolve(nil, translate: echoTranslate, chrome: echoChrome)
         XCTAssertFalse(projection.rendersTrigger)
@@ -93,8 +92,7 @@ final class SettingFieldHelpProjectionTests: XCTestCase {
 
 // MARK: - Accessibility policy (web aria-label / aria-describedby)
 
-@MainActor
-final class SettingFieldAccessibilityTests: XCTestCase {
+@MainActor final class SettingFieldAccessibilityTests: XCTestCase {
     func testFieldIDProducesPerFieldLabelAndDescribedBy() {
         let help = SettingFieldHelp(content: "Help text", fieldID: "display_name")
         let projection = SettingFieldHelpResolver.resolve(help, translate: echoTranslate, chrome: echoChrome)
@@ -138,8 +136,7 @@ final class SettingFieldAccessibilityTests: XCTestCase {
 
 // MARK: - Surface identity + telemetry (P1/S11 view.opened)
 
-@MainActor
-final class SettingFieldSurfaceTests: XCTestCase {
+@MainActor final class SettingFieldSurfaceTests: XCTestCase {
     func testSurfaceSlugIsStable() {
         XCTAssertEqual(SettingFieldSurface.slug, "SettingField")
     }

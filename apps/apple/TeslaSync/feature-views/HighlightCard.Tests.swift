@@ -24,8 +24,7 @@ import XCTest
 
 // MARK: - Accent adapter (web color string → native projection + glow map)
 
-@MainActor
-final class HighlightCardAccentTests: XCTestCase {
+@MainActor final class HighlightCardAccentTests: XCTestCase {
     func testMapsEveryKnownWebColor() {
         XCTAssertEqual(HighlightCardAccent(web: "cyan"), .cyan)
         XCTAssertEqual(HighlightCardAccent(web: "green"), .green)
@@ -84,8 +83,7 @@ final class HighlightCardAccentTests: XCTestCase {
 
 // MARK: - Change model (web `change.positive ? TrendingUp : TrendingDown`)
 
-@MainActor
-final class HighlightCardChangeTests: XCTestCase {
+@MainActor final class HighlightCardChangeTests: XCTestCase {
     func testPositiveUsesUpGlyphAndSuccessTint() {
         let change = HighlightCardChange(value: "+12.3%", isPositive: true)
         XCTAssertEqual(change.systemImage, "arrow.up.right")
@@ -114,8 +112,7 @@ final class HighlightCardChangeTests: XCTestCase {
 
 // MARK: - Presentation projection (per-configuration "snapshot")
 
-@MainActor
-final class HighlightCardPresentationTests: XCTestCase {
+@MainActor final class HighlightCardPresentationTests: XCTestCase {
     private func make(
         icon: String = "car.fill",
         accent: HighlightCardAccent = .cyan,
@@ -201,8 +198,7 @@ final class HighlightCardPresentationTests: XCTestCase {
 
 // MARK: - Accessibility phrasing
 
-@MainActor
-final class HighlightCardAccessibilityTests: XCTestCase {
+@MainActor final class HighlightCardAccessibilityTests: XCTestCase {
     func testChangeLabelAnnouncesIncreaseWithValue() {
         let label = HighlightCardAccessibility.changeLabel(isPositive: true, value: "+12.3%")
         XCTAssertTrue(label.lowercased().contains("increase"), label)
@@ -224,8 +220,7 @@ final class HighlightCardAccessibilityTests: XCTestCase {
 
 // MARK: - Telemetry (P1/S11 view.opened)
 
-@MainActor
-final class HighlightCardTelemetryTests: XCTestCase {
+@MainActor final class HighlightCardTelemetryTests: XCTestCase {
     func testReportOpenEmitsSurfaceSlug() {
         let spy = SpyHighlightCardTelemetry()
         HighlightCardSurface.reportOpen(to: spy)

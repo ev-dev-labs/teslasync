@@ -35,8 +35,7 @@ private func fullInputs() -> CostSavingsInputs {
 
 // MARK: - Number / currency / plain formatting (ports of numberFormat.ts + useFormatting)
 
-@MainActor
-final class CostSavingsFormatTests: XCTestCase {
+@MainActor final class CostSavingsFormatTests: XCTestCase {
     func testNumberGroupsAndFixesDecimals() {
         XCTAssertEqual(CostSavingsFormat.number(1234.5, decimals: 2, locale: enUS), "1,234.50")
         XCTAssertEqual(CostSavingsFormat.number(1.44, decimals: 2, locale: enUS), "1.44")
@@ -77,8 +76,7 @@ final class CostSavingsFormatTests: XCTestCase {
 
 // MARK: - Settings derivation (web useSettings → useUnits → useFormatting defaults)
 
-@MainActor
-final class CostSavingsConfigMakeTests: XCTestCase {
+@MainActor final class CostSavingsConfigMakeTests: XCTestCase {
     func testCostPerKwhFallsBackToDefault() {
         let derived = CostSavingsConfig.make(from: CostSavingsRawSettings(
             baseCostPerKwh: nil,
@@ -142,8 +140,7 @@ final class CostSavingsConfigMakeTests: XCTestCase {
 
 // MARK: - Cost & savings math (web component body + useFormatting callbacks)
 
-@MainActor
-final class CostSavingsMathTests: XCTestCase {
+@MainActor final class CostSavingsMathTests: XCTestCase {
     func testEnergyKwhAndTripCost() {
         XCTAssertEqual(CostSavingsMath.energyKwh(12000), 12, accuracy: 1e-9)
         XCTAssertEqual(CostSavingsMath.tripCost(energyWh: 12000, costPerKwh: 0.12), 1.44, accuracy: 1e-9)
@@ -190,8 +187,7 @@ final class CostSavingsMathTests: XCTestCase {
 
 // MARK: - Tile builder (the web render branches, in order)
 
-@MainActor
-final class CostSavingsTilesTests: XCTestCase {
+@MainActor final class CostSavingsTilesTests: XCTestCase {
     func testEmptyWhenNoEnergyAndNoDistance() {
         let tiles = CostSavingsTiles.build(config: fullConfig(), inputs: CostSavingsInputs(distanceM: 0, energyWh: 0))
         XCTAssertTrue(tiles.isEmpty)
@@ -256,8 +252,7 @@ final class CostSavingsTilesTests: XCTestCase {
 
 // MARK: - Projection (web render branches + P4 leaf contract)
 
-@MainActor
-final class CostSavingsProjectionTests: XCTestCase {
+@MainActor final class CostSavingsProjectionTests: XCTestCase {
     private func snapshot() -> CostSavingsSnapshot {
         CostSavingsSnapshot(config: fullConfig(), inputs: fullInputs())
     }
@@ -289,8 +284,7 @@ final class CostSavingsProjectionTests: XCTestCase {
 
 // MARK: - State holder: wiring, telemetry, freshness
 
-@MainActor
-final class CostSavingsModelTests: XCTestCase {
+@MainActor final class CostSavingsModelTests: XCTestCase {
     private func makeModel(
         _ input: CostSavingsInput,
         telemetry: CostSavingsTelemetry = OSLogCostSavingsTelemetry()
@@ -374,8 +368,7 @@ final class CostSavingsModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class CostSavingsAccessibilityTests: XCTestCase {
+@MainActor final class CostSavingsAccessibilityTests: XCTestCase {
     func testTileLabelWithDetail() {
         XCTAssertEqual(
             CostSavingsAccessibility.tileLabel(label: "Trip Cost", value: "$1.44", detail: "at $0.12/kWh"),

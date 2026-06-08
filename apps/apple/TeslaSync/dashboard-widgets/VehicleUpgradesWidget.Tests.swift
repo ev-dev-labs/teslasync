@@ -22,8 +22,7 @@ import XCTest
 
 // MARK: - Adapter: cached envelope → projection (parity with the web pipeline)
 
-@MainActor
-final class UpgradesAdapterTests: XCTestCase {
+@MainActor final class UpgradesAdapterTests: XCTestCase {
     /// Fixed reference clock so the share-link expiry math is deterministic.
     private let now = ISO8601DateFormatter().date(from: "2024-06-01T00:00:00Z")!
 
@@ -189,8 +188,7 @@ final class UpgradesAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class VehicleUpgradesModelTests: XCTestCase {
+@MainActor final class VehicleUpgradesModelTests: XCTestCase {
     private func dataUpdate(
         status: UpgradesLoadStatus,
         connection: UpgradesConnection = .live
@@ -285,8 +283,7 @@ final class VehicleUpgradesModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class UpgradesRegistryTests: XCTestCase {
+@MainActor final class UpgradesRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = VehicleUpgradesWidget.registration
         XCTAssertEqual(registration.id, "vehicle-upgrades")
@@ -309,8 +306,7 @@ final class UpgradesRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class UpgradesAccessibilityTests: XCTestCase {
+@MainActor final class UpgradesAccessibilityTests: XCTestCase {
     private let now = ISO8601DateFormatter().date(from: "2024-06-01T00:00:00Z")!
 
     func testSummaryIncludesUpgradeCountsAndNearestExpiry() {

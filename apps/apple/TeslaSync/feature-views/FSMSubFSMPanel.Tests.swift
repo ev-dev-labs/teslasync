@@ -25,8 +25,7 @@ private let utc = TimeZone(identifier: "UTC") ?? TimeZone(secondsFromGMT: 0)!
 
 // MARK: - Timestamp parsing (port of `new Date(iso)` acceptance)
 
-@MainActor
-final class FSMSubFSMTimestampParseTests: XCTestCase {
+@MainActor final class FSMSubFSMTimestampParseTests: XCTestCase {
     func testParsesPlainInternetDateTime() {
         XCTAssertNotNil(FSMSubFSMTimestamp.parse("2026-06-07T19:30:00Z"))
     }
@@ -43,8 +42,7 @@ final class FSMSubFSMTimestampParseTests: XCTestCase {
 
 // MARK: - Relative time (port of dateFormat.ts `formatRelative`)
 
-@MainActor
-final class FSMSubFSMRelativeTimeTests: XCTestCase {
+@MainActor final class FSMSubFSMRelativeTimeTests: XCTestCase {
     private let base = FSMSubFSMTimestamp.parse("2026-06-07T12:00:00Z")!
 
     private func relative(secondsAfter offset: TimeInterval) -> String {
@@ -97,8 +95,7 @@ final class FSMSubFSMRelativeTimeTests: XCTestCase {
 
 // MARK: - Semantic variant table (port of the FSM registries + `getStateColor`)
 
-@MainActor
-final class FSMSubFSMStateVariantTests: XCTestCase {
+@MainActor final class FSMSubFSMStateVariantTests: XCTestCase {
     func testDriveStateVariants() {
         XCTAssertEqual(FSMSubFSMStateModel.variant(for: .drive, state: "pending"), .warning)
         XCTAssertEqual(FSMSubFSMStateModel.variant(for: .drive, state: "active"), .success)
@@ -128,8 +125,7 @@ final class FSMSubFSMStateVariantTests: XCTestCase {
 
 // MARK: - Terminal / active rule (port of `!terminalStates.includes(sub.state)`)
 
-@MainActor
-final class FSMSubFSMActiveStateTests: XCTestCase {
+@MainActor final class FSMSubFSMActiveStateTests: XCTestCase {
     func testDriveActiveStates() {
         XCTAssertTrue(FSMSubFSMStateModel.isActive(kind: .drive, state: "pending"))
         XCTAssertTrue(FSMSubFSMStateModel.isActive(kind: .drive, state: "active"))
@@ -155,8 +151,7 @@ final class FSMSubFSMActiveStateTests: XCTestCase {
 
 // MARK: - Applicability guard (web `isVehicleView`)
 
-@MainActor
-final class FSMSubFSMApplicabilityTests: XCTestCase {
+@MainActor final class FSMSubFSMApplicabilityTests: XCTestCase {
     func testVehicleAndAllAreApplicable() {
         XCTAssertTrue(FSMSubFSMApplicability.isVehicleView("vehicle"))
         XCTAssertTrue(FSMSubFSMApplicability.isVehicleView("all"))
@@ -171,8 +166,7 @@ final class FSMSubFSMApplicabilityTests: XCTestCase {
 
 // MARK: - Projection (web render branches + P4 leaf contract)
 
-@MainActor
-final class FSMSubFSMProjectionTests: XCTestCase {
+@MainActor final class FSMSubFSMProjectionTests: XCTestCase {
     private var subs: [FSMSubFSMEntry] {
         [
             FSMSubFSMEntry(kind: .drive, state: "active", startTime: "2026-06-07T12:00:00Z", driveID: 1),
@@ -246,8 +240,7 @@ final class FSMSubFSMProjectionTests: XCTestCase {
 
 // MARK: - State holder: wiring, telemetry, freshness
 
-@MainActor
-final class FSMSubFSMModelTests: XCTestCase {
+@MainActor final class FSMSubFSMModelTests: XCTestCase {
     private var dataInput: FSMSubFSMInput {
         FSMSubFSMInput(fsmType: "vehicle", activeSubs: [
             FSMSubFSMEntry(kind: .drive, state: "active", startTime: "2026-06-07T12:00:00Z"),
@@ -342,8 +335,7 @@ final class FSMSubFSMModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class FSMSubFSMAccessibilityTests: XCTestCase {
+@MainActor final class FSMSubFSMAccessibilityTests: XCTestCase {
     func testRowLabelJoinsParts() {
         XCTAssertEqual(
             FSMSubFSMAccessibility.rowLabel(

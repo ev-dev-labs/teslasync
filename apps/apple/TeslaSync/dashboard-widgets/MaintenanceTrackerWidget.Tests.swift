@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (parity with the web data pipeline)
 
-@MainActor
-final class MaintenanceAdapterTests: XCTestCase {
+@MainActor final class MaintenanceAdapterTests: XCTestCase {
     private let format = MaintenanceFormatting(
         distanceUnit: "mi",
         currencySymbol: "$",
@@ -156,8 +155,7 @@ final class MaintenanceAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class MaintenanceModelTests: XCTestCase {
+@MainActor final class MaintenanceModelTests: XCTestCase {
     private func dataUpdate(
         status: MaintenanceLoadStatus,
         connection: MaintenanceConnection = .live
@@ -239,8 +237,7 @@ final class MaintenanceModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class MaintenanceRegistryTests: XCTestCase {
+@MainActor final class MaintenanceRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = MaintenanceTrackerWidget.registration
         XCTAssertEqual(registration.id, "maintenance-tracker")
@@ -266,8 +263,7 @@ final class MaintenanceRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class MaintenanceAccessibilityTests: XCTestCase {
+@MainActor final class MaintenanceAccessibilityTests: XCTestCase {
     private let format = MaintenanceFormatting(
         distanceUnit: "mi",
         currencySymbol: "$",

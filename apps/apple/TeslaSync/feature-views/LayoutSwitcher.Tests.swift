@@ -37,8 +37,7 @@ private enum Fixture {
 
 // MARK: - Active / visible / rows
 
-@MainActor
-final class LayoutSwitcherSelectionTests: XCTestCase {
+@MainActor final class LayoutSwitcherSelectionTests: XCTestCase {
     func testActiveResolvesByIdThenFallsBackToFirst() {
         XCTAssertEqual(LayoutSwitcherProjection.active(Fixture.dashboards, activeID: "garage")?.id, "garage")
         // Unknown id falls back to the first layout (web `?? dashboards[0]`).
@@ -86,8 +85,7 @@ final class LayoutSwitcherSelectionTests: XCTestCase {
 
 // MARK: - Labels (active name / pinned label / save-as suggestion)
 
-@MainActor
-final class LayoutSwitcherLabelTests: XCTestCase {
+@MainActor final class LayoutSwitcherLabelTests: XCTestCase {
     private let echo = LayoutSwitcherLocalizer.echo
 
     func testActiveNameUsesNameOrUntitledFallback() {
@@ -157,8 +155,7 @@ final class LayoutSwitcherLabelTests: XCTestCase {
 
 // MARK: - handleSaveAs / handlePinToggle branches
 
-@MainActor
-final class LayoutSwitcherActionTests: XCTestCase {
+@MainActor final class LayoutSwitcherActionTests: XCTestCase {
     func testSaveAsOutcomeBranches() {
         let active = Fixture.summary(id: "default", name: "Overview")
         // Blank ⇒ no-op (web early return).
@@ -239,8 +236,7 @@ final class LayoutSwitcherActionTests: XCTestCase {
 
 // MARK: - Reset confirm / edit label / freshness
 
-@MainActor
-final class LayoutSwitcherCopyTests: XCTestCase {
+@MainActor final class LayoutSwitcherCopyTests: XCTestCase {
     private let echo = LayoutSwitcherLocalizer.echo
 
     func testResetConfirmContent() {
@@ -276,8 +272,7 @@ final class LayoutSwitcherCopyTests: XCTestCase {
 
 // MARK: - Accessibility + i18n key parity
 
-@MainActor
-final class LayoutSwitcherAccessibilityTests: XCTestCase {
+@MainActor final class LayoutSwitcherAccessibilityTests: XCTestCase {
     private let echo = LayoutSwitcherLocalizer.echo
 
     func testTriggerLabelComposesEveryAnnotatedPart() {
@@ -335,8 +330,7 @@ final class LayoutSwitcherAccessibilityTests: XCTestCase {
 
 // MARK: - State accessor + telemetry (P1/S11 view.opened)
 
-@MainActor
-final class LayoutSwitcherStateTests: XCTestCase {
+@MainActor final class LayoutSwitcherStateTests: XCTestCase {
     func testStateDataAccessor() {
         let data = LayoutSwitcherData(dashboards: Fixture.dashboards, activeID: "default")
         XCTAssertEqual(LayoutSwitcherState.loaded(data).data, data)
@@ -358,8 +352,7 @@ final class LayoutSwitcherStateTests: XCTestCase {
     }
 }
 
-@MainActor
-final class LayoutSwitcherTelemetryTests: XCTestCase {
+@MainActor final class LayoutSwitcherTelemetryTests: XCTestCase {
     private final class Recorder: LayoutSwitcherTelemetry, @unchecked Sendable {
         private let lock = NSLock()
         private var stored: [String] = []

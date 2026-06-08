@@ -36,15 +36,28 @@ private enum RecentDrivesFixture {
     static let utc = TimeZone(identifier: "UTC") ?? .gmt
 
     static let drives: [RecentDrivesWidgetDriveDTO] = [
-        RecentDrivesWidgetDriveDTO(id: 1, distanceM: 16093.44, durationS: 1500, startSocPct: 82, endSocPct: 67, startTs: date),
-        RecentDrivesWidgetDriveDTO(id: 2, distanceM: 1000, durationS: 1530, startSocPct: 67, endSocPct: nil, startTs: nil)
+        RecentDrivesWidgetDriveDTO(
+            id: 1,
+            distanceM: 16093.44,
+            durationS: 1500,
+            startSocPct: 82,
+            endSocPct: 67,
+            startTs: date
+        ),
+        RecentDrivesWidgetDriveDTO(
+            id: 2,
+            distanceM: 1000,
+            durationS: 1530,
+            startSocPct: 67,
+            endSocPct: nil,
+            startTs: nil
+        )
     ]
 }
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web widget)
 
-@MainActor
-final class RecentDrivesWidgetAdapterTests: XCTestCase {
+@MainActor final class RecentDrivesWidgetAdapterTests: XCTestCase {
     func testProjectionMiles() {
         let units = RecentDrivesWidgetUnitPrefs(distance: .miles, localeIdentifier: "en_US")
         let projection = RecentDrivesWidgetProjector.project(
@@ -169,8 +182,7 @@ final class RecentDrivesWidgetAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class RecentDrivesWidgetPhaseTests: XCTestCase {
+@MainActor final class RecentDrivesWidgetPhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         XCTAssertEqual(RecentDrivesWidgetModel.resolvePhase(status: .loading, hasData: false), .loading)
         XCTAssertEqual(RecentDrivesWidgetModel.resolvePhase(status: .loading, hasData: true), .content)
@@ -183,8 +195,7 @@ final class RecentDrivesWidgetPhaseTests: XCTestCase {
     }
 }
 
-@MainActor
-final class RecentDrivesWidgetModelTests: XCTestCase {
+@MainActor final class RecentDrivesWidgetModelTests: XCTestCase {
     private func makeModel(
         _ update: RecentDrivesWidgetUpdate,
         telemetry: RecentDrivesWidgetTelemetry = RecentDrivesWidgetOSLogRecentDrivesTelemetry()
@@ -276,8 +287,7 @@ final class RecentDrivesWidgetModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class RecentDrivesWidgetRegistryTests: XCTestCase {
+@MainActor final class RecentDrivesWidgetRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = RecentDrivesWidget.registration
         XCTAssertEqual(registration.id, "recent-drives")
@@ -304,8 +314,7 @@ final class RecentDrivesWidgetRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class RecentDrivesWidgetAccessibilityTests: XCTestCase {
+@MainActor final class RecentDrivesWidgetAccessibilityTests: XCTestCase {
     func testSummaryIncludesTitleAndEveryRow() {
         let units = RecentDrivesWidgetUnitPrefs(distance: .miles, localeIdentifier: "en_US")
         let projection = RecentDrivesWidgetProjector.project(

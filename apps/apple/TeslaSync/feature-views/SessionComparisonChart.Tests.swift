@@ -58,8 +58,7 @@ private enum ComparisonFixture {
 
 // MARK: - Adapter: projection (generateChargingCurve consumer parity)
 
-@MainActor
-final class ComparisonProjectionTests: XCTestCase {
+@MainActor final class ComparisonProjectionTests: XCTestCase {
     private let posix = ComparisonFixture.posix
     private let utc = ComparisonFixture.utc
 
@@ -187,8 +186,7 @@ final class ComparisonProjectionTests: XCTestCase {
 
 // MARK: - State holder: SessionComparisonChartModel
 
-@MainActor
-final class SessionComparisonChartModelTests: XCTestCase {
+@MainActor final class SessionComparisonChartModelTests: XCTestCase {
     private func makeModel(
         initial: ComparisonUpdate?,
         telemetry: SessionComparisonTelemetry = SpySessionComparisonTelemetry()
@@ -298,8 +296,7 @@ final class SessionComparisonChartModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
-@MainActor
-final class ComparisonAccessibilityTests: XCTestCase {
+@MainActor final class ComparisonAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }
 

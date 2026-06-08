@@ -13,8 +13,7 @@
 import XCTest
 @testable import TeslaSync
 
-@MainActor
-final class SOCRouteChartModelTests: XCTestCase {
+@MainActor final class SOCRouteChartModelTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
 
     private let curve: [SOCRoutePoint] = [

@@ -22,8 +22,7 @@ import XCTest
 
 // MARK: - Adapter: settled outcome → projection
 
-@MainActor
-final class BackendToolAdapterTests: XCTestCase {
+@MainActor final class BackendToolAdapterTests: XCTestCase {
     /// English-fallback localizer (bundle-free) used by the projection tests.
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
@@ -126,8 +125,7 @@ final class BackendToolAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + freshness + telemetry + seam wiring
 
-@MainActor
-final class BackendToolModelTests: XCTestCase {
+@MainActor final class BackendToolModelTests: XCTestCase {
     func testInitialStateIsIdle() {
         let model = BackendToolModel(runner: InMemoryBackendToolRunner())
         XCTAssertEqual(model.phase, .idle)

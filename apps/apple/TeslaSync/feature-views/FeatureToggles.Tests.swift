@@ -21,8 +21,7 @@ import XCTest
 
 // MARK: - Adapter: truthiness (web `Boolean(value)`)
 
-@MainActor
-final class FeatureConfigTruthinessTests: XCTestCase {
+@MainActor final class FeatureConfigTruthinessTests: XCTestCase {
     func testBooleanTruthiness() {
         XCTAssertTrue(FeatureConfigValue.bool(true).isTruthy)
         XCTAssertFalse(FeatureConfigValue.bool(false).isTruthy)
@@ -69,8 +68,7 @@ final class FeatureConfigTruthinessTests: XCTestCase {
 
 // MARK: - Adapter: JSON.stringify (detail value rendering)
 
-@MainActor
-final class FeatureTogglesJSONTests: XCTestCase {
+@MainActor final class FeatureTogglesJSONTests: XCTestCase {
     func testPrimitiveEncoding() {
         XCTAssertEqual(FeatureTogglesJSON.encode(.null), "null")
         XCTAssertEqual(FeatureTogglesJSON.encode(.bool(true)), "true")
@@ -96,8 +94,7 @@ final class FeatureTogglesJSONTests: XCTestCase {
 
 // MARK: - Adapter: per-entry derivation (web featureEntries map)
 
-@MainActor
-final class FeatureTogglesAdapterTests: XCTestCase {
+@MainActor final class FeatureTogglesAdapterTests: XCTestCase {
     private func entry(_ key: String, _ value: FeatureConfigValue) -> FeatureToggleEntry {
         FeatureTogglesAdapter.project([key: value]).entries[0]
     }
@@ -182,8 +179,7 @@ final class FeatureTogglesAdapterTests: XCTestCase {
 
 // MARK: - Adapter: phase resolver + formatting + slug
 
-@MainActor
-final class FeatureTogglesPhaseTests: XCTestCase {
+@MainActor final class FeatureTogglesPhaseTests: XCTestCase {
     func testResolvePhase() {
         XCTAssertEqual(FeatureTogglesPhaseResolver.phase(status: .loading, hasData: false), .loading)
         XCTAssertEqual(FeatureTogglesPhaseResolver.phase(status: .loading, hasData: true), .content)
@@ -210,8 +206,7 @@ final class FeatureTogglesPhaseTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + refresh + freshness
 
-@MainActor
-final class FeatureTogglesModelTests: XCTestCase {
+@MainActor final class FeatureTogglesModelTests: XCTestCase {
     private let sample: [String: FeatureConfigValue] = ["beta": .bool(true), "max_rows": .number(5000)]
 
     private func makeModel(
@@ -340,8 +335,7 @@ final class FeatureTogglesModelTests: XCTestCase {
 
 // MARK: - Accessibility content
 
-@MainActor
-final class FeatureTogglesAccessibilityTests: XCTestCase {
+@MainActor final class FeatureTogglesAccessibilityTests: XCTestCase {
     func testEmptySummaryUsesNoDataMessage() {
         let summary = FeatureTogglesAccessibility.summary(for: .empty)
         XCTAssertTrue(summary.contains("No feature config data"))

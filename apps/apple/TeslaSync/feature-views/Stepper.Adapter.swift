@@ -1,5 +1,5 @@
 //
-//  OnboardingStepper.Adapter.swift
+//  Stepper.Adapter.swift
 //  TeslaSync — P4 feature view · 0195 · OnboardingStepper (Apple)
 //
 //  The testable projection core — the SwiftUI parity of

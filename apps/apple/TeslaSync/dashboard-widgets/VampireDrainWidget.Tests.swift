@@ -22,8 +22,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web memos)
 
-@MainActor
-final class VampireDrainAdapterTests: XCTestCase {
+@MainActor final class VampireDrainAdapterTests: XCTestCase {
     func testDrainToneThresholds() {
         XCTAssertEqual(VampireDrainBuilder.drainTone(perDay: 0.0), .good)
         XCTAssertEqual(VampireDrainBuilder.drainTone(perDay: 0.99), .good)
@@ -116,8 +115,7 @@ final class VampireDrainAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class VampireDrainModelTests: XCTestCase {
+@MainActor final class VampireDrainModelTests: XCTestCase {
     private func makeModel(
         _ update: VampireDrainUpdate,
         telemetry: VampireDrainTelemetry = OSLogVampireDrainTelemetry()
@@ -200,8 +198,7 @@ final class VampireDrainModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class VampireDrainRegistryTests: XCTestCase {
+@MainActor final class VampireDrainRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = VampireDrainWidget.registration
         XCTAssertEqual(registration.id, "vampire-drain")
@@ -224,8 +221,7 @@ final class VampireDrainRegistryTests: XCTestCase {
 
 // MARK: - Accessibility + i18n composition
 
-@MainActor
-final class VampireDrainAccessibilityTests: XCTestCase {
+@MainActor final class VampireDrainAccessibilityTests: XCTestCase {
     private func item(sentry: Bool) -> VampireDrainEventItem {
         VampireDrainBuilder.makeEvent(from: VampireDrainEventInput(
             id: 1,

@@ -4,8 +4,7 @@ import XCTest
 /// Golden-vector parity: runs the shared `apps/shared/spec/units-golden.json`
 /// fixtures through the Swift `Units` facade and asserts identical conversion +
 /// formatting to the KMP core. This is the SI-parity proof the spec requires.
-@MainActor
-final class UnitsGoldenVectorTests: XCTestCase {
+@MainActor final class UnitsGoldenVectorTests: XCTestCase {
     private struct Preference: Decodable {
         let distance: String
         let speed: String

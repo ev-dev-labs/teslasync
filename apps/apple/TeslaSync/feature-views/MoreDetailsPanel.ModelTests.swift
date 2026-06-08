@@ -19,8 +19,7 @@
     import XCTest
     @testable import TeslaSync
 
-    @MainActor
-    final class MoreDetailsModelTests: XCTestCase {
+    @MainActor final class MoreDetailsModelTests: XCTestCase {
         private func makeModel(
             _ update: MoreDetailsUpdate,
             telemetry: MoreDetailsTelemetry = OSLogMoreDetailsTelemetry()

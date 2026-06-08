@@ -25,8 +25,7 @@ import XCTest
 
 // MARK: - Adapter: conversion / safe / formatting (web parity)
 
-@MainActor
-final class ChargerSpecsAdapterTests: XCTestCase {
+@MainActor final class ChargerSpecsAdapterTests: XCTestCase {
     func testEnergyConvertsWattHoursToKilowattHours() {
         XCTAssertEqual(convertChargerEnergyToKwh(142_000), 142, accuracy: 0.0001)
         XCTAssertEqual(convertChargerEnergyToKwh(42567), 42.567, accuracy: 0.0001)
@@ -54,8 +53,7 @@ final class ChargerSpecsAdapterTests: XCTestCase {
 
 // MARK: - Adapter: row strings + metric selection (web row expression)
 
-@MainActor
-final class ChargerSpecsProjectorStringTests: XCTestCase {
+@MainActor final class ChargerSpecsProjectorStringTests: XCTestCase {
     private let prefs = ChargerSpecsUnitPrefs(localeIdentifier: "en_US", energyPrecision: 2)
 
     func testSessionsTextUsesRawCount() {
@@ -112,8 +110,7 @@ final class ChargerSpecsProjectorStringTests: XCTestCase {
 
 // MARK: - Adapter: projection + column catalog (web grid)
 
-@MainActor
-final class ChargerSpecsProjectionTests: XCTestCase {
+@MainActor final class ChargerSpecsProjectionTests: XCTestCase {
     private let prefs = ChargerSpecsUnitPrefs(localeIdentifier: "en_US", energyPrecision: 2)
 
     private func sampleSpecs() -> ChargerSpecsInput {
@@ -198,8 +195,7 @@ final class ChargerSpecsProjectionTests: XCTestCase {
 
 // MARK: - State holder: phases + projection + refresh + telemetry
 
-@MainActor
-final class ChargerSpecsModelTests: XCTestCase {
+@MainActor final class ChargerSpecsModelTests: XCTestCase {
     private func makeModel(
         _ update: ChargerSpecsUpdate,
         telemetry: ChargerSpecsTelemetry = OSLogChargerSpecsTelemetry()
@@ -358,8 +354,7 @@ final class ChargerSpecsModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
-@MainActor
-final class ChargerSpecsAccessibilityTests: XCTestCase {
+@MainActor final class ChargerSpecsAccessibilityTests: XCTestCase {
     func testRowSummaryComposesNameAndDetail() {
         let summary = ChargerSpecsAccessibility.rowSummary(name: "Supercharger", detail: "8 sessions · 11 kW avg")
         XCTAssertEqual(summary, "Supercharger, 8 sessions · 11 kW avg")

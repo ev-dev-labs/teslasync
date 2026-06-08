@@ -17,8 +17,7 @@ import XCTest
 
 // MARK: - State holder: RecentActivityModel
 
-@MainActor
-final class RecentActivityModelTests: XCTestCase {
+@MainActor final class RecentActivityModelTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_733_580_000)
 
     private func units(_ localeID: String = "en-US") -> RecentActivityUnits {
@@ -163,8 +162,7 @@ final class RecentActivityModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
-@MainActor
-final class RecentActivityAccessibilityTests: XCTestCase {
+@MainActor final class RecentActivityAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testItemLabelJoinsTitleSubtitleTime() {

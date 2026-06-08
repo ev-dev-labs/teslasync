@@ -152,7 +152,10 @@ struct OverviewLeaderboardPanel: View {
     }
 
     var body: some View {
-        OverviewVehicleComparisonPanel(titleKey: "analytics.overview.effLeaderboard", titleFallback: "Efficiency Leaderboard") {
+        OverviewVehicleComparisonPanel(
+            titleKey: "analytics.overview.effLeaderboard",
+            titleFallback: "Efficiency Leaderboard"
+        ) {
             if entries.isEmpty {
                 OverviewEmptyState(
                     messageKey: "analytics.overview.noEfficiency",
@@ -182,7 +185,10 @@ struct OverviewComparisonRadarPanel: View {
     }
 
     var body: some View {
-        OverviewVehicleComparisonPanel(titleKey: "analytics.overview.vehicleComparison", titleFallback: "Vehicle Comparison") {
+        OverviewVehicleComparisonPanel(
+            titleKey: "analytics.overview.vehicleComparison",
+            titleFallback: "Vehicle Comparison"
+        ) {
             if radar.isEmpty {
                 OverviewEmptyState(
                     messageKey: "analytics.overview.noComparison",
@@ -207,7 +213,10 @@ struct OverviewEnergyActivityPanel: View {
     }
 
     var body: some View {
-        OverviewVehicleComparisonPanel(titleKey: "analytics.overview.energyActivity", titleFallback: "Energy & Activity") {
+        OverviewVehicleComparisonPanel(
+            titleKey: "analytics.overview.energyActivity",
+            titleFallback: "Energy & Activity"
+        ) {
             if bars.isEmpty {
                 OverviewEmptyState(messageKey: "analytics.overview.noVehicles", messageFallback: "No vehicle data")
             } else {

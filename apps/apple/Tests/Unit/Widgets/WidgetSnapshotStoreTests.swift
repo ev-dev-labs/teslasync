@@ -3,8 +3,7 @@ import XCTest
 
 /// App Group store tests: atomic round-trip, graceful absence, clearing PII, and the
 /// forward-schema guard that makes an unreadable file resolve to `nil`.
-@MainActor
-final class WidgetSnapshotStoreTests: XCTestCase {
+@MainActor final class WidgetSnapshotStoreTests: XCTestCase {
     func testSaveThenLoadRoundTrips() throws {
         let store = makeTempWidgetStore()
         addTeardownBlock { Self.cleanUp(store) }

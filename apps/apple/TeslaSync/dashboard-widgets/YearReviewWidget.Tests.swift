@@ -19,8 +19,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web widget)
 
-@MainActor
-final class YearReviewAdapterTests: XCTestCase {
+@MainActor final class YearReviewAdapterTests: XCTestCase {
     private let sample = YearReviewDTO(
         totalDrives: 487,
         totalDistanceKm: 18540,
@@ -168,8 +167,7 @@ final class YearReviewAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class YearReviewPhaseTests: XCTestCase {
+@MainActor final class YearReviewPhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         XCTAssertEqual(YearReviewModel.resolvePhase(status: .loading, hasData: false), .loading)
         XCTAssertEqual(YearReviewModel.resolvePhase(status: .loading, hasData: true), .content)
@@ -182,8 +180,7 @@ final class YearReviewPhaseTests: XCTestCase {
     }
 }
 
-@MainActor
-final class YearReviewModelTests: XCTestCase {
+@MainActor final class YearReviewModelTests: XCTestCase {
     private func makeModel(
         _ update: YearReviewUpdate,
         telemetry: YearReviewTelemetry = OSLogYearReviewTelemetry()
@@ -278,8 +275,7 @@ final class YearReviewModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class YearReviewRegistryTests: XCTestCase {
+@MainActor final class YearReviewRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = YearReviewWidget.registration
         XCTAssertEqual(registration.id, "year-review")
@@ -306,8 +302,7 @@ final class YearReviewRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class YearReviewAccessibilityTests: XCTestCase {
+@MainActor final class YearReviewAccessibilityTests: XCTestCase {
     private let projection = YearReviewProjector.project(
         stats: YearReviewDTO(
             totalDrives: 487,

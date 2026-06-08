@@ -19,8 +19,7 @@ import XCTest
 
 // MARK: - Adapter: definition + status → projection
 
-@MainActor
-final class CommandTileAdapterTests: XCTestCase {
+@MainActor final class CommandTileAdapterTests: XCTestCase {
     /// English-fallback localizer (bundle-free) used by the projection tests.
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
@@ -136,8 +135,7 @@ final class CommandTileAdapterTests: XCTestCase {
 
 // MARK: - State holder: parse + activate routing + lifecycle + favorite + telemetry
 
-@MainActor
-final class CommandTileModelTests: XCTestCase {
+@MainActor final class CommandTileModelTests: XCTestCase {
     private let lockDef = CommandTileDef(
         id: "lock",
         command: "lock",

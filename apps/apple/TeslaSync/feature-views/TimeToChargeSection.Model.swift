@@ -86,7 +86,10 @@ public final class TimeToChargeModel {
     }
 
     /// Preview / test binding: render a fixed state without the shared core.
-    public init(previewState: TimeToChargeLoadState<[TimeToChargeSectionChargingSessionSummary]>, locale: Locale = .current) {
+    public init(
+        previewState: TimeToChargeLoadState<[TimeToChargeSectionChargingSessionSummary]>,
+        locale: Locale = .current
+    ) {
         let inMemory = InMemoryTimeToChargeSource(initial: previewState)
         source = inMemory
         self.locale = locale

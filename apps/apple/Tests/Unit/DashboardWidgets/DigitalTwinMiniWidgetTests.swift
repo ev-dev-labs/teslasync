@@ -5,8 +5,7 @@ import XCTest
 
 // MARK: - Pure adapter (cached → projection)
 
-@MainActor
-final class DigitalTwinMiniAdapterTests: XCTestCase {
+@MainActor final class DigitalTwinMiniAdapterTests: XCTestCase {
     func testAllSourcesAbsentReturnsNil() {
         XCTAssertNil(DigitalTwinMiniAdapter.project(DigitalTwinMiniInputs()))
     }
@@ -128,8 +127,7 @@ final class DigitalTwinMiniAdapterTests: XCTestCase {
 
 // MARK: - Badge mapping (accessibility labels present + correct tone)
 
-@MainActor
-final class DigitalTwinMiniBadgeTests: XCTestCase {
+@MainActor final class DigitalTwinMiniBadgeTests: XCTestCase {
     func testLockUnlocked() {
         let spec = DigitalTwinMiniBadges.lock(locked: false)
         XCTAssertEqual(spec.key, "widget.digitalTwinMini.unlocked")
@@ -160,8 +158,7 @@ final class DigitalTwinMiniBadgeTests: XCTestCase {
 
 // MARK: - Registry descriptor parity
 
-@MainActor
-final class DigitalTwinMiniDescriptorTests: XCTestCase {
+@MainActor final class DigitalTwinMiniDescriptorTests: XCTestCase {
     func testDescriptorMatchesWebRegistry() {
         let descriptor = DigitalTwinMiniWidget.descriptor
         XCTAssertEqual(descriptor.id, "digital-twin-mini")
@@ -192,8 +189,7 @@ private final class EventLog: @unchecked Sendable {
     }
 }
 
-@MainActor
-final class DigitalTwinMiniModelTests: XCTestCase {
+@MainActor final class DigitalTwinMiniModelTests: XCTestCase {
     func testNoVehicleProducesEmpty() async {
         let model = DigitalTwinMiniModel(source: DigitalTwinMiniUnconfiguredSource())
         await model.load()
@@ -286,8 +282,7 @@ final class DigitalTwinMiniModelTests: XCTestCase {
 
 // MARK: - Per-state render (snapshot) coverage
 
-@MainActor
-final class DigitalTwinMiniRenderTests: XCTestCase {
+@MainActor final class DigitalTwinMiniRenderTests: XCTestCase {
     private func rendersToImage(_ view: some View) -> Bool {
         let renderer = ImageRenderer(content: view.frame(width: 200, height: 320))
         #if canImport(UIKit)
@@ -365,8 +360,7 @@ final class DigitalTwinMiniRenderTests: XCTestCase {
 
 // MARK: - Exterior color resolution
 
-@MainActor
-final class DigitalTwinMiniColorTests: XCTestCase {
+@MainActor final class DigitalTwinMiniColorTests: XCTestCase {
     func testHexAndNamedColorsResolve() {
         // Pure resolution must not crash and must return a usable color for each branch.
         _ = twinExteriorColor("#1A2B3C")

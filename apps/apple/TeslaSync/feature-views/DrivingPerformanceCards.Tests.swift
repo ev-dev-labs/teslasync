@@ -22,8 +22,7 @@ import XCTest
 
 // MARK: - Adapter: conversion + formatting (web parity)
 
-@MainActor
-final class DrivingUnitMathTests: XCTestCase {
+@MainActor final class DrivingUnitMathTests: XCTestCase {
     func testSafeCoercesNonFinite() {
         XCTAssertEqual(DrivingUnitMath.safe(42), 42, accuracy: 0.0001)
         XCTAssertEqual(DrivingUnitMath.safe(.nan), 0)
@@ -61,8 +60,7 @@ final class DrivingUnitMathTests: XCTestCase {
 
 // MARK: - Adapter: projection (web parity)
 
-@MainActor
-final class DrivingPerformanceProjectionTests: XCTestCase {
+@MainActor final class DrivingPerformanceProjectionTests: XCTestCase {
     private let imperial = DrivingUnitPrefs(distance: "mi", speed: "mph", locale: "en-US")
     private let metric = DrivingUnitPrefs(distance: "km", speed: "km/h", locale: "en-US")
 
@@ -171,8 +169,7 @@ final class DrivingPerformanceProjectionTests: XCTestCase {
 
 // MARK: - State holder: phases + refresh + telemetry
 
-@MainActor
-final class DrivingPerformanceModelTests: XCTestCase {
+@MainActor final class DrivingPerformanceModelTests: XCTestCase {
     private func makeModel(
         _ update: DrivingPerformanceUpdate,
         telemetry: DrivingPerformanceTelemetry = OSLogDrivingPerformanceTelemetry()
@@ -292,8 +289,7 @@ final class DrivingPerformanceModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
-@MainActor
-final class DrivingPerformanceAccessibilityTests: XCTestCase {
+@MainActor final class DrivingPerformanceAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testCardSummaryReadsLabelValueUnit() {

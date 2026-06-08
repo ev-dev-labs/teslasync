@@ -11,8 +11,7 @@ import XCTest
 
 // MARK: - Color band thresholds (web getBatteryColor)
 
-@MainActor
-final class BatteryGaugeBandTests: XCTestCase {
+@MainActor final class BatteryGaugeBandTests: XCTestCase {
     func testThresholdsMatchWebGetBatteryColor() {
         XCTAssertEqual(BatteryGaugeBand.forLevel(100, hasState: true), .high)
         XCTAssertEqual(BatteryGaugeBand.forLevel(51, hasState: true), .high)
@@ -30,8 +29,7 @@ final class BatteryGaugeBandTests: XCTestCase {
 
 // MARK: - Display projection + stats
 
-@MainActor
-final class BatteryGaugeProjectionTests: XCTestCase {
+@MainActor final class BatteryGaugeProjectionTests: XCTestCase {
     func testLevelIsClampedToGaugeDomain() {
         XCTAssertEqual(
             BatteryGaugeProjection(batteryLevel: 140, chargeLimitSoc: nil, isCharging: false).clampedLevel,
@@ -88,8 +86,7 @@ final class BatteryGaugeProjectionTests: XCTestCase {
 
 // MARK: - Load error classification
 
-@MainActor
-final class BatteryGaugeLoadErrorTests: XCTestCase {
+@MainActor final class BatteryGaugeLoadErrorTests: XCTestCase {
     func testRetryability() {
         XCTAssertTrue(BatteryGaugeLoadError.offline.isRetryable)
         XCTAssertTrue(BatteryGaugeLoadError.retryable.isRetryable)
@@ -99,8 +96,7 @@ final class BatteryGaugeLoadErrorTests: XCTestCase {
 
 // MARK: - Render-state derivation (every visual branch)
 
-@MainActor
-final class BatteryRadialGaugeRenderStateTests: XCTestCase {
+@MainActor final class BatteryRadialGaugeRenderStateTests: XCTestCase {
     private let projection = BatteryGaugeProjection(batteryLevel: 55, chargeLimitSoc: nil, isCharging: false)
 
     func testFirstLoadWithNothingCachedIsLoading() {
@@ -171,8 +167,7 @@ final class BatteryRadialGaugeRenderStateTests: XCTestCase {
 
 // MARK: - Size + registry metadata
 
-@MainActor
-final class TSDashboardWidgetSizeTests: XCTestCase {
+@MainActor final class TSDashboardWidgetSizeTests: XCTestCase {
     func testCompactAndExpandedClassification() {
         XCTAssertTrue(TSDashboardWidgetSize(cols: 1, rows: 1).isCompact)
         XCTAssertFalse(TSDashboardWidgetSize(cols: 1, rows: 2).isCompact)
@@ -182,8 +177,7 @@ final class TSDashboardWidgetSizeTests: XCTestCase {
     }
 }
 
-@MainActor
-final class BatteryRadialGaugeMetadataTests: XCTestCase {
+@MainActor final class BatteryRadialGaugeMetadataTests: XCTestCase {
     func testMetadataMatchesRegistry() {
         let meta = BatteryRadialGaugeWidget.metadata
         XCTAssertEqual(meta.id, "battery-radial-gauge")
@@ -220,8 +214,7 @@ private final class SpyDashboardTelemetry: DashboardWidgetTelemetry {
     }
 }
 
-@MainActor
-final class BatteryRadialGaugeTelemetryTests: XCTestCase {
+@MainActor final class BatteryRadialGaugeTelemetryTests: XCTestCase {
     func testReportOpenEmitsViewOpenedWithSurfaceSlug() {
         let spy = SpyDashboardTelemetry()
         BatteryRadialGaugeWidget.reportOpen(to: spy)
@@ -232,8 +225,7 @@ final class BatteryRadialGaugeTelemetryTests: XCTestCase {
 
 // MARK: - Projection from envelope + content construction (a11y/state coverage)
 
-@MainActor
-final class BatteryRadialGaugeContentTests: XCTestCase {
+@MainActor final class BatteryRadialGaugeContentTests: XCTestCase {
     func testProjectNilEnvelopeReturnsNil() {
         XCTAssertNil(BatteryRadialGaugeModel.project(nil))
     }

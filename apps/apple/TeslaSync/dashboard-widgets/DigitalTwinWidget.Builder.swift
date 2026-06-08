@@ -166,7 +166,10 @@ public enum TwinStateBuilder {
         return normalized == "charging" || normalized == "starting"
     }
 
-    private static func parseWindowOpenSummary(_ windowsOpen: String?, _ aliases: [String]) -> DigitalTwinWidgetTwinWindowState? {
+    private static func parseWindowOpenSummary(
+        _ windowsOpen: String?,
+        _ aliases: [String]
+    ) -> DigitalTwinWidgetTwinWindowState? {
         guard let value = nonEmpty(windowsOpen) else { return nil }
         let normalized = value.lowercased()
         if ["closed", "none", "[]", "false"].contains(normalized) { return .closed }

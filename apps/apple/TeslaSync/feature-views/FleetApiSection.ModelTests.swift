@@ -13,8 +13,7 @@
 import XCTest
 @testable import TeslaSync
 
-@MainActor
-final class FleetApiSectionModelTests: XCTestCase {
+@MainActor final class FleetApiSectionModelTests: XCTestCase {
     private func makeModel(
         _ snapshot: FleetSnapshot,
         canned: [String: ToolResult] = [:],

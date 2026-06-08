@@ -20,8 +20,7 @@
 
     // MARK: - Adapter: formatting + conversion (web parity)
 
-    @MainActor
-    final class MoreDetailsFormatTests: XCTestCase {
+    @MainActor final class MoreDetailsFormatTests: XCTestCase {
         func testSafeCoercesNonFinite() {
             XCTAssertEqual(MoreDetailsFormat.safe(42), 42, accuracy: 0.0001)
             XCTAssertEqual(MoreDetailsFormat.safe(.nan), 0)
@@ -53,8 +52,7 @@
 
     // MARK: - Adapter: projection (web parity)
 
-    @MainActor
-    final class MoreDetailsProjectionTests: XCTestCase {
+    @MainActor final class MoreDetailsProjectionTests: XCTestCase {
         private let metric = MoreDetailsUnitPrefs(distance: "km", speed: "km/h", temperature: "°C", locale: "en-US")
         private let imperial = MoreDetailsUnitPrefs(distance: "mi", speed: "mph", temperature: "°F", locale: "en-US")
 
@@ -249,8 +247,7 @@
 
     // MARK: - Accessibility summary
 
-    @MainActor
-    final class MoreDetailsAccessibilityTests: XCTestCase {
+    @MainActor final class MoreDetailsAccessibilityTests: XCTestCase {
         private let echo: (String, String) -> String = { _, fallback in fallback }
 
         func testMutedUnitSummaryReadsLabelValueUnit() {

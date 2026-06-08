@@ -48,8 +48,7 @@ private enum AlertFixture {
 
 // MARK: - Adapter: token extraction + autocomplete projection
 
-@MainActor
-final class AlertMessageEditorAdapterTests: XCTestCase {
+@MainActor final class AlertMessageEditorAdapterTests: XCTestCase {
     func testExtractTemplateKeysMatchesWebRegex() {
         XCTAssertEqual(
             AlertMessageEditorAdapter.extractTemplateKeys("{{BatteryLevel}} and {{ VehicleName }}"),
@@ -92,8 +91,7 @@ final class AlertMessageEditorAdapterTests: XCTestCase {
 
 // MARK: - Adapter: preset gallery gating
 
-@MainActor
-final class AlertMessageEditorPresetTests: XCTestCase {
+@MainActor final class AlertMessageEditorPresetTests: XCTestCase {
     func testAvailableKeys() {
         XCTAssertEqual(
             AlertMessageEditorAdapter.availableKeys(AlertFixture.tokens),
@@ -185,8 +183,7 @@ final class AlertMessageEditorPresetTests: XCTestCase {
 
 // MARK: - Adapter: trigger detection, insertion, preview request, maxLength
 
-@MainActor
-final class AlertMessageEditorEditingAdapterTests: XCTestCase {
+@MainActor final class AlertMessageEditorEditingAdapterTests: XCTestCase {
     func testDetectTriggerOpensOnUnclosedBraces() {
         let trigger = AlertMessageEditorAdapter.detectTrigger(text: "Battery {{Bat", caret: 13)
         XCTAssertEqual(trigger, TokenTrigger(index: 8, partial: "Bat"))
@@ -250,8 +247,7 @@ final class AlertMessageEditorEditingAdapterTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
-@MainActor
-final class AlertMessageEditorAccessibilityTests: XCTestCase {
+@MainActor final class AlertMessageEditorAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, value in value }
 
     func testTokenSummaryPerPhase() {

@@ -14,8 +14,7 @@ import XCTest
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class DetailCardsModelTests: XCTestCase {
+@MainActor final class DetailCardsModelTests: XCTestCase {
     private func makeModel(
         _ update: DetailCardsUpdate,
         telemetry: DetailCardsTelemetry = OSLogDetailCardsTelemetry()

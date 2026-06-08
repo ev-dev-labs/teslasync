@@ -4,8 +4,7 @@ import XCTest
 
 /// Verifies the phone-side coordinator's context mirroring and command relay using
 /// the fake messenger — no live WatchConnectivity required.
-@MainActor
-final class WatchSyncServiceTests: XCTestCase {
+@MainActor final class WatchSyncServiceTests: XCTestCase {
     func testStartPushesContext() {
         let messenger = FakeWatchMessenger()
         let service = PhoneWatchSyncService(makeMessenger: { _ in messenger })

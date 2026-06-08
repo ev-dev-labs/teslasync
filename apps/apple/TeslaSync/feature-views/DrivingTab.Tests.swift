@@ -49,8 +49,7 @@ private func sampleInput() -> DriveAnalyticsInput {
 
 // MARK: - Adapter: SI conversions (web lib/unitConversion.ts parity pins)
 
-@MainActor
-final class DriveAnalyticsUnitsTests: XCTestCase {
+@MainActor final class DriveAnalyticsUnitsTests: XCTestCase {
     func testConvertTempFromSI() {
         XCTAssertEqual(DriveAnalyticsUnits.convertTempFromSI(0, to: "°C"), 0, accuracy: 1e-9)
         XCTAssertEqual(DriveAnalyticsUnits.convertTempFromSI(20, to: "°C"), 20, accuracy: 1e-9)
@@ -105,8 +104,7 @@ final class DriveAnalyticsUnitsTests: XCTestCase {
 
 // MARK: - Adapter: projection (web chart `data`)
 
-@MainActor
-final class DrivingTabProjectionTests: XCTestCase {
+@MainActor final class DrivingTabProjectionTests: XCTestCase {
     func testEmptyProjectionCarriesLabelsOnly() {
         let projection = DrivingTabProjection.make(from: nil, units: .metric)
         XCTAssertFalse(projection.hasAny)
@@ -173,8 +171,7 @@ final class DrivingTabProjectionTests: XCTestCase {
 
 // MARK: - State holder: phases + units + refresh + telemetry
 
-@MainActor
-final class DrivingTabModelTests: XCTestCase {
+@MainActor final class DrivingTabModelTests: XCTestCase {
     private func makeModel(
         _ update: DriveAnalyticsUpdate,
         telemetry: DrivingTabTelemetry = OSLogDrivingTabTelemetry()
@@ -272,8 +269,7 @@ final class DrivingTabModelTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
-@MainActor
-final class DrivingTabDriveAnalyticsAccessibilityTests: XCTestCase {
+@MainActor final class DrivingTabDriveAnalyticsAccessibilityTests: XCTestCase {
     func testDistributionSummary() {
         let bars = [
             DriveBar(id: "0", range: "0-20", count: 10),

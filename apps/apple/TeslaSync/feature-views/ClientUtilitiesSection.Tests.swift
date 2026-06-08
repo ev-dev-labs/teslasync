@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Adapter: catalog parity (port of useToolList)
 
-@MainActor
-final class ClientUtilitiesCatalogTests: XCTestCase {
+@MainActor final class ClientUtilitiesCatalogTests: XCTestCase {
     /// English-fallback localizer (bundle-free) mirroring the display boundary.
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
@@ -77,8 +76,7 @@ final class ClientUtilitiesCatalogTests: XCTestCase {
 
 // MARK: - Adapter: search filter (port of `filtered`)
 
-@MainActor
-final class ToolFilterTests: XCTestCase {
+@MainActor final class ToolFilterTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private var tools: [ToolDescriptor] {
         ClientUtilitiesCatalog.defaultTools
@@ -110,8 +108,7 @@ final class ToolFilterTests: XCTestCase {
 
 // MARK: - Adapter: single-open accordion (port of `setExpandedId`)
 
-@MainActor
-final class ToolDisclosureTests: XCTestCase {
+@MainActor final class ToolDisclosureTests: XCTestCase {
     func testSelectingFromNoneOpensThatTool() {
         XCTAssertEqual(ToolDisclosure.toggled(current: nil, selecting: "vin"), "vin")
     }
@@ -127,8 +124,7 @@ final class ToolDisclosureTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class ClientUtilitiesModelTests: XCTestCase {
+@MainActor final class ClientUtilitiesModelTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     private func makeModel(
@@ -258,8 +254,7 @@ final class ClientUtilitiesModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class ClientUtilitiesAccessibilityTests: XCTestCase {
+@MainActor final class ClientUtilitiesAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testCardSummaryIncludesNameStateAndDescription() {

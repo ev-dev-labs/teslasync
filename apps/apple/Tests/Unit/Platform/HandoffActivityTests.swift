@@ -2,8 +2,7 @@ import XCTest
 @testable import TeslaSync
 
 /// Tests route Handoff: building, parsing, eligibility, and the Universal Link.
-@MainActor
-final class HandoffActivityTests: XCTestCase {
+@MainActor final class HandoffActivityTests: XCTestCase {
     func testActivityCarriesRouteAndEligibility() {
         let activity = HandoffActivity.activity(for: .charging)
         XCTAssertEqual(activity.activityType, HandoffActivity.routeActivityType)

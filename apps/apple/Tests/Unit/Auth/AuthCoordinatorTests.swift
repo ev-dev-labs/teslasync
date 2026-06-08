@@ -4,8 +4,7 @@ import XCTest
 
 /// The auth state machine: restore, sign-in, single-flight refresh, 401 retry,
 /// biometric unlock, and sign-out.
-@MainActor
-final class AuthCoordinatorTests: XCTestCase {
+@MainActor final class AuthCoordinatorTests: XCTestCase {
     // MARK: Restore
 
     func testRestoreSignedOutWhenNoTokens() async {

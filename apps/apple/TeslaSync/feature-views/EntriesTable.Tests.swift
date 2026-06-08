@@ -100,8 +100,7 @@ private func sampleDTO(
 
 // MARK: - Adapter / pure-logic tests
 
-@MainActor
-final class EntriesTableAdapterTests: XCTestCase {
+@MainActor final class EntriesTableAdapterTests: XCTestCase {
     func testDecodesSnakeCaseSummaryJSON() throws {
         let dto = try JSONDecoder().decode(DLQEntrySummaryDTO.self, from: Data(summaryJSON.utf8))
         XCTAssertEqual(dto.id, 7)
@@ -234,8 +233,7 @@ final class EntriesTableAdapterTests: XCTestCase {
 
 // MARK: - Model / view-state / contract tests
 
-@MainActor
-final class EntriesTableModelTests: XCTestCase {
+@MainActor final class EntriesTableModelTests: XCTestCase {
     private func rows() -> [DLQEntryRow] {
         EntriesTableProjector.project([sampleDTO(id: 1, arrivedAt: "2026-06-07T12:04:31Z")], context: .fixed)
     }
@@ -327,8 +325,7 @@ final class EntriesTableModelTests: XCTestCase {
 
 // MARK: - i18n + accessibility tests
 
-@MainActor
-final class EntriesTableLocalizationTests: XCTestCase {
+@MainActor final class EntriesTableLocalizationTests: XCTestCase {
     func testEveryKeyIsNamespaced() {
         for key in EntriesTableStrings.Key.all {
             let namespaced = key.hasPrefix("admin.dlq.") || key == "common.yes" || key == "common.no"

@@ -42,8 +42,7 @@ private enum AutopilotFixture {
 
 // MARK: - Adapter: cached input → projection (port parity with the web source)
 
-@MainActor
-final class AutopilotSectionAdapterTests: XCTestCase {
+@MainActor final class AutopilotSectionAdapterTests: XCTestCase {
     func testSpeedTilesProjectionMphMatchesWeb() {
         let projection = AutopilotFixture.project(AutopilotFixture.full)
         XCTAssertTrue(projection.hasAny)
@@ -164,8 +163,7 @@ final class AutopilotSectionAdapterTests: XCTestCase {
 
 // MARK: - State holder: phase resolution
 
-@MainActor
-final class AutopilotSectionPhaseTests: XCTestCase {
+@MainActor final class AutopilotSectionPhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         // Web parent precedence: loading and error short-circuit BEFORE the content/empty body.
         XCTAssertEqual(AutopilotProjector.resolvePhase(.loading, hasAny: false), .loading)
@@ -179,8 +177,7 @@ final class AutopilotSectionPhaseTests: XCTestCase {
 
 // MARK: - State holder: model wiring + telemetry
 
-@MainActor
-final class AutopilotSectionModelTests: XCTestCase {
+@MainActor final class AutopilotSectionModelTests: XCTestCase {
     private func makeModel(
         _ update: AutopilotSectionUpdate,
         telemetry: AutopilotSectionTelemetry = OSLogAutopilotSectionTelemetry()
@@ -298,8 +295,7 @@ final class AutopilotSectionModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
-@MainActor
-final class AutopilotSectionAccessibilityTests: XCTestCase {
+@MainActor final class AutopilotSectionAccessibilityTests: XCTestCase {
     private let fallback: (String, String) -> String = { _, value in value }
 
     func testSectionSummaryWithData() {

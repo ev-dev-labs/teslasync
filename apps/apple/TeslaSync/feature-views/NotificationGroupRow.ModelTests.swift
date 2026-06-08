@@ -50,8 +50,7 @@ private enum Fixture {
 
 // MARK: - Model
 
-@MainActor
-final class NotificationGroupRowModelTests: XCTestCase {
+@MainActor final class NotificationGroupRowModelTests: XCTestCase {
     private func makeModel(
         initial: NotificationGroupUpdate?,
         members: NotificationMembersUpdate? = nil,

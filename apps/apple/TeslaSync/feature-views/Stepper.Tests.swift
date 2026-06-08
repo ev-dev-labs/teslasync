@@ -1,5 +1,5 @@
 //
-//  OnboardingStepper.Tests.swift
+//  Stepper.Tests.swift
 //  TeslaSync — P4 feature view · 0195 · OnboardingStepper (Apple)
 //
 //  Unit coverage for the OnboardingStepper surface:
@@ -36,8 +36,7 @@ private func makeStep(
 
 // MARK: - State ladder (web `stateOf`)
 
-@MainActor
-final class StepperProjectionStateTests: XCTestCase {
+@MainActor final class StepperProjectionStateTests: XCTestCase {
     func testFirstNotDoneIsCurrentRestPending() {
         let steps = [
             makeStep(key: "a", isDone: false),
@@ -82,8 +81,7 @@ final class StepperProjectionStateTests: XCTestCase {
 
 // MARK: - Projection rows
 
-@MainActor
-final class StepperProjectionRowsTests: XCTestCase {
+@MainActor final class StepperProjectionRowsTests: XCTestCase {
     private func sampleSteps() -> [StepperStep] {
         [
             makeStep(key: "a", title: "Connect", isDone: true, cta: StepperStepCTA(label: "Open")),
@@ -145,8 +143,7 @@ final class StepperProjectionRowsTests: XCTestCase {
 
 // MARK: - Render resolution
 
-@MainActor
-final class StepperRenderTests: XCTestCase {
+@MainActor final class StepperRenderTests: XCTestCase {
     func testLoadingPhase() {
         XCTAssertEqual(StepperModel.render(for: .loading), .loading)
     }
@@ -170,8 +167,7 @@ final class StepperRenderTests: XCTestCase {
 
 // MARK: - Accessibility
 
-@MainActor
-final class StepperAccessibilityTests: XCTestCase {
+@MainActor final class StepperAccessibilityTests: XCTestCase {
     func testPositionFormatting() {
         let clause = StepperAccessibility.position(format: "Step %1$d of %2$d", position: 2, total: 4)
         XCTAssertEqual(clause, "Step 2 of 4")
@@ -190,8 +186,7 @@ final class StepperAccessibilityTests: XCTestCase {
 
 // MARK: - Copy catalog
 
-@MainActor
-final class StepperCopyTests: XCTestCase {
+@MainActor final class StepperCopyTests: XCTestCase {
     func testCatalogKeysAndFallbacksNonEmpty() {
         XCTAssertFalse(StepperCopy.all.isEmpty)
         for entry in StepperCopy.all {
@@ -216,8 +211,7 @@ final class StepperCopyTests: XCTestCase {
 
 // MARK: - State holder
 
-@MainActor
-final class StepperModelTests: XCTestCase {
+@MainActor final class StepperModelTests: XCTestCase {
     func testStartAppliesInitialAndEmitsTelemetryOnce() {
         let step = makeStep(key: "a", isDone: false)
         let source = InMemoryStepperSource(

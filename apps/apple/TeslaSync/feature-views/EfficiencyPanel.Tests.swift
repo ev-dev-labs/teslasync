@@ -42,8 +42,7 @@ private func sampleStats() -> EfficiencyPanelInput {
 
 // MARK: - Format (port of lib/numberFormat.ts + lib/dateFormat.ts)
 
-@MainActor
-final class EfficiencyFormatTests: XCTestCase {
+@MainActor final class EfficiencyFormatTests: XCTestCase {
     func testFmtNumberGroupsAtDefaultPrecision() {
         XCTAssertEqual(EfficiencyFormat.fmtNumber(85.432, locale: enUS), "85.43")
         XCTAssertEqual(EfficiencyFormat.fmtNumber(1234.5, locale: enUS), "1,234.50")
@@ -83,8 +82,7 @@ final class EfficiencyFormatTests: XCTestCase {
 
 // MARK: - Projection: the four tiles
 
-@MainActor
-final class EfficiencyProjectionTests: XCTestCase {
+@MainActor final class EfficiencyProjectionTests: XCTestCase {
     private func tile(_ tiles: [EfficiencyMetricModel], _ id: String) -> EfficiencyMetricModel {
         guard let match = tiles.first(where: { $0.id == id }) else {
             return EfficiencyMetricModel(
@@ -167,8 +165,7 @@ final class EfficiencyProjectionTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class EfficiencyAccessibilityTests: XCTestCase {
+@MainActor final class EfficiencyAccessibilityTests: XCTestCase {
     func testAverageLabelCombinesLabelAndValue() {
         let tiles = EfficiencyProjection.metrics(from: sampleStats(), localize: echo, locale: enUS, timeZone: .gmt)
         let average = tiles.first { $0.id == "average" }
@@ -187,8 +184,7 @@ final class EfficiencyAccessibilityTests: XCTestCase {
 
 // MARK: - Phase resolution
 
-@MainActor
-final class EfficiencyPhaseTests: XCTestCase {
+@MainActor final class EfficiencyPhaseTests: XCTestCase {
     func testLoadingWithoutDataIsLoading() {
         XCTAssertEqual(EfficiencyProjection.resolvePhase(.loading, hasValue: false), .loading)
     }
@@ -220,8 +216,7 @@ final class EfficiencyPhaseTests: XCTestCase {
 
 // MARK: - State holder: wiring + telemetry + stale auto-refresh
 
-@MainActor
-final class EfficiencyPanelModelTests: XCTestCase {
+@MainActor final class EfficiencyPanelModelTests: XCTestCase {
     private func makeModel(
         _ update: EfficiencyPanelUpdate,
         telemetry: EfficiencyPanelTelemetry = OSLogEfficiencyPanelTelemetry()

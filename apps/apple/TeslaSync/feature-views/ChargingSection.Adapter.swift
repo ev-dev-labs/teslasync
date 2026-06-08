@@ -363,7 +363,11 @@ public enum ChargingSectionAccessibility {
         guard !bars.isEmpty else {
             return "\(title): \(localize("common.noData", "No data available"))"
         }
-        let total = ChargingFormat.number(ChargingSectionProjection.totalEnergy(bars), fractionDigits: 1, locale: locale)
+        let total = ChargingFormat.number(
+            ChargingSectionProjection.totalEnergy(bars),
+            fractionDigits: 1,
+            locale: locale
+        )
         let days = localize("analytics.weeklyDigest.charging.days", "days")
         let energyAdded = localize("analytics.weeklyDigest.energyAdded", "Energy Added")
         return "\(title): \(bars.count) \(days), \(total) \(ChargingUnits.kwh) \(energyAdded)"

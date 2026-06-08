@@ -4,8 +4,7 @@ import XCTest
 /// The push coordinator: authorization + token lifecycle, device registration,
 /// deep-link routing, foreground presentation, and unregister. Driven by in-memory
 /// fakes so no APNs runtime is required.
-@MainActor
-final class PushCoordinatorTests: XCTestCase {
+@MainActor final class PushCoordinatorTests: XCTestCase {
     func testRequestAuthorizationGrantsAndRegistersForRemote() async {
         let authorizer = PreviewPushAuthorizer(initial: .notDetermined, grants: .authorized)
         let coordinator = PushCoordinator.demo(authorizer: authorizer)

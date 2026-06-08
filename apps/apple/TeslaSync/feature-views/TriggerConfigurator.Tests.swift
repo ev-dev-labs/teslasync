@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Cron expression (port of web buildCronExpr / parseCronExpr)
 
-@MainActor
-final class TriggerCronTests: XCTestCase {
+@MainActor final class TriggerCronTests: XCTestCase {
     func testBuildJoinsSelectedDays() {
         XCTAssertEqual(CronExpression.build(hour: 8, minute: 0, days: [1, 2, 3, 4, 5]), "0 8 * * 1,2,3,4,5")
     }
@@ -74,8 +73,7 @@ final class TriggerCronTests: XCTestCase {
 
 // MARK: - Day toggle (port of web handleDayToggle)
 
-@MainActor
-final class TriggerDayToggleTests: XCTestCase {
+@MainActor final class TriggerDayToggleTests: XCTestCase {
     func testToggleOffEmptySelectsOtherSix() {
         XCTAssertEqual(TriggerAdapter.toggleDay([], 2), [0, 1, 3, 4, 5, 6])
     }
@@ -101,8 +99,7 @@ final class TriggerDayToggleTests: XCTestCase {
 
 // MARK: - Signal value coercion (port of web signalValueFromInput + value derivation)
 
-@MainActor
-final class TriggerSignalValueTests: XCTestCase {
+@MainActor final class TriggerSignalValueTests: XCTestCase {
     func testChangedDropsValue() {
         XCTAssertEqual(TriggerAdapter.signalValue(signal: "battery_level", op: .changed, rawValue: "5"), .none)
     }
@@ -172,8 +169,7 @@ final class TriggerSignalValueTests: XCTestCase {
 
 // MARK: - Default seeds (port of web createDefaultTrigger)
 
-@MainActor
-final class TriggerDefaultTests: XCTestCase {
+@MainActor final class TriggerDefaultTests: XCTestCase {
     func testCreateDefaults() {
         XCTAssertEqual(AutomationTrigger.createDefault(.schedule), .schedule(cronExpr: "0 8 * * *", timezone: "UTC"))
         XCTAssertEqual(AutomationTrigger.createDefault(.event), .event(.online))
@@ -195,8 +191,7 @@ final class TriggerDefaultTests: XCTestCase {
 
 // MARK: - Geofence wire decode
 
-@MainActor
-final class TriggerGeofenceDecodeTests: XCTestCase {
+@MainActor final class TriggerGeofenceDecodeTests: XCTestCase {
     func testDecodesNumericAndStringIDs() {
         let json = """
         [{"id": 1, "name": "Home"}, {"id": "2", "name": "Work"}, {"id": 3.0, "name": "Lot"}]
@@ -221,8 +216,7 @@ final class TriggerGeofenceDecodeTests: XCTestCase {
 
 // MARK: - Geofence projection: phase resolution + overlays
 
-@MainActor
-final class TriggerGeofenceProjectionTests: XCTestCase {
+@MainActor final class TriggerGeofenceProjectionTests: XCTestCase {
     private let sample = [Geofence(id: "1", name: "Home")]
 
     func testLoadingTakesPrecedence() {
@@ -260,8 +254,7 @@ final class TriggerGeofenceProjectionTests: XCTestCase {
 
 // MARK: - Accessibility labels
 
-@MainActor
-final class TriggerAccessibilityTests: XCTestCase {
+@MainActor final class TriggerAccessibilityTests: XCTestCase {
     func testDayLabel() {
         XCTAssertEqual(
             TriggerConfiguratorAccessibility.dayLabel(day: "Mon", active: true) { _, fallback in fallback },

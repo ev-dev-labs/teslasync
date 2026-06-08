@@ -22,8 +22,7 @@ import XCTest
 
 // MARK: - Adapter: inbound location → navigation target (port parity with the web source)
 
-@MainActor
-final class LegacyAlertStudioRedirectResolverTests: XCTestCase {
+@MainActor final class LegacyAlertStudioRedirectResolverTests: XCTestCase {
     func testDestinationTargetsStudioAndPreservesSearchVerbatim() {
         let location = RedirectLocation(path: "/alert-studio", rawQuery: "draft=42&utm_source=email")
         let destination = LegacyAlertStudioRedirectResolver.destination(for: location)
@@ -83,8 +82,7 @@ final class LegacyAlertStudioRedirectResolverTests: XCTestCase {
 
 // MARK: - Query parsing
 
-@MainActor
-final class LegacyAlertStudioRedirectQueryTests: XCTestCase {
+@MainActor final class LegacyAlertStudioRedirectQueryTests: XCTestCase {
     func testParseSplitsPairs() {
         XCTAssertEqual(RedirectQuery.parse("draft=42&utm_source=email"), [
             RedirectQueryItem(name: "draft", value: "42"),
@@ -118,8 +116,7 @@ final class LegacyAlertStudioRedirectQueryTests: XCTestCase {
 
 // MARK: - State holder: automatic redirect, fallbacks, phase, telemetry
 
-@MainActor
-final class LegacyAlertStudioRedirectModelTests: XCTestCase {
+@MainActor final class LegacyAlertStudioRedirectModelTests: XCTestCase {
     private let deepLink = RedirectLocation(path: "/alert-studio", rawQuery: "draft=42&utm_source=email")
 
     private func makeModel(
@@ -280,8 +277,7 @@ final class LegacyAlertStudioRedirectModelTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
-@MainActor
-final class LegacyAlertStudioRedirectAccessibilityTests: XCTestCase {
+@MainActor final class LegacyAlertStudioRedirectAccessibilityTests: XCTestCase {
     private let passthrough: (String, String) -> String = { _, value in value }
 
     func testSummaryForEachPhase() {

@@ -14,8 +14,7 @@ import XCTest
 
 // MARK: - State holder: ActiveOrdersModel
 
-@MainActor
-final class ActiveOrdersModelTests: XCTestCase {
+@MainActor final class ActiveOrdersModelTests: XCTestCase {
     private func makeModel(
         initial: OrdersUpdate?,
         telemetry: ActiveOrdersTelemetry = SpyOrdersTelemetry(),

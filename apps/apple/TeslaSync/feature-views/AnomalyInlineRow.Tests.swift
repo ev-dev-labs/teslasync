@@ -57,8 +57,7 @@
 
     // MARK: - Severity → status (web `SEVERITY_TO_STATUS`)
 
-    @MainActor
-    final class AnomalyHealthStatusTests: XCTestCase {
+    @MainActor final class AnomalyHealthStatusTests: XCTestCase {
         func testSeverityMapsToStatus() {
             XCTAssertEqual(AnomalyHealthStatus(severity: .critical), .unhealthy)
             XCTAssertEqual(AnomalyHealthStatus(severity: .warning), .degraded)
@@ -76,8 +75,7 @@
 
     // MARK: - Projection: webRendersRow (web `return null` decision)
 
-    @MainActor
-    final class AnomalyInlineRowProjectionTests: XCTestCase {
+    @MainActor final class AnomalyInlineRowProjectionTests: XCTestCase {
         func testWebRendersRowFalseWhenNoData() {
             XCTAssertFalse(AnomalyInlineRowProjection.webRendersRow(nil))
         }
@@ -188,8 +186,7 @@
 
     // MARK: - Relative time (web `formatRelative`)
 
-    @MainActor
-    final class AnomalyRelativeTimeTests: XCTestCase {
+    @MainActor final class AnomalyRelativeTimeTests: XCTestCase {
         private let now = Date(timeIntervalSince1970: 2_000_000)
 
         private func relative(secondsAgo: TimeInterval?) -> String {
@@ -230,8 +227,7 @@
 
     // MARK: - Accessibility + identity
 
-    @MainActor
-    final class AnomalyInlineRowAccessibilityTests: XCTestCase {
+    @MainActor final class AnomalyInlineRowAccessibilityTests: XCTestCase {
         func testRowLabelMatchesWebAria() {
             let label = AnomalyInlineRowAccessibility.rowLabel(
                 summary: "3 in 24h · battery_temp 5m ago", localize: passthroughLocalize

@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Window enum (web `IngestXRayWindow` + `WINDOW_LABEL`)
 
-@MainActor
-final class XRayHeaderWindowTests: XCTestCase {
+@MainActor final class XRayHeaderWindowTests: XCTestCase {
     func testWireRoundTripForEveryCase() {
         for window in IngestXRayWindow.allCases {
             XCTAssertEqual(IngestXRayWindow.from(wire: window.wire), window)
@@ -52,8 +51,7 @@ final class XRayHeaderWindowTests: XCTestCase {
 
 // MARK: - Adapter: cached summary → projection (parity with the web header)
 
-@MainActor
-final class XRayHeaderAdapterTests: XCTestCase {
+@MainActor final class XRayHeaderAdapterTests: XCTestCase {
     /// English-fallback localizer (bundle-free) used by the projection tests.
     private let echo: (String, String) -> String = { _, fallback in fallback }
     /// Key-revealing localizer so a test can assert the exact i18n key used.
@@ -148,8 +146,7 @@ final class XRayHeaderAdapterTests: XCTestCase {
 
 // MARK: - State holder: phase resolution + telemetry + source wiring
 
-@MainActor
-final class XRayHeaderModelTests: XCTestCase {
+@MainActor final class XRayHeaderModelTests: XCTestCase {
     /// Telemetry spy capturing each `view.opened` surface slug.
     private final class SpyTelemetry: XRayHeaderTelemetry, @unchecked Sendable {
         private(set) var surfaces: [String] = []

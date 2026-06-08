@@ -19,8 +19,7 @@ import XCTest
 
 // MARK: - Catalog
 
-@MainActor
-final class WidgetCatalogTests: XCTestCase {
+@MainActor final class WidgetCatalogTests: XCTestCase {
     func testRegistryShape() {
         XCTAssertEqual(WidgetCatalog.all.count, 118)
         XCTAssertEqual(WidgetCatalog.presets.count, 10)
@@ -72,8 +71,7 @@ final class WidgetCatalogTests: XCTestCase {
 
 // MARK: - Adapter (filtering / grouping / mutation / highlight)
 
-@MainActor
-final class WidgetPickerAdapterTests: XCTestCase {
+@MainActor final class WidgetPickerAdapterTests: XCTestCase {
     func testNormalizedQueryTrimsAndLowercases() {
         XCTAssertEqual(WidgetPickerAdapter.normalizedQuery("  Battery  "), "battery")
         XCTAssertEqual(WidgetPickerAdapter.normalizedQuery(""), "")
@@ -186,8 +184,7 @@ final class WidgetPickerAdapterTests: XCTestCase {
 
 // MARK: - Adapter copy builders (web t(key, default, vars))
 
-@MainActor
-final class WidgetPickerCopyTests: XCTestCase {
+@MainActor final class WidgetPickerCopyTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testInterpolateReplacesTokens() {
@@ -231,8 +228,7 @@ final class WidgetPickerCopyTests: XCTestCase {
 
 // MARK: - Accessibility (VoiceOver labels) + surface slug
 
-@MainActor
-final class WidgetPickerAccessibilityTests: XCTestCase {
+@MainActor final class WidgetPickerAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testCardLabel() throws {

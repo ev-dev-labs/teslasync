@@ -26,8 +26,7 @@ private let enUS = Locale(identifier: "en_US")
 
 // MARK: - Adapter: cached payload → projection (port parity with the web useMemo)
 
-@MainActor
-final class UptimeMonitorProjectorTests: XCTestCase {
+@MainActor final class UptimeMonitorProjectorTests: XCTestCase {
     func testServiceOrderMatchesWebKeys() {
         let projection = UptimeMonitorProjector.project(from: UptimeMonitorWidgetSystemHealthData(status: "healthy"))
         XCTAssertEqual(projection.services.map(\.key), ["database", "mqtt", "tesla_api", "fleet_telemetry"])
@@ -86,8 +85,14 @@ final class UptimeMonitorProjectorTests: XCTestCase {
     }
 
     func testOverallToneTracksStatus() {
-        XCTAssertEqual(UptimeMonitorProjector.project(from: UptimeMonitorWidgetSystemHealthData(status: "healthy")).overallTone, .success)
-        XCTAssertEqual(UptimeMonitorProjector.project(from: UptimeMonitorWidgetSystemHealthData(status: "degraded")).overallTone, .warning)
+        XCTAssertEqual(
+            UptimeMonitorProjector.project(from: UptimeMonitorWidgetSystemHealthData(status: "healthy")).overallTone,
+            .success
+        )
+        XCTAssertEqual(
+            UptimeMonitorProjector.project(from: UptimeMonitorWidgetSystemHealthData(status: "degraded")).overallTone,
+            .warning
+        )
         XCTAssertEqual(
             UptimeMonitorProjector.project(from: UptimeMonitorWidgetSystemHealthData(status: "unhealthy")).overallTone,
             .danger
@@ -104,8 +109,7 @@ final class UptimeMonitorProjectorTests: XCTestCase {
 
 // MARK: - statusVariant / isHealthy parity
 
-@MainActor
-final class UptimeStatusToneTests: XCTestCase {
+@MainActor final class UptimeStatusToneTests: XCTestCase {
     func testToneMapping() {
         XCTAssertEqual(UptimeMonitorProjector.tone(for: "ok"), .success)
         XCTAssertEqual(UptimeMonitorProjector.tone(for: "healthy"), .success)
@@ -130,8 +134,7 @@ final class UptimeStatusToneTests: XCTestCase {
 
 // MARK: - Formatters: db-size / table-count / ratio parity
 
-@MainActor
-final class UptimeMonitorFormatTests: XCTestCase {
+@MainActor final class UptimeMonitorFormatTests: XCTestCase {
     func testDatabaseSizeFallsBackToEmDash() {
         XCTAssertEqual(UptimeMonitorFormat.databaseSize(nil), "—")
         XCTAssertEqual(UptimeMonitorFormat.databaseSize("   "), "—")
@@ -152,8 +155,7 @@ final class UptimeMonitorFormatTests: XCTestCase {
 
 // MARK: - Status text: web 'OK'/'All OK'/raw-status parity (English fallbacks)
 
-@MainActor
-final class UptimeMonitorStatusTextTests: XCTestCase {
+@MainActor final class UptimeMonitorStatusTextTests: XCTestCase {
     func testServiceBadgeText() {
         XCTAssertEqual(UptimeMonitorStatusText.serviceBadge("ok"), "OK")
         XCTAssertEqual(UptimeMonitorStatusText.serviceBadge("healthy"), "OK")
@@ -174,8 +176,7 @@ final class UptimeMonitorStatusTextTests: XCTestCase {
 
 // MARK: - i18n facade: humanize + serviceLabel parity
 
-@MainActor
-final class UptimeMonitorStringsTests: XCTestCase {
+@MainActor final class UptimeMonitorStringsTests: XCTestCase {
     func testHumanizeMatchesWeb() {
         XCTAssertEqual(UptimeMonitorStrings.humanize("database"), "Database")
         XCTAssertEqual(UptimeMonitorStrings.humanize("mqtt"), "Mqtt")
@@ -191,8 +192,7 @@ final class UptimeMonitorStringsTests: XCTestCase {
 
 // MARK: - State holder: phases + freshness + telemetry + source wiring
 
-@MainActor
-final class UptimeMonitorModelTests: XCTestCase {
+@MainActor final class UptimeMonitorModelTests: XCTestCase {
     private func makeModel(
         _ update: UptimeMonitorUpdate,
         telemetry: UptimeMonitorTelemetry = OSLogUptimeMonitorTelemetry()
@@ -288,8 +288,7 @@ final class UptimeMonitorModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class UptimeMonitorRegistryTests: XCTestCase {
+@MainActor final class UptimeMonitorRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = UptimeMonitorWidget.registration
         XCTAssertEqual(registration.id, "uptime-monitor")
@@ -318,8 +317,7 @@ final class UptimeMonitorRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class UptimeMonitorAccessibilityTests: XCTestCase {
+@MainActor final class UptimeMonitorAccessibilityTests: XCTestCase {
     func testSummaryIncludesOverallHealthCountAndDatabase() {
         let projection = UptimeMonitorProjector.project(
             from: UptimeMonitorWidgetSystemHealthData(

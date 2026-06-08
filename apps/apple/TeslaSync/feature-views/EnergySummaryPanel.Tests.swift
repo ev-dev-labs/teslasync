@@ -33,8 +33,7 @@ private let sampleDrive = EnergySummaryInputData(
 
 // MARK: - Number formatting (port of numberFormat.ts fmtNumber / fmtWithUnit)
 
-@MainActor
-final class EnergySummaryFormatNumberTests: XCTestCase {
+@MainActor final class EnergySummaryFormatNumberTests: XCTestCase {
     func testNumberGroupsAndFixesTwoDecimals() {
         XCTAssertEqual(EnergySummaryFormat.number(18450, locale: enUS), "18,450.00")
         XCTAssertEqual(EnergySummaryFormat.number(1234.5, locale: enUS), "1,234.50")
@@ -62,8 +61,7 @@ final class EnergySummaryFormatNumberTests: XCTestCase {
 
 // MARK: - Energy ladder (web `value > 1000 ? kWh : Wh`)
 
-@MainActor
-final class EnergySummaryFormatEnergyTests: XCTestCase {
+@MainActor final class EnergySummaryFormatEnergyTests: XCTestCase {
     func testAtOrBelowThresholdStaysWattHours() {
         XCTAssertEqual(EnergySummaryFormat.energy(1000, locale: enUS), "1,000.00 Wh")
         XCTAssertEqual(EnergySummaryFormat.energy(999.5, locale: enUS), "999.50 Wh")
@@ -88,8 +86,7 @@ final class EnergySummaryFormatEnergyTests: XCTestCase {
 
 // MARK: - Efficiency (web `whPerKm × factor` + Wh/km|Wh/mi, em-dash when not positive)
 
-@MainActor
-final class EnergySummaryFormatEfficiencyTests: XCTestCase {
+@MainActor final class EnergySummaryFormatEfficiencyTests: XCTestCase {
     func testMetricKeepsWattHoursPerKilometre() {
         XCTAssertEqual(
             EnergySummaryFormat.efficiencyCell(consumptionWhKm: 168, unit: .km, locale: enUS),
@@ -113,8 +110,7 @@ final class EnergySummaryFormatEfficiencyTests: XCTestCase {
 
 // MARK: - Battery used (web `${start - end}%` + `${start ?? '?'}% → ${end ?? '?'}%`)
 
-@MainActor
-final class EnergySummaryFormatBatteryTests: XCTestCase {
+@MainActor final class EnergySummaryFormatBatteryTests: XCTestCase {
     func testDeltaAndDetailWhenBothPresent() {
         XCTAssertEqual(EnergySummaryFormat.batteryUsedValue(start: 86, end: 61, locale: enUS), "25%")
         XCTAssertEqual(EnergySummaryFormat.batteryUsedDetail(start: 86, end: 61, locale: enUS), "86% → 61%")
@@ -139,8 +135,7 @@ final class EnergySummaryFormatBatteryTests: XCTestCase {
 
 // MARK: - Range used (web `fmtWithUnit(start - end, distanceUnit)`, em-dash when missing)
 
-@MainActor
-final class EnergySummaryFormatRangeTests: XCTestCase {
+@MainActor final class EnergySummaryFormatRangeTests: XCTestCase {
     func testMetricAndImperialUnitsAndDelta() {
         XCTAssertEqual(
             EnergySummaryFormat.rangeUsedCell(start: 412, end: 298, unit: .km, locale: enUS),
@@ -160,8 +155,7 @@ final class EnergySummaryFormatRangeTests: XCTestCase {
 
 // MARK: - Distance preference (web `useUnits().unitPrefs.distance`)
 
-@MainActor
-final class EnergySummaryDistanceUnitTests: XCTestCase {
+@MainActor final class EnergySummaryDistanceUnitTests: XCTestCase {
     func testMetricMapsToKilometres() {
         let unit = EnergySummaryDistanceUnit(.metric)
         XCTAssertEqual(unit, .km)
@@ -181,8 +175,7 @@ final class EnergySummaryDistanceUnitTests: XCTestCase {
 
 // MARK: - Metrics builder (cached → projection)
 
-@MainActor
-final class EnergySummaryMetricsBuilderTests: XCTestCase {
+@MainActor final class EnergySummaryMetricsBuilderTests: XCTestCase {
     func testBuildsSixCellsInSourceOrderWithMetricUnits() {
         let metrics = EnergySummaryMetricsBuilder.metrics(for: sampleDrive, unit: .km, locale: enUS)
         XCTAssertEqual(metrics.map(\.id), ["consumed", "recovered", "net", "efficiency", "battery", "range"])
@@ -232,8 +225,7 @@ final class EnergySummaryMetricsBuilderTests: XCTestCase {
 
 // MARK: - Projection (web render branches + P4 leaf contract)
 
-@MainActor
-final class EnergySummaryProjectionTests: XCTestCase {
+@MainActor final class EnergySummaryProjectionTests: XCTestCase {
     func testErrorTakesPrecedence() {
         let resolved = EnergySummaryProjection.resolve(
             EnergySummaryInput(data: sampleDrive, errorMessage: "boom"),
@@ -275,8 +267,7 @@ final class EnergySummaryProjectionTests: XCTestCase {
 
 // MARK: - State holder: wiring, telemetry, freshness
 
-@MainActor
-final class EnergySummaryModelTests: XCTestCase {
+@MainActor final class EnergySummaryModelTests: XCTestCase {
     private func makeModel(
         _ input: EnergySummaryInput,
         telemetry: EnergySummaryTelemetry = OSLogEnergySummaryTelemetry()
@@ -363,8 +354,7 @@ final class EnergySummaryModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class EnergySummaryAccessibilityTests: XCTestCase {
+@MainActor final class EnergySummaryAccessibilityTests: XCTestCase {
     func testMetricLabelJoinsLabelAndValue() {
         XCTAssertEqual(
             EnergySummaryAccessibility.metricLabel(label: "Energy Consumed", value: "18.45 kWh"),

@@ -61,8 +61,7 @@ private enum Fixture {
 
 // MARK: - Severity mapping
 
-@MainActor
-final class NotificationSeverityKindTests: XCTestCase {
+@MainActor final class NotificationSeverityKindTests: XCTestCase {
     func testKnownSeveritiesMapCaseInsensitively() {
         XCTAssertEqual(NotificationSeverityKind.from("critical"), .critical)
         XCTAssertEqual(NotificationSeverityKind.from("CRITICAL"), .critical)
@@ -86,8 +85,7 @@ final class NotificationSeverityKindTests: XCTestCase {
 
 // MARK: - Group derivations
 
-@MainActor
-final class NotificationGroupProjectionTests: XCTestCase {
+@MainActor final class NotificationGroupProjectionTests: XCTestCase {
     func testSingletonDerivation() {
         let singleton = Fixture.group(key: nil, count: 1, unread: 1).projected(archived: false)
         XCTAssertTrue(singleton.isSingleton)
@@ -140,8 +138,7 @@ final class NotificationGroupProjectionTests: XCTestCase {
 
 // MARK: - Phase + member projectors
 
-@MainActor
-final class NotificationGroupProjectorTests: XCTestCase {
+@MainActor final class NotificationGroupProjectorTests: XCTestCase {
     func testResolvePhase() {
         XCTAssertEqual(NotificationGroupProjector.resolvePhase(.loading, hasGroup: false), .loading)
         XCTAssertEqual(NotificationGroupProjector.resolvePhase(.loaded, hasGroup: true), .content)
@@ -178,8 +175,7 @@ final class NotificationGroupProjectorTests: XCTestCase {
 
 // MARK: - Copy + formatting
 
-@MainActor
-final class NotificationGroupCopyTests: XCTestCase {
+@MainActor final class NotificationGroupCopyTests: XCTestCase {
     func testExpandLabelSwitchesOnState() {
         XCTAssertEqual(NotificationGroupCopy.expandLabel(expanded: true, extraCount: 4, localize: echo), "Hide similar")
         XCTAssertEqual(
@@ -222,8 +218,7 @@ final class NotificationGroupCopyTests: XCTestCase {
 
 // MARK: - Accessibility
 
-@MainActor
-final class NotificationGroupAccessibilityTests: XCTestCase {
+@MainActor final class NotificationGroupAccessibilityTests: XCTestCase {
     func testRowLabelIncludesSeverityReadStateAndTitle() {
         let row = Fixture.log(1, severity: "critical", read: false).projected()
         let label = NotificationGroupAccessibility.rowLabel(
@@ -261,8 +256,7 @@ final class NotificationGroupAccessibilityTests: XCTestCase {
 
 // MARK: - i18n: every web source key is wired
 
-@MainActor
-final class NotificationGroupLocalizationTests: XCTestCase {
+@MainActor final class NotificationGroupLocalizationTests: XCTestCase {
     /// Drives every copy helper through a recording localizer and asserts all keys
     /// extracted from the web source are requested (the view-static keys are checked
     /// directly against the fallback table).

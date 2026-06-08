@@ -35,8 +35,7 @@ private func daysBefore(_ days: Int) -> Date {
 
 // MARK: - Adapter: cached DTO → projection (parity with the web source)
 
-@MainActor
-final class LocationFavoritesProjectionTests: XCTestCase {
+@MainActor final class LocationFavoritesProjectionTests: XCTestCase {
     func testPresencePrecedenceMatchesWeb() {
         let both = LocationFavoritesSnapshot(locatedAtHome: true, locatedAtWork: true)
         XCTAssertEqual(LocationFavoritesProjection.presence(for: both), .home)
@@ -130,8 +129,7 @@ final class LocationFavoritesProjectionTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class LocationFavoritesModelTests: XCTestCase {
+@MainActor final class LocationFavoritesModelTests: XCTestCase {
     private func makeModel(
         _ update: LocationFavoritesUpdate,
         telemetry: LocationFavoritesTelemetry = OSLogLocationFavoritesTelemetry()
@@ -246,8 +244,7 @@ final class LocationFavoritesModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class LocationFavoritesRegistryTests: XCTestCase {
+@MainActor final class LocationFavoritesRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = LocationFavoritesWidget.registration
         XCTAssertEqual(registration.id, "location-favorites")
@@ -277,8 +274,7 @@ final class LocationFavoritesRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class LocationFavoritesAccessibilityTests: XCTestCase {
+@MainActor final class LocationFavoritesAccessibilityTests: XCTestCase {
     func testSummaryIncludesPresenceDestinationAndCount() {
         let summary = LocationFavoritesAccessibility.summary(
             presence: .home,

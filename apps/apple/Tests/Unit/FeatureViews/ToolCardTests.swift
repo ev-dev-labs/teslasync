@@ -8,8 +8,7 @@ import XCTest
 /// policy, and the `view.opened` telemetry slug. These mirror the web
 /// `ICON_COLOR_MAP[color] ?? ICON_COLOR_MAP.cyan` branch and the card's
 /// composition. No rendering / no KMP runtime required.
-@MainActor
-final class ToolCardTests: XCTestCase {
+@MainActor final class ToolCardTests: XCTestCase {
     // MARK: - Tint adapter (web color string → native projection)
 
     func testTintMapsEveryKnownWebColor() {

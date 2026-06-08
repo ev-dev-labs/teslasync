@@ -23,8 +23,7 @@ import XCTest
 
 // MARK: - Adapter: conversion
 
-@MainActor
-final class TempSectionConversionTests: XCTestCase {
+@MainActor final class TempSectionConversionTests: XCTestCase {
     func testCelsiusPassesThrough() {
         XCTAssertEqual(convertTempSectionFromSI(0, to: .celsius), 0, accuracy: 0.0001)
         XCTAssertEqual(convertTempSectionFromSI(21.5, to: .celsius), 21.5, accuracy: 0.0001)
@@ -49,8 +48,7 @@ final class TempSectionConversionTests: XCTestCase {
 
 // MARK: - Adapter: projection (web chartData/stats parity)
 
-@MainActor
-final class TempSectionProjectorTests: XCTestCase {
+@MainActor final class TempSectionProjectorTests: XCTestCase {
     private let samples: [TempSectionSample] = [
         TempSectionSample(time: "08:00", outsideC: 10, insideC: 20, driverC: 21, climateOn: true, fanStatus: 2),
         TempSectionSample(time: "08:10", outsideC: 20, insideC: 22, driverC: 23, climateOn: true, fanStatus: 4),
@@ -125,8 +123,7 @@ final class TempSectionProjectorTests: XCTestCase {
 
 // MARK: - Adapter: climate rollup (web stats.climateStatus)
 
-@MainActor
-final class TempSectionClimateTests: XCTestCase {
+@MainActor final class TempSectionClimateTests: XCTestCase {
     func testClimateStatusBranches() {
         XCTAssertEqual(TempSectionProjector.climateStatus(onCount: 2, offCount: 1), .on)
         XCTAssertEqual(TempSectionProjector.climateStatus(onCount: 3, offCount: 3), .on)
@@ -150,8 +147,7 @@ final class TempSectionClimateTests: XCTestCase {
 
 // MARK: - Adapter: phase resolution
 
-@MainActor
-final class TempSectionPhaseTests: XCTestCase {
+@MainActor final class TempSectionPhaseTests: XCTestCase {
     func testResolvePhase() {
         XCTAssertEqual(TempSectionProjector.resolvePhase(.loading, hasContent: false), .loading)
         XCTAssertEqual(TempSectionProjector.resolvePhase(.loading, hasContent: true), .content)
@@ -164,8 +160,7 @@ final class TempSectionPhaseTests: XCTestCase {
 
 // MARK: - Formatting
 
-@MainActor
-final class TempSectionFormatTests: XCTestCase {
+@MainActor final class TempSectionFormatTests: XCTestCase {
     private let posix = "en_US_POSIX"
 
     func testNumberFixedTwoDecimals() {
@@ -198,8 +193,7 @@ final class TempSectionFormatTests: XCTestCase {
 
 // MARK: - State holder: TemperatureSectionModel
 
-@MainActor
-final class TemperatureSectionModelTests: XCTestCase {
+@MainActor final class TemperatureSectionModelTests: XCTestCase {
     private let samples: [TempSectionSample] = [
         TempSectionSample(time: "08:00", outsideC: 10, insideC: 20, climateOn: true, fanStatus: 2),
         TempSectionSample(time: "08:10", outsideC: 20, insideC: 22, climateOn: true, fanStatus: 4)
@@ -324,8 +318,7 @@ final class TemperatureSectionModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summary
 
-@MainActor
-final class TempSectionAccessibilityTests: XCTestCase {
+@MainActor final class TempSectionAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let posix = "en_US_POSIX"

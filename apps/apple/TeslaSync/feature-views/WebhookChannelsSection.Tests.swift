@@ -24,8 +24,7 @@ import XCTest
 
 // MARK: - Adapter: method, validation, projection, formatting
 
-@MainActor
-final class WebhookChannelsProjectionTests: XCTestCase {
+@MainActor final class WebhookChannelsProjectionTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testMethodMappingIsCaseInsensitiveWithPostDefault() {
@@ -150,8 +149,7 @@ final class WebhookChannelsProjectionTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
-@MainActor
-final class WebhookChannelsAccessibilityTests: XCTestCase {
+@MainActor final class WebhookChannelsAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testRowLabelIncludesNameStateMethodAndURL() {

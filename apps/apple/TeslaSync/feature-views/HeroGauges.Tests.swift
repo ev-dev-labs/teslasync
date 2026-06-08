@@ -24,8 +24,7 @@ import XCTest
 
 // MARK: - Adapter: SI converters + formatting (web parity)
 
-@MainActor
-final class HeroGaugesFormatTests: XCTestCase {
+@MainActor final class HeroGaugesFormatTests: XCTestCase {
     func testNumberGroupsAndFixesFractionDigits() {
         XCTAssertEqual(HeroGaugesFormat.number(1234.0, decimals: 1), "1,234.0")
         XCTAssertEqual(HeroGaugesFormat.number(1234.567, decimals: 2), "1,234.57")
@@ -75,8 +74,7 @@ final class HeroGaugesFormatTests: XCTestCase {
 
 // MARK: - Adapter: projector gauge math (web parity)
 
-@MainActor
-final class HeroGaugesProjectorTests: XCTestCase {
+@MainActor final class HeroGaugesProjectorTests: XCTestCase {
     private func gauge(_ id: String, in projection: HeroGaugesProjection) -> HeroGaugeTileModel? {
         projection.gauges.first { $0.id == id }
     }
@@ -163,8 +161,7 @@ final class HeroGaugesProjectorTests: XCTestCase {
 
 // MARK: - State holder: phases + refresh + telemetry
 
-@MainActor
-final class HeroGaugesModelTests: XCTestCase {
+@MainActor final class HeroGaugesModelTests: XCTestCase {
     private func makeModel(
         _ update: HeroGaugesUpdate,
         telemetry: HeroGaugesTelemetry = OSLogHeroGaugesTelemetry()
@@ -273,8 +270,7 @@ final class HeroGaugesModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
-@MainActor
-final class HeroGaugesAccessibilityTests: XCTestCase {
+@MainActor final class HeroGaugesAccessibilityTests: XCTestCase {
     func testSummaryIncludesEveryGauge() {
         let stats = DriveGaugeStats(
             distanceM: 41840,
@@ -296,8 +292,7 @@ final class HeroGaugesAccessibilityTests: XCTestCase {
 // MARK: - View: per-state render smoke (every state materializes)
 
 #if canImport(UIKit) || canImport(AppKit)
-    @MainActor
-    final class HeroGaugesViewStateTests: XCTestCase {
+    @MainActor final class HeroGaugesViewStateTests: XCTestCase {
         private func renders(_ update: HeroGaugesUpdate) -> Bool {
             let source = InMemoryHeroGaugesSource(initial: update)
             let model = HeroGaugesModel(source: source)

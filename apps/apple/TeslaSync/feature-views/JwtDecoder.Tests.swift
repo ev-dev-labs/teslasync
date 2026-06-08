@@ -43,8 +43,7 @@ private enum JwtDecoderSample {
 
 // MARK: - Adapter: decode pipeline
 
-@MainActor
-final class JwtDecoderAdapterTests: XCTestCase {
+@MainActor final class JwtDecoderAdapterTests: XCTestCase {
     func testEmptyOrWhitespaceInputIsIdle() {
         XCTAssertEqual(JwtDecoderAdapter.decode(""), .idle)
         XCTAssertEqual(JwtDecoderAdapter.decode("    "), .idle)
@@ -99,8 +98,7 @@ final class JwtDecoderAdapterTests: XCTestCase {
 
 // MARK: - JSON formatter (parity with JSON.stringify(_, null, 2))
 
-@MainActor
-final class JwtDecoderFormatterTests: XCTestCase {
+@MainActor final class JwtDecoderFormatterTests: XCTestCase {
     private func format(_ json: String) throws -> String {
         let object = try JSONSerialization.jsonObject(with: Data(json.utf8), options: [.fragmentsAllowed])
         return JwtJSONFormatter.format(object)
@@ -150,8 +148,7 @@ final class JwtDecoderFormatterTests: XCTestCase {
 
 // MARK: - State holder: input → result + telemetry
 
-@MainActor
-final class JwtDecoderModelTests: XCTestCase {
+@MainActor final class JwtDecoderModelTests: XCTestCase {
     func testEmptyInputIsIdle() {
         let model = JwtDecoderModel()
         XCTAssertEqual(model.result, .idle)
@@ -190,8 +187,7 @@ final class JwtDecoderModelTests: XCTestCase {
 
 // MARK: - i18n facade
 
-@MainActor
-final class JwtDecoderStringsTests: XCTestCase {
+@MainActor final class JwtDecoderStringsTests: XCTestCase {
     func testFacadeResolvesWebFallbacks() {
         // The per-surface table is folded in at integration; in the test bundle
         // the facade returns the web English fallback for each source key.

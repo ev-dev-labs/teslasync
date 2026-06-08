@@ -19,8 +19,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (port parity with lib/vehicleState.ts)
 
-@MainActor
-final class DigitalTwinAdapterTests: XCTestCase {
+@MainActor final class DigitalTwinAdapterTests: XCTestCase {
     func testEmptyWhenAllInputsNil() {
         let state = TwinStateBuilder.buildTwinState(security: nil, vehicleState: nil, charging: nil)
         XCTAssertEqual(state, .empty)
@@ -159,8 +158,7 @@ final class DigitalTwinAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class DigitalTwinModelTests: XCTestCase {
+@MainActor final class DigitalTwinModelTests: XCTestCase {
     private func makeModel(
         _ update: DigitalTwinUpdate,
         telemetry: DigitalTwinTelemetry = OSLogDigitalTwinTelemetry()
@@ -242,8 +240,7 @@ final class DigitalTwinModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class DigitalTwinRegistryTests: XCTestCase {
+@MainActor final class DigitalTwinRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = DigitalTwinWidget.registration
         XCTAssertEqual(registration.id, "vehicle-twin")
@@ -269,8 +266,7 @@ final class DigitalTwinRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class DigitalTwinAccessibilityTests: XCTestCase {
+@MainActor final class DigitalTwinAccessibilityTests: XCTestCase {
     func testSummaryIncludesLockWindowAndStateLabels() {
         let state = VehicleTwinState(
             windowFD: .open,

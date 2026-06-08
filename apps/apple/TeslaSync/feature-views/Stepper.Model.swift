@@ -1,5 +1,5 @@
 //
-//  OnboardingStepper.Model.swift
+//  Stepper.Model.swift
 //  TeslaSync — P4 feature view · 0195 · OnboardingStepper (Apple)
 //
 //  The state-holder seam (P1/S8), the telemetry seam (P1/S11 diagnostics), and

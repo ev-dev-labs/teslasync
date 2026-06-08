@@ -4,8 +4,7 @@ import XCTest
 /// The live-data store: foreground-only lifecycle, cache/live merge, staleness,
 /// `Last-Event-ID` resume, and the single 401-refresh + retry policy. Driven by a
 /// scripted `AsyncStream` provider so every transition is deterministic.
-@MainActor
-final class LiveDataStoreTests: XCTestCase {
+@MainActor final class LiveDataStoreTests: XCTestCase {
     private typealias Provider = ScriptedLiveStreamProvider<LiveFleetEvent>
     private typealias Store = LiveDataStore<LiveDemoSnapshot, LiveFleetEvent>
 

@@ -21,8 +21,7 @@ import XCTest
 
 // MARK: - Adapter: thresholds, units, formatting, reading time
 
-@MainActor
-final class TirePressureVisualWidgetAdapterTests: XCTestCase {
+@MainActor final class TirePressureVisualWidgetAdapterTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let keyTap: (String, String) -> String = { key, _ in "L:\(key)" }
 
@@ -56,7 +55,11 @@ final class TirePressureVisualWidgetAdapterTests: XCTestCase {
     func testUnitConversionMatchesWebConstants() {
         XCTAssertEqual(TirePressureVisualWidgetUnit.bar.convert(fromKilopascals: 241) ?? -1, 2.41, accuracy: 0.0001)
         XCTAssertEqual(TirePressureVisualWidgetUnit.psi.convert(fromKilopascals: 240) ?? -1, 34.80906, accuracy: 0.0001)
-        XCTAssertEqual(TirePressureVisualWidgetUnit.kilopascals.convert(fromKilopascals: 241) ?? -1, 241, accuracy: 0.0001)
+        XCTAssertEqual(
+            TirePressureVisualWidgetUnit.kilopascals.convert(fromKilopascals: 241) ?? -1,
+            241,
+            accuracy: 0.0001
+        )
         XCTAssertNil(TirePressureVisualWidgetUnit.bar.convert(fromKilopascals: nil))
         XCTAssertNil(TirePressureVisualWidgetUnit.bar.convert(fromKilopascals: .nan))
     }
@@ -108,8 +111,7 @@ final class TirePressureVisualWidgetAdapterTests: XCTestCase {
 
 // MARK: - Adapter: projection aggregates
 
-@MainActor
-final class TirePressureProjectionTests: XCTestCase {
+@MainActor final class TirePressureProjectionTests: XCTestCase {
     func testProjectionKeepsCornerOrderAndStatuses() {
         let reading = TirePressureReading(
             frontLeftKilopascals: 240,
@@ -157,15 +159,15 @@ final class TirePressureProjectionTests: XCTestCase {
     }
 
     func testLatestReadingNilWhenNoTimestamps() {
-        let projection = TirePressureVisualWidgetProjection.project(from: TirePressureReading(frontLeftKilopascals: 240))
+        let projection = TirePressureVisualWidgetProjection
+            .project(from: TirePressureReading(frontLeftKilopascals: 240))
         XCTAssertNil(projection.latestReading)
     }
 }
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class TirePressureVisualWidgetModelTests: XCTestCase {
+@MainActor final class TirePressureVisualWidgetModelTests: XCTestCase {
     private func makeModel(
         _ update: TirePressureUpdate,
         telemetry: TirePressureTelemetry = OSLogTirePressureTelemetry()
@@ -251,8 +253,7 @@ final class TirePressureVisualWidgetModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class TirePressureVisualWidgetRegistryTests: XCTestCase {
+@MainActor final class TirePressureVisualWidgetRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = TirePressureVisualWidget.registration
         XCTAssertEqual(registration.id, "tire-pressure-visual")
@@ -281,8 +282,7 @@ final class TirePressureVisualWidgetRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class TirePressureVisualWidgetAccessibilityTests: XCTestCase {
+@MainActor final class TirePressureVisualWidgetAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testSummaryIncludesEveryCornerAndAllNormal() {

@@ -38,8 +38,7 @@ private let populatedValues = SummaryStatsGridValues(
 
 // MARK: - Number formatting (port of numberFormat.ts + useFormatting.ts)
 
-@MainActor
-final class SummaryStatsGridFormatTests: XCTestCase {
+@MainActor final class SummaryStatsGridFormatTests: XCTestCase {
     func testIntegerRoundsAndGroups() {
         XCTAssertEqual(SummaryStatsGridFormat.decimal(12345.6, fractionDigits: 0, locale: enUS), "12,346")
         XCTAssertEqual(SummaryStatsGridFormat.decimal(1284, fractionDigits: 0, locale: enUS), "1,284")
@@ -66,8 +65,7 @@ final class SummaryStatsGridFormatTests: XCTestCase {
 
 // MARK: - useFormatting mirror (symbol + precision)
 
-@MainActor
-final class SummaryStatsGridFormattingTests: XCTestCase {
+@MainActor final class SummaryStatsGridFormattingTests: XCTestCase {
     func testIntegerNumberAndCurrency() {
         let fmt = usdFormatting()
         XCTAssertEqual(fmt.integer(1284), "1,284")
@@ -95,8 +93,7 @@ final class SummaryStatsGridFormattingTests: XCTestCase {
 
 // MARK: - Responsive column math (web grid-cols-2 / lg:3 / xl:6)
 
-@MainActor
-final class SummaryStatsGridLayoutTests: XCTestCase {
+@MainActor final class SummaryStatsGridLayoutTests: XCTestCase {
     func testColumnsAtBreakpoints() {
         XCTAssertEqual(SummaryStatsGridLayout.columnCount(forWidth: 320), 2)
         XCTAssertEqual(SummaryStatsGridLayout.columnCount(forWidth: 1023), 2)
@@ -109,8 +106,7 @@ final class SummaryStatsGridLayoutTests: XCTestCase {
 
 // MARK: - Projection: branches + card wiring
 
-@MainActor
-final class SummaryStatsGridProjectionTests: XCTestCase {
+@MainActor final class SummaryStatsGridProjectionTests: XCTestCase {
     func testLoadingBranchNullsEveryCardValue() {
         let resolved = SummaryStatsGridProjection.resolve(
             SummaryStatsGridInput(values: populatedValues, formatting: usdFormatting(), isLoading: true)
@@ -170,8 +166,7 @@ final class SummaryStatsGridProjectionTests: XCTestCase {
 
 // MARK: - Card facade resolution
 
-@MainActor
-final class SummaryStatsGridCardTests: XCTestCase {
+@MainActor final class SummaryStatsGridCardTests: XCTestCase {
     func testResolvedLabelAndUnitFallThroughToEnglish() {
         let card = SummaryStatsGridCard(
             id: "totalEnergy",
@@ -200,8 +195,7 @@ final class SummaryStatsGridCardTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class SummaryStatsGridAccessibilityTests: XCTestCase {
+@MainActor final class SummaryStatsGridAccessibilityTests: XCTestCase {
     func testCardLabelWithUnit() {
         XCTAssertEqual(
             SummaryStatsGridAccessibility.cardLabel(label: "Total Energy", value: "18,234.70", unit: "kWh"),
@@ -223,8 +217,7 @@ final class SummaryStatsGridAccessibilityTests: XCTestCase {
 
 // MARK: - i18n facade
 
-@MainActor
-final class SummaryStatsGridStringsTests: XCTestCase {
+@MainActor final class SummaryStatsGridStringsTests: XCTestCase {
     func testUnitSymbolsResolveToFallback() {
         XCTAssertEqual(SSGStrings.string("charging.curve.unit.kwh", "kWh"), "kWh")
         XCTAssertEqual(SSGStrings.string("charging.curve.unit.kw", "kW"), "kW")
@@ -234,8 +227,7 @@ final class SummaryStatsGridStringsTests: XCTestCase {
 
 // MARK: - State holder: wiring + telemetry
 
-@MainActor
-final class SummaryStatsGridModelTests: XCTestCase {
+@MainActor final class SummaryStatsGridModelTests: XCTestCase {
     private func makeModel(
         _ input: SummaryStatsGridInput,
         telemetry: SummaryStatsGridTelemetry

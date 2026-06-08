@@ -49,8 +49,7 @@ private enum WCFixture {
 
 // MARK: - Adapter: cached DTO → projection (parity with web chartData/summary)
 
-@MainActor
-final class WallConnectorAdapterTests: XCTestCase {
+@MainActor final class WallConnectorAdapterTests: XCTestCase {
     private let enUS = Locale(identifier: "en_US")
 
     func testDailyBarsAggregateSortAndConvertToKilowattHours() {
@@ -163,8 +162,7 @@ final class WallConnectorAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + empty reasons + telemetry + source wiring
 
-@MainActor
-final class WallConnectorModelTests: XCTestCase {
+@MainActor final class WallConnectorModelTests: XCTestCase {
     private let site = WallConnectorSiteInput(energySiteID: 7)
 
     private func makeModel(
@@ -313,8 +311,7 @@ final class WallConnectorModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class WallConnectorRegistryTests: XCTestCase {
+@MainActor final class WallConnectorRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = WallConnectorWidget.registration
         XCTAssertEqual(registration.id, "wall-connector")
@@ -341,8 +338,7 @@ final class WallConnectorRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class WallConnectorAccessibilityTests: XCTestCase {
+@MainActor final class WallConnectorAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let enUS = Locale(identifier: "en_US")
 

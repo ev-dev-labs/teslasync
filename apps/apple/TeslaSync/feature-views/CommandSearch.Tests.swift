@@ -49,8 +49,7 @@ private enum CommandSearchFixture {
 
 // MARK: - Adapter: catalog → projection (port parity with the web filter)
 
-@MainActor
-final class CommandSearchAdapterTests: XCTestCase {
+@MainActor final class CommandSearchAdapterTests: XCTestCase {
     func testProjectMatchesByTitle() {
         let projection = CommandSearchFixture.project("lock")
         XCTAssertEqual(projection.matches.map(\.id), ["door_lock"])
@@ -141,8 +140,7 @@ final class CommandSearchAdapterTests: XCTestCase {
 
 // MARK: - Adapter: stale-age label
 
-@MainActor
-final class CommandSearchAgeTests: XCTestCase {
+@MainActor final class CommandSearchAgeTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_000_000)
 
     func testCompactLabelBuckets() {
@@ -166,8 +164,7 @@ final class CommandSearchAgeTests: XCTestCase {
 
 // MARK: - State holder: query → project, callbacks, phase, telemetry
 
-@MainActor
-final class CommandSearchModelTests: XCTestCase {
+@MainActor final class CommandSearchModelTests: XCTestCase {
     private func makeModel(
         query: String,
         initial: CommandSearchUpdate,
@@ -313,8 +310,7 @@ final class CommandSearchModelTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
-@MainActor
-final class CommandSearchAccessibilityTests: XCTestCase {
+@MainActor final class CommandSearchAccessibilityTests: XCTestCase {
     private let fallback: (String, String) -> String = { _, value in value }
 
     func testResultsSummaryForEachPhase() {

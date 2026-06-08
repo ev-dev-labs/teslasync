@@ -21,8 +21,7 @@ import XCTest
 
 // MARK: - State holder: web-prop mapping + wiring
 
-@MainActor
-final class ComputedMetricRegistryModelTests: XCTestCase {
+@MainActor final class ComputedMetricRegistryModelTests: XCTestCase {
     private let one = [ComputedMetricSummary(id: "c", label: "C", unit: "kwh", windows: ["7d"], ops: [.lessThan])]
 
     func testLoadStateMapping() {
@@ -82,8 +81,7 @@ final class ComputedMetricRegistryModelTests: XCTestCase {
 
 // MARK: - Preview holder: lifecycle + freshness
 
-@MainActor
-final class ComputedMetricPreviewModelTests: XCTestCase {
+@MainActor final class ComputedMetricPreviewModelTests: XCTestCase {
     private let request = ComputedMetricPreviewRequest(
         metricID: "cost",
         metricWindow: "7d",
@@ -173,8 +171,7 @@ final class ComputedMetricPreviewModelTests: XCTestCase {
 
 // MARK: - Telemetry: P1/S11 view.opened
 
-@MainActor
-final class ComputedMetricEditorTelemetryTests: XCTestCase {
+@MainActor final class ComputedMetricEditorTelemetryTests: XCTestCase {
     func testReporterEmitsSurfaceSlug() {
         let spy = SpyComputedMetricEditorTelemetry()
         ComputedMetricEditorOpenReporter.report(using: spy)

@@ -19,8 +19,7 @@ import XCTest
 
 // MARK: - Adapter: cached stats → config (port parity with the web slide)
 
-@MainActor
-final class StatHeroSlideAdapterTests: XCTestCase {
+@MainActor final class StatHeroSlideAdapterTests: XCTestCase {
     private let sample = StatHeroSlideStats(totalDistanceKm: 18540, totalEnergyKwh: 3120.6)
 
     /// Web `case 'distance'` (km): convertDistanceFromSI(total_distance_km * 1000, 'km') = km value,
@@ -168,8 +167,7 @@ final class StatHeroSlideAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class StatHeroSlidePhaseTests: XCTestCase {
+@MainActor final class StatHeroSlidePhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         XCTAssertEqual(StatHeroSlideModel.resolvePhase(status: .loading, hasData: false), .loading)
         XCTAssertEqual(StatHeroSlideModel.resolvePhase(status: .loading, hasData: true), .content)
@@ -182,8 +180,7 @@ final class StatHeroSlidePhaseTests: XCTestCase {
     }
 }
 
-@MainActor
-final class StatHeroSlideModelTests: XCTestCase {
+@MainActor final class StatHeroSlideModelTests: XCTestCase {
     private func makeModel(
         _ update: StatHeroSlideUpdate,
         telemetry: StatHeroSlideTelemetry = OSLogStatHeroSlideTelemetry()
@@ -277,8 +274,7 @@ final class StatHeroSlideModelTests: XCTestCase {
 
 // MARK: - Surface metadata
 
-@MainActor
-final class StatHeroSlideSurfaceTests: XCTestCase {
+@MainActor final class StatHeroSlideSurfaceTests: XCTestCase {
     func testSurfaceSlug() {
         XCTAssertEqual(StatHeroSlideSurface.slug, "StatHeroSlide")
         XCTAssertEqual(StatHeroSlide.surfaceSlug, "StatHeroSlide")

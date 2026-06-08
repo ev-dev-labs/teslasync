@@ -13,8 +13,7 @@ import XCTest
 
 // MARK: - Adapter: numeric guard
 
-@MainActor
-final class ChargingSessionNumericTests: XCTestCase {
+@MainActor final class ChargingSessionNumericTests: XCTestCase {
     func testSafeReturnsFiniteValuesElseZero() {
         XCTAssertEqual(ChargingSessionNumeric.safe(42.5), 42.5)
         XCTAssertEqual(ChargingSessionNumeric.safe(0), 0)
@@ -26,8 +25,7 @@ final class ChargingSessionNumericTests: XCTestCase {
 
 // MARK: - Adapter: charger category (port of `getChargerCategory`)
 
-@MainActor
-final class ChargerKindTests: XCTestCase {
+@MainActor final class ChargerKindTests: XCTestCase {
     func testMissingOrEmptyTypeIsHome() {
         XCTAssertEqual(ChargerKind.category(forType: nil), .home)
         XCTAssertEqual(ChargerKind.category(forType: ""), .home)
@@ -68,8 +66,7 @@ final class ChargerKindTests: XCTestCase {
 
 // MARK: - Scale: per-session helpers
 
-@MainActor
-final class ChargingSessionMetricsTests: XCTestCase {
+@MainActor final class ChargingSessionMetricsTests: XCTestCase {
     private func session(
         start: TimeInterval?,
         end: TimeInterval?,
@@ -139,8 +136,7 @@ final class ChargingSessionMetricsTests: XCTestCase {
 
 // MARK: - Scale: A–F grade (port of `numericToGrade`)
 
-@MainActor
-final class ChargingScoreGradeTests: XCTestCase {
+@MainActor final class ChargingScoreGradeTests: XCTestCase {
     func testThresholds() {
         XCTAssertEqual(ChargingScoreGrade.grade(forScore: 100), .gradeAPlus)
         XCTAssertEqual(ChargingScoreGrade.grade(forScore: 90), .gradeAPlus)
@@ -172,8 +168,7 @@ final class ChargingScoreGradeTests: XCTestCase {
 
 // MARK: - Scale: battery-delta display (port of `BatteryDelta`)
 
-@MainActor
-final class ChargingBatteryDeltaDisplayTests: XCTestCase {
+@MainActor final class ChargingBatteryDeltaDisplayTests: XCTestCase {
     func testRise() {
         let display = ChargingBatteryDeltaDisplay.make(startPct: 18, endPct: 72)
         XCTAssertTrue(display.hasData)
@@ -206,8 +201,7 @@ final class ChargingBatteryDeltaDisplayTests: XCTestCase {
 
 // MARK: - Projection (port of the web card body)
 
-@MainActor
-final class ChargingSessionCardProjectionTests: XCTestCase {
+@MainActor final class ChargingSessionCardProjectionTests: XCTestCase {
     private let milesConverter: (Double) -> Double = { $0 * 0.621_371 }
 
     private var supercharger: ChargingSessionSummary {
@@ -302,8 +296,7 @@ final class ChargingSessionCardProjectionTests: XCTestCase {
 
 // MARK: - Formatting parity
 
-@MainActor
-final class ChargingSessionCardFormattingTests: XCTestCase {
+@MainActor final class ChargingSessionCardFormattingTests: XCTestCase {
     private let formatting = DefaultChargingSessionCardFormatting()
 
     func testNumberAndIntGroupingAndRounding() {
@@ -346,8 +339,7 @@ final class ChargingSessionCardFormattingTests: XCTestCase {
 
 // MARK: - Labels + accessibility builders (no hardcoded literals in the view)
 
-@MainActor
-final class ChargingSessionCardLabelsTests: XCTestCase {
+@MainActor final class ChargingSessionCardLabelsTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testChargerLabels() {

@@ -21,8 +21,7 @@ import XCTest
 
 // MARK: - Adapter: kind resolution
 
-@MainActor
-final class RecentlyViewedKindTests: XCTestCase {
+@MainActor final class RecentlyViewedKindTests: XCTestCase {
     func testParseKnownAndUnknown() {
         XCTAssertEqual(RecentPageKind.parse("vehicle"), .vehicle)
         XCTAssertEqual(RecentPageKind.parse("drive"), .drive)
@@ -53,8 +52,7 @@ final class RecentlyViewedKindTests: XCTestCase {
 
 // MARK: - Adapter: path classification (web classifyPath)
 
-@MainActor
-final class RecentlyViewedClassifyTests: XCTestCase {
+@MainActor final class RecentlyViewedClassifyTests: XCTestCase {
     func testEveryPatternCapturesRef() {
         XCTAssertEqual(
             RecentlyViewedAdapter.classify(path: "/vehicles/42"),
@@ -99,8 +97,7 @@ final class RecentlyViewedClassifyTests: XCTestCase {
 
 // MARK: - Adapter: relative-time bucketing + formatting (web formatRelative)
 
-@MainActor
-final class RecentlyViewedRelativeTimeTests: XCTestCase {
+@MainActor final class RecentlyViewedRelativeTimeTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
 
     private func bucket(secondsAgo: TimeInterval) -> RecentRelativeTime {
@@ -135,8 +132,7 @@ final class RecentlyViewedRelativeTimeTests: XCTestCase {
 
 // MARK: - Adapter: row projection + accessibility summary
 
-@MainActor
-final class RecentlyViewedAdapterTests: XCTestCase {
+@MainActor final class RecentlyViewedAdapterTests: XCTestCase {
     private func entry(
         _ path: String,
         _ title: String,
@@ -193,8 +189,7 @@ final class RecentlyViewedAdapterTests: XCTestCase {
 
 // MARK: - Projection: phase resolution across every branch
 
-@MainActor
-final class RecentlyViewedProjectionTests: XCTestCase {
+@MainActor final class RecentlyViewedProjectionTests: XCTestCase {
     private var sample: [RecentlyViewedEntry] {
         [RecentlyViewedEntry(path: "/vehicles/1", title: "Model 3", kind: .vehicle, visitedAt: Date())]
     }
@@ -247,8 +242,7 @@ final class RecentlyViewedProjectionTests: XCTestCase {
 
 // MARK: - State holder: wiring + telemetry + stale auto-refresh
 
-@MainActor
-final class RecentlyViewedModelTests: XCTestCase {
+@MainActor final class RecentlyViewedModelTests: XCTestCase {
     private func makeModel(
         _ input: RecentlyViewedInput,
         telemetry: RecentlyViewedTelemetry = OSLogRecentlyViewedTelemetry()

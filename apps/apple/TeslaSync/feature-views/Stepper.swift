@@ -1,5 +1,5 @@
 //
-//  OnboardingStepper.swift
+//  Stepper.swift
 //  TeslaSync — P4 feature view · 0195 · OnboardingStepper (Apple)
 //
 //  The composable onboarding step list — the SwiftUI parity of

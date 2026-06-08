@@ -16,8 +16,7 @@ import XCTest
 
 // MARK: - Adapter: deriveTimeline (port of helpers.deriveTimeline)
 
-@MainActor
-final class EventTimelineDeriveTests: XCTestCase {
+@MainActor final class EventTimelineDeriveTests: XCTestCase {
     private func event(
         _ id: String,
         _ offset: TimeInterval,
@@ -108,8 +107,7 @@ final class EventTimelineDeriveTests: XCTestCase {
 
 // MARK: - Adapter: predicates + icon mapping
 
-@MainActor
-final class EventTimelineAdapterPredicateTests: XCTestCase {
+@MainActor final class EventTimelineAdapterPredicateTests: XCTestCase {
     func testIsSentryActive() {
         XCTAssertTrue(EventTimelineAdapter.isSentryActive(.bool(true)))
         XCTAssertFalse(EventTimelineAdapter.isSentryActive(.bool(false)))
@@ -155,8 +153,7 @@ final class EventTimelineAdapterPredicateTests: XCTestCase {
 
 // MARK: - Labels (port of useTimelineLabels)
 
-@MainActor
-final class EventTimelineLabelsTests: XCTestCase {
+@MainActor final class EventTimelineLabelsTests: XCTestCase {
     private let englishFallback: (String, String) -> String = { _, fallback in fallback }
 
     private func entry(
@@ -222,8 +219,7 @@ final class EventTimelineLabelsTests: XCTestCase {
 
 // MARK: - Timestamp formatting
 
-@MainActor
-final class EventTimelineTimestampTests: XCTestCase {
+@MainActor final class EventTimelineTimestampTests: XCTestCase {
     func testAbsoluteNilReturnsDash() {
         XCTAssertEqual(EventTimelineTimestamp.absolute(for: nil), "—")
     }
@@ -245,8 +241,7 @@ final class EventTimelineTimestampTests: XCTestCase {
 
 // MARK: - Projection: phase resolution
 
-@MainActor
-final class EventTimelineProjectionTests: XCTestCase {
+@MainActor final class EventTimelineProjectionTests: XCTestCase {
     func testLoading() {
         XCTAssertEqual(EventTimelineProjection.resolvePhase(.loading, hasRows: false), .loading)
         XCTAssertEqual(EventTimelineProjection.resolvePhase(.loading, hasRows: true), .content)
@@ -271,8 +266,7 @@ final class EventTimelineProjectionTests: XCTestCase {
 
 // MARK: - State holder: wiring + telemetry
 
-@MainActor
-final class EventTimelineModelTests: XCTestCase {
+@MainActor final class EventTimelineModelTests: XCTestCase {
     private func history() -> [EventTimelineSecurityEvent] {
         [
             EventTimelineSecurityEvent(
@@ -366,8 +360,7 @@ final class EventTimelineModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class EventTimelineAccessibilityTests: XCTestCase {
+@MainActor final class EventTimelineAccessibilityTests: XCTestCase {
     private let englishFallback: (String, String) -> String = { _, fallback in fallback }
 
     func testRowSummaryCombinesTitleSubtitleAndTimestamp() {

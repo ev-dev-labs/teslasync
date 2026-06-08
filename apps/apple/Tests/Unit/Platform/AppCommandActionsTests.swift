@@ -2,8 +2,7 @@ import XCTest
 @testable import TeslaSync
 
 /// Tests the menu command hub's gating, confirmation, and action dispatch.
-@MainActor
-final class AppCommandActionsTests: XCTestCase {
+@MainActor final class AppCommandActionsTests: XCTestCase {
     func testRequestCommandNeedsAuthWhenSignedOut() {
         let actions = AppCommandActions()
         actions.isAuthenticated = false

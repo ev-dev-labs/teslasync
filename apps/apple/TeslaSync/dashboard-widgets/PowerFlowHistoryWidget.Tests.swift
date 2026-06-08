@@ -21,8 +21,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (parity with web chartData/summary)
 
-@MainActor
-final class PowerFlowAdapterTests: XCTestCase {
+@MainActor final class PowerFlowAdapterTests: XCTestCase {
     /// English-fallback localizer (bundle-free) used by the catalog tests.
     private let echo: (String, String) -> String = { _, fallback in fallback }
     /// Key-revealing localizer so tests can assert the exact i18n key used.
@@ -85,10 +84,22 @@ final class PowerFlowAdapterTests: XCTestCase {
     }
 
     func testHasDataDistinguishesZeroFromSignal() {
-        let zero = PowerFlowHistoryWidgetProjection.points(from: [entry(hoursAgo: 1, solar: 0, battery: 0, grid: 0, load: 0)])
+        let zero = PowerFlowHistoryWidgetProjection.points(from: [entry(
+            hoursAgo: 1,
+            solar: 0,
+            battery: 0,
+            grid: 0,
+            load: 0
+        )])
         XCTAssertFalse(PowerFlowHistoryWidgetProjection.hasData(zero))
 
-        let signal = PowerFlowHistoryWidgetProjection.points(from: [entry(hoursAgo: 1, solar: 0, battery: 0, grid: 0, load: 120)])
+        let signal = PowerFlowHistoryWidgetProjection.points(from: [entry(
+            hoursAgo: 1,
+            solar: 0,
+            battery: 0,
+            grid: 0,
+            load: 120
+        )])
         XCTAssertTrue(PowerFlowHistoryWidgetProjection.hasData(signal))
     }
 
@@ -132,8 +143,7 @@ final class PowerFlowAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + empty reasons + telemetry + source wiring
 
-@MainActor
-final class PowerFlowModelTests: XCTestCase {
+@MainActor final class PowerFlowModelTests: XCTestCase {
     private func makeModel(
         _ update: PowerFlowUpdate,
         telemetry: PowerFlowTelemetry = OSLogPowerFlowTelemetry()
@@ -271,8 +281,7 @@ final class PowerFlowModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class PowerFlowRegistryTests: XCTestCase {
+@MainActor final class PowerFlowRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = PowerFlowHistoryWidget.registration
         XCTAssertEqual(registration.id, "power-flow-history")
@@ -299,8 +308,7 @@ final class PowerFlowRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class PowerFlowAccessibilityTests: XCTestCase {
+@MainActor final class PowerFlowAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let enUS = Locale(identifier: "en_US")
 

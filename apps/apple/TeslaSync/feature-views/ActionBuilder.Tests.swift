@@ -19,8 +19,7 @@ import XCTest
 
 // MARK: - JSON engine (JSON.parse / JSON.stringify(_, null, 2))
 
-@MainActor
-final class ActionJSONTests: XCTestCase {
+@MainActor final class ActionJSONTests: XCTestCase {
     func testParsePreservesObjectKeyOrder() throws {
         let value = try ActionJSONParser.parse("{\"b\": 1, \"a\": 2}")
         guard case let .object(members) = value else { return XCTFail("expected object") }
@@ -98,8 +97,7 @@ final class ActionJSONTests: XCTestCase {
 
 // MARK: - Adapter (defaults / channels / commands / coercions)
 
-@MainActor
-final class ActionBuilderAdapterTests: XCTestCase {
+@MainActor final class ActionBuilderAdapterTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testDefaultActionPerKind() {
@@ -187,8 +185,7 @@ final class ActionBuilderAdapterTests: XCTestCase {
 
 // MARK: - Catalog (action types + command catalog)
 
-@MainActor
-final class ActionCatalogTests: XCTestCase {
+@MainActor final class ActionCatalogTests: XCTestCase {
     func testActionTypesShape() {
         XCTAssertEqual(
             ActionCatalog.actionTypes,
@@ -211,8 +208,7 @@ final class ActionCatalogTests: XCTestCase {
 
 // MARK: - Accessibility (VoiceOver row label)
 
-@MainActor
-final class ActionBuilderAccessibilityTests: XCTestCase {
+@MainActor final class ActionBuilderAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testRowLabelIsOneBased() {

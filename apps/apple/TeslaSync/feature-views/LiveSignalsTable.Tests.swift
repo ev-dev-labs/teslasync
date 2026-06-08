@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Adapter: value rendering + timestamp parsing (web `renderValue`)
 
-@MainActor
-final class LiveSignalsTableFormatTests: XCTestCase {
+@MainActor final class LiveSignalsTableFormatTests: XCTestCase {
     func testJsNumberMatchesTemplateLiteral() {
         XCTAssertEqual(LiveSignalsTableFormat.jsNumber(320), "320")
         XCTAssertEqual(LiveSignalsTableFormat.jsNumber(320.5), "320.5")
@@ -59,8 +58,7 @@ final class LiveSignalsTableFormatTests: XCTestCase {
 
 // MARK: - Adapter: rowFromEntry + projection + filter + sort
 
-@MainActor
-final class LiveSignalsTableBuilderTests: XCTestCase {
+@MainActor final class LiveSignalsTableBuilderTests: XCTestCase {
     func testRowFromEnvelopeCarriesValueAndTimestamp() {
         let entry = LiveSignalEntry(
             name: "speed",
@@ -135,8 +133,7 @@ final class LiveSignalsTableBuilderTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + filter/sort wiring
 
-@MainActor
-final class LiveSignalsTableModelTests: XCTestCase {
+@MainActor final class LiveSignalsTableModelTests: XCTestCase {
     private func makeModel(
         _ update: LiveSignalsTableUpdate,
         telemetry: LiveSignalsTableTelemetry = OSLogLiveSignalsTableTelemetry()
@@ -242,8 +239,7 @@ final class LiveSignalsTableModelTests: XCTestCase {
 
 // MARK: - Accessibility
 
-@MainActor
-final class LiveSignalsTableAccessibilityTests: XCTestCase {
+@MainActor final class LiveSignalsTableAccessibilityTests: XCTestCase {
     func testGridSummaryFallsBackToEmptyTitle() {
         XCTAssertEqual(LiveSignalsTableAccessibility.gridSummary(rowCount: 0), LiveSignalsTableStrings.emptyTitle)
     }

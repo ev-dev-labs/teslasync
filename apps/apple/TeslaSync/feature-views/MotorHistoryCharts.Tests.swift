@@ -58,8 +58,7 @@ private enum MotorHistoryChartsFixture {
 
 // MARK: - Adapter: projection (web useMemo parity)
 
-@MainActor
-final class MotorHistoryChartsBuilderTests: XCTestCase {
+@MainActor final class MotorHistoryChartsBuilderTests: XCTestCase {
     func testProjectMapsEveryDatasetAndPreservesNulls() {
         let projection = MotorHistoryChartsBuilder.project(MotorHistoryChartsFixture.drive)
         XCTAssertEqual(projection.points.count, 3)
@@ -142,8 +141,7 @@ final class MotorHistoryChartsBuilderTests: XCTestCase {
 
 // MARK: - State holder: MotorHistoryChartsModel
 
-@MainActor
-final class MotorHistoryChartsModelTests: XCTestCase {
+@MainActor final class MotorHistoryChartsModelTests: XCTestCase {
     private func makeModel(
         initial: MotorHistoryChartsUpdate?,
         telemetry: MotorHistoryChartsTelemetry = SpyMotorHistoryChartsTelemetry()
@@ -252,8 +250,7 @@ final class MotorHistoryChartsModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
-@MainActor
-final class MotorHistoryChartsAccessibilityTests: XCTestCase {
+@MainActor final class MotorHistoryChartsAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }
 

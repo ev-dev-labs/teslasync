@@ -4,8 +4,7 @@ import XCTest
 /// Cross-checks every widget deep link against the app's real `AppRouteParser`, so a
 /// renamed route can never silently break a widget tap. Guards the privacy contract
 /// that links carry only a route, no identifiers.
-@MainActor
-final class WidgetDeepLinkTests: XCTestCase {
+@MainActor final class WidgetDeepLinkTests: XCTestCase {
     func testSchemeIsTeslaSync() {
         for link in WidgetDeepLink.allCases {
             XCTAssertEqual(link.url.scheme, WidgetURLScheme.scheme)

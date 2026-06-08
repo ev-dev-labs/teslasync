@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (web parity)
 
-@MainActor
-final class LocationMapAdapterTests: XCTestCase {
+@MainActor final class LocationMapAdapterTests: XCTestCase {
     func testNilInputProducesEmptyProjection() {
         let projection = LocationProjectionBuilder.build(nil)
         XCTAssertEqual(projection, .none)
@@ -98,8 +97,7 @@ final class LocationMapAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class LocationMapModelTests: XCTestCase {
+@MainActor final class LocationMapModelTests: XCTestCase {
     private func makeModel(
         _ update: LocationMapUpdate,
         telemetry: LocationMapTelemetry = OSLogLocationMapTelemetry()
@@ -206,8 +204,7 @@ final class LocationMapModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class LocationMapRegistryTests: XCTestCase {
+@MainActor final class LocationMapRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = LocationMapWidget.registration
         XCTAssertEqual(registration.id, "location-map")
@@ -237,8 +234,7 @@ final class LocationMapRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class LocationMapAccessibilityTests: XCTestCase {
+@MainActor final class LocationMapAccessibilityTests: XCTestCase {
     func testSummaryReturnsEmptyCopyWhenNoCoordinate() {
         let summary = LocationMapAccessibility.summary(location: .none, connection: .live)
         XCTAssertEqual(summary, "No location data available")

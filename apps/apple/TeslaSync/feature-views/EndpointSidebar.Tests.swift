@@ -42,8 +42,7 @@ private enum EndpointFixtures {
 
 // MARK: - Adapter: search → filter → group (web view-local parity)
 
-@MainActor
-final class EndpointSidebarBuilderTests: XCTestCase {
+@MainActor final class EndpointSidebarBuilderTests: XCTestCase {
     func testEmptyQueryReturnsAllEndpoints() {
         XCTAssertEqual(EndpointSidebarBuilder.filter(EndpointFixtures.catalog, query: "").count, 5)
     }
@@ -118,8 +117,7 @@ final class EndpointSidebarBuilderTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + selection + search
 
-@MainActor
-final class EndpointSidebarModelTests: XCTestCase {
+@MainActor final class EndpointSidebarModelTests: XCTestCase {
     private func makeModel(
         _ update: EndpointSidebarUpdate,
         telemetry: EndpointSidebarTelemetry = OSLogEndpointSidebarTelemetry(),
@@ -216,8 +214,7 @@ final class EndpointSidebarModelTests: XCTestCase {
 
 // MARK: - HTTP method token / parse / tone
 
-@MainActor
-final class EndpointMethodTests: XCTestCase {
+@MainActor final class EndpointMethodTests: XCTestCase {
     func testTokenIsAlwaysUpperCased() {
         XCTAssertEqual(HTTPMethod.get.token, "GET")
         XCTAssertEqual(HTTPMethod.patch.token, "PATCH")
@@ -242,8 +239,7 @@ final class EndpointMethodTests: XCTestCase {
 
 // MARK: - Accessibility label content
 
-@MainActor
-final class EndpointSidebarAccessibilityTests: XCTestCase {
+@MainActor final class EndpointSidebarAccessibilityTests: XCTestCase {
     func testRowLabelIncludesMethodPathAndSummary() {
         let endpoint = EndpointFixtures.make(.get, "/vehicles", tag: "Vehicles", summary: "List vehicles")
         let label = EndpointSidebarAccessibility.rowLabel(for: endpoint, isSelected: false)

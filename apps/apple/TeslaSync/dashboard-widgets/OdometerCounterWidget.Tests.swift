@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (parity with convertDistanceFromSI)
 
-@MainActor
-final class OdometerProjectionTests: XCTestCase {
+@MainActor final class OdometerProjectionTests: XCTestCase {
     func testKilometerConversionAndFormatting() {
         let input = OdometerInput(odometerMeters: 28_452_000, totalDistanceMeters: 19_804_000, distanceUnit: "km")
         let projection = OdometerProjectionBuilder.build(from: input, localeIdentifier: "en_US")
@@ -70,8 +69,7 @@ final class OdometerProjectionTests: XCTestCase {
 
 // MARK: - Responsive layout (web isCompact / isWide)
 
-@MainActor
-final class OdometerLayoutTests: XCTestCase {
+@MainActor final class OdometerLayoutTests: XCTestCase {
     func testLayoutResolution() {
         XCTAssertEqual(OdometerLayout.resolve(for: DashboardWidgetSize(cols: 1, rows: 1)), .compact)
         XCTAssertEqual(OdometerLayout.resolve(for: DashboardWidgetSize(cols: 1, rows: 2)), .expanded(wide: false))
@@ -81,8 +79,7 @@ final class OdometerLayoutTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class OdometerCounterModelTests: XCTestCase {
+@MainActor final class OdometerCounterModelTests: XCTestCase {
     private func makeModel(
         _ update: OdometerUpdate,
         telemetry: OdometerTelemetry = OSLogOdometerTelemetry()
@@ -162,8 +159,7 @@ final class OdometerCounterModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class OdometerRegistryTests: XCTestCase {
+@MainActor final class OdometerRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = OdometerCounterWidget.registration
         XCTAssertEqual(registration.id, "odometer-counter")
@@ -190,8 +186,7 @@ final class OdometerRegistryTests: XCTestCase {
 
 // MARK: - Accessibility label content
 
-@MainActor
-final class OdometerAccessibilityTests: XCTestCase {
+@MainActor final class OdometerAccessibilityTests: XCTestCase {
     func testReadoutLabelIncludesTitleValueAndUnit() {
         let input = OdometerInput(odometerMeters: 28_452_000, distanceUnit: "km")
         let projection = OdometerProjectionBuilder.build(from: input, localeIdentifier: "en_US")

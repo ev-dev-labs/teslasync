@@ -14,8 +14,7 @@
 import XCTest
 @testable import TeslaSync
 
-@MainActor
-final class TriggerConfiguratorModelTests: XCTestCase {
+@MainActor final class TriggerConfiguratorModelTests: XCTestCase {
     /// A bound model plus the test doubles driving it (a struct, not a tuple, to stay within
     /// the house large-tuple lint budget).
     private struct Harness {

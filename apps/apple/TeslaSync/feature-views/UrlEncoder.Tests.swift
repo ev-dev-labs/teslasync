@@ -21,8 +21,7 @@ import XCTest
 
 // MARK: - Codec: parity with encodeURIComponent / decodeURIComponent
 
-@MainActor
-final class UrlEncoderCodecTests: XCTestCase {
+@MainActor final class UrlEncoderCodecTests: XCTestCase {
     func testEncodeMatchesEncodeURIComponentForExample() {
         // The exact web example pair: "hello world&foo=bar" → "hello%20world%26foo%3Dbar".
         XCTAssertEqual(UrlEncoderCodec.encode("hello world&foo=bar"), "hello%20world%26foo%3Dbar")
@@ -85,8 +84,7 @@ final class UrlEncoderCodecTests: XCTestCase {
 
 // MARK: - State holder: result derivation + example + telemetry
 
-@MainActor
-final class UrlEncoderModelTests: XCTestCase {
+@MainActor final class UrlEncoderModelTests: XCTestCase {
     func testDefaultsToEncodeModeAndEmptyResult() {
         let model = UrlEncoderModel()
         XCTAssertEqual(model.mode, .encode)
@@ -130,8 +128,7 @@ final class UrlEncoderModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class UrlEncoderAccessibilityTests: XCTestCase {
+@MainActor final class UrlEncoderAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let keyTap: (String, String) -> String = { key, _ in "L:\(key)" }
 
@@ -157,8 +154,7 @@ final class UrlEncoderAccessibilityTests: XCTestCase {
 
 // MARK: - i18n facade
 
-@MainActor
-final class UrlEncoderStringsTests: XCTestCase {
+@MainActor final class UrlEncoderStringsTests: XCTestCase {
     func testFacadeResolvesToWebFallbackWhenKeyAbsent() {
         // The per-surface table is folded into the catalog at integration time; in
         // isolation the facade returns the web `t(key, default)` English fallback.

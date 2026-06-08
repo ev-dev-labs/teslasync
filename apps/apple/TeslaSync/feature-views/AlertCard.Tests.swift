@@ -56,8 +56,7 @@ private enum Fixture {
 
 // MARK: - Severity (web normalizeSeverity + severityTokens)
 
-@MainActor
-final class AlertSeverityTests: XCTestCase {
+@MainActor final class AlertSeverityTests: XCTestCase {
     func testNormalizeFoldsAliases() {
         XCTAssertEqual(AlertSeverity.normalize(nil), .info)
         XCTAssertEqual(AlertSeverity.normalize(""), .info)
@@ -87,8 +86,7 @@ final class AlertSeverityTests: XCTestCase {
 
 // MARK: - Type icon + label (web TYPE_ICONS + type display)
 
-@MainActor
-final class AlertTypeIconTests: XCTestCase {
+@MainActor final class AlertTypeIconTests: XCTestCase {
     func testKnownTypesMapToSymbols() {
         XCTAssertEqual(AlertTypeIcon.systemImage(for: "geofence_exit"), "mappin.and.ellipse")
         XCTAssertEqual(AlertTypeIcon.systemImage(for: "low_battery"), "battery.50")
@@ -111,8 +109,7 @@ final class AlertTypeIconTests: XCTestCase {
 
 // MARK: - Relative time (web getTimeAgo)
 
-@MainActor
-final class AlertTimeFormatTests: XCTestCase {
+@MainActor final class AlertTimeFormatTests: XCTestCase {
     private let echo = AlertCardLocalizer.echo
 
     func testTimeAgoBuckets() {
@@ -127,8 +124,7 @@ final class AlertTimeFormatTests: XCTestCase {
 
 // MARK: - Acknowledged badge + action (web isAcked branch)
 
-@MainActor
-final class AlertAckTests: XCTestCase {
+@MainActor final class AlertAckTests: XCTestCase {
     private let echo = AlertCardLocalizer.echo
 
     func testIsAcknowledgedDerivation() {
@@ -160,8 +156,7 @@ final class AlertAckTests: XCTestCase {
 
 // MARK: - Freshness chip (stale / offline)
 
-@MainActor
-final class AlertFreshnessTests: XCTestCase {
+@MainActor final class AlertFreshnessTests: XCTestCase {
     func testProjection() {
         XCTAssertNil(AlertFreshnessChip.project(.live))
         XCTAssertEqual(AlertFreshnessChip.project(.stale), .stale)
@@ -181,8 +176,7 @@ final class AlertFreshnessTests: XCTestCase {
 
 // MARK: - Drill-through (web getAlertDrillthrough / getAlertDrillthroughHref)
 
-@MainActor
-final class AlertDrillthroughTests: XCTestCase {
+@MainActor final class AlertDrillthroughTests: XCTestCase {
     func testMappedSignalRoutesToContextPage() {
         let target = AlertDrillthrough.resolve(
             Fixture.alert(createdAt: "2023-11-14T19:02:00Z", vehicleID: 1, ruleSignal: "BatteryLevel")
@@ -232,8 +226,7 @@ final class AlertDrillthroughTests: XCTestCase {
 
 // MARK: - State accessor
 
-@MainActor
-final class AlertCardStateTests: XCTestCase {
+@MainActor final class AlertCardStateTests: XCTestCase {
     func testAlertAccessor() {
         let data = Fixture.alert()
         XCTAssertEqual(AlertCardState.loaded(data).alert, data)
@@ -245,8 +238,7 @@ final class AlertCardStateTests: XCTestCase {
 
 // MARK: - Accessibility + i18n key parity
 
-@MainActor
-final class AlertCardAccessibilityTests: XCTestCase {
+@MainActor final class AlertCardAccessibilityTests: XCTestCase {
     private let echo = AlertCardLocalizer.echo
 
     func testCardLabelComposesUnreadAlert() {
@@ -292,8 +284,7 @@ final class AlertCardAccessibilityTests: XCTestCase {
 
 // MARK: - Telemetry (P1/S11 view.opened)
 
-@MainActor
-final class AlertCardTelemetryTests: XCTestCase {
+@MainActor final class AlertCardTelemetryTests: XCTestCase {
     private final class Recorder: AlertCardTelemetry, @unchecked Sendable {
         private let lock = NSLock()
         private var stored: [String] = []

@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Adapter: cached positions → density projection (parity port)
 
-@MainActor
-final class PositionHeatmapBuilderTests: XCTestCase {
+@MainActor final class PositionHeatmapBuilderTests: XCTestCase {
     func testTierFromColumns() {
         XCTAssertEqual(PositionHeatmapBuilder.tier(forColumns: 0), .compact)
         XCTAssertEqual(PositionHeatmapBuilder.tier(forColumns: 1), .compact)
@@ -139,8 +138,7 @@ final class PositionHeatmapBuilderTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class PositionHeatmapModelTests: XCTestCase {
+@MainActor final class PositionHeatmapModelTests: XCTestCase {
     private func makeModel(
         _ update: PositionHeatmapUpdate,
         telemetry: PositionHeatmapTelemetry = OSLogPositionHeatmapTelemetry()
@@ -221,8 +219,7 @@ final class PositionHeatmapModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class PositionHeatmapRegistryTests: XCTestCase {
+@MainActor final class PositionHeatmapRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = PositionHeatmapWidget.registration
         XCTAssertEqual(registration.id, "position-heatmap")
@@ -248,8 +245,7 @@ final class PositionHeatmapRegistryTests: XCTestCase {
 
 // MARK: - i18n facade content
 
-@MainActor
-final class PositionHeatmapStringsTests: XCTestCase {
+@MainActor final class PositionHeatmapStringsTests: XCTestCase {
     func testCountFormatsValue() {
         let label = PositionHeatmapStrings.count("widget.positionHeatmap.count", "%lld positions", 3)
         XCTAssertEqual(label, "3 positions")

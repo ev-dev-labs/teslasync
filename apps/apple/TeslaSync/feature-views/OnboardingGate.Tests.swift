@@ -23,8 +23,7 @@ import XCTest
 
 // MARK: - Allow-list (web ALLOW_PREFIXES + isAllowed)
 
-@MainActor
-final class OnboardingAllowListTests: XCTestCase {
+@MainActor final class OnboardingAllowListTests: XCTestCase {
     private let list = OnboardingAllowList.default
 
     func testExactPrefixMatches() {
@@ -59,8 +58,7 @@ final class OnboardingAllowListTests: XCTestCase {
 
 // MARK: - Evaluator (web gate effect)
 
-@MainActor
-final class GateEvaluatorTests: XCTestCase {
+@MainActor final class GateEvaluatorTests: XCTestCase {
     private let incomplete = OnboardingStatus(
         teslaConnected: true,
         vehicleCount: 1,
@@ -132,8 +130,7 @@ final class GateEvaluatorTests: XCTestCase {
 
 // MARK: - Projection (inputs → anchors / error / progress)
 
-@MainActor
-final class OnboardingGateProjectionTests: XCTestCase {
+@MainActor final class OnboardingGateProjectionTests: XCTestCase {
     func testLoadedProducesThreeAnchorsAndProgress() {
         let status = OnboardingStatus(teslaConnected: true, vehicleCount: 1, dataFlowing: false, isComplete: false)
         let projection = OnboardingGateProjectionBuilder.build(feed: .loaded(status), isSkipped: false, path: "/")
@@ -173,8 +170,7 @@ final class OnboardingGateProjectionTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + navigation seam
 
-@MainActor
-final class OnboardingGateModelTests: XCTestCase {
+@MainActor final class OnboardingGateModelTests: XCTestCase {
     private let incomplete = OnboardingStatus(
         teslaConnected: true,
         vehicleCount: 1,
@@ -289,8 +285,7 @@ final class OnboardingGateModelTests: XCTestCase {
 
 // MARK: - Accessibility label content
 
-@MainActor
-final class OnboardingGateAccessibilityTests: XCTestCase {
+@MainActor final class OnboardingGateAccessibilityTests: XCTestCase {
     private let incomplete = OnboardingStatus(
         teslaConnected: true,
         vehicleCount: 1,

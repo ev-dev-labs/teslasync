@@ -23,8 +23,7 @@ import XCTest
 
 // MARK: - Adapter: projection (web SocChart body parity)
 
-@MainActor
-final class SocChartProjectionTests: XCTestCase {
+@MainActor final class SocChartProjectionTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
 
     private let readings: [SocReading] = [
@@ -107,8 +106,7 @@ final class SocChartProjectionTests: XCTestCase {
 
 // MARK: - Formatting
 
-@MainActor
-final class SocChartFormatTests: XCTestCase {
+@MainActor final class SocChartFormatTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
 
     func testPercentRendersWholeNumber() {
@@ -130,8 +128,7 @@ final class SocChartFormatTests: XCTestCase {
 
 // MARK: - State holder: SocChartModel
 
-@MainActor
-final class SocChartModelTests: XCTestCase {
+@MainActor final class SocChartModelTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
 
     private let trace: [SocReading] = [
@@ -261,8 +258,7 @@ final class SocChartModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
-@MainActor
-final class SocChartAccessibilityTests: XCTestCase {
+@MainActor final class SocChartAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let posix = Locale(identifier: "en_US_POSIX")

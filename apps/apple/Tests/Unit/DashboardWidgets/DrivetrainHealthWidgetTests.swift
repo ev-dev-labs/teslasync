@@ -62,8 +62,7 @@ private let motorJSON = """
 
 // MARK: - Adapter / pure-logic tests
 
-@MainActor
-final class DrivetrainHealthAdapterTests: XCTestCase {
+@MainActor final class DrivetrainHealthAdapterTests: XCTestCase {
     func testDecodesHealthCamelCaseJSON() {
         let reading = DrivetrainHealthDecoder.reading(from: Data(healthJSON.utf8))
         XCTAssertEqual(reading?.frontMotorTempC, 64.4)
@@ -190,8 +189,7 @@ final class DrivetrainHealthAdapterTests: XCTestCase {
 
 // MARK: - Model / view-state / contract tests
 
-@MainActor
-final class DrivetrainHealthWidgetViewTests: XCTestCase {
+@MainActor final class DrivetrainHealthWidgetViewTests: XCTestCase {
     func testModelStartsAndRepublishesProviderState() {
         let provider = RecordingProvider()
         let model = DrivetrainHealthWidgetModel(provider: provider)

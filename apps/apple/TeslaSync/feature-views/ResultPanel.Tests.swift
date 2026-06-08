@@ -19,8 +19,7 @@ import XCTest
 
 // MARK: - Adapter: JSON pretty printer (parity with JSON.stringify(_, null, 2))
 
-@MainActor
-final class ResultPanelJSONTests: XCTestCase {
+@MainActor final class ResultPanelJSONTests: XCTestCase {
     private let objectTree = ResultPanelJSONValue.object([
         JSONMember(key: "status", value: .string("ok")),
         JSONMember(key: "code", value: .number("200")),
@@ -98,8 +97,7 @@ final class ResultPanelJSONTests: XCTestCase {
 
 // MARK: - Adapter: outcome → projection
 
-@MainActor
-final class ResultProjectionTests: XCTestCase {
+@MainActor final class ResultProjectionTests: XCTestCase {
     func testSuccessProducesResultVariantWithCopyText() {
         let value = ResultPanelJSONValue.object([JSONMember(key: "ok", value: .bool(true))])
         let projection = ResultProjectionBuilder.build(
@@ -153,8 +151,7 @@ final class ResultProjectionTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + copy seam
 
-@MainActor
-final class ResultPanelModelTests: XCTestCase {
+@MainActor final class ResultPanelModelTests: XCTestCase {
     private func makeModel(
         _ update: ResultPanelUpdate,
         telemetry: any ResultPanelTelemetry = OSLogResultPanelTelemetry(),
@@ -251,8 +248,7 @@ final class ResultPanelModelTests: XCTestCase {
 
 // MARK: - Accessibility label content
 
-@MainActor
-final class ResultPanelAccessibilityTests: XCTestCase {
+@MainActor final class ResultPanelAccessibilityTests: XCTestCase {
     func testPanelLabelForResultIncludesTitle() {
         let projection = ResultProjectionBuilder.build(
             from: ResultPanelInput(title: "Response", outcome: .success(.bool(true)))

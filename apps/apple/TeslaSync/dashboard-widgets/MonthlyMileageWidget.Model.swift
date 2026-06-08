@@ -188,7 +188,10 @@ public final class MonthlyMileageModel {
     /// fetch and the friendly "No mileage data" empty whenever there is no
     /// non-zero data; cached bars stay visible behind a refresh/offline/error so
     /// a transient failure never blanks a populated widget.
-    static func resolvePhase(status: MonthlyMileageWidgetMileageLoadStatus, projection: MonthlyMileageProjection) -> Phase {
+    static func resolvePhase(
+        status: MonthlyMileageWidgetMileageLoadStatus,
+        projection: MonthlyMileageProjection
+    ) -> Phase {
         switch status {
         case .loading:
             if projection.hasData { return .content }

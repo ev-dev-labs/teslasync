@@ -15,10 +15,8 @@
 import Foundation
 import XCTest
 @testable import TeslaSync
- import TeslaSync
 
-@MainActor
-final class FSMStateDiagramModelTests: XCTestCase {
+@MainActor final class FSMStateDiagramModelTests: XCTestCase {
     /// Records the surfaces reported through the P1/S11 telemetry seam.
     private final class SpyTelemetry: FSMStateDiagramTelemetry, @unchecked Sendable {
         private let lock = NSLock()

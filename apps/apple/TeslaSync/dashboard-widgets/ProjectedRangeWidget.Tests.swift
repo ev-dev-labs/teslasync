@@ -52,8 +52,7 @@ private func project(
 
 // MARK: - Adapter: cached DTO → projection
 
-@MainActor
-final class ProjectedRangeAdapterTests: XCTestCase {
+@MainActor final class ProjectedRangeAdapterTests: XCTestCase {
     func testDistanceConversionMetricIsIdentity() {
         XCTAssertEqual(ProjectedRangeUnits.distanceFromKilometers(412, system: .metric), 412, accuracy: 0.001)
     }
@@ -166,8 +165,7 @@ final class ProjectedRangeAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + freshness + telemetry + source wiring
 
-@MainActor
-final class ProjectedRangeModelTests: XCTestCase {
+@MainActor final class ProjectedRangeModelTests: XCTestCase {
     private func makeModel(
         _ update: ProjectedRangeUpdate,
         telemetry: ProjectedRangeTelemetry = OSLogProjectedRangeTelemetry()
@@ -248,8 +246,7 @@ final class ProjectedRangeModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class ProjectedRangeRegistryTests: XCTestCase {
+@MainActor final class ProjectedRangeRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = ProjectedRangeWidget.registration
         XCTAssertEqual(registration.id, "projected-range")
@@ -275,8 +272,7 @@ final class ProjectedRangeRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class ProjectedRangeAccessibilityTests: XCTestCase {
+@MainActor final class ProjectedRangeAccessibilityTests: XCTestCase {
     func testSummaryIncludesValueHealthAndEpaRatio() {
         let stats = project(
             ProjectedRangeInput(currentRangeKm: 412, newRangeKm: 505, healthScore: 92),

@@ -54,8 +54,7 @@ enum TimeToChargeFixture {
 
 // MARK: - Formatting (ports of helpers.ts / numberFormat.ts / unitConversion.ts)
 
-@MainActor
-final class TimeToChargeFormatTests: XCTestCase {
+@MainActor final class TimeToChargeFormatTests: XCTestCase {
     func testDurationMinutesValid() {
         XCTAssertEqual(
             TimeToChargeFormat.durationMinutes(
@@ -134,8 +133,7 @@ final class TimeToChargeFormatTests: XCTestCase {
 
 // MARK: - DC classification (web isDcSession)
 
-@MainActor
-final class TimeToChargeDcClassificationTests: XCTestCase {
+@MainActor final class TimeToChargeDcClassificationTests: XCTestCase {
     func testChargerTypePresentIsDc() {
         XCTAssertTrue(TimeToChargeProjection.isDcSession(TimeToChargeFixture.sessionB))
     }
@@ -162,8 +160,7 @@ final class TimeToChargeDcClassificationTests: XCTestCase {
 
 // MARK: - Metrics projection (web useMemo)
 
-@MainActor
-final class TimeToChargeMetricsTests: XCTestCase {
+@MainActor final class TimeToChargeMetricsTests: XCTestCase {
     func testEmptyWhenNoSessions() {
         XCTAssertEqual(TimeToChargeProjection.metrics(from: []), .empty)
     }
@@ -230,8 +227,7 @@ final class TimeToChargeMetricsTests: XCTestCase {
 
 // MARK: - Cards
 
-@MainActor
-final class TimeToChargeCardsTests: XCTestCase {
+@MainActor final class TimeToChargeCardsTests: XCTestCase {
     func testBuildsFourCardsWithWiring() {
         let metrics = TimeToChargeProjection.metrics(from: TimeToChargeFixture.all)
         let cards = TimeToChargeCards.make(from: metrics, locale: timeToChargeEnUS)

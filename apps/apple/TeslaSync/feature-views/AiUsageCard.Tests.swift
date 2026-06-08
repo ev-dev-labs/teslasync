@@ -36,8 +36,7 @@ private let sampleToday = AiUsageToday(
 
 // MARK: - Projection phases
 
-@MainActor
-final class AiUsageProjectionPhaseTests: XCTestCase {
+@MainActor final class AiUsageProjectionPhaseTests: XCTestCase {
     func testGatedWhenAiModeOff() {
         let resolved = AiUsageProjection.resolve(AiUsageInput(aiModeOff: true, today: sampleToday), locale: enUS)
         XCTAssertEqual(resolved.phase, .gated)
@@ -83,8 +82,7 @@ final class AiUsageProjectionPhaseTests: XCTestCase {
 
 // MARK: - Projection bands / details
 
-@MainActor
-final class AiUsageProjectionContentTests: XCTestCase {
+@MainActor final class AiUsageProjectionContentTests: XCTestCase {
     private func resolve() -> AiUsageResolved {
         AiUsageProjection.resolve(AiUsageInput(today: sampleToday, currencySymbol: "$"), locale: enUS)
     }
@@ -138,8 +136,7 @@ final class AiUsageProjectionContentTests: XCTestCase {
 
 // MARK: - Projection top-lists
 
-@MainActor
-final class AiUsageProjectionTopListTests: XCTestCase {
+@MainActor final class AiUsageProjectionTopListTests: XCTestCase {
     func testNoTopListsWhenSourcesEmpty() {
         let resolved = AiUsageProjection.resolve(AiUsageInput(today: sampleToday), locale: enUS)
         XCTAssertTrue(resolved.topLists.isEmpty)
@@ -204,8 +201,7 @@ final class AiUsageProjectionTopListTests: XCTestCase {
 
 // MARK: - State holder: wiring, telemetry, freshness, gate
 
-@MainActor
-final class AiUsageModelTests: XCTestCase {
+@MainActor final class AiUsageModelTests: XCTestCase {
     private func makeModel(
         _ input: AiUsageInput,
         telemetry: AiUsageTelemetry = OSLogAiUsageTelemetry()
@@ -309,8 +305,7 @@ final class AiUsageModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
-@MainActor
-final class AiUsageAccessibilityTests: XCTestCase {
+@MainActor final class AiUsageAccessibilityTests: XCTestCase {
     func testLabelJoinsLabelAndValue() {
         XCTAssertEqual(AiUsageAccessibility.label("Today", "42 calls"), "Today: 42 calls")
     }

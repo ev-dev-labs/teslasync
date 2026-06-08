@@ -23,8 +23,7 @@ import XCTest
 
 // MARK: - Catalog: verbatim port of the web HTTP_CODES
 
-@MainActor
-final class HttpStatusCatalogTests: XCTestCase {
+@MainActor final class HttpStatusCatalogTests: XCTestCase {
     func testCatalogMatchesWebConstant() {
         XCTAssertEqual(HttpStatusCatalog.codes.count, 19)
         XCTAssertEqual(HttpStatusCatalog.codes.first?.code, 200)
@@ -47,8 +46,7 @@ final class HttpStatusCatalogTests: XCTestCase {
 
 // MARK: - Tone: port of the web Badge variant ternary
 
-@MainActor
-final class HttpStatusToneTests: XCTestCase {
+@MainActor final class HttpStatusToneTests: XCTestCase {
     func testToneByRange() {
         XCTAssertEqual(HttpStatusProjector.tone(forCode: 200), .success)
         XCTAssertEqual(HttpStatusProjector.tone(forCode: 204), .success)
@@ -72,8 +70,7 @@ final class HttpStatusToneTests: XCTestCase {
 
 // MARK: - Filter: port of the web `filtered` useMemo
 
-@MainActor
-final class HttpStatusFilterTests: XCTestCase {
+@MainActor final class HttpStatusFilterTests: XCTestCase {
     private let codes = HttpStatusCatalog.codes
 
     func testBlankQueryReturnsAll() {
@@ -114,8 +111,7 @@ final class HttpStatusFilterTests: XCTestCase {
 
 // MARK: - Sort + pagination: the web DataTable `sortable` / `pagination`
 
-@MainActor
-final class HttpStatusSortPaginationTests: XCTestCase {
+@MainActor final class HttpStatusSortPaginationTests: XCTestCase {
     private let shuffled = [
         HttpStatusCode(code: 500, text: "e", desc: "e"),
         HttpStatusCode(code: 200, text: "a", desc: "a"),
@@ -153,8 +149,7 @@ final class HttpStatusSortPaginationTests: XCTestCase {
 
 // MARK: - Projection: end-to-end derivation
 
-@MainActor
-final class HttpStatusProjectionTests: XCTestCase {
+@MainActor final class HttpStatusProjectionTests: XCTestCase {
     func testDefaultProjectionFitsOnePage() {
         let projection = HttpStatusProjector.project(codes: HttpStatusCatalog.codes)
         XCTAssertEqual(projection.rows.count, 19)
@@ -219,8 +214,7 @@ final class HttpStatusProjectionTests: XCTestCase {
 
 // MARK: - Strings + accessibility (English fallbacks)
 
-@MainActor
-final class HttpStatusStringsTests: XCTestCase {
+@MainActor final class HttpStatusStringsTests: XCTestCase {
     func testToneLabels() {
         XCTAssertEqual(HttpStatusStrings.toneLabel(.success), "Success")
         XCTAssertEqual(HttpStatusStrings.toneLabel(.info), "Redirect")
@@ -240,8 +234,7 @@ final class HttpStatusStringsTests: XCTestCase {
     }
 }
 
-@MainActor
-final class HttpStatusAccessibilityTests: XCTestCase {
+@MainActor final class HttpStatusAccessibilityTests: XCTestCase {
     func testSummaryForContent() {
         let projection = HttpStatusProjector.project(codes: HttpStatusCatalog.codes)
         let summary = HttpStatusAccessibility.summary(for: projection)
@@ -266,8 +259,7 @@ final class HttpStatusAccessibilityTests: XCTestCase {
 
 // MARK: - State holder: phases + UI state + telemetry + source wiring
 
-@MainActor
-final class HttpStatusModelTests: XCTestCase {
+@MainActor final class HttpStatusModelTests: XCTestCase {
     private func makeModel(
         _ update: HttpStatusUpdate,
         telemetry: HttpStatusTelemetry = OSLogHttpStatusTelemetry()

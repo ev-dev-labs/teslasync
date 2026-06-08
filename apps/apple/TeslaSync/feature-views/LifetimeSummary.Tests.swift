@@ -22,8 +22,7 @@ import XCTest
 
 // MARK: - Number formatting (port of web fmtNumber / fmtInt / formatCurrency)
 
-@MainActor
-final class LifetimeNumberFormatTests: XCTestCase {
+@MainActor final class LifetimeNumberFormatTests: XCTestCase {
     private let enUS = Locale(identifier: "en-US")
 
     func testDefaultPrecisionIsTwoDecimals() {
@@ -65,8 +64,7 @@ final class LifetimeNumberFormatTests: XCTestCase {
 
 // MARK: - Formatting preferences (web useFormatting defaults)
 
-@MainActor
-final class LifetimeFormattingTests: XCTestCase {
+@MainActor final class LifetimeFormattingTests: XCTestCase {
     func testDefaultsMirrorWebGlobals() {
         let formatting = LifetimeFormatting()
         XCTAssertEqual(formatting.currencySymbol, "$")
@@ -84,8 +82,7 @@ final class LifetimeFormattingTests: XCTestCase {
 
 // MARK: - Tile builder (web LifetimeSummary composition)
 
-@MainActor
-final class LifetimeMetricsBuilderTests: XCTestCase {
+@MainActor final class LifetimeMetricsBuilderTests: XCTestCase {
     private let core = LifetimeCoreStats(totalCost: 1284.5, totalEnergy: 4210.6, count: 142)
     private let metrics = LifetimeMetrics(
         avgSessionCost: 9.05,
@@ -135,8 +132,7 @@ final class LifetimeMetricsBuilderTests: XCTestCase {
 
 // MARK: - View composition (kind → unit-wrapped display value)
 
-@MainActor
-final class LifetimeMetricDisplayValueTests: XCTestCase {
+@MainActor final class LifetimeMetricDisplayValueTests: XCTestCase {
     func testEnergyKindsWrapWithKwhUnit() {
         let energy = LifetimeMetricProjection(kind: .totalEnergy, primaryText: "4,210.6")
         XCTAssertEqual(LifetimeMetricKind.totalEnergy.displayValue(energy), "4,210.6 kWh")
@@ -171,8 +167,7 @@ final class LifetimeMetricDisplayValueTests: XCTestCase {
 
 // MARK: - Projection: phase resolution + overlays
 
-@MainActor
-final class LifetimeSummaryProjectionTests: XCTestCase {
+@MainActor final class LifetimeSummaryProjectionTests: XCTestCase {
     private let core = LifetimeCoreStats(totalCost: 100, totalEnergy: 400, count: 12)
     private let metrics = LifetimeMetrics(
         avgSessionCost: 8.3, avgSessionEnergy: 33.3, avgDuration: 40, freeCount: 2, freeEnergy: 50
@@ -236,8 +231,7 @@ final class LifetimeSummaryProjectionTests: XCTestCase {
 
 // MARK: - State holder: wiring + telemetry
 
-@MainActor
-final class LifetimeSummaryModelTests: XCTestCase {
+@MainActor final class LifetimeSummaryModelTests: XCTestCase {
     private let core = LifetimeCoreStats(totalCost: 100, totalEnergy: 400, count: 12)
     private let metrics = LifetimeMetrics(
         avgSessionCost: 8.3, avgSessionEnergy: 33.3, avgDuration: 40, freeCount: 2, freeEnergy: 50
@@ -298,8 +292,7 @@ final class LifetimeSummaryModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class LifetimeSummaryAccessibilityTests: XCTestCase {
+@MainActor final class LifetimeSummaryAccessibilityTests: XCTestCase {
     func testTileSummaryJoinsLabelAndValue() {
         let summary = LifetimeSummaryAccessibility.tileSummary(label: "Total Spent", value: "$1,284.50")
         XCTAssertEqual(summary, "Total Spent, $1,284.50")

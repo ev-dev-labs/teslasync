@@ -213,7 +213,10 @@ public enum FleetHealthAccessibility {
         ].joined(separator: ", ")
     }
 
-    public static func errorRowSummary(_ row: FleetTelemetryHealthErrorRow, localize: (String, String) -> String) -> String {
+    public static func errorRowSummary(
+        _ row: FleetTelemetryHealthErrorRow,
+        localize: (String, String) -> String
+    ) -> String {
         var parts = ["\(localize("devtools.health.vin", "VIN")) \(row.vin)"]
         if let code = row.errorCode {
             parts.append("\(localize("devtools.health.errorCode", "Error Code")) \(code)")

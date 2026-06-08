@@ -12,8 +12,7 @@
 import XCTest
 @testable import TeslaSync
 
-@MainActor
-final class ChargingSessionCardModelTests: XCTestCase {
+@MainActor final class ChargingSessionCardModelTests: XCTestCase {
     private func makeModel(
         _ update: ChargingSessionCardUpdate,
         telemetry: ChargingSessionCardTelemetry = OSLogChargingSessionCardTelemetry()

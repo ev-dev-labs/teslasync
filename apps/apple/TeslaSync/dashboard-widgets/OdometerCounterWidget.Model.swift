@@ -208,7 +208,6 @@ public final class OdometerCounterModel {
 
 // MARK: - Registry metadata (canonical: registry/vehicle.ts → "odometer-counter")
 
-
 // MARK: - Localization facade (P1/S10) — web `t(key, default)`
 
 /// Resolves the surface's strings by key with the web English fallback, so the

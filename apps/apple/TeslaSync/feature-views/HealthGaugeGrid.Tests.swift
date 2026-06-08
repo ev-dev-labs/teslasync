@@ -22,8 +22,7 @@ import XCTest
 
 // MARK: - Adapter: formatting (web parity)
 
-@MainActor
-final class HealthGaugeFormatTests: XCTestCase {
+@MainActor final class HealthGaugeFormatTests: XCTestCase {
     func testNumberGroupsAndFixesFractionDigits() {
         XCTAssertEqual(HealthGaugeFormat.number(1234.0, decimals: 1), "1,234.0")
         XCTAssertEqual(HealthGaugeFormat.number(72, decimals: 1), "72.0")
@@ -60,8 +59,7 @@ final class HealthGaugeFormatTests: XCTestCase {
 
 // MARK: - Adapter: SI converters (web parity)
 
-@MainActor
-final class HealthGaugeConverterTests: XCTestCase {
+@MainActor final class HealthGaugeConverterTests: XCTestCase {
     func testDistanceConverterMatchesWebConstants() {
         XCTAssertEqual(convertHealthDistanceFromSI(1000, to: .kilometers), 1, accuracy: 1e-9)
         XCTAssertEqual(convertHealthDistanceFromSI(1609.344, to: .miles), 1, accuracy: 1e-9)
@@ -78,8 +76,7 @@ final class HealthGaugeConverterTests: XCTestCase {
 
 // MARK: - Adapter: projector (web parity)
 
-@MainActor
-final class HealthGaugeGridProjectorTests: XCTestCase {
+@MainActor final class HealthGaugeGridProjectorTests: XCTestCase {
     private func row(_ id: String, in rows: [HealthDetailRow]?) -> HealthDetailRow? {
         rows?.first { $0.id == id }
     }
@@ -185,8 +182,7 @@ final class HealthGaugeGridProjectorTests: XCTestCase {
 
 // MARK: - State holder: phases + refresh + telemetry
 
-@MainActor
-final class HealthGaugeGridModelTests: XCTestCase {
+@MainActor final class HealthGaugeGridModelTests: XCTestCase {
     private func makeModel(
         _ update: HealthGaugeGridUpdate,
         telemetry: HealthGaugeGridTelemetry = OSLogHealthGaugeGridTelemetry()
@@ -312,8 +308,7 @@ final class HealthGaugeGridModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
-@MainActor
-final class HealthGaugeGridAccessibilityTests: XCTestCase {
+@MainActor final class HealthGaugeGridAccessibilityTests: XCTestCase {
     private func data(includeStats: Bool) -> DrivetrainHealthInput {
         DrivetrainHealthInput(
             overallHealth: includeStats ? .good : .warning,

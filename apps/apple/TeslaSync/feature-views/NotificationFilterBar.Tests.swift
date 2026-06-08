@@ -19,8 +19,7 @@ import XCTest
 
 // MARK: - Filter patch math (web setters)
 
-@MainActor
-final class NotificationFiltersPatchTests: XCTestCase {
+@MainActor final class NotificationFiltersPatchTests: XCTestCase {
     func testTogglingSeverityAppendsThenRemoves() {
         let base = NotificationFilters()
         let warned = base.togglingSeverity(.warn)
@@ -102,8 +101,7 @@ final class NotificationFiltersPatchTests: XCTestCase {
 
 // MARK: - Projection: phase + active chips
 
-@MainActor
-final class NotificationFilterProjectionTests: XCTestCase {
+@MainActor final class NotificationFilterProjectionTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testResolvePhaseWithoutCache() {
@@ -167,8 +165,7 @@ final class NotificationFilterProjectionTests: XCTestCase {
 
 // MARK: - Option labels + ISO date boundary
 
-@MainActor
-final class NotificationFilterOptionTests: XCTestCase {
+@MainActor final class NotificationFilterOptionTests: XCTestCase {
     func testVehicleOptionLabelFallback() {
         XCTAssertEqual(NotificationVehicleOption(id: 1, displayName: "Roadster").label, "Roadster")
         XCTAssertEqual(NotificationVehicleOption(id: 2, displayName: "").label, "#2")
@@ -195,8 +192,7 @@ final class NotificationFilterOptionTests: XCTestCase {
 
 // MARK: - Accessibility
 
-@MainActor
-final class NotificationFilterAccessibilityTests: XCTestCase {
+@MainActor final class NotificationFilterAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testSummaryWithNoActiveFilters() {

@@ -15,8 +15,7 @@ import XCTest
 
 // MARK: - Adapter: formatting + temperature conversion (web parity)
 
-@MainActor
-final class LiveMotorFormatTests: XCTestCase {
+@MainActor final class LiveMotorFormatTests: XCTestCase {
     func testNumberGroupsAndFixesFractionDigits() {
         XCTAssertEqual(LiveMotorFormat.number(1234.0, decimals: 1), "1,234.0")
         XCTAssertEqual(LiveMotorFormat.number(1234.567, decimals: 2), "1,234.57")
@@ -49,8 +48,7 @@ final class LiveMotorFormatTests: XCTestCase {
 
 // MARK: - Adapter: projector gauge math (web parity)
 
-@MainActor
-final class LiveMotorProjectorTests: XCTestCase {
+@MainActor final class LiveMotorProjectorTests: XCTestCase {
     private func gauge(_ id: String, in projection: LiveMotorProjection) -> MotorGaugeTile? {
         projection.gauges.first { $0.id == id }
     }
@@ -197,8 +195,7 @@ final class LiveMotorProjectorTests: XCTestCase {
 
 // MARK: - State holder: phases + refresh + telemetry
 
-@MainActor
-final class LiveMotorStatusModelTests: XCTestCase {
+@MainActor final class LiveMotorStatusModelTests: XCTestCase {
     private func makeModel(
         _ update: LiveMotorUpdate,
         telemetry: LiveMotorTelemetry = OSLogLiveMotorTelemetry()
@@ -318,8 +315,7 @@ final class LiveMotorStatusModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
-@MainActor
-final class LiveMotorAccessibilityTests: XCTestCase {
+@MainActor final class LiveMotorAccessibilityTests: XCTestCase {
     func testSummaryIncludesEveryGaugeAndShift() {
         let motor = MotorSnapshotInput(
             torqueFrontNm: 184.5,
@@ -341,8 +337,7 @@ final class LiveMotorAccessibilityTests: XCTestCase {
 // MARK: - View: per-state render smoke (every state materializes)
 
 #if canImport(UIKit) || canImport(AppKit)
-    @MainActor
-    final class LiveMotorStatusViewStateTests: XCTestCase {
+    @MainActor final class LiveMotorStatusViewStateTests: XCTestCase {
         private func renders(_ update: LiveMotorUpdate) -> Bool {
             let source = InMemoryLiveMotorSource(initial: update)
             let model = LiveMotorStatusModel(source: source)

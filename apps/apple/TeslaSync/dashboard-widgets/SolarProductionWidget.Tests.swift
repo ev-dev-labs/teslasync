@@ -21,8 +21,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (parity with the web memos)
 
-@MainActor
-final class SolarProductionBuilderTests: XCTestCase {
+@MainActor final class SolarProductionBuilderTests: XCTestCase {
     private let today = "2026-06-07"
 
     func testShortDateStripsLeadingZerosAndMatchesWebMD() {
@@ -108,8 +107,7 @@ final class SolarProductionBuilderTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class SolarProductionModelTests: XCTestCase {
+@MainActor final class SolarProductionModelTests: XCTestCase {
     private let today = "2026-06-07"
 
     private func history(positive: Bool = true) -> [SolarHistoryEntry] {
@@ -236,8 +234,7 @@ final class SolarProductionModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class SolarProductionRegistryTests: XCTestCase {
+@MainActor final class SolarProductionRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = SolarProductionWidget.registration
         XCTAssertEqual(registration.id, "solar-production")
@@ -266,8 +263,7 @@ final class SolarProductionRegistryTests: XCTestCase {
 
 // MARK: - Formatting (locale-safe)
 
-@MainActor
-final class SolarProductionFormatTests: XCTestCase {
+@MainActor final class SolarProductionFormatTests: XCTestCase {
     func testNumberKeepsFractionDigits() {
         XCTAssertEqual(SolarProductionFormat.number(8.0, fractionDigits: 1).filter(\.isNumber), "80")
         XCTAssertEqual(SolarProductionFormat.number(4.25, fractionDigits: 1).filter(\.isNumber), "43") // rounds to 4.3
@@ -293,8 +289,7 @@ final class SolarProductionFormatTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class SolarProductionAccessibilityTests: XCTestCase {
+@MainActor final class SolarProductionAccessibilityTests: XCTestCase {
     func testSummaryListsEveryMetricWithUnit() {
         let history = [SolarHistoryEntry(timestamp: "2026-06-07T00:00:00Z", solarEnergyWh: 9000)]
         let projection = SolarProductionBuilder.buildProjection(history: history, todayKey: "2026-06-07")

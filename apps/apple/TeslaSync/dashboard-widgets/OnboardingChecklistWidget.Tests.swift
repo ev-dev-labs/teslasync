@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Adapter: cached inputs → projection (port of useChecklistTasks)
 
-@MainActor
-final class OnboardingChecklistBuilderTests: XCTestCase {
+@MainActor final class OnboardingChecklistBuilderTests: XCTestCase {
     func testCatalogShapeMatchesWebOrder() {
         let tasks = ChecklistBuilder.catalog(for: ChecklistInputs())
         XCTAssertEqual(tasks.map(\.id), [
@@ -129,8 +128,7 @@ final class OnboardingChecklistBuilderTests: XCTestCase {
 
 // MARK: - State holder: phases + transitions + telemetry
 
-@MainActor
-final class OnboardingChecklistModelTests: XCTestCase {
+@MainActor final class OnboardingChecklistModelTests: XCTestCase {
     private func makeModel(
         _ update: ChecklistUpdate,
         telemetry: OnboardingChecklistTelemetry = OSLogOnboardingChecklistTelemetry()
@@ -252,8 +250,7 @@ final class OnboardingChecklistModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class OnboardingChecklistRegistryTests: XCTestCase {
+@MainActor final class OnboardingChecklistRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = OnboardingChecklistWidget.registration
         XCTAssertEqual(registration.id, "onboarding-checklist")
@@ -276,8 +273,7 @@ final class OnboardingChecklistRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class OnboardingChecklistAccessibilityTests: XCTestCase {
+@MainActor final class OnboardingChecklistAccessibilityTests: XCTestCase {
     func testSummaryIncludesProgressAndTaskStatuses() {
         let projection = ChecklistBuilder.buildProjection(
             from: ChecklistInputs(vehicleCount: 1, commandPaletteDiscovered: true)

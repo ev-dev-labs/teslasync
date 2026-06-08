@@ -42,8 +42,7 @@ private enum FavoritesTestData {
 
 // MARK: - Projection: favorite filter
 
-@MainActor
-final class FavoritesProjectionFilterTests: XCTestCase {
+@MainActor final class FavoritesProjectionFilterTests: XCTestCase {
     func testKeepsRegistryOrderNotFavoritesOrder() {
         let result = FavoritesProjection.favoriteCommands(
             favorites: ["climate", "wake"],
@@ -79,8 +78,7 @@ final class FavoritesProjectionFilterTests: XCTestCase {
 
 // MARK: - Projection: phase resolution
 
-@MainActor
-final class FavoritesProjectionPhaseTests: XCTestCase {
+@MainActor final class FavoritesProjectionPhaseTests: XCTestCase {
     func testResolvePhaseWithoutCache() {
         XCTAssertEqual(FavoritesProjection.resolvePhase(.loading, favoriteCount: 0), .loading)
         XCTAssertEqual(FavoritesProjection.resolvePhase(.loaded, favoriteCount: 0), .empty)
@@ -96,8 +94,7 @@ final class FavoritesProjectionPhaseTests: XCTestCase {
 
 // MARK: - Responsive column math
 
-@MainActor
-final class FavoritesLayoutTests: XCTestCase {
+@MainActor final class FavoritesLayoutTests: XCTestCase {
     func testColumnCountAcrossTailwindBreakpoints() {
         XCTAssertEqual(FavoritesLayout.columnCount(forWidth: 0), 2)
         XCTAssertEqual(FavoritesLayout.columnCount(forWidth: 639), 2)
@@ -110,8 +107,7 @@ final class FavoritesLayoutTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
-@MainActor
-final class FavoritesAccessibilityTests: XCTestCase {
+@MainActor final class FavoritesAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testSummaryWithNoFavorites() {
@@ -127,8 +123,7 @@ final class FavoritesAccessibilityTests: XCTestCase {
 
 // MARK: - Surface identity
 
-@MainActor
-final class FavoritesSurfaceTests: XCTestCase {
+@MainActor final class FavoritesSurfaceTests: XCTestCase {
     func testSlugIsStable() {
         XCTAssertEqual(FavoritesSurface.slug, "FavoritesBar")
     }

@@ -61,8 +61,7 @@ private final class RecordingLocalizer: @unchecked Sendable {
 
 // MARK: - Adapter: state / resolve / connection
 
-@MainActor
-final class EnvironmentalImpactProjectionTests: XCTestCase {
+@MainActor final class EnvironmentalImpactProjectionTests: XCTestCase {
     func testStateFromCoreStatsMirrorsWebConditional() {
         XCTAssertEqual(EnvironmentalImpactProjection.state(from: nil), .empty)
         XCTAssertEqual(EnvironmentalImpactProjection.state(from: Fixture.sample), .loaded(Fixture.sample))
@@ -127,8 +126,7 @@ final class EnvironmentalImpactProjectionTests: XCTestCase {
 
 // MARK: - Number formatting (web `fmtNumber`)
 
-@MainActor
-final class EnvironmentalImpactFormatTests: XCTestCase {
+@MainActor final class EnvironmentalImpactFormatTests: XCTestCase {
     func testFixedPrecisionAndGrouping() {
         XCTAssertEqual(EnvironmentalImpactFormat.number(1284.6, decimals: 1, locale: Fixture.locale), "1,284.6")
         XCTAssertEqual(EnvironmentalImpactFormat.number(21.4, decimals: 1, locale: Fixture.locale), "21.4")
@@ -146,8 +144,7 @@ final class EnvironmentalImpactFormatTests: XCTestCase {
 
 // MARK: - Stat tiles (web primary + secondary figures)
 
-@MainActor
-final class EnvironmentalImpactStatTests: XCTestCase {
+@MainActor final class EnvironmentalImpactStatTests: XCTestCase {
     func testPrimaryStats() {
         let stats = EnvironmentalImpactProjection.primaryStats(Fixture.sample, locale: Fixture.locale)
         XCTAssertEqual(stats.map(\.id), ["co2SavedKg", "treeEquiv"])
@@ -175,8 +172,7 @@ final class EnvironmentalImpactStatTests: XCTestCase {
 
 // MARK: - Description sentence (web interpolated `<p>`)
 
-@MainActor
-final class EnvironmentalImpactDescriptionTests: XCTestCase {
+@MainActor final class EnvironmentalImpactDescriptionTests: XCTestCase {
     func testDescriptionSegments() {
         let desc = EnvironmentalImpactDescription.build(
             Fixture.sample,
@@ -227,8 +223,7 @@ final class EnvironmentalImpactDescriptionTests: XCTestCase {
 
 // MARK: - Freshness chip
 
-@MainActor
-final class EnvironmentalFreshnessChipTests: XCTestCase {
+@MainActor final class EnvironmentalFreshnessChipTests: XCTestCase {
     func testChipProjection() {
         XCTAssertNil(EnvironmentalFreshnessChip.project(.live))
         XCTAssertEqual(EnvironmentalFreshnessChip.project(.stale), .stale)
@@ -249,8 +244,7 @@ final class EnvironmentalFreshnessChipTests: XCTestCase {
 
 // MARK: - Accessibility + i18n key parity
 
-@MainActor
-final class EnvironmentalImpactAccessibilityTests: XCTestCase {
+@MainActor final class EnvironmentalImpactAccessibilityTests: XCTestCase {
     func testStatLabelComposesValueAndLabel() {
         let stats = EnvironmentalImpactProjection.primaryStats(Fixture.sample, locale: Fixture.locale)
         XCTAssertEqual(
@@ -290,8 +284,7 @@ final class EnvironmentalImpactAccessibilityTests: XCTestCase {
 
 // MARK: - Telemetry (P1/S11 view.opened)
 
-@MainActor
-final class EnvironmentalImpactTelemetryTests: XCTestCase {
+@MainActor final class EnvironmentalImpactTelemetryTests: XCTestCase {
     private final class Recorder: EnvironmentalImpactTelemetry, @unchecked Sendable {
         private let lock = NSLock()
         private var stored: [String] = []

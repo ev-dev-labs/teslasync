@@ -19,8 +19,7 @@ import XCTest
 
 // MARK: - Conversion: SI kilopascals → display unit (port of convertPressureFromSI)
 
-@MainActor
-final class TirePressureConvertTests: XCTestCase {
+@MainActor final class TirePressureConvertTests: XCTestCase {
     func testKilopascalIdentity() throws {
         XCTAssertEqual(try XCTUnwrap(TirePressureConvert.fromSI(250, .kpa)), 250, accuracy: 0.0001)
     }
@@ -50,8 +49,7 @@ final class TirePressureConvertTests: XCTestCase {
 
 // MARK: - Adapter: cached rows → projection (port of buildChartData)
 
-@MainActor
-final class TirePressureAdapterTests: XCTestCase {
+@MainActor final class TirePressureAdapterTests: XCTestCase {
     private func snap(
         _ timestamp: String?,
         fl: Double? = nil,
@@ -158,8 +156,7 @@ final class TirePressureAdapterTests: XCTestCase {
 
 // MARK: - Display formatting (port of formatPressure)
 
-@MainActor
-final class TirePressureFormatTests: XCTestCase {
+@MainActor final class TirePressureFormatTests: XCTestCase {
     func testNilRendersEmDash() {
         XCTAssertEqual(TirePressureNumberFormat.pressure(nil), "—")
         XCTAssertEqual(TirePressureNumberFormat.pressure(.nan), "—")
@@ -174,8 +171,7 @@ final class TirePressureFormatTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class TirePressureModelTests: XCTestCase {
+@MainActor final class TirePressureModelTests: XCTestCase {
     private func loaded(_ frontLeft: Double = 250) -> TirePressureHistoryUpdate {
         TirePressureHistoryUpdate(
             status: .loaded,
@@ -250,8 +246,7 @@ final class TirePressureModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class TirePressureRegistryTests: XCTestCase {
+@MainActor final class TirePressureRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = TirePressureHistoryWidget.registration
         XCTAssertEqual(registration.id, "tire-pressure-history")
@@ -277,8 +272,7 @@ final class TirePressureRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class TirePressureAccessibilityTests: XCTestCase {
+@MainActor final class TirePressureAccessibilityTests: XCTestCase {
     func testSummaryIncludesEveryCorner() {
         let row = TirePressureSnapshotInput(
             timestamp: "2024-01-01T00:00:00Z",

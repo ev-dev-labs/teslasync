@@ -38,8 +38,7 @@ private func sampleDef(
 
 // MARK: - Last-result status parsing (web `lastStatus` ✓/✗)
 
-@MainActor
-final class CommandTileStatusTests: XCTestCase {
+@MainActor final class CommandTileStatusTests: XCTestCase {
     func testSuccessMarkerParsesAndStrips() {
         let status = CommandTileStatus.parse("✓ 2m ago")
         XCTAssertEqual(status?.outcome, .success)
@@ -73,8 +72,7 @@ final class CommandTileStatusTests: XCTestCase {
 
 // MARK: - Variant → accent + raw value parity
 
-@MainActor
-final class CommandTileVariantTests: XCTestCase {
+@MainActor final class CommandTileVariantTests: XCTestCase {
     func testAccentMapping() {
         XCTAssertEqual(InputCommandTileCommandTileVariant.standard.accent, .neutral)
         XCTAssertEqual(InputCommandTileCommandTileVariant.danger.accent, .danger)
@@ -89,8 +87,7 @@ final class CommandTileVariantTests: XCTestCase {
 
 // MARK: - Sublabel presence (web `def.sublabelFallback && …`)
 
-@MainActor
-final class CommandTileDefTests: XCTestCase {
+@MainActor final class CommandTileDefTests: XCTestCase {
     func testHasSublabelWhenFallbackPresent() {
         XCTAssertTrue(sampleDef(sublabelFallback: "Set MPH").hasSublabel)
     }
@@ -103,8 +100,7 @@ final class CommandTileDefTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
-@MainActor
-final class CommandTileAccessibilityTests: XCTestCase {
+@MainActor final class CommandTileAccessibilityTests: XCTestCase {
     func testTileLabelJoinsLabelAndSublabel() {
         XCTAssertEqual(
             InputCommandTileCommandTileAccessibility.tileLabel(label: "Speed Limit", sublabel: "Set MPH"),
@@ -119,7 +115,10 @@ final class CommandTileAccessibilityTests: XCTestCase {
 
     func testStatusLabelJoinsWordingAndDetail() {
         XCTAssertEqual(
-            InputCommandTileCommandTileAccessibility.statusLabel(outcomeWording: "Last result succeeded", detail: "2m ago"),
+            InputCommandTileCommandTileAccessibility.statusLabel(
+                outcomeWording: "Last result succeeded",
+                detail: "2m ago"
+            ),
             "Last result succeeded 2m ago"
         )
         XCTAssertEqual(
@@ -131,8 +130,7 @@ final class CommandTileAccessibilityTests: XCTestCase {
 
 // MARK: - Projection (web render branches + P4 leaf contract)
 
-@MainActor
-final class InputCommandTileProjectionTests: XCTestCase {
+@MainActor final class InputCommandTileProjectionTests: XCTestCase {
     func testErrorTakesPrecedence() {
         let resolved = InputCommandTileProjection.resolve(
             InputCommandTileInput(def: sampleDef(), errorMessage: "boom")
@@ -188,8 +186,7 @@ final class InputCommandTileProjectionTests: XCTestCase {
 
 // MARK: - State holder: wiring, telemetry, actions, freshness
 
-@MainActor
-final class InputCommandTileModelTests: XCTestCase {
+@MainActor final class InputCommandTileModelTests: XCTestCase {
     private func makeModel(
         _ input: InputCommandTileInput,
         telemetry: InputCommandTelemetry = OSLogInputCommandTelemetry()

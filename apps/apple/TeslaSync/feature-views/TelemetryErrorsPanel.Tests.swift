@@ -19,8 +19,7 @@ import XCTest
 
 // MARK: - Extractor: Tesla wire shape → rows (port of extractTelemetryErrors)
 
-@MainActor
-final class TelemetryErrorsExtractorTests: XCTestCase {
+@MainActor final class TelemetryErrorsExtractorTests: XCTestCase {
     private func errorRow(_ members: [TelemetryJSON.Member]) -> TelemetryJSON {
         .object(members)
     }
@@ -114,8 +113,7 @@ final class TelemetryErrorsExtractorTests: XCTestCase {
 
 // MARK: - Export + JSON serialisation (web JSON.stringify(value, null, 2))
 
-@MainActor
-final class TelemetryErrorsExportTests: XCTestCase {
+@MainActor final class TelemetryErrorsExportTests: XCTestCase {
     func testExportProducesPrettyJSONArrayInKeyOrder() {
         let rows = [
             TelemetryErrorsPanelErrorRow(rowKey: "k1", timestamp: "t1", code: "c1", message: "m1")
@@ -152,8 +150,7 @@ final class TelemetryErrorsExportTests: XCTestCase {
 
 // MARK: - Timestamp formatting (web formatDateTime)
 
-@MainActor
-final class TelemetryErrorsFormatTests: XCTestCase {
+@MainActor final class TelemetryErrorsFormatTests: XCTestCase {
     func testEmptyAndInvalidReturnDash() {
         XCTAssertEqual(TelemetryErrorsFormat.timestamp(""), "—")
         XCTAssertEqual(TelemetryErrorsFormat.timestamp("not-a-date"), "—")
@@ -170,8 +167,7 @@ final class TelemetryErrorsFormatTests: XCTestCase {
 
 // MARK: - Projection: phase resolution across every web branch
 
-@MainActor
-final class TelemetryErrorsProjectionTests: XCTestCase {
+@MainActor final class TelemetryErrorsProjectionTests: XCTestCase {
     func testIdleWhenNotRequested() {
         let resolved = TelemetryErrorsProjection.resolve(TelemetryErrorsInput(requested: false))
         XCTAssertEqual(resolved.phase, .idle)
@@ -229,8 +225,7 @@ final class TelemetryErrorsProjectionTests: XCTestCase {
 
 // MARK: - State holder: wiring + telemetry
 
-@MainActor
-final class TelemetryErrorsModelTests: XCTestCase {
+@MainActor final class TelemetryErrorsModelTests: XCTestCase {
     private func makeModel(
         _ input: TelemetryErrorsInput,
         telemetry: TelemetryErrorsTelemetry = OSLogTelemetryErrorsTelemetry()
@@ -282,8 +277,7 @@ final class TelemetryErrorsModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class TelemetryErrorsAccessibilityTests: XCTestCase {
+@MainActor final class TelemetryErrorsAccessibilityTests: XCTestCase {
     func testRowSummaryCombinesFields() {
         let row = TelemetryErrorsPanelErrorRow(rowKey: "k", timestamp: "", code: "c1", message: "m1")
         let summary = TelemetryErrorsAccessibility.rowSummary(for: row)

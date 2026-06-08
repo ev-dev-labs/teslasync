@@ -205,8 +205,6 @@ public final class InMemoryTirePressureHistorySource: TirePressureHistorySource 
 
 // MARK: - Registry metadata (canonical: registry/tires.ts → "tire-pressure-history")
 
-
-
 // MARK: - Localization facade (P1/S10) — web `t(key, default)`
 
 /// Resolves the surface's strings by key with the web English fallback, so the

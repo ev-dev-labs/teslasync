@@ -46,8 +46,7 @@ private enum Fixture {
 
 // MARK: - Breakpoint (web GRID_BREAKPOINTS / getBreakpointFromWidth)
 
-@MainActor
-final class DashboardBreakpointTests: XCTestCase {
+@MainActor final class DashboardBreakpointTests: XCTestCase {
     func testResolvePicksLargestThresholdAtOrBelowWidth() {
         XCTAssertEqual(DashboardBreakpoint.resolve(width: 1300), .lg)
         XCTAssertEqual(DashboardBreakpoint.resolve(width: 1200), .lg)
@@ -81,8 +80,7 @@ final class DashboardBreakpointTests: XCTestCase {
 
 // MARK: - Layout projections (getWidgetSizeLive / orderedWidgets / placements / contexts)
 
-@MainActor
-final class DashboardLayoutMathTests: XCTestCase {
+@MainActor final class DashboardLayoutMathTests: XCTestCase {
     private func layouts() -> DashboardGridLayouts {
         DashboardGridLayouts([
             .lg: [Fixture.item("A", 0, 0, 2, 3)],
@@ -245,8 +243,7 @@ final class DashboardLayoutMathTests: XCTestCase {
 
 // MARK: - Placement geometry (native equivalent of RGL x/y/w/h)
 
-@MainActor
-final class DashboardGridPlacementTests: XCTestCase {
+@MainActor final class DashboardGridPlacementTests: XCTestCase {
     func testColumnWidth() {
         XCTAssertEqual(
             DashboardGridPlacement.columnWidth(totalWidth: 1000, columns: 4, spacing: 16),
@@ -296,8 +293,7 @@ final class DashboardGridPlacementTests: XCTestCase {
 
 // MARK: - Kiosk boost (web kioskPanelStyle)
 
-@MainActor
-final class DashboardKioskStyleTests: XCTestCase {
+@MainActor final class DashboardKioskStyleTests: XCTestCase {
     func testNilOpacityYieldsNoStyle() {
         XCTAssertNil(DashboardKioskStyle.resolve(opacity: nil))
     }
@@ -315,8 +311,7 @@ final class DashboardKioskStyleTests: XCTestCase {
 
 // MARK: - Freshness chip + connection gating
 
-@MainActor
-final class DashboardFreshnessTests: XCTestCase {
+@MainActor final class DashboardFreshnessTests: XCTestCase {
     func testChipProjection() {
         XCTAssertNil(DashboardGridFreshnessChip.project(.live))
         XCTAssertEqual(DashboardGridFreshnessChip.project(.stale), .stale)
@@ -343,8 +338,7 @@ final class DashboardFreshnessTests: XCTestCase {
 
 // MARK: - Render state
 
-@MainActor
-final class DashboardGridStateTests: XCTestCase {
+@MainActor final class DashboardGridStateTests: XCTestCase {
     func testDashboardAccessor() {
         let data = DashboardGridData(id: "d", name: "n", widgets: [], layouts: DashboardGridLayouts())
         XCTAssertEqual(DashboardGridState.loaded(data).dashboard, data)
@@ -356,8 +350,7 @@ final class DashboardGridStateTests: XCTestCase {
 
 // MARK: - Accessibility + i18n key parity
 
-@MainActor
-final class DashboardGridAccessibilityTests: XCTestCase {
+@MainActor final class DashboardGridAccessibilityTests: XCTestCase {
     private let echo = DashboardGridLocalizer.echo
 
     func testGridAndTileLabels() {
@@ -379,8 +372,7 @@ final class DashboardGridAccessibilityTests: XCTestCase {
 
 // MARK: - Telemetry (P1/S11 view.opened)
 
-@MainActor
-final class DashboardGridTelemetryTests: XCTestCase {
+@MainActor final class DashboardGridTelemetryTests: XCTestCase {
     private final class Recorder: DashboardGridTelemetry, @unchecked Sendable {
         private let lock = NSLock()
         private var stored: [String] = []

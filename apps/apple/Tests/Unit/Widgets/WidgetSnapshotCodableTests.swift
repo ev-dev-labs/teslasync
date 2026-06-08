@@ -4,8 +4,7 @@ import XCTest
 /// Codable / schema tests for the cached payload: lossless round-trip, an empty
 /// envelope with no summaries, unit-interval clamping, and the forward-compatibility
 /// guard that rejects a newer schema instead of misreading it.
-@MainActor
-final class WidgetSnapshotCodableTests: XCTestCase {
+@MainActor final class WidgetSnapshotCodableTests: XCTestCase {
     func testRoundTripSample() throws {
         let sample = TeslaSyncWidgetSnapshot.sample()
         let data = try WidgetSnapshotCoder.encode(sample)

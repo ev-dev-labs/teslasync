@@ -3,8 +3,7 @@ import XCTest
 
 /// Pure-logic tests for the widget freshness policy (ADR-013): fresh / stale /
 /// offline classification and the transition scheduling the timeline relies on.
-@MainActor
-final class WidgetFreshnessTests: XCTestCase {
+@MainActor final class WidgetFreshnessTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_000_000)
     private let policy = WidgetFreshnessPolicy.standard
 

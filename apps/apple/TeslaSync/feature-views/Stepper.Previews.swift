@@ -1,5 +1,5 @@
 //
-//  OnboardingStepper.Previews.swift
+//  Stepper.Previews.swift
 //  TeslaSync — P4 feature view · 0195 · OnboardingStepper (Apple)
 //
 //  Xcode previews for the step list + each P4 state (loading / empty / error /

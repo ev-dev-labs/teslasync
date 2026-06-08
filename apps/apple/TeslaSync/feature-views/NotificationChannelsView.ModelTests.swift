@@ -37,8 +37,7 @@ private func sampleChannel(
 
 // MARK: - Model: wiring, telemetry, freshness
 
-@MainActor
-final class NotificationChannelsModelTests: XCTestCase {
+@MainActor final class NotificationChannelsModelTests: XCTestCase {
     private func makeModel(
         _ input: NotifChannelsInput,
         telemetry: NotificationChannelsTelemetry = OSLogNotificationChannelsTelemetry(),
@@ -196,8 +195,7 @@ final class NotificationChannelsModelTests: XCTestCase {
 
 // MARK: - Form model
 
-@MainActor
-final class ChannelFormModelTests: XCTestCase {
+@MainActor final class ChannelFormModelTests: XCTestCase {
     private func source(
         failing: Set<ChannelSourceAction> = [],
         testResult: ChannelTestResult = ChannelTestResult(success: true)

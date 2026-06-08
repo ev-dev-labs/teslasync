@@ -19,8 +19,7 @@ import XCTest
 
 // MARK: - Projection: parseWindowState (port of web parseWindowState)
 
-@MainActor
-final class WindowStatusParseTests: XCTestCase {
+@MainActor final class WindowStatusParseTests: XCTestCase {
     func testClosedVariants() {
         XCTAssertEqual(WindowStatusProjection.parseWindowState(.string("Closed")), .closed)
         XCTAssertEqual(WindowStatusProjection.parseWindowState(.string("closed")), .closed)
@@ -51,8 +50,7 @@ final class WindowStatusParseTests: XCTestCase {
 
 // MARK: - Projection: cells / phase / summary
 
-@MainActor
-final class WindowStatusProjectionTests: XCTestCase {
+@MainActor final class WindowStatusProjectionTests: XCTestCase {
     func testNilEventYieldsFourUnknownCellsInOrder() {
         let cells = WindowStatusProjection.cells(from: nil)
         XCTAssertEqual(cells.map(\.position), [.fd, .fp, .rd, .rp])
@@ -107,8 +105,7 @@ final class WindowStatusProjectionTests: XCTestCase {
 
 // MARK: - State holder: wiring + telemetry + freshness
 
-@MainActor
-final class WindowStatusModelTests: XCTestCase {
+@MainActor final class WindowStatusModelTests: XCTestCase {
     private func makeModel(
         _ input: WindowStatusInput,
         telemetry: WindowStatusTelemetry = OSLogWindowStatusTelemetry()
@@ -205,8 +202,7 @@ final class WindowStatusModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class WindowStatusAccessibilityTests: XCTestCase {
+@MainActor final class WindowStatusAccessibilityTests: XCTestCase {
     func testCellSummaryCombinesPositionAndState() {
         let summary = WindowStatusAccessibility.cellSummary(positionLabel: "Front Driver", stateLabel: "Closed")
         XCTAssertEqual(summary, "Front Driver, Closed")

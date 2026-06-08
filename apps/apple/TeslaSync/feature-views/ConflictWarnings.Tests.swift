@@ -34,8 +34,7 @@ private func makeConflict(
 
 // MARK: - Projection
 
-@MainActor
-final class ConflictWarningsProjectionTests: XCTestCase {
+@MainActor final class ConflictWarningsProjectionTests: XCTestCase {
     func testRowsPreserveOrderAndStableKeysForRepeatedIds() {
         let conflicts = [
             makeConflict(id: 5, name: "A", reason: "r1", severity: .warning),
@@ -73,8 +72,7 @@ final class ConflictWarningsProjectionTests: XCTestCase {
 
 // MARK: - Severity decode
 
-@MainActor
-final class AutomationConflictSeverityTests: XCTestCase {
+@MainActor final class AutomationConflictSeverityTests: XCTestCase {
     func testKnownWireValues() {
         XCTAssertEqual(ConflictWarningsAutomationConflictSeverity(wire: "warning"), .warning)
         XCTAssertEqual(ConflictWarningsAutomationConflictSeverity(wire: "info"), .info)
@@ -91,8 +89,7 @@ final class AutomationConflictSeverityTests: XCTestCase {
 
 // MARK: - Render resolution
 
-@MainActor
-final class ConflictWarningsRenderTests: XCTestCase {
+@MainActor final class ConflictWarningsRenderTests: XCTestCase {
     func testLoadingPhase() {
         XCTAssertEqual(ConflictWarningsModel.render(for: .loading), .loading)
     }
@@ -116,8 +113,7 @@ final class ConflictWarningsRenderTests: XCTestCase {
 
 // MARK: - Accessibility
 
-@MainActor
-final class ConflictWarningsAccessibilityTests: XCTestCase {
+@MainActor final class ConflictWarningsAccessibilityTests: XCTestCase {
     func testBannerSummaryComposesTitleSeverityAndDetail() {
         let summary = ConflictWarningsAccessibility.bannerSummary(
             title: "Potential Conflict",
@@ -130,8 +126,7 @@ final class ConflictWarningsAccessibilityTests: XCTestCase {
 
 // MARK: - Copy catalog
 
-@MainActor
-final class ConflictWarningsCopyTests: XCTestCase {
+@MainActor final class ConflictWarningsCopyTests: XCTestCase {
     func testCatalogKeysAndFallbacksNonEmpty() {
         XCTAssertFalse(CWCopy.all.isEmpty)
         for entry in CWCopy.all {
@@ -155,8 +150,7 @@ final class ConflictWarningsCopyTests: XCTestCase {
 
 // MARK: - State holder
 
-@MainActor
-final class ConflictWarningsModelTests: XCTestCase {
+@MainActor final class ConflictWarningsModelTests: XCTestCase {
     func testStartAppliesInitialAndEmitsTelemetryOnce() {
         let conflict = makeConflict()
         let source = InMemoryConflictWarningsSource(

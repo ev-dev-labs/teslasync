@@ -24,8 +24,7 @@
     import XCTest
     @testable import TeslaSync
 
-    @MainActor
-    final class KioskOverlayTests: XCTestCase {
+    @MainActor final class KioskOverlayTests: XCTestCase {
         private let enUS = Locale(identifier: "en_US")
         private let enGB = Locale(identifier: "en_GB")
         private let utc = TimeZone(identifier: "UTC")!

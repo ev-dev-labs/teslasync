@@ -9,7 +9,6 @@ import SwiftUI
 // (web/src/features/dashboard/widgets/types.ts + registry/*). They live here
 // with the first widget; later widgets reuse them unchanged.
 
-
 /// Runtime inputs a dashboard host hands a widget surface (web `WidgetProps`).
 public struct DashboardWidgetProps: Equatable, Sendable {
     /// The vehicle to scope the widget to, or `nil` to fall back to the first.

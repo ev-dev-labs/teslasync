@@ -32,8 +32,7 @@ private let enUS = Locale(identifier: "en_US")
 
 // MARK: - Relative time (port of helpers.ts timeSince)
 
-@MainActor
-final class SummaryStatsRelativeTimeTests: XCTestCase {
+@MainActor final class SummaryStatsRelativeTimeTests: XCTestCase {
     func testNilAndEmptyReturnNone() {
         XCTAssertEqual(SummaryStatsFormat.relativeTime(nil, now: referenceNow), .none)
         XCTAssertEqual(SummaryStatsFormat.relativeTime("", now: referenceNow), .none)
@@ -78,8 +77,7 @@ final class SummaryStatsRelativeTimeTests: XCTestCase {
 
 // MARK: - Number formatting (port of numberFormat.ts fmtInt)
 
-@MainActor
-final class SummaryStatsNumberTests: XCTestCase {
+@MainActor final class SummaryStatsNumberTests: XCTestCase {
     func testIntegerRoundsAndGroups() {
         XCTAssertEqual(SummaryStatsFormat.integer(12345.6, locale: enUS), "12,346")
         XCTAssertEqual(SummaryStatsFormat.integer(1000, locale: enUS), "1,000")
@@ -105,8 +103,7 @@ final class SummaryStatsNumberTests: XCTestCase {
 
 // MARK: - Responsive column math (web grid-cols-1 / sm:2 / lg:4)
 
-@MainActor
-final class SummaryStatsLayoutTests: XCTestCase {
+@MainActor final class SummaryStatsLayoutTests: XCTestCase {
     func testColumnsAtBreakpoints() {
         XCTAssertEqual(SummaryStatsLayout.columnCount(forWidth: 320), 1)
         XCTAssertEqual(SummaryStatsLayout.columnCount(forWidth: 639), 1)
@@ -120,8 +117,7 @@ final class SummaryStatsLayoutTests: XCTestCase {
 
 // MARK: - Projection: branches + tile wiring
 
-@MainActor
-final class SummaryStatsProjectionTests: XCTestCase {
+@MainActor final class SummaryStatsProjectionTests: XCTestCase {
     func testLoadingBranchHasNoTiles() {
         let resolved = SummaryStatsProjection.resolve(
             SummaryStatsInput(isLoading: true), now: referenceNow, locale: enUS
@@ -180,8 +176,7 @@ final class SummaryStatsProjectionTests: XCTestCase {
 
 // MARK: - i18n wording (web timeSince literals routed through the facade)
 
-@MainActor
-final class SummaryStatsStringsTests: XCTestCase {
+@MainActor final class SummaryStatsStringsTests: XCTestCase {
     func testRelativeTimeWording() {
         XCTAssertEqual(SSRStrings.relativeTime(.none), "—")
         XCTAssertEqual(SSRStrings.relativeTime(.justNow), "just now")
@@ -193,8 +188,7 @@ final class SummaryStatsStringsTests: XCTestCase {
 
 // MARK: - State holder: wiring + telemetry
 
-@MainActor
-final class SummaryStatsModelTests: XCTestCase {
+@MainActor final class SummaryStatsModelTests: XCTestCase {
     private func makeModel(
         _ input: SummaryStatsInput,
         telemetry: SummaryStatsTelemetry = OSLogSummaryStatsTelemetry()
@@ -250,8 +244,7 @@ final class SummaryStatsModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class SummaryStatsAccessibilityTests: XCTestCase {
+@MainActor final class SummaryStatsAccessibilityTests: XCTestCase {
     func testTileLabelCombinesLabelAndValue() {
         XCTAssertEqual(
             SummaryStatsAccessibility.tileLabel(label: "Sentry Uptime", value: "99%"),

@@ -22,7 +22,7 @@ import SwiftUI
     /// Representative drivetrain readings — the shape the web reads from
     /// `health.{front,rear}MotorTempC` / `inverterTempC` / `batteryTempC` (°C) plus the derived
     /// health verdict + score and the peak drive power (kW).
-    private func previewInput(_ health: TemperatureMetricCardsDrivetrainHealthStatus = .warning) -> TemperatureMetricsInput {
+    private func previewInput(_ health: TempCardsHealthStatus = .warning) -> TemperatureMetricsInput {
         TemperatureMetricsInput(
             frontMotorTempC: 98.0,
             rearMotorTempC: 132.0,

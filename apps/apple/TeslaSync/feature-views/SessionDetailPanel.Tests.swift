@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Adapter: getChargerLabel (port of web getChargerLabel)
 
-@MainActor
-final class SessionDetailChargerKindTests: XCTestCase {
+@MainActor final class SessionDetailChargerKindTests: XCTestCase {
     private func session(chargerType: String?, peakPowerW: Double?) -> ChargingSessionSnapshot {
         ChargingSessionSnapshot(
             startedAt: Date(timeIntervalSince1970: 0),
@@ -71,8 +70,7 @@ final class SessionDetailChargerKindTests: XCTestCase {
 
 // MARK: - Adapter: durationMinutes (port of web durationMinutes)
 
-@MainActor
-final class SessionDetailDurationTests: XCTestCase {
+@MainActor final class SessionDetailDurationTests: XCTestCase {
     private let start = Date(timeIntervalSince1970: 1_000_000)
 
     func testNoEndIsZero() {
@@ -99,8 +97,7 @@ final class SessionDetailDurationTests: XCTestCase {
 
 // MARK: - Adapter: SOC range string
 
-@MainActor
-final class SessionDetailSocRangeTests: XCTestCase {
+@MainActor final class SessionDetailSocRangeTests: XCTestCase {
     func testStartAndEnd() {
         XCTAssertEqual(SessionDetailProjection.socString(start: 20, end: 80), "20% → 80%")
     }
@@ -116,8 +113,7 @@ final class SessionDetailSocRangeTests: XCTestCase {
 
 // MARK: - Adapter: rows + value formatting + phase
 
-@MainActor
-final class SessionDetailRowsTests: XCTestCase {
+@MainActor final class SessionDetailRowsTests: XCTestCase {
     private let formatting = SessionFormatting(
         currencySymbol: "$",
         precision: 2,
@@ -239,8 +235,7 @@ final class SessionDetailRowsTests: XCTestCase {
 
 // MARK: - State holder: wiring + telemetry + freshness
 
-@MainActor
-final class SessionDetailModelTests: XCTestCase {
+@MainActor final class SessionDetailModelTests: XCTestCase {
     private func makeModel(
         _ input: SessionDetailInput,
         telemetry: SessionDetailTelemetry = OSLogSessionDetailTelemetry()
@@ -336,8 +331,7 @@ final class SessionDetailModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class SessionDetailAccessibilityTests: XCTestCase {
+@MainActor final class SessionDetailAccessibilityTests: XCTestCase {
     func testRowSummaryCombinesLabelAndValue() {
         let summary = SessionDetailAccessibility.rowSummary(label: "Energy Added", value: "42.57 kWh")
         XCTAssertEqual(summary, "Energy Added, 42.57 kWh")

@@ -22,8 +22,7 @@ import XCTest
 
 // MARK: - Adapter: projection (alertsByType / alertPieData consumer parity)
 
-@MainActor
-final class AlertsProjectionTests: XCTestCase {
+@MainActor final class AlertsProjectionTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testDataSortsBySeverityPriorityThenKey() {
@@ -102,8 +101,7 @@ final class AlertsProjectionTests: XCTestCase {
 
 // MARK: - State holder: AlertsSectionModel
 
-@MainActor
-final class AlertsSectionModelTests: XCTestCase {
+@MainActor final class AlertsSectionModelTests: XCTestCase {
     private func makeModel(
         initial: AlertsUpdate?,
         telemetry: AlertsSectionTelemetry = SpyAlertsTelemetry()
@@ -207,8 +205,7 @@ final class AlertsSectionModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
-@MainActor
-final class AlertsAccessibilityTests: XCTestCase {
+@MainActor final class AlertsAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }
 

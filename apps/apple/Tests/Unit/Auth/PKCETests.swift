@@ -3,8 +3,7 @@ import XCTest
 @testable import TeslaSync
 
 /// PKCE (RFC 7636) correctness, including the spec's S256 known-answer vector.
-@MainActor
-final class PKCETests: XCTestCase {
+@MainActor final class PKCETests: XCTestCase {
     func testKnownAnswerVectorRFC7636() {
         // RFC 7636 Appendix B.
         let pkce = PKCE(verifier: "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk")

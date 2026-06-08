@@ -12,8 +12,7 @@ import XCTest
 
 // MARK: - State holder: WebhookChannelsSectionModel
 
-@MainActor
-final class WebhookChannelsSectionModelTests: XCTestCase {
+@MainActor final class WebhookChannelsSectionModelTests: XCTestCase {
     private let sample = [
         WebhookChannel(channelID: 1, name: "Discord", enabled: true, url: "https://d", method: .post),
         WebhookChannel(channelID: 2, name: "HA", enabled: false, url: "https://h", method: .put)

@@ -39,8 +39,7 @@ private func sampleInput(unit: DistanceUnitPref = .km, alerts: Int = 2) -> Fleet
 
 // MARK: - Unit conversion (port of lib/unitConversion + widget efficiency)
 
-@MainActor
-final class FleetUnitsTests: XCTestCase {
+@MainActor final class FleetUnitsTests: XCTestCase {
     func testDistanceFromSI() {
         XCTAssertEqual(FleetUnits.distanceFromSI(1000, .km), 1, accuracy: 1e-9)
         XCTAssertEqual(FleetUnits.distanceFromSI(1609.344, .mi), 1, accuracy: 1e-9)
@@ -65,8 +64,7 @@ final class FleetUnitsTests: XCTestCase {
 
 // MARK: - Number formatting (port of lib/numberFormat fmtNumber)
 
-@MainActor
-final class FleetStatsFormatTests: XCTestCase {
+@MainActor final class FleetStatsFormatTests: XCTestCase {
     func testGroupingAndFractionDigits() {
         XCTAssertEqual(FleetStatsFormat.number(1_234_567, decimals: 0, locale: enUS), "1,234,567")
         XCTAssertEqual(FleetStatsFormat.number(312.5, decimals: 1, locale: enUS), "312.5")
@@ -92,8 +90,7 @@ final class FleetStatsFormatTests: XCTestCase {
 
 // MARK: - Responsive column math (web grid-cols-2 / sm:3 / md:4 / lg:5)
 
-@MainActor
-final class FleetStatsLayoutTests: XCTestCase {
+@MainActor final class FleetStatsLayoutTests: XCTestCase {
     func testColumnsAtBreakpoints() {
         XCTAssertEqual(FleetStatsLayout.columnCount(forWidth: 320), 2)
         XCTAssertEqual(FleetStatsLayout.columnCount(forWidth: 639), 2)
@@ -108,8 +105,7 @@ final class FleetStatsLayoutTests: XCTestCase {
 
 // MARK: - Projection: five cards + wiring
 
-@MainActor
-final class FleetStatsProjectionTests: XCTestCase {
+@MainActor final class FleetStatsProjectionTests: XCTestCase {
     func testBuildsFiveCardsInWebOrder() {
         let cards = FleetStatsProjection.cards(from: sampleInput(), locale: enUS)
         XCTAssertEqual(cards.map(\.id), ["size", "distance", "energy", "efficiency", "alerts"])
@@ -173,8 +169,7 @@ final class FleetStatsProjectionTests: XCTestCase {
 
 // MARK: - Empty detection + phase resolution
 
-@MainActor
-final class FleetStatsPhaseTests: XCTestCase {
+@MainActor final class FleetStatsPhaseTests: XCTestCase {
     func testIsEmpty() {
         XCTAssertTrue(FleetStatsProjection.isEmpty(FleetStatsInput()))
         XCTAssertFalse(FleetStatsProjection.isEmpty(FleetStatsInput(vehicleCount: 1)))
@@ -193,8 +188,7 @@ final class FleetStatsPhaseTests: XCTestCase {
 
 // MARK: - State holder: wiring + telemetry + freshness
 
-@MainActor
-final class FleetStatsModelTests: XCTestCase {
+@MainActor final class FleetStatsModelTests: XCTestCase {
     private func makeModel(
         _ update: FleetStatsUpdate,
         telemetry: FleetStatsTelemetry = OSLogFleetStatsTelemetry()
@@ -287,8 +281,7 @@ final class FleetStatsModelTests: XCTestCase {
 
 // MARK: - Accessibility content
 
-@MainActor
-final class FleetStatsAccessibilityTests: XCTestCase {
+@MainActor final class FleetStatsAccessibilityTests: XCTestCase {
     func testCardLabelWithAndWithoutDetail() {
         XCTAssertEqual(
             FleetStatsAccessibility.cardLabel(label: "Distance (30d)", value: "1,234 km", detail: nil),

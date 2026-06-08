@@ -21,8 +21,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web slide)
 
-@MainActor
-final class EnvironmentSlideAdapterTests: XCTestCase {
+@MainActor final class EnvironmentSlideAdapterTests: XCTestCase {
     /// The web slide's headline derivation: `Math.round(co2_offset_kg / 21)` trees, capped at 30
     /// glyphs, with the remainder surfaced as "+N more". 1,840.2 kg → round(87.62…) = 88.
     func testProjectionTreesCapAndOverflow() {
@@ -120,8 +119,7 @@ final class EnvironmentSlideAdapterTests: XCTestCase {
 
 // MARK: - State holder: phase resolution per state
 
-@MainActor
-final class EnvironmentSlidePhaseTests: XCTestCase {
+@MainActor final class EnvironmentSlidePhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         typealias Phase = EnvironmentSlideModel.Phase
         XCTAssertEqual(EnvironmentSlideModel.resolvePhase(status: .loading, hasData: false), Phase.loading)
@@ -137,8 +135,7 @@ final class EnvironmentSlidePhaseTests: XCTestCase {
 
 // MARK: - State holder: model wiring + telemetry
 
-@MainActor
-final class EnvironmentSlideModelTests: XCTestCase {
+@MainActor final class EnvironmentSlideModelTests: XCTestCase {
     private func makeModel(
         _ update: EnvironmentSlideUpdate,
         telemetry: EnvironmentSlideTelemetry = OSLogEnvironmentSlideTelemetry()
@@ -245,8 +242,7 @@ final class EnvironmentSlideModelTests: XCTestCase {
 
 // MARK: - i18n: pluralized caption + source keys
 
-@MainActor
-final class EnvironmentSlideStringsTests: XCTestCase {
+@MainActor final class EnvironmentSlideStringsTests: XCTestCase {
     func testTreesCaptionInterpolatesCount() {
         XCTAssertEqual(EnvironmentSlideStrings.trees(88), "Like planting 88 trees")
         XCTAssertEqual(EnvironmentSlideStrings.trees(1), "Like planting 1 trees")
@@ -262,8 +258,7 @@ final class EnvironmentSlideStringsTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class EnvironmentSlideAccessibilityTests: XCTestCase {
+@MainActor final class EnvironmentSlideAccessibilityTests: XCTestCase {
     func testSummaryCombinesLabelFigureAndTrees() {
         let projection = EnvironmentSlideProjector.project(
             stats: EnvironmentReviewDTO(co2OffsetKg: 1840.2),

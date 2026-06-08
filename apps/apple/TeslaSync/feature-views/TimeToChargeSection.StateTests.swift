@@ -16,8 +16,7 @@ import XCTest
 
 // MARK: - Presentation resolver (every state)
 
-@MainActor
-final class TimeToChargePresentationTests: XCTestCase {
+@MainActor final class TimeToChargePresentationTests: XCTestCase {
     func testIdleIsLoading() {
         XCTAssertEqual(TimeToChargePresentation.resolve(state: .idle), .loading)
     }
@@ -118,8 +117,7 @@ final class TimeToChargePresentationTests: XCTestCase {
 
 // MARK: - Web-prop → load-state mapping
 
-@MainActor
-final class TimeToChargeLoadStateMappingTests: XCTestCase {
+@MainActor final class TimeToChargeLoadStateMappingTests: XCTestCase {
     func testLoadingWithSessionsKeepsCache() {
         let state = TimeToChargeModel.loadState(sessions: TimeToChargeFixture.all, loading: true)
         guard case let .loading(cached, stale) = state else { return XCTFail("expected loading") }
@@ -147,8 +145,7 @@ final class TimeToChargeLoadStateMappingTests: XCTestCase {
 
 // MARK: - Layout
 
-@MainActor
-final class TimeToChargeLayoutTests: XCTestCase {
+@MainActor final class TimeToChargeLayoutTests: XCTestCase {
     func testColumnsAtBreakpoints() {
         XCTAssertEqual(TimeToChargeLayout.columnCount(forWidth: 375), 2)
         XCTAssertEqual(TimeToChargeLayout.columnCount(forWidth: 1023), 2)
@@ -159,8 +156,7 @@ final class TimeToChargeLayoutTests: XCTestCase {
 
 // MARK: - Accessibility
 
-@MainActor
-final class TimeToChargeAccessibilityTests: XCTestCase {
+@MainActor final class TimeToChargeAccessibilityTests: XCTestCase {
     func testCardLabelWithValueUnitAndSubtitle() {
         XCTAssertEqual(
             TimeToChargeAccessibility.cardLabel(
@@ -182,8 +178,7 @@ final class TimeToChargeAccessibilityTests: XCTestCase {
 
 // MARK: - Telemetry
 
-@MainActor
-final class TimeToChargeTelemetryTests: XCTestCase {
+@MainActor final class TimeToChargeTelemetryTests: XCTestCase {
     func testViewOpenedEventCarriesSlug() {
         XCTAssertEqual(TimeToChargeSection.surfaceSlug, "TimeToChargeSection")
         XCTAssertEqual(
@@ -204,8 +199,7 @@ final class TimeToChargeTelemetryTests: XCTestCase {
 
 // MARK: - Model wiring
 
-@MainActor
-final class TimeToChargeModelTests: XCTestCase {
+@MainActor final class TimeToChargeModelTests: XCTestCase {
     func testStartDelegatesToSourceOnce() {
         let source = InMemoryTimeToChargeSource(initial: .loaded(TimeToChargeFixture.all, stale: false))
         let model = TimeToChargeModel(source: source, locale: timeToChargeEnUS)

@@ -11,8 +11,7 @@
 import XCTest
 @testable import TeslaSync
 
-@MainActor
-final class ActionBuilderModelTests: XCTestCase {
+@MainActor final class ActionBuilderModelTests: XCTestCase {
     private func channels() -> [NotificationChannelSummary] {
         [
             NotificationChannelSummary(id: 1, name: "A", kind: .email, enabled: false),

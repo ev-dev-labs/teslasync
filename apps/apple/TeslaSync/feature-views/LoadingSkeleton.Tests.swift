@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Layout projection (adapter "snapshot" — web dimensions, 1:1)
 
-@MainActor
-final class LoadingSkeletonLayoutTests: XCTestCase {
+@MainActor final class LoadingSkeletonLayoutTests: XCTestCase {
     private let layout = LoadingSkeletonLayout.chargingCurve
 
     func testRegionCountMatchesWebRoot() {
@@ -106,8 +105,7 @@ final class LoadingSkeletonLayoutTests: XCTestCase {
 
 // MARK: - Responsive columns (web base / lg / xl → width bucket)
 
-@MainActor
-final class LoadingSkeletonResponsiveColumnsTests: XCTestCase {
+@MainActor final class LoadingSkeletonResponsiveColumnsTests: XCTestCase {
     private let layout = LoadingSkeletonLayout.chargingCurve
 
     func testSummaryColumnsMatchWebBreakpoints() {
@@ -140,8 +138,7 @@ final class LoadingSkeletonResponsiveColumnsTests: XCTestCase {
 
 // MARK: - Telemetry (P1/S11 view.opened)
 
-@MainActor
-final class LoadingSkeletonTelemetryTests: XCTestCase {
+@MainActor final class LoadingSkeletonTelemetryTests: XCTestCase {
     func testReportOpenEmitsSurfaceSlug() {
         let spy = SpyLoadingSkeletonTelemetry()
         LoadingSkeletonSurface.reportOpen(to: spy)
@@ -162,8 +159,7 @@ final class LoadingSkeletonTelemetryTests: XCTestCase {
 
 // MARK: - Localization facade (P1/S10)
 
-@MainActor
-final class LoadingSkeletonLocalizationTests: XCTestCase {
+@MainActor final class LoadingSkeletonLocalizationTests: XCTestCase {
     func testAccessibilityLabelResolvesToFallback() {
         // With no catalog at unit-test time, NSLocalizedString returns the
         // `value` fallback — proving the key + English default are wired.

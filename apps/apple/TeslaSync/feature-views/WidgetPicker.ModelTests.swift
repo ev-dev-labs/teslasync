@@ -13,8 +13,7 @@
 import XCTest
 @testable import TeslaSync
 
-@MainActor
-final class WidgetPickerModelTests: XCTestCase {
+@MainActor final class WidgetPickerModelTests: XCTestCase {
     private func model(
         active: [String] = [],
         store: SpyWidgetRecentsStore = SpyWidgetRecentsStore(),

@@ -13,8 +13,7 @@
 import XCTest
 @testable import TeslaSync
 
-@MainActor
-final class GeneralSettingsModelTests: XCTestCase {
+@MainActor final class GeneralSettingsModelTests: XCTestCase {
     /// The bound model + its injected doubles, returned together so each test can
     /// drive the source and assert the model's projected state.
     private struct Harness {

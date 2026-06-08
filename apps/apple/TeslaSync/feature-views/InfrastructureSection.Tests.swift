@@ -21,8 +21,7 @@ import XCTest
 
 // MARK: - Adapter: decode + pretty-print + projection (web parity)
 
-@MainActor
-final class InfrastructureAdapterTests: XCTestCase {
+@MainActor final class InfrastructureAdapterTests: XCTestCase {
     func testDecodeSortsObjectKeysDeterministically() throws {
         let value = try InfraJSONValue.decode("{\"b\":2,\"a\":1}")
         guard case let .object(members) = value else { return XCTFail("expected object") }
@@ -102,8 +101,7 @@ final class InfrastructureAdapterTests: XCTestCase {
 
 // MARK: - State holder: phase, run lifecycle, offline, freshness, telemetry
 
-@MainActor
-final class InfrastructureModelTests: XCTestCase {
+@MainActor final class InfrastructureModelTests: XCTestCase {
     private func makeModel(
         source: InMemoryInfrastructureSource,
         telemetry: InfrastructureTelemetry = OSLogInfrastructureTelemetry(),
@@ -208,8 +206,7 @@ final class InfrastructureModelTests: XCTestCase {
 
 // MARK: - Catalog: web JSX grid parity
 
-@MainActor
-final class InfrastructureCatalogTests: XCTestCase {
+@MainActor final class InfrastructureCatalogTests: XCTestCase {
     func testCatalogOrderMatchesWebJSX() {
         XCTAssertEqual(
             InfraToolCatalog.all.map(\.id),
@@ -238,8 +235,7 @@ final class InfrastructureCatalogTests: XCTestCase {
 
 // MARK: - Accessibility: composed VoiceOver labels
 
-@MainActor
-final class InfrastructureAccessibilityTests: XCTestCase {
+@MainActor final class InfrastructureAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }
     /// Key-revealing localizer so tests can assert the exact i18n key used.

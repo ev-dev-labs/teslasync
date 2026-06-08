@@ -19,8 +19,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (port parity with mapEventToFeedItem)
 
-@MainActor
-final class GuardAdapterTests: XCTestCase {
+@MainActor final class GuardAdapterTests: XCTestCase {
     /// English-fallback localizer (bundle-free) used by the builder tests.
     private let echo: (String, String) -> String = { _, fallback in fallback }
     /// Key-revealing localizer so tests can assert the exact i18n key used.
@@ -131,8 +130,7 @@ final class GuardAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class GuardModelTests: XCTestCase {
+@MainActor final class GuardModelTests: XCTestCase {
     private func makeModel(
         _ update: GuardUpdate,
         telemetry: GuardTelemetry = OSLogGuardTelemetry()
@@ -210,8 +208,7 @@ final class GuardModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class GuardRegistryTests: XCTestCase {
+@MainActor final class GuardRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = GuardModeWidget.registration
         XCTAssertEqual(registration.id, "guard-mode")
@@ -237,8 +234,7 @@ final class GuardRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class GuardAccessibilityTests: XCTestCase {
+@MainActor final class GuardAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testStatusSummaryIncludesArmedSensitivityAutoPanicAndCount() {

@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Adapter: pure conversion + formatting (parity with the web lib)
 
-@MainActor
-final class LiveSignalsFormatTests: XCTestCase {
+@MainActor final class LiveSignalsFormatTests: XCTestCase {
     func testTemperatureConversion() {
         XCTAssertEqual(LiveSignalsFormat.convertTempFromSI(20, .celsius), 20, accuracy: 0.0001)
         XCTAssertEqual(LiveSignalsFormat.convertTempFromSI(45, .fahrenheit), 113, accuracy: 0.0001)
@@ -59,8 +58,7 @@ final class LiveSignalsFormatTests: XCTestCase {
 
 // MARK: - Adapter: cached DTO → projection
 
-@MainActor
-final class LiveSignalsBuilderTests: XCTestCase {
+@MainActor final class LiveSignalsBuilderTests: XCTestCase {
     private let metric = LiveSignalsUnitPrefs(temperature: .celsius, pressure: .bar, locale: "en-US")
     private let imperial = LiveSignalsUnitPrefs(temperature: .fahrenheit, pressure: .psi, locale: "en-US")
 
@@ -151,8 +149,7 @@ final class LiveSignalsBuilderTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class LiveSignalsModelTests: XCTestCase {
+@MainActor final class LiveSignalsModelTests: XCTestCase {
     private func makeModel(
         _ update: LiveSignalsUpdate,
         telemetry: LiveSignalsTelemetry = OSLogLiveSignalsTelemetry()
@@ -237,8 +234,7 @@ final class LiveSignalsModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class LiveSignalsRegistryTests: XCTestCase {
+@MainActor final class LiveSignalsRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = LiveSignalsWidget.registration
         XCTAssertEqual(registration.id, "live-signals")
@@ -267,8 +263,7 @@ final class LiveSignalsRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class LiveSignalsAccessibilityTests: XCTestCase {
+@MainActor final class LiveSignalsAccessibilityTests: XCTestCase {
     func testSummaryIncludesEverySectionLabel() {
         let projection = LiveSignalsBuilder.buildProjection(
             motor: LiveSignalsMotorInput(torqueNm: 285, statorTempC: 42, gear: "D"),

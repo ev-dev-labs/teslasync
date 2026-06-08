@@ -64,8 +64,7 @@ private enum DrivingSectionFixture {
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web source)
 
-@MainActor
-final class DrivingSectionAdapterTests: XCTestCase {
+@MainActor final class DrivingSectionAdapterTests: XCTestCase {
     func testStatsProjectionMatchesWeb() {
         let projection = DrivingSectionFixture.project(DrivingSectionFixture.worsening)
         XCTAssertEqual(projection.stats.map(\.kind), [.avgEfficiency, .totalDrivingTime, .efficiencyChange, .drives])
@@ -215,8 +214,7 @@ final class DrivingSectionAdapterTests: XCTestCase {
 
 // MARK: - State holder: phase resolution
 
-@MainActor
-final class DrivingSectionPhaseTests: XCTestCase {
+@MainActor final class DrivingSectionPhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         // Web parent precedence: loading and error short-circuit BEFORE the body (error wins over cache).
         XCTAssertEqual(DrivingSectionProjector.resolvePhase(.loading, hasData: false), .loading)
@@ -230,8 +228,7 @@ final class DrivingSectionPhaseTests: XCTestCase {
 
 // MARK: - State holder: model wiring + telemetry
 
-@MainActor
-final class DrivingSectionModelTests: XCTestCase {
+@MainActor final class DrivingSectionModelTests: XCTestCase {
     private func makeModel(
         _ update: DrivingSectionUpdate,
         telemetry: DrivingSectionTelemetry = OSLogDrivingSectionTelemetry()
@@ -336,8 +333,7 @@ final class DrivingSectionModelTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
-@MainActor
-final class DrivingSectionAccessibilityTests: XCTestCase {
+@MainActor final class DrivingSectionAccessibilityTests: XCTestCase {
     private let fallback: (String, String) -> String = { _, value in value }
 
     func testChartSummaryWithData() {

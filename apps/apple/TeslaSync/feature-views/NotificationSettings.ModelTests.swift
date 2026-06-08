@@ -14,8 +14,7 @@ import XCTest
 
 // MARK: - State holder: model wiring, telemetry, mutations
 
-@MainActor
-final class NotificationSettingsModelTests: XCTestCase {
+@MainActor final class NotificationSettingsModelTests: XCTestCase {
     private func makeModel(
         _ update: NotificationSettingsUpdate,
         telemetry: NotificationSettingsTelemetry = OSLogNotificationSettingsTelemetry()

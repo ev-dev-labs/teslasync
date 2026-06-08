@@ -40,8 +40,7 @@ private func session(
 
 // MARK: - Adapter: cached DTO → projection (parity with the web source)
 
-@MainActor
-final class SuperchargerHistoryAdapterTests: XCTestCase {
+@MainActor final class SuperchargerHistoryAdapterTests: XCTestCase {
     func testSessionsSortByStartDescendingAndSliceToTen() {
         // 12 sessions, deliberately out of order; expect newest-first, capped at 10.
         let sessions = (1 ... 12).map { index in
@@ -139,8 +138,7 @@ final class SuperchargerHistoryAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class SuperchargerHistoryModelTests: XCTestCase {
+@MainActor final class SuperchargerHistoryModelTests: XCTestCase {
     private func makeModel(
         _ update: SuperchargerHistoryUpdate,
         telemetry: SuperchargerHistoryTelemetry = OSLogSuperchargerHistoryTelemetry()
@@ -229,8 +227,7 @@ final class SuperchargerHistoryModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class SuperchargerHistoryRegistryTests: XCTestCase {
+@MainActor final class SuperchargerHistoryRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = SuperchargerHistoryWidget.registration
         XCTAssertEqual(registration.id, "supercharger-history")
@@ -260,8 +257,7 @@ final class SuperchargerHistoryRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class SuperchargerHistoryAccessibilityTests: XCTestCase {
+@MainActor final class SuperchargerHistoryAccessibilityTests: XCTestCase {
     func testSummaryIncludesTitleCountAndTotals() {
         let summary = SuperchargerHistoryAccessibility.summary(
             sessionCount: 3,

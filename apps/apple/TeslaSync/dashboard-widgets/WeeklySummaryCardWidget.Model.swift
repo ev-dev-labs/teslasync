@@ -235,8 +235,6 @@ public final class InMemoryWeeklySummarySource: WeeklySummarySource {
 
 // MARK: - Dashboard grid primitives (web `WidgetSize` / `WidgetDef`)
 
-
-
 // MARK: - Registry metadata (canonical: registry/analytics.ts → "weekly-summary-card")
 
 /// Diagnostics slug + canonical dashboard registration for this surface, kept out

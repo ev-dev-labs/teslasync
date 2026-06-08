@@ -12,8 +12,7 @@ private final class DestinationETADiagnosticsSpy: DestinationETADiagnostics {
     }
 }
 
-@MainActor
-final class DestinationETAWidgetTests: XCTestCase {
+@MainActor final class DestinationETAWidgetTests: XCTestCase {
     // MARK: - Data adapter (cached JSON → projection)
 
     func testProjectionMapsNavigatingSnapshot() {

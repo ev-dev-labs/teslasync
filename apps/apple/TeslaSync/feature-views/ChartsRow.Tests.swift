@@ -22,8 +22,7 @@ import XCTest
 
 // MARK: - Adapter: numeric guard (port of `safeNumber`)
 
-@MainActor
-final class ChartsRowNumericTests: XCTestCase {
+@MainActor final class ChartsRowNumericTests: XCTestCase {
     func testSafeReturnsFiniteValues() {
         XCTAssertEqual(ChartsRowNumeric.safe(42.5), 42.5)
         XCTAssertEqual(ChartsRowNumeric.safe(0), 0)
@@ -40,8 +39,7 @@ final class ChartsRowNumericTests: XCTestCase {
 
 // MARK: - Adapter: donut shares (port of `<Pie/>`)
 
-@MainActor
-final class ChartsRowDonutTests: XCTestCase {
+@MainActor final class ChartsRowDonutTests: XCTestCase {
     func testEmptySlicesProduceEmptyDonut() {
         let donut = ChartsRowProjection.donut([])
         XCTAssertTrue(donut.isEmpty)
@@ -80,8 +78,7 @@ final class ChartsRowDonutTests: XCTestCase {
 
 // MARK: - Adapter: energy/cost shared-axis scale
 
-@MainActor
-final class ChartsRowEnergyScaleTests: XCTestCase {
+@MainActor final class ChartsRowEnergyScaleTests: XCTestCase {
     private let points = [
         ChartsRowEnergyPoint(date: "Jan", energy: 300, cost: 20),
         ChartsRowEnergyPoint(date: "Feb", energy: 420, cost: 55)
@@ -117,8 +114,7 @@ final class ChartsRowEnergyScaleTests: XCTestCase {
 
 // MARK: - Formatting: web `fmtNumber` / `fmtWithUnit` / `${fmtNumber}` parity
 
-@MainActor
-final class ChartsRowFormattingTests: XCTestCase {
+@MainActor final class ChartsRowFormattingTests: XCTestCase {
     private let formatting = DefaultChartsRowFormatting()
 
     func testNumberGroupsAndUsesFixedDecimals() {
@@ -147,8 +143,7 @@ final class ChartsRowFormattingTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class ChartsRowAccessibilityTests: XCTestCase {
+@MainActor final class ChartsRowAccessibilityTests: XCTestCase {
     private let formatting = DefaultChartsRowFormatting()
 
     func testEnergyTrendSummarySpansDatesAndSeries() {
@@ -204,8 +199,7 @@ final class ChartsRowAccessibilityTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class ChartsRowModelTests: XCTestCase {
+@MainActor final class ChartsRowModelTests: XCTestCase {
     private func makeModel(
         _ update: ChartsRowUpdate,
         telemetry: ChartsRowTelemetry = OSLogChartsRowTelemetry()

@@ -220,11 +220,16 @@ extension VehicleHeroWidgetProjection {
         guard state.isCharging else { return nil }
         let rate = VehicleHeroConvert.distance(state.chargeRateMph ?? 0, prefs.distanceUnit)
         let ttf = state.timeToFullChargeH
-        let power = VehicleHeroWidgetFormat.number(state.chargerPowerKw, decimals: prefs.precision, locale: prefs.locale)
+        let power = VehicleHeroWidgetFormat.number(
+            state.chargerPowerKw,
+            decimals: prefs.precision,
+            locale: prefs.locale
+        )
         return VehicleHeroChargingDetail(
             powerText: "\(power) kW",
             rateText: "\(VehicleHeroWidgetFormat.int(rate, locale: prefs.locale)) \(prefs.distanceUnit)/h",
-            timeToFullText: ttf > 0 ? "\(VehicleHeroWidgetFormat.number(ttf, decimals: 1, locale: prefs.locale))h" : "—",
+            timeToFullText: ttf > 0 ? "\(VehicleHeroWidgetFormat.number(ttf, decimals: 1, locale: prefs.locale))h" :
+                "—",
             doneInHours: ttf > 0 ? ttf : nil
         )
     }

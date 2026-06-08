@@ -3,8 +3,7 @@ import XCTest
 @testable import TeslaSync
 
 /// Token expiry math and OIDC token-response decoding/mapping.
-@MainActor
-final class AuthTokensTests: XCTestCase {
+@MainActor final class AuthTokensTests: XCTestCase {
     func testIsExpired() {
         let now = Date()
         XCTAssertTrue(AuthTokens.fixture(expiresIn: -10, now: now).isExpired(now: now))

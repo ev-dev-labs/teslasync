@@ -50,8 +50,7 @@ enum NotificationFixture {
 
 // MARK: - Adapter: cached input → projection (port parity with the web source)
 
-@MainActor
-final class NotificationSettingsAdapterTests: XCTestCase {
+@MainActor final class NotificationSettingsAdapterTests: XCTestCase {
     func testChannelOrderMatchesWebConstant() {
         let projection = NotificationFixture.project(NotificationFixture.input())
         XCTAssertEqual(
@@ -175,8 +174,7 @@ final class NotificationSettingsAdapterTests: XCTestCase {
 
 // MARK: - Volume math
 
-@MainActor
-final class NotificationVolumeMathTests: XCTestCase {
+@MainActor final class NotificationVolumeMathTests: XCTestCase {
     func testClampUnit() {
         XCTAssertEqual(NotificationVolumeMath.clampUnit(0.5), 0.5, accuracy: 0.0001)
         XCTAssertEqual(NotificationVolumeMath.clampUnit(-1), 0)
@@ -195,8 +193,7 @@ final class NotificationVolumeMathTests: XCTestCase {
 
 // MARK: - State holder: phase resolution
 
-@MainActor
-final class NotificationSettingsPhaseTests: XCTestCase {
+@MainActor final class NotificationSettingsPhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         // Web parent precedence: loading and error short-circuit BEFORE the content/empty body.
         XCTAssertEqual(NotificationSettingsProjector.resolvePhase(.loading, hasContent: false), .loading)
@@ -210,8 +207,7 @@ final class NotificationSettingsPhaseTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
-@MainActor
-final class NotificationSettingsAccessibilityTests: XCTestCase {
+@MainActor final class NotificationSettingsAccessibilityTests: XCTestCase {
     private let fallback: (String, String) -> String = { _, value in value }
 
     func testSectionSummaryWithData() {

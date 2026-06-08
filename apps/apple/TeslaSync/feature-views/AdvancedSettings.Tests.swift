@@ -21,8 +21,7 @@ import XCTest
 
 // MARK: - Adapter: persisted ids → projection (port parity with the web source)
 
-@MainActor
-final class AdvancedSettingsAdapterTests: XCTestCase {
+@MainActor final class AdvancedSettingsAdapterTests: XCTestCase {
     func testLabelMapsKnownKeysAndFallsBackToRawKey() {
         XCTAssertEqual(AdvancedSettingsProjector.label(for: "discard-draft"), "Discard unsaved draft")
         XCTAssertEqual(
@@ -75,8 +74,7 @@ final class AdvancedSettingsAdapterTests: XCTestCase {
 
 // MARK: - State holder: snapshot → phase, mutations, telemetry
 
-@MainActor
-final class AdvancedSettingsModelTests: XCTestCase {
+@MainActor final class AdvancedSettingsModelTests: XCTestCase {
     private func makeModel(
         keys: [String],
         status: AdvancedSettingsLoadStatus = .loaded,
@@ -173,8 +171,7 @@ final class AdvancedSettingsModelTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
-@MainActor
-final class AdvancedSettingsAccessibilityTests: XCTestCase {
+@MainActor final class AdvancedSettingsAccessibilityTests: XCTestCase {
     private let fallback: (String, String) -> String = { _, value in value }
 
     func testSummaryForEachPhase() {

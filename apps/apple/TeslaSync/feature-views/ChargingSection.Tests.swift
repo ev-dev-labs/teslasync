@@ -22,8 +22,7 @@ import XCTest
 
 // MARK: - Adapter: projection + formatting
 
-@MainActor
-final class ChargingProjectionTests: XCTestCase {
+@MainActor final class ChargingProjectionTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
 
     private let daily: [ChargingDailyEnergy] = [
@@ -101,7 +100,10 @@ final class ChargingProjectionTests: XCTestCase {
     func testHasContent() {
         let empty = ChargingMetrics(sessionCount: 0, energyAddedKwh: 0, avgChargeRateKw: 0, cost: 0, prevEnergyKwh: 0)
         XCTAssertFalse(ChargingSectionProjection.hasContent(metrics: empty, bars: []))
-        XCTAssertTrue(ChargingSectionProjection.hasContent(metrics: empty, bars: ChargingSectionProjection.bars(from: daily)))
+        XCTAssertTrue(ChargingSectionProjection.hasContent(
+            metrics: empty,
+            bars: ChargingSectionProjection.bars(from: daily)
+        ))
         let active = ChargingMetrics(sessionCount: 2, energyAddedKwh: 0, avgChargeRateKw: 0, cost: 0, prevEnergyKwh: 0)
         XCTAssertTrue(ChargingSectionProjection.hasContent(metrics: active, bars: []))
         XCTAssertFalse(ChargingSectionProjection.hasContent(metrics: nil, bars: []))
@@ -115,7 +117,11 @@ final class ChargingProjectionTests: XCTestCase {
     }
 
     func testTotalEnergy() {
-        XCTAssertEqual(ChargingSectionProjection.totalEnergy(ChargingSectionProjection.bars(from: daily)), 8, accuracy: 0.0001)
+        XCTAssertEqual(
+            ChargingSectionProjection.totalEnergy(ChargingSectionProjection.bars(from: daily)),
+            8,
+            accuracy: 0.0001
+        )
     }
 
     func testNumberFormattingParity() {
@@ -136,8 +142,7 @@ final class ChargingProjectionTests: XCTestCase {
 
 // MARK: - State holder: ChargingSectionModel
 
-@MainActor
-final class ChargingSectionModelTests: XCTestCase {
+@MainActor final class ChargingSectionModelTests: XCTestCase {
     private func makeModel(
         initial: ChargingUpdate?,
         telemetry: ChargingSectionTelemetry = SpyChargingTelemetry()
@@ -249,8 +254,7 @@ final class ChargingSectionModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
-@MainActor
-final class ChargingSectionAccessibilityTests: XCTestCase {
+@MainActor final class ChargingSectionAccessibilityTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
 
     /// English-fallback localizer (bundle-free).
@@ -292,7 +296,10 @@ final class ChargingSectionAccessibilityTests: XCTestCase {
 
     func testBarLabel() {
         let bar = ChargingEnergyBar(index: 0, day: "Mon", energy: 5)
-        XCTAssertEqual(ChargingSectionAccessibility.barLabel(bar, localize: echo, locale: posix), "Mon: 5.0 kWh Energy Added")
+        XCTAssertEqual(
+            ChargingSectionAccessibility.barLabel(bar, localize: echo, locale: posix),
+            "Mon: 5.0 kWh Energy Added"
+        )
     }
 }
 

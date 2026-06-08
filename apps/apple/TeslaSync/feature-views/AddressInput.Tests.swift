@@ -35,8 +35,7 @@ private enum AddressInputFixture {
 
 // MARK: - Adapter: cached results → projection (port parity with the web source)
 
-@MainActor
-final class AddressInputAdapterTests: XCTestCase {
+@MainActor final class AddressInputAdapterTests: XCTestCase {
     func testProjectMapsResultsToSuggestions() {
         let projection = AddressInputFixture.project(AddressInputFixture.results)
         XCTAssertEqual(projection.suggestions.count, 3)
@@ -106,8 +105,7 @@ final class AddressInputAdapterTests: XCTestCase {
 
 // MARK: - State holder: query → search, callbacks, phase, telemetry
 
-@MainActor
-final class AddressInputModelTests: XCTestCase {
+@MainActor final class AddressInputModelTests: XCTestCase {
     private func makeModel(
         query: String,
         initial: AddressInputUpdate,
@@ -292,8 +290,7 @@ final class AddressInputModelTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
-@MainActor
-final class AddressInputAccessibilityTests: XCTestCase {
+@MainActor final class AddressInputAccessibilityTests: XCTestCase {
     private let fallback: (String, String) -> String = { _, value in value }
 
     func testResultsSummaryForEachPhase() {

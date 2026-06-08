@@ -204,8 +204,6 @@ public final class InMemoryMotorHistorySource: MotorHistorySource {
 
 // MARK: - Registry metadata (canonical: registry/vehicle.ts → "motor-history")
 
-
-
 // MARK: - Localization facade (P1/S10) — web `t(key, default)`
 
 /// Resolves the surface's strings by key with the web English fallback, so the

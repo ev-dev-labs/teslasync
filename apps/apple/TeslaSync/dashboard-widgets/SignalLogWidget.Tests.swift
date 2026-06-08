@@ -22,8 +22,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection
 
-@MainActor
-final class SignalLogAdapterTests: XCTestCase {
+@MainActor final class SignalLogAdapterTests: XCTestCase {
     private func observation(
         ts: TimeInterval = 0,
         name: String? = "BatteryLevel",
@@ -171,8 +170,7 @@ final class SignalLogAdapterTests: XCTestCase {
 
 // MARK: - State holder: phase / freshness / pause / telemetry / wiring
 
-@MainActor
-final class SignalLogModelTests: XCTestCase {
+@MainActor final class SignalLogModelTests: XCTestCase {
     private func observation(ts: TimeInterval, name: String) -> SignalObservationDTO {
         SignalObservationDTO(
             timestamp: Date(timeIntervalSince1970: ts),
@@ -299,8 +297,7 @@ final class SignalLogModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class SignalLogRegistryTests: XCTestCase {
+@MainActor final class SignalLogRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = SignalLogWidget.registration
         XCTAssertEqual(registration.id, "signal-log")
@@ -333,8 +330,7 @@ final class SignalLogRegistryTests: XCTestCase {
 
 // MARK: - Accessibility copy
 
-@MainActor
-final class SignalLogAccessibilityTests: XCTestCase {
+@MainActor final class SignalLogAccessibilityTests: XCTestCase {
     func testRowLabelIncludesNameValueSourceAndTime() {
         let now = Date()
         let row = SignalLogRowProjection(

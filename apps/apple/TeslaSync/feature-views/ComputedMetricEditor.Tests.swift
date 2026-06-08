@@ -24,8 +24,7 @@ import XCTest
 
 // MARK: - Adapter: web transform ports
 
-@MainActor
-final class ComputedMetricEditorAdapterTests: XCTestCase {
+@MainActor final class ComputedMetricEditorAdapterTests: XCTestCase {
     private typealias Adapter = ComputedMetricEditorAdapter
     private let enUS = Locale(identifier: "en_US")
 
@@ -195,8 +194,7 @@ final class ComputedMetricEditorAdapterTests: XCTestCase {
 
 // MARK: - State holder: cached → projection
 
-@MainActor
-final class ComputedMetricRegistryPresentationTests: XCTestCase {
+@MainActor final class ComputedMetricRegistryPresentationTests: XCTestCase {
     private let one = [ComputedMetricSummary(id: "c", label: "C", unit: "kwh", windows: ["7d"], ops: [.lessThan])]
 
     func testLoadingAndContent() {

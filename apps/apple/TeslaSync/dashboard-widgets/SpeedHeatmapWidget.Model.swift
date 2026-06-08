@@ -263,7 +263,11 @@ public enum SpeedHeatmapStrings {
 /// Builds the VoiceOver value spoken for the heatmap. Pure + public so the a11y
 /// content can be unit-tested without rendering the view.
 public enum SpeedHeatmapAccessibility {
-    public static func summary(grid: [[HeatCell]], unit: SpeedHeatmapWidgetUnit, calendar: Calendar = .current) -> String {
+    public static func summary(
+        grid: [[HeatCell]],
+        unit: SpeedHeatmapWidgetUnit,
+        calendar: Calendar = .current
+    ) -> String {
         let title = SpeedHeatmapStrings.string("widget.speedHeatmap.title", "Speed Heatmap")
         let total = SpeedHeatmapBuilder.totalDrives(in: grid)
         guard total > 0 else {

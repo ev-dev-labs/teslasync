@@ -19,8 +19,7 @@ import XCTest
 
 // MARK: - Adapter: status + props → projection
 
-@MainActor
-final class UserImpersonateButtonAdapterTests: XCTestCase {
+@MainActor final class UserImpersonateButtonAdapterTests: XCTestCase {
     /// English-fallback localizer (bundle-free) used by the projection tests.
     private let echo: (String, String) -> String = { _, fallback in fallback }
     /// English-fallback `%@` formatter (bundle-free).
@@ -147,8 +146,7 @@ final class UserImpersonateButtonAdapterTests: XCTestCase {
 
 // MARK: - State holder: status phases + confirm/start flow + freshness + telemetry
 
-@MainActor
-final class UserImpersonateButtonModelTests: XCTestCase {
+@MainActor final class UserImpersonateButtonModelTests: XCTestCase {
     private func makeModel(
         subject: String = "subject-1",
         disabled: Bool = false,

@@ -60,8 +60,7 @@ private enum PowerOutputFixture {
 
 // MARK: - Adapter: projection
 
-@MainActor
-final class PowerOutputProjectionTests: XCTestCase {
+@MainActor final class PowerOutputProjectionTests: XCTestCase {
     private let posix = PowerOutputFixture.posix
     private let utc = PowerOutputFixture.utc
 
@@ -172,8 +171,7 @@ final class PowerOutputProjectionTests: XCTestCase {
 
 // MARK: - Adapter: CSV export
 
-@MainActor
-final class PowerOutputExportTests: XCTestCase {
+@MainActor final class PowerOutputExportTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testCsvHeaderAndRows() {
@@ -193,8 +191,7 @@ final class PowerOutputExportTests: XCTestCase {
 
 // MARK: - State holder: PowerOutputChartModel
 
-@MainActor
-final class PowerOutputChartModelTests: XCTestCase {
+@MainActor final class PowerOutputChartModelTests: XCTestCase {
     private func makeModel(
         initial: PowerOutputUpdate?,
         telemetry: PowerOutputTelemetry = SpyPowerOutputTelemetry()
@@ -320,8 +317,7 @@ final class PowerOutputChartModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
-@MainActor
-final class PowerOutputAccessibilityTests: XCTestCase {
+@MainActor final class PowerOutputAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     private var series: [PowerOutputSeries] {

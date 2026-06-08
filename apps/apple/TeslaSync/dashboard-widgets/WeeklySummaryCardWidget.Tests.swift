@@ -44,8 +44,7 @@ private enum WeeklySummaryFixture {
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web widget)
 
-@MainActor
-final class WeeklySummaryAdapterTests: XCTestCase {
+@MainActor final class WeeklySummaryAdapterTests: XCTestCase {
     func testProjectReturnsNilWithoutDigest() {
         XCTAssertNil(WeeklySummaryBuilder.project(nil, units: WeeklySummaryFixture.units(.kilometers)))
     }
@@ -103,7 +102,10 @@ final class WeeklySummaryAdapterTests: XCTestCase {
 
     func testEmptyDigestProjectsToZeroesAndFlatTrends() throws {
         let projection = try XCTUnwrap(
-            WeeklySummaryBuilder.project(WeeklySummaryCardWidgetDigestDTO(), units: WeeklySummaryFixture.units(.kilometers))
+            WeeklySummaryBuilder.project(
+                WeeklySummaryCardWidgetDigestDTO(),
+                units: WeeklySummaryFixture.units(.kilometers)
+            )
         )
         XCTAssertEqual(projection.distanceValue, "0.0")
         XCTAssertEqual(projection.energyValue, "0.0")
@@ -153,8 +155,7 @@ final class WeeklySummaryAdapterTests: XCTestCase {
 
 // MARK: - Trend (port parity with the web `trendOf`)
 
-@MainActor
-final class WeeklySummaryTrendTests: XCTestCase {
+@MainActor final class WeeklySummaryTrendTests: XCTestCase {
     func testZeroPreviousIsFlatDash() {
         XCTAssertEqual(
             WeeklySummaryBuilder.trend(current: 5, previous: 0),
@@ -200,8 +201,7 @@ final class WeeklySummaryTrendTests: XCTestCase {
 
 // MARK: - State holder: phases
 
-@MainActor
-final class WeeklySummaryPhaseTests: XCTestCase {
+@MainActor final class WeeklySummaryPhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         XCTAssertEqual(WeeklySummaryModel.resolvePhase(status: .loading, hasData: false), .loading)
         XCTAssertEqual(WeeklySummaryModel.resolvePhase(status: .loading, hasData: true), .content)
@@ -214,8 +214,7 @@ final class WeeklySummaryPhaseTests: XCTestCase {
     }
 }
 
-@MainActor
-final class WeeklySummaryModelTests: XCTestCase {
+@MainActor final class WeeklySummaryModelTests: XCTestCase {
     private func makeModel(
         _ update: WeeklySummaryUpdate,
         telemetry: WeeklySummaryTelemetry = OSLogWeeklySummaryTelemetry()
@@ -307,8 +306,7 @@ final class WeeklySummaryModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class WeeklySummaryRegistryTests: XCTestCase {
+@MainActor final class WeeklySummaryRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = WeeklySummaryCardWidget.registration
         XCTAssertEqual(registration.id, "weekly-summary-card")
@@ -335,8 +333,7 @@ final class WeeklySummaryRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class WeeklySummaryAccessibilityTests: XCTestCase {
+@MainActor final class WeeklySummaryAccessibilityTests: XCTestCase {
     func testSummaryIncludesEveryStatAndTrendPhrase() throws {
         let projection = try XCTUnwrap(
             WeeklySummaryBuilder.project(WeeklySummaryFixture.digest, units: WeeklySummaryFixture.units(.kilometers))

@@ -17,8 +17,7 @@ import XCTest
 
 // MARK: - Adapter: generation rules (parity with lib/safeUUID.ts + slice(0, 10))
 
-@MainActor
-final class UuidGenerationTests: XCTestCase {
+@MainActor final class UuidGenerationTests: XCTestCase {
     func testPrependPutsNewestFirst() {
         var entries: [UuidEntry] = []
         entries = UuidGeneration.prepending("a", to: entries)
@@ -56,8 +55,7 @@ final class UuidGenerationTests: XCTestCase {
 
 // MARK: - State holder: phase + generate + telemetry
 
-@MainActor
-final class UuidGeneratorModelTests: XCTestCase {
+@MainActor final class UuidGeneratorModelTests: XCTestCase {
     func testStartsEmpty() {
         let model = UuidGeneratorModel(generator: CountingGenerator(), telemetry: SpyTelemetry())
         XCTAssertEqual(model.phase, .empty)
@@ -92,8 +90,7 @@ final class UuidGeneratorModelTests: XCTestCase {
 
 // MARK: - Accessibility
 
-@MainActor
-final class UuidGeneratorAccessibilityTests: XCTestCase {
+@MainActor final class UuidGeneratorAccessibilityTests: XCTestCase {
     func testRowLabelIncludesPositionAndValue() {
         let label = UuidGeneratorAccessibility.rowLabel(index: 2, total: 5, value: "abc-123")
         XCTAssertTrue(label.contains("2"))

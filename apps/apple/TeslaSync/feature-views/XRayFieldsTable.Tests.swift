@@ -48,8 +48,7 @@ private final class SpyTelemetry: XRayFieldsTelemetry, @unchecked Sendable {
 
 // MARK: - Adapter parity
 
-@MainActor
-final class XRayFieldsAdapterTests: XCTestCase {
+@MainActor final class XRayFieldsAdapterTests: XCTestCase {
     func testValueKindLabelsMatchWeb() {
         let expected: [Int: String] = [
             0: "unknown", 1: "string", 2: "bool", 3: "int32", 4: "int64",
@@ -117,8 +116,7 @@ final class XRayFieldsAdapterTests: XCTestCase {
 
 // MARK: - Sort parity
 
-@MainActor
-final class XRayFieldsSorterTests: XCTestCase {
+@MainActor final class XRayFieldsSorterTests: XCTestCase {
     func testSampleCountSort() {
         XCTAssertEqual(
             XRayFieldsSorter.sorted(XRayFixtures.rows, key: .sampleCount, direction: .descending).map(\.sampleCount),
@@ -166,8 +164,7 @@ final class XRayFieldsSorterTests: XCTestCase {
 
 // MARK: - Projection + accessibility
 
-@MainActor
-final class XRayFieldsProjectionTests: XCTestCase {
+@MainActor final class XRayFieldsProjectionTests: XCTestCase {
     private func project() -> [XRayFieldRow] {
         XRayFieldsProjector.project(
             rows: XRayFixtures.rows, sortKey: .sampleCount, sortDirection: .descending,
@@ -201,8 +198,7 @@ final class XRayFieldsProjectionTests: XCTestCase {
 
 // MARK: - Model (state holder)
 
-@MainActor
-final class XRayFieldsModelTests: XCTestCase {
+@MainActor final class XRayFieldsModelTests: XCTestCase {
     func testResolvePhaseMatrix() {
         XCTAssertEqual(XRayFieldsModel.resolvePhase(status: .loading, hasRows: false), .loading)
         XCTAssertEqual(XRayFieldsModel.resolvePhase(status: .loading, hasRows: true), .content)

@@ -3,8 +3,7 @@ import XCTest
 
 /// The Live Activity controller: per-kind id tracking, start/update/end lifecycle,
 /// and honest degradation when the presenter is unsupported (macOS / old OS).
-@MainActor
-final class LiveActivityControllerTests: XCTestCase {
+@MainActor final class LiveActivityControllerTests: XCTestCase {
     func testStartTracksActiveAndPresenterRecords() async {
         let presenter = PreviewLiveActivityPresenter()
         let controller = LiveActivityController(presenter: presenter)

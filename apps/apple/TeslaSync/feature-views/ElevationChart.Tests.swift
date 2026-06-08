@@ -22,8 +22,7 @@ import XCTest
 
 // MARK: - Adapter: projection (ElevationChart parity)
 
-@MainActor
-final class ElevationProjectionTests: XCTestCase {
+@MainActor final class ElevationProjectionTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
 
     private func samples() -> [ElevationSample] {
@@ -176,8 +175,7 @@ final class ElevationProjectionTests: XCTestCase {
 
 // MARK: - State holder: ElevationChartModel
 
-@MainActor
-final class ElevationChartModelTests: XCTestCase {
+@MainActor final class ElevationChartModelTests: XCTestCase {
     private func sampleData() -> [ElevationSample] {
         [
             ElevationSample(index: 0, time: "09:00", elevationM: 100, speedMps: 0),
@@ -323,8 +321,7 @@ final class ElevationChartModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
-@MainActor
-final class ElevationAccessibilityTests: XCTestCase {
+@MainActor final class ElevationAccessibilityTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }

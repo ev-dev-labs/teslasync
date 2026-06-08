@@ -23,8 +23,7 @@ import XCTest
 
 // MARK: - Adapter: projection (monthlyTrend useMemo parity)
 
-@MainActor
-final class SpeedTrendProjectionTests: XCTestCase {
+@MainActor final class SpeedTrendProjectionTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
     private let utc = TimeZone(identifier: "UTC")!
 
@@ -158,8 +157,7 @@ final class SpeedTrendProjectionTests: XCTestCase {
 
 // MARK: - Formatting
 
-@MainActor
-final class SpeedTrendFormatTests: XCTestCase {
+@MainActor final class SpeedTrendFormatTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
 
     func testDecimalRendersUpToOneFractionDigit() {
@@ -181,8 +179,7 @@ final class SpeedTrendFormatTests: XCTestCase {
 
 // MARK: - State holder: SpeedTrendChartModel
 
-@MainActor
-final class SpeedTrendChartModelTests: XCTestCase {
+@MainActor final class SpeedTrendChartModelTests: XCTestCase {
     private func makeModel(
         initial: SpeedTrendUpdate?,
         telemetry: SpeedTrendChartTelemetry = SpySpeedTrendTelemetry()
@@ -288,8 +285,7 @@ final class SpeedTrendChartModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
-@MainActor
-final class SpeedTrendAccessibilityTests: XCTestCase {
+@MainActor final class SpeedTrendAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let posix = Locale(identifier: "en_US_POSIX")

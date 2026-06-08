@@ -16,8 +16,7 @@ import XCTest
 
 // MARK: - Telemetry-error extraction (port parity)
 
-@MainActor
-final class FleetApiTelemetryErrorsTests: XCTestCase {
+@MainActor final class FleetApiTelemetryErrorsTests: XCTestCase {
     func testEnvelopeWrappedErrors() {
         let payload = JSONValue.object([
             "response": .object(["errors": .array([
@@ -71,8 +70,7 @@ final class FleetApiTelemetryErrorsTests: XCTestCase {
 
 // MARK: - Card projections
 
-@MainActor
-final class FleetApiProjectionTests: XCTestCase {
+@MainActor final class FleetApiProjectionTests: XCTestCase {
     func testVehicleOptionsMapAndFallback() {
         let payload = JSONValue.array([
             .object(["vin": .string("VINA"), "display_name": .string("Red")]),
@@ -147,8 +145,7 @@ final class FleetApiProjectionTests: XCTestCase {
 
 // MARK: - Onboarding + phase + freshness + formatters
 
-@MainActor
-final class FleetApiStateTests: XCTestCase {
+@MainActor final class FleetApiStateTests: XCTestCase {
     func testOnboardingProgressAndAutoDetect() {
         let steps = FleetApiContent.onboardingSteps()
         let progress = FleetApiBuilder.onboardingProgress(steps: steps, completed: ["account": true, "auth": true])
@@ -232,8 +229,7 @@ final class FleetApiStateTests: XCTestCase {
 
 // MARK: - Canonical catalogs + a11y
 
-@MainActor
-final class FleetApiCatalogTests: XCTestCase {
+@MainActor final class FleetApiCatalogTests: XCTestCase {
     func testOnboardingStepCatalog() {
         let steps = FleetApiContent.onboardingSteps()
         XCTAssertEqual(steps.count, 7)

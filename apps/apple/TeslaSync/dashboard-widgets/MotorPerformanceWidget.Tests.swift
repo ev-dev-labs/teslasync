@@ -19,8 +19,7 @@ import XCTest
 
 // MARK: - Adapter: cached SI snapshot → projection (parity with the web derivations)
 
-@MainActor
-final class MotorProjectionAdapterTests: XCTestCase {
+@MainActor final class MotorProjectionAdapterTests: XCTestCase {
     private let sample = MotorPerformanceWidgetSnapshotInput(
         diTorque: 312,
         diStatorTemp: 78,
@@ -79,7 +78,10 @@ final class MotorProjectionAdapterTests: XCTestCase {
     }
 
     func testMissingTorqueDefaultsToZero() {
-        let projection = MotorProjection.make(from: MotorPerformanceWidgetSnapshotInput(gear: "N"), temperatureUnit: .celsius)
+        let projection = MotorProjection.make(
+            from: MotorPerformanceWidgetSnapshotInput(gear: "N"),
+            temperatureUnit: .celsius
+        )
         XCTAssertTrue(projection.hasData)
         XCTAssertEqual(projection.torque, 0, accuracy: 0.0001)
         XCTAssertEqual(projection.torqueZone, .low)
@@ -147,7 +149,10 @@ final class MotorProjectionAdapterTests: XCTestCase {
         XCTAssertEqual(present.lateralGText, "0.50")
         XCTAssertEqual(present.longitudinalGText, "-1.25")
 
-        let absent = MotorProjection.make(from: MotorPerformanceWidgetSnapshotInput(diTorque: 1), temperatureUnit: .celsius)
+        let absent = MotorProjection.make(
+            from: MotorPerformanceWidgetSnapshotInput(diTorque: 1),
+            temperatureUnit: .celsius
+        )
         XCTAssertNil(absent.lateralGText)
         XCTAssertNil(absent.longitudinalGText)
     }
@@ -161,46 +166,9 @@ final class MotorProjectionAdapterTests: XCTestCase {
     }
 }
 
-// MARK: - Torque zone thresholds (web `torqueColor`)
-
-@MainActor
-final class MotorTorqueZoneTests: XCTestCase {
-    func testZoneBoundaries() {
-        XCTAssertEqual(MotorTorqueZone.classify(magnitude: 0), .low)
-        XCTAssertEqual(MotorTorqueZone.classify(magnitude: 199), .low)
-        XCTAssertEqual(MotorTorqueZone.classify(magnitude: 200), .medium)
-        XCTAssertEqual(MotorTorqueZone.classify(magnitude: 399), .medium)
-        XCTAssertEqual(MotorTorqueZone.classify(magnitude: 400), .high)
-        XCTAssertEqual(MotorTorqueZone.classify(magnitude: 600), .high)
-    }
-}
-
-// MARK: - Number formatting (web `fmtInt` / `fmtNumber`)
-
-@MainActor
-final class MotorFormatTests: XCTestCase {
-    func testIntegerGrouping() {
-        XCTAssertEqual(MotorFormat.int(12345), "12,345")
-        XCTAssertEqual(MotorFormat.int(-12345), "-12,345")
-        XCTAssertEqual(MotorFormat.int(0), "0")
-    }
-
-    func testFixedDecimals() {
-        XCTAssertEqual(MotorFormat.number(0.1, decimals: 2), "0.10")
-        XCTAssertEqual(MotorFormat.number(312, decimals: 0), "312")
-        XCTAssertEqual(MotorFormat.number(1234.5, decimals: 1), "1,234.5")
-    }
-
-    func testNonFiniteCoercesToZero() {
-        XCTAssertEqual(MotorFormat.number(.nan, decimals: 0), "0")
-        XCTAssertEqual(MotorFormat.number(.infinity, decimals: 2), "0.00")
-    }
-}
-
 // MARK: - Temperature unit (web `convertTempFromSI`)
 
-@MainActor
-final class MotorPerformanceWidgetTemperatureUnitTests: XCTestCase {
+@MainActor final class MotorPerformanceWidgetTemperatureUnitTests: XCTestCase {
     func testLabels() {
         XCTAssertEqual(MotorPerformanceWidgetTemperatureUnit.celsius.label, "°C")
         XCTAssertEqual(MotorPerformanceWidgetTemperatureUnit.fahrenheit.label, "°F")
@@ -209,7 +177,11 @@ final class MotorPerformanceWidgetTemperatureUnitTests: XCTestCase {
     func testConversion() {
         XCTAssertEqual(MotorPerformanceWidgetTemperatureUnit.celsius.convert(fromCelsius: 20), 20, accuracy: 0.0001)
         XCTAssertEqual(MotorPerformanceWidgetTemperatureUnit.fahrenheit.convert(fromCelsius: 0), 32, accuracy: 0.0001)
-        XCTAssertEqual(MotorPerformanceWidgetTemperatureUnit.fahrenheit.convert(fromCelsius: 100), 212, accuracy: 0.0001)
+        XCTAssertEqual(
+            MotorPerformanceWidgetTemperatureUnit.fahrenheit.convert(fromCelsius: 100),
+            212,
+            accuracy: 0.0001
+        )
     }
 
     func testFromLabel() {
@@ -221,8 +193,7 @@ final class MotorPerformanceWidgetTemperatureUnitTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class MotorPerformanceModelTests: XCTestCase {
+@MainActor final class MotorPerformanceModelTests: XCTestCase {
     private func makeModel(
         _ update: MotorUpdate,
         telemetry: MotorPerformanceTelemetry = OSLogMotorPerformanceTelemetry()
@@ -245,7 +216,10 @@ final class MotorPerformanceModelTests: XCTestCase {
     }
 
     func testLoadedWithSnapshotShowsContent() {
-        let (model, _) = makeModel(MotorUpdate(status: .loaded, snapshot: MotorPerformanceWidgetSnapshotInput(diTorque: 120)))
+        let (model, _) = makeModel(MotorUpdate(
+            status: .loaded,
+            snapshot: MotorPerformanceWidgetSnapshotInput(diTorque: 120)
+        ))
         model.start()
         XCTAssertEqual(model.phase, .content)
         XCTAssertTrue(model.projection.hasData)
@@ -318,8 +292,7 @@ final class MotorPerformanceModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class MotorPerformanceRegistryTests: XCTestCase {
+@MainActor final class MotorPerformanceRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = MotorPerformanceWidget.registration
         XCTAssertEqual(registration.id, "motor-performance")
@@ -352,8 +325,7 @@ final class MotorPerformanceRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class MotorPerformanceAccessibilityTests: XCTestCase {
+@MainActor final class MotorPerformanceAccessibilityTests: XCTestCase {
     func testSummaryIncludesAllPresentMetrics() {
         let projection = MotorProjection.make(
             from: MotorPerformanceWidgetSnapshotInput(

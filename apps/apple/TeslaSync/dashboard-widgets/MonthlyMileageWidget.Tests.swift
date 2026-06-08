@@ -40,8 +40,7 @@ private func rows(_ pairs: [(String, Double)]) -> [MileageMonthRow] {
 
 // MARK: - Adapter: cached DTO → projection
 
-@MainActor
-final class MonthlyMileageBuilderTests: XCTestCase {
+@MainActor final class MonthlyMileageBuilderTests: XCTestCase {
     func testShortMonthFormatsKnownMonths() {
         XCTAssertEqual(MonthlyMileageBuilder.shortMonth("2026-01"), "Jan")
         XCTAssertEqual(MonthlyMileageBuilder.shortMonth("2026-04"), "Apr")
@@ -148,8 +147,7 @@ final class MonthlyMileageBuilderTests: XCTestCase {
 
 // MARK: - Number formatting parity (web fmtInt / fmtNumber)
 
-@MainActor
-final class MonthlyMileageFormatTests: XCTestCase {
+@MainActor final class MonthlyMileageFormatTests: XCTestCase {
     func testIntRoundsAndGroups() {
         XCTAssertEqual(MonthlyMileageFormat.int(1234.6), "1,235")
         XCTAssertEqual(MonthlyMileageFormat.int(0), "0")
@@ -168,8 +166,7 @@ final class MonthlyMileageFormatTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class MonthlyMileageModelTests: XCTestCase {
+@MainActor final class MonthlyMileageModelTests: XCTestCase {
     private func makeModel(
         _ update: MonthlyMileageUpdate,
         telemetry: MonthlyMileageTelemetry = OSLogMonthlyMileageTelemetry()
@@ -269,8 +266,7 @@ final class MonthlyMileageModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class MonthlyMileageRegistryTests: XCTestCase {
+@MainActor final class MonthlyMileageRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = MonthlyMileageWidget.registration
         XCTAssertEqual(registration.id, "monthly-mileage")
@@ -296,8 +292,7 @@ final class MonthlyMileageRegistryTests: XCTestCase {
 
 // MARK: - Accessibility content
 
-@MainActor
-final class MonthlyMileageAccessibilityTests: XCTestCase {
+@MainActor final class MonthlyMileageAccessibilityTests: XCTestCase {
     func testSummaryIncludesStatsAndUnit() {
         let projection = MonthlyMileageBuilder.buildProjection(
             rows: rows([("2026-03", 300), ("2026-04", 150)]),

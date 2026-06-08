@@ -4,8 +4,7 @@ import XCTest
 /// Unit tests for the BatteryCellsWidget surface: the decode→projection adapter,
 /// the per-state presentation resolver, accessibility labels, telemetry, and the
 /// registry metadata. All pure (no rendering / no KMP runtime required).
-@MainActor
-final class BatteryCellsWidgetTests: XCTestCase {
+@MainActor final class BatteryCellsWidgetTests: XCTestCase {
     /// A deterministic en-US locale so number formatting is stable across hosts.
     private let locale = Locale(identifier: "en_US")
 

@@ -87,8 +87,7 @@ private enum SampleSessions {
     }
 }
 
-@MainActor
-final class ActiveSessionsModelTests: XCTestCase {
+@MainActor final class ActiveSessionsModelTests: XCTestCase {
     private func makeModel(
         source: InMemoryActiveSessionsSource,
         telemetry: SpyActiveSessionsTelemetry = SpyActiveSessionsTelemetry(),

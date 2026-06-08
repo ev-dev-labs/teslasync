@@ -221,8 +221,6 @@ public final class InMemoryUptimeMonitorSource: UptimeMonitorSource {
 
 // MARK: - Registry metadata (canonical: registry/system.ts → "uptime-monitor")
 
-
-
 // MARK: - Localization facade (P1/S10) — SwiftUI half
 
 public extension UptimeMonitorStrings {

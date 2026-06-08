@@ -21,8 +21,7 @@ import XCTest
 
 // MARK: - Catalog (verbatim port of web `getChatSuggestions()`)
 
-@MainActor
-final class SuggestedPromptsCatalogTests: XCTestCase {
+@MainActor final class SuggestedPromptsCatalogTests: XCTestCase {
     func testCatalogMatchesWebSourceKeysAndOrder() {
         let keys = SuggestedPromptsCatalog.defaults.map(\.i18nKey)
         XCTAssertEqual(keys, [
@@ -46,8 +45,7 @@ final class SuggestedPromptsCatalogTests: XCTestCase {
 
 // MARK: - Adapter (web `suggestions.map(...)`)
 
-@MainActor
-final class SuggestedPromptsAdapterTests: XCTestCase {
+@MainActor final class SuggestedPromptsAdapterTests: XCTestCase {
     func testProjectMapsEachSuggestionPreservingKeyAndFallback() {
         let projection = SuggestedPromptsAdapter.project(SuggestedPromptsCatalog.defaults)
         XCTAssertTrue(projection.hasData)
@@ -82,8 +80,7 @@ final class SuggestedPromptsAdapterTests: XCTestCase {
 
 // MARK: - Phase resolution (web shell loading / empty + P4 leaf contract)
 
-@MainActor
-final class SuggestedPromptsPhaseTests: XCTestCase {
+@MainActor final class SuggestedPromptsPhaseTests: XCTestCase {
     func testLoadingWithoutDataIsLoading() {
         XCTAssertEqual(SuggestedPromptsModel.resolvePhase(status: .loading, hasData: false), .loading)
     }
@@ -115,8 +112,7 @@ final class SuggestedPromptsPhaseTests: XCTestCase {
 
 // MARK: - State holder: wiring, telemetry, freshness
 
-@MainActor
-final class SuggestedPromptsModelTests: XCTestCase {
+@MainActor final class SuggestedPromptsModelTests: XCTestCase {
     private func makeModel(
         _ update: SuggestedPromptsUpdate,
         telemetry: SuggestedPromptsTelemetry = OSLogSuggestedPromptsTelemetry()
@@ -221,8 +217,7 @@ final class SuggestedPromptsModelTests: XCTestCase {
 
 // MARK: - Accessibility content
 
-@MainActor
-final class SuggestedPromptsAccessibilityTests: XCTestCase {
+@MainActor final class SuggestedPromptsAccessibilityTests: XCTestCase {
     func testContainerLabelResolvesWebAriaLabel() {
         XCTAssertEqual(SuggestedPromptsAccessibility.containerLabel(), "Suggested prompts")
     }
@@ -241,8 +236,7 @@ final class SuggestedPromptsAccessibilityTests: XCTestCase {
 
 // MARK: - Localization facade
 
-@MainActor
-final class SuggestedPromptsStringsTests: XCTestCase {
+@MainActor final class SuggestedPromptsStringsTests: XCTestCase {
     func testStringFallsBackToProvidedValue() {
         XCTAssertEqual(
             SuggestedPromptsStrings.string("chatbot.suggestion.__absent__", "Fallback copy"),

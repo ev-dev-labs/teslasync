@@ -23,8 +23,7 @@ private let enUS = Locale(identifier: "en_US")
 
 // MARK: - Classification (web getStatusColor / statusTextClass / getStatusIcon)
 
-@MainActor
-final class StatusKindTests: XCTestCase {
+@MainActor final class StatusKindTests: XCTestCase {
     func testSuccessTokens() {
         for token in ["healthy", "ok", "online", "connected", "ready", "sent", "completed"] {
             XCTAssertEqual(StatusHelpers.kind(for: token), .success, token)
@@ -71,8 +70,7 @@ final class StatusKindTests: XCTestCase {
 
 // MARK: - Badge classification (web statusToBadgeVariant — the "connected" divergence)
 
-@MainActor
-final class StatusBadgeKindTests: XCTestCase {
+@MainActor final class StatusBadgeKindTests: XCTestCase {
     func testBadgeSuccessTokens() {
         for token in ["healthy", "ok", "online", "ready", "sent", "completed"] {
             XCTAssertEqual(StatusHelpers.badgeKind(for: token), .success, token)
@@ -101,8 +99,7 @@ final class StatusBadgeKindTests: XCTestCase {
 
 // MARK: - Uptime formatting (port of formatUptime)
 
-@MainActor
-final class StatusFormatUptimeTests: XCTestCase {
+@MainActor final class StatusFormatUptimeTests: XCTestCase {
     func testDaysHoursMinutes() {
         XCTAssertEqual(StatusFormat.formatUptime(93784), "1d 2h 3m")
     }
@@ -129,8 +126,7 @@ final class StatusFormatUptimeTests: XCTestCase {
 
 // MARK: - Byte formatting (port of formatBytes)
 
-@MainActor
-final class StatusFormatBytesTests: XCTestCase {
+@MainActor final class StatusFormatBytesTests: XCTestCase {
     func testZeroIsBytes() {
         XCTAssertEqual(StatusFormat.formatBytes(0, locale: enUS), "0 B")
     }
@@ -164,8 +160,7 @@ final class StatusFormatBytesTests: XCTestCase {
 
 // MARK: - Legend rows (web classification applied per sample)
 
-@MainActor
-final class StatusHelpersRowsTests: XCTestCase {
+@MainActor final class StatusHelpersRowsTests: XCTestCase {
     func testRowsCarryKindBadgeAndKey() {
         let rows = StatusHelpersRows.rows(for: ["Healthy", "connected", "boom"])
         XCTAssertEqual(rows.map(\.id), ["0-healthy", "1-connected", "2-boom"])
@@ -188,8 +183,7 @@ final class StatusHelpersRowsTests: XCTestCase {
 
 // MARK: - Projection (P4 leaf contract)
 
-@MainActor
-final class StatusHelpersProjectionTests: XCTestCase {
+@MainActor final class StatusHelpersProjectionTests: XCTestCase {
     private let samples = ["healthy", "offline"]
 
     func testErrorTakesPrecedence() {
@@ -233,8 +227,7 @@ final class StatusHelpersProjectionTests: XCTestCase {
 
 // MARK: - State holder: wiring, telemetry, freshness
 
-@MainActor
-final class StatusHelpersModelTests: XCTestCase {
+@MainActor final class StatusHelpersModelTests: XCTestCase {
     private func makeModel(
         _ input: StatusHelpersInput,
         telemetry: StatusHelpersTelemetry = OSLogStatusHelpersTelemetry()
@@ -319,8 +312,7 @@ final class StatusHelpersModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class StatusHelpersAccessibilityTests: XCTestCase {
+@MainActor final class StatusHelpersAccessibilityTests: XCTestCase {
     func testLegendRowLabelJoinsParts() {
         XCTAssertEqual(
             StatusHelpersAccessibility.legendRowLabel(status: "Connected", variant: "Unknown"),

@@ -24,8 +24,7 @@ private let enUS = Locale(identifier: "en_US_POSIX")
 
 // MARK: - AiMode (web `isAiMode` parse + canonical set)
 
-@MainActor
-final class AiModeTests: XCTestCase {
+@MainActor final class AiModeTests: XCTestCase {
     func testParseCanonicalValues() {
         XCTAssertEqual(AiMode.parse("off"), .off)
         XCTAssertEqual(AiMode.parse("local"), .local)
@@ -45,8 +44,7 @@ final class AiModeTests: XCTestCase {
 
 // MARK: - Mode catalogue (web `<ModeRadio>` × 3)
 
-@MainActor
-final class AiModeCatalogTests: XCTestCase {
+@MainActor final class AiModeCatalogTests: XCTestCase {
     func testOrderMatchesWebSource() {
         XCTAssertEqual(AiModeCatalog.options.map(\.mode), [.off, .local, .cloud])
     }
@@ -69,8 +67,7 @@ final class AiModeCatalogTests: XCTestCase {
 
 // MARK: - Dollar formatting (port of web `toFixed(2)`)
 
-@MainActor
-final class HelixFormatTests: XCTestCase {
+@MainActor final class HelixFormatTests: XCTestCase {
     func testFixedTwoFractionDigits() {
         XCTAssertEqual(HelixFormat.fixed2(2, locale: enUS), "2.00")
         XCTAssertEqual(HelixFormat.fixed2(4.5, locale: enUS), "4.50")
@@ -90,8 +87,7 @@ final class HelixFormatTests: XCTestCase {
 
 // MARK: - Cost-cap math (port of `AICostCapSpendBar`)
 
-@MainActor
-final class HelixCostCapTests: XCTestCase {
+@MainActor final class HelixCostCapTests: XCTestCase {
     func testInformationalBelowEightyPercent() {
         let cap = HelixCostCap.compute(todayMicroCents: 2_000_000, capCents: 500)
         XCTAssertEqual(cap.percent, 40, accuracy: 1e-9)
@@ -141,8 +137,7 @@ final class HelixCostCapTests: XCTestCase {
 
 // MARK: - Projection (web render gate + P4 leaf contract)
 
-@MainActor
-final class AiSettingsProjectionTests: XCTestCase {
+@MainActor final class AiSettingsProjectionTests: XCTestCase {
     func testErrorTakesPrecedence() {
         let resolved = AiSettingsProjection.resolve(
             AiSettingsInput(savedMode: .cloud, isLoading: true, errorMessage: "boom")
@@ -172,8 +167,7 @@ final class AiSettingsProjectionTests: XCTestCase {
 
 // MARK: - State holder: wiring, telemetry, draft, save, freshness
 
-@MainActor
-final class AiSettingsModelTests: XCTestCase {
+@MainActor final class AiSettingsModelTests: XCTestCase {
     private func makeModel(
         _ input: AiSettingsInput,
         saveOutcome: AiSaveOutcome? = nil,
@@ -343,8 +337,7 @@ final class AiSettingsModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class AiSettingsAccessibilityTests: XCTestCase {
+@MainActor final class AiSettingsAccessibilityTests: XCTestCase {
     func testCostCapValueJoinsParts() {
         XCTAssertEqual(
             AiSettingsAccessibility.costCapValue(spent: "$2.00", cap: "$5.00", percent: 40),

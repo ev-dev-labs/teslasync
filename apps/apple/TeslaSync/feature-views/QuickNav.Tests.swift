@@ -25,8 +25,7 @@ import XCTest
 
 // MARK: - Adapter: catalog parity (port of the web `NAV_ITEMS`)
 
-@MainActor
-final class QuickNavShortcutCatalogTests: XCTestCase {
+@MainActor final class QuickNavShortcutCatalogTests: XCTestCase {
     func testCatalogMatchesWebOrder() {
         XCTAssertEqual(QuickNavShortcut.catalog, [.drives, .charging, .analytics, .battery])
     }
@@ -81,8 +80,7 @@ final class QuickNavShortcutCatalogTests: XCTestCase {
 
 // MARK: - Adapter: tile builder + layout
 
-@MainActor
-final class QuickNavTileBuilderTests: XCTestCase {
+@MainActor final class QuickNavTileBuilderTests: XCTestCase {
     /// English-fallback localizer (bundle-free) used by the builder tests.
     private let echo: (String, String) -> String = { _, fallback in fallback }
     /// Key-revealing localizer so tests can assert the exact i18n key used.
@@ -125,8 +123,7 @@ final class QuickNavTileBuilderTests: XCTestCase {
 
 // MARK: - Projection: phase resolution
 
-@MainActor
-final class QuickNavProjectionTests: XCTestCase {
+@MainActor final class QuickNavProjectionTests: XCTestCase {
     func testLoadingWithoutItemsShowsLoading() {
         XCTAssertEqual(QuickNavProjection.resolvePhase(.loading, count: 0), .loading)
     }
@@ -154,8 +151,7 @@ final class QuickNavProjectionTests: XCTestCase {
 
 // MARK: - Accessibility content
 
-@MainActor
-final class QuickNavComponentAccessibilityTests: XCTestCase {
+@MainActor final class QuickNavComponentAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testTileLabelCombinesLabelAndDetail() {
@@ -193,8 +189,7 @@ final class QuickNavComponentAccessibilityTests: XCTestCase {
 
 // MARK: - Surface identity
 
-@MainActor
-final class QuickNavSurfaceTests: XCTestCase {
+@MainActor final class QuickNavSurfaceTests: XCTestCase {
     func testSurfaceSlugIsStable() {
         XCTAssertEqual(QuickNavSurface.slug, "QuickNav")
         XCTAssertEqual(QuickNav.surfaceSlug, "QuickNav")
@@ -203,8 +198,7 @@ final class QuickNavSurfaceTests: XCTestCase {
 
 // MARK: - State holder: phases + connection + telemetry + source wiring
 
-@MainActor
-final class QuickNavViewModelTests: XCTestCase {
+@MainActor final class QuickNavViewModelTests: XCTestCase {
     private func makeModel(
         _ update: QuickNavCatalogUpdate,
         telemetry: QuickNavViewTelemetry = OSLogQuickNavViewTelemetry()
@@ -334,8 +328,7 @@ final class QuickNavViewModelTests: XCTestCase {
 
 // MARK: - Per-state render smoke (snapshot)
 
-@MainActor
-final class QuickNavRenderTests: XCTestCase {
+@MainActor final class QuickNavRenderTests: XCTestCase {
     private func render(_ update: QuickNavCatalogUpdate) -> CGImage? {
         let source = InMemoryQuickNavCatalogSource(initial: update)
         let model = QuickNavViewModel(source: source)

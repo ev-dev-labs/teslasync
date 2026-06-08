@@ -13,7 +13,6 @@ import Foundation
 
 // MARK: - Grid + seam value types (Foundation-only so the adapter is host-runnable)
 
-
 /// The cached DTO inputs the seam pushes each snapshot. The production source reads
 /// `state.odometer` (vehicle state) and `DrivingStats.totalDistanceKm` — both SI
 /// meters after the Phase-42 cutover, despite the legacy `Km` field name — plus the

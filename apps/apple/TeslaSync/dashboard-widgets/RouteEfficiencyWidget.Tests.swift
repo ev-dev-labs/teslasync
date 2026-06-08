@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (parity with the web useMemo)
 
-@MainActor
-final class RouteEfficiencyAdapterTests: XCTestCase {
+@MainActor final class RouteEfficiencyAdapterTests: XCTestCase {
     /// English-fallback localizer (bundle-free) used by the projection tests.
     private let echo: (String, String) -> String = { _, fallback in fallback }
     /// Key-revealing localizer so tests can assert the exact i18n key used.
@@ -169,8 +168,7 @@ final class RouteEfficiencyAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class RouteEfficiencyModelTests: XCTestCase {
+@MainActor final class RouteEfficiencyModelTests: XCTestCase {
     private func makeModel(
         _ update: RouteEfficiencyUpdate,
         telemetry: RouteEfficiencyTelemetry = OSLogRouteEfficiencyTelemetry()
@@ -251,8 +249,7 @@ final class RouteEfficiencyModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class RouteEfficiencyRegistryTests: XCTestCase {
+@MainActor final class RouteEfficiencyRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = RouteEfficiencyWidget.registration
         XCTAssertEqual(registration.id, "route-efficiency")
@@ -281,8 +278,7 @@ final class RouteEfficiencyRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class RouteEfficiencyAccessibilityTests: XCTestCase {
+@MainActor final class RouteEfficiencyAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testRowSummaryIncludesRankLabelValueAndBadge() {

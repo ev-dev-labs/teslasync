@@ -23,8 +23,7 @@
 import XCTest
 @testable import TeslaSync
 
-@MainActor
-final class CollapsibleCommandGroupTests: XCTestCase {
+@MainActor final class CollapsibleCommandGroupTests: XCTestCase {
     // MARK: - Category adapter (web `CommandCategory` + `CATEGORY_META`)
 
     private let webOrderedIdentifiers = [

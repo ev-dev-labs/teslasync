@@ -150,40 +150,12 @@ public enum LifetimeStatsProjector {
 
         let distanceValue = LifetimeStatsFormat.number(displayDistance, decimals: 0, localeIdentifier: locale)
 
-        let coreStats: [LifetimeStatItem] = [
-            LifetimeStatItem(
-                id: "total-distance",
-                labelKey: "widget.lifetimeStats.totalDistance",
-                labelFallback: "Total Distance",
-                value: distanceValue,
-                unit: distanceSymbol,
-                systemImage: "road.lanes"
-            ),
-            LifetimeStatItem(
-                id: "total-drives",
-                labelKey: "widget.lifetimeStats.totalDrives",
-                labelFallback: "Total Drives",
-                value: LifetimeStatsFormat.integer(stats.totalDrives, localeIdentifier: locale),
-                unit: nil,
-                systemImage: "car.fill"
-            ),
-            LifetimeStatItem(
-                id: "total-energy",
-                labelKey: "widget.lifetimeStats.totalEnergy",
-                labelFallback: "Total Energy",
-                value: LifetimeStatsFormat.number(stats.totalEnergyKwh, decimals: 1, localeIdentifier: locale),
-                unit: "kWh",
-                systemImage: "bolt.fill"
-            ),
-            LifetimeStatItem(
-                id: "co2-saved",
-                labelKey: "widget.lifetimeStats.co2Saved",
-                labelFallback: "CO₂ Saved",
-                value: LifetimeStatsFormat.number(stats.co2OffsetKg, decimals: 0, localeIdentifier: locale),
-                unit: "kg",
-                systemImage: "leaf.fill"
-            )
-        ]
+        let coreStats = makeCoreStats(
+            stats: stats,
+            locale: locale,
+            distanceValue: distanceValue,
+            distanceSymbol: distanceSymbol
+        )
 
         // Avg daily distance, ported verbatim:
         //   avgDailyMi = ownership_days > 0 ? distanceMi / ownership_days : 0
@@ -228,6 +200,48 @@ public enum LifetimeStatsProjector {
             compactValue: distanceValue,
             distanceSymbol: distanceSymbol
         )
+    }
+
+    private static func makeCoreStats(
+        stats: LifetimeStatsDTO,
+        locale: String,
+        distanceValue: String,
+        distanceSymbol: String
+    ) -> [LifetimeStatItem] {
+        [
+            LifetimeStatItem(
+                id: "total-distance",
+                labelKey: "widget.lifetimeStats.totalDistance",
+                labelFallback: "Total Distance",
+                value: distanceValue,
+                unit: distanceSymbol,
+                systemImage: "road.lanes"
+            ),
+            LifetimeStatItem(
+                id: "total-drives",
+                labelKey: "widget.lifetimeStats.totalDrives",
+                labelFallback: "Total Drives",
+                value: LifetimeStatsFormat.integer(stats.totalDrives, localeIdentifier: locale),
+                unit: nil,
+                systemImage: "car.fill"
+            ),
+            LifetimeStatItem(
+                id: "total-energy",
+                labelKey: "widget.lifetimeStats.totalEnergy",
+                labelFallback: "Total Energy",
+                value: LifetimeStatsFormat.number(stats.totalEnergyKwh, decimals: 1, localeIdentifier: locale),
+                unit: "kWh",
+                systemImage: "bolt.fill"
+            ),
+            LifetimeStatItem(
+                id: "co2-saved",
+                labelKey: "widget.lifetimeStats.co2Saved",
+                labelFallback: "CO₂ Saved",
+                value: LifetimeStatsFormat.number(stats.co2OffsetKg, decimals: 0, localeIdentifier: locale),
+                unit: "kg",
+                systemImage: "leaf.fill"
+            )
+        ]
     }
 }
 

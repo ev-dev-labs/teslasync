@@ -2,8 +2,7 @@ import XCTest
 @testable import TeslaSync
 
 /// Pure-logic tests for forms helpers.
-@MainActor
-final class FormsLogicTests: XCTestCase {
+@MainActor final class FormsLogicTests: XCTestCase {
     func testTreeNodeOptionalChildren() {
         let leaf = TSTreeNode(id: "leaf", label: "leaf")
         XCTAssertNil(leaf.optionalChildren)

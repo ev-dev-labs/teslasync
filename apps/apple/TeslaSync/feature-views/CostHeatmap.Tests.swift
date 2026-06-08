@@ -22,8 +22,7 @@ import XCTest
 
 // MARK: - Adapter: numeric guard
 
-@MainActor
-final class CostHeatmapNumericTests: XCTestCase {
+@MainActor final class CostHeatmapNumericTests: XCTestCase {
     func testSafeReturnsFiniteValues() {
         XCTAssertEqual(CostHeatmapNumeric.safe(0.42), 0.42)
         XCTAssertEqual(CostHeatmapNumeric.safe(0), 0)
@@ -40,8 +39,7 @@ final class CostHeatmapNumericTests: XCTestCase {
 
 // MARK: - Adapter: maxCost (web `peakCostPerKwh || 0.30`)
 
-@MainActor
-final class CostHeatmapMaxCostTests: XCTestCase {
+@MainActor final class CostHeatmapMaxCostTests: XCTestCase {
     func testPositivePeakIsKept() {
         XCTAssertEqual(CostHeatmapProjection.maxCost(peakCostPerKwh: 0.48), 0.48, accuracy: 0.0001)
     }
@@ -62,8 +60,7 @@ final class CostHeatmapMaxCostTests: XCTestCase {
 
 // MARK: - Adapter: cell / legend colour ramp (web `rgba(...)`)
 
-@MainActor
-final class CostHeatmapColorTests: XCTestCase {
+@MainActor final class CostHeatmapColorTests: XCTestCase {
     func testCheapEndIsGreen() {
         let color = CostHeatmapColor.cell(intensity: 0, sessions: 1)
         XCTAssertEqual(color.red, 0)
@@ -114,8 +111,7 @@ final class CostHeatmapColorTests: XCTestCase {
 
 // MARK: - Adapter: dense 7×24 grid (web `heatmap.find`)
 
-@MainActor
-final class CostHeatmapGridTests: XCTestCase {
+@MainActor final class CostHeatmapGridTests: XCTestCase {
     func testGridIsAlwaysSevenByTwentyFour() {
         let cells = CostHeatmapProjection.grid(CostHeatmapData())
         XCTAssertEqual(cells.count, 168)
@@ -176,8 +172,7 @@ final class CostHeatmapGridTests: XCTestCase {
 
 // MARK: - Adapter: localized day labels
 
-@MainActor
-final class CostHeatmapDayLabelTests: XCTestCase {
+@MainActor final class CostHeatmapDayLabelTests: XCTestCase {
     func testDayLabelsAreSundayFirstForEnglish() {
         let labels = CostHeatmapProjection.dayLabels(locale: Locale(identifier: "en_US"))
         XCTAssertEqual(labels, ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"])
@@ -186,8 +181,7 @@ final class CostHeatmapDayLabelTests: XCTestCase {
 
 // MARK: - Formatting: web `formatCurrency(_, 3)` / `fmtInt` parity
 
-@MainActor
-final class CostHeatmapFormattingTests: XCTestCase {
+@MainActor final class CostHeatmapFormattingTests: XCTestCase {
     private let formatting = DefaultCostHeatmapFormatting()
 
     func testCostPerKwhUsesSymbolGroupingAndThreeDecimals() {
@@ -213,8 +207,7 @@ final class CostHeatmapFormattingTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class CostHeatmapAccessibilityTests: XCTestCase {
+@MainActor final class CostHeatmapAccessibilityTests: XCTestCase {
     private let formatting = DefaultCostHeatmapFormatting()
 
     private var labels: CostHeatmapSummaryLabels {
@@ -269,8 +262,7 @@ final class CostHeatmapAccessibilityTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class CostHeatmapModelTests: XCTestCase {
+@MainActor final class CostHeatmapModelTests: XCTestCase {
     private func makeModel(
         _ snapshot: CostHeatmapSnapshot,
         telemetry: CostHeatmapTelemetry = OSLogCostHeatmapTelemetry()

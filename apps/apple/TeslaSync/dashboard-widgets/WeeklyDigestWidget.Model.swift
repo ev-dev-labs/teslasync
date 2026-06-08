@@ -300,8 +300,6 @@ public final class InMemoryWeeklyDigestSource: WeeklyDigestSource {
 
 // MARK: - Registry metadata (canonical: registry/analytics.ts → "weekly-digest")
 
-
-
 /// Diagnostics slug + canonical dashboard registration for this surface, kept out of the SwiftUI view
 /// so the model/adapter compile and test without SwiftUI. `WeeklyDigestWidget` re-exposes these as
 /// `surfaceSlug` / `registration` for API parity with the other surfaces.

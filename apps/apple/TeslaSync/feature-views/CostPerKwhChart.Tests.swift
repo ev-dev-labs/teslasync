@@ -23,8 +23,7 @@ import XCTest
 
 // MARK: - Adapter: projection (web `data` consumer parity)
 
-@MainActor
-final class CostPerKwhChartProjectionTests: XCTestCase {
+@MainActor final class CostPerKwhChartProjectionTests: XCTestCase {
     func testPointsPreserveOrderAndAssignIndex() {
         let points = CostPerKwhProjection.points(from: [
             CostPerKwhSample(date: "a", costPerKwh: 0.1),
@@ -107,8 +106,7 @@ final class CostPerKwhChartProjectionTests: XCTestCase {
 
 // MARK: - Formatting: DefaultCostPerKwhFormatting (web `formatCurrency`)
 
-@MainActor
-final class CostPerKwhFormattingTests: XCTestCase {
+@MainActor final class CostPerKwhFormattingTests: XCTestCase {
     private let formatter = DefaultCostPerKwhFormatting(currencySymbol: "$", localeIdentifier: "en_US")
 
     func testFormatsWithSymbolGroupingAndFixedDecimals() {
@@ -141,8 +139,7 @@ final class CostPerKwhFormattingTests: XCTestCase {
 
 // MARK: - State holder: CostPerKwhModel
 
-@MainActor
-final class CostPerKwhModelTests: XCTestCase {
+@MainActor final class CostPerKwhModelTests: XCTestCase {
     private func makeModel(
         initial: CostPerKwhUpdate?,
         telemetry: CostPerKwhTelemetry = SpyCostPerKwhTelemetry()
@@ -244,8 +241,7 @@ final class CostPerKwhModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
-@MainActor
-final class CostPerKwhAccessibilityTests: XCTestCase {
+@MainActor final class CostPerKwhAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let formatter = DefaultCostPerKwhFormatting(currencySymbol: "$", localeIdentifier: "en_US")

@@ -2,7 +2,6 @@ import Foundation
 
 // MARK: - Registry metadata
 
-
 /// Static registry metadata for a dashboard widget, mirroring the web `WidgetDef`
 /// registry entry. Keeps the native grid in lockstep with
 /// `web/src/features/dashboard/widgets/registry`. String fields hold i18n catalog

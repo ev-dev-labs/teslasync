@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Adapter: projection (buildSentryBuckets consumer parity)
 
-@MainActor
-final class SentryModeProjectionTests: XCTestCase {
+@MainActor final class SentryModeProjectionTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
     private let utc = TimeZone(identifier: "UTC")!
 
@@ -104,8 +103,7 @@ final class SentryModeProjectionTests: XCTestCase {
 
 // MARK: - State holder: SentryModeChartModel
 
-@MainActor
-final class SentryModeChartModelTests: XCTestCase {
+@MainActor final class SentryModeChartModelTests: XCTestCase {
     private func makeModel(
         initial: SentryModeUpdate?,
         telemetry: SentryModeChartTelemetry = SpySentryModeTelemetry()
@@ -211,8 +209,7 @@ final class SentryModeChartModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
-@MainActor
-final class SentryModeAccessibilityTests: XCTestCase {
+@MainActor final class SentryModeAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }
 

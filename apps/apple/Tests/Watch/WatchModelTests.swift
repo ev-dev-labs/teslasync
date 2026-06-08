@@ -5,8 +5,7 @@ import XCTest
 /// Behavioural tests for the watch model: hydration, payload ingestion, honest
 /// freshness, command gating/relay, and reachability — all without the live
 /// WatchConnectivity layer.
-@MainActor
-final class WatchModelTests: XCTestCase {
+@MainActor final class WatchModelTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_700_000_000)
 
     private func makeModel(

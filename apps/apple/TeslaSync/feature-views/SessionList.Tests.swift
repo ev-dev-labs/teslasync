@@ -25,8 +25,7 @@ import XCTest
 
 // MARK: - Adapter: projection
 
-@MainActor
-final class ChatSessionListProjectionTests: XCTestCase {
+@MainActor final class ChatSessionListProjectionTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testResolvePhase() {
@@ -80,8 +79,7 @@ final class ChatSessionListProjectionTests: XCTestCase {
 
 // MARK: - Adapter: relative time + subtitle
 
-@MainActor
-final class ChatSessionListRelativeTimeTests: XCTestCase {
+@MainActor final class ChatSessionListRelativeTimeTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let now = Date(timeIntervalSince1970: 1_700_000_000)
 
@@ -133,8 +131,7 @@ final class ChatSessionListRelativeTimeTests: XCTestCase {
 
 // MARK: - Accessibility
 
-@MainActor
-final class ChatSessionListAccessibilityTests: XCTestCase {
+@MainActor final class ChatSessionListAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let now = Date(timeIntervalSince1970: 1_700_000_000)
 
@@ -203,8 +200,7 @@ final class RecordingChatSessionListActions: ChatSessionListActions {
 
 // MARK: - State holder
 
-@MainActor
-final class ChatSessionListModelTests: XCTestCase {
+@MainActor final class ChatSessionListModelTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     private func makeModel(

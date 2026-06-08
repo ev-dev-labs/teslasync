@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web feed build)
 
-@MainActor
-final class MediaHistoryAdapterTests: XCTestCase {
+@MainActor final class MediaHistoryAdapterTests: XCTestCase {
     func testSourceLabelSpecialCasesUSB() {
         XCTAssertEqual(MediaHistoryBuilder.sourceLabel("usb"), "USB")
         XCTAssertEqual(MediaHistoryBuilder.sourceLabel("USB"), "USB")
@@ -92,8 +91,7 @@ final class MediaHistoryAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class MediaHistoryModelTests: XCTestCase {
+@MainActor final class MediaHistoryModelTests: XCTestCase {
     private func makeModel(
         _ update: MediaHistoryUpdate,
         telemetry: MediaHistoryTelemetry = OSLogMediaHistoryTelemetry()
@@ -171,8 +169,7 @@ final class MediaHistoryModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class MediaHistoryRegistryTests: XCTestCase {
+@MainActor final class MediaHistoryRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = MediaHistoryWidget.registration
         XCTAssertEqual(registration.id, "media-history")
@@ -201,8 +198,7 @@ final class MediaHistoryRegistryTests: XCTestCase {
 
 // MARK: - Accessibility + relative-time copy
 
-@MainActor
-final class MediaHistoryAccessibilityTests: XCTestCase {
+@MainActor final class MediaHistoryAccessibilityTests: XCTestCase {
     func testRowLabelIncludesTrackSourceAndPlaying() {
         let track = MediaHistoryBuilder.makeTrack(
             from: MediaTrackInput(

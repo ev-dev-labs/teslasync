@@ -19,9 +19,12 @@ import XCTest
 
 // MARK: - Adapter: URL assembly (buildUrl + encodeURIComponent)
 
-@MainActor
-final class RequestURLBuilderTests: XCTestCase {
-    private func endpoint(_ method: RequestBuilderHTTPMethod, _ path: String, _ params: [EndpointParameter]) -> RequestBuilderParsedEndpoint {
+@MainActor final class RequestURLBuilderTests: XCTestCase {
+    private func endpoint(
+        _ method: RequestBuilderHTTPMethod,
+        _ path: String,
+        _ params: [EndpointParameter]
+    ) -> RequestBuilderParsedEndpoint {
         RequestBuilderParsedEndpoint(method: method, path: path, parameters: params)
     }
 
@@ -81,8 +84,7 @@ final class RequestURLBuilderTests: XCTestCase {
 
 // MARK: - Adapter: JSON pretty printer (JSON.stringify(_, null, 2))
 
-@MainActor
-final class RequestJSONFormatterTests: XCTestCase {
+@MainActor final class RequestJSONFormatterTests: XCTestCase {
     func testObjectIndentedAndOrdered() {
         let value = RequestJSON.object([
             RequestJSONMember("name", .string("Low battery")),
@@ -144,8 +146,7 @@ final class RequestJSONFormatterTests: XCTestCase {
 
 // MARK: - Adapter: seed / defaults / headers / prompts / method
 
-@MainActor
-final class RequestBuilderAdapterTests: XCTestCase {
+@MainActor final class RequestBuilderAdapterTests: XCTestCase {
     func testSeedBodyFromExample() {
         let body = RequestBody(
             contentType: "application/json",
@@ -222,8 +223,7 @@ final class RequestBuilderAdapterTests: XCTestCase {
 
 // MARK: - State holder: RequestBuilderModel
 
-@MainActor
-final class RequestBuilderModelTests: XCTestCase {
+@MainActor final class RequestBuilderModelTests: XCTestCase {
     private func getEndpoint() -> RequestBuilderParsedEndpoint {
         RequestBuilderParsedEndpoint(method: .get, path: "/vehicles/{vehicleID}/state", parameters: [
             EndpointParameter(name: "vehicleID", location: .path, required: true, type: "string"),
@@ -337,8 +337,7 @@ final class RequestBuilderModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
-@MainActor
-final class RequestBuilderAccessibilityTests: XCTestCase {
+@MainActor final class RequestBuilderAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testURLSummaryIncludesMethodAndURL() {

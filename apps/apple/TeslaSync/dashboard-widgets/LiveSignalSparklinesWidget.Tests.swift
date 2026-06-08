@@ -21,8 +21,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection
 
-@MainActor
-final class LiveSignalSparklinesAdapterTests: XCTestCase {
+@MainActor final class LiveSignalSparklinesAdapterTests: XCTestCase {
     func testSelectSignalsDefaultsWhenUnset() {
         let result = LiveSignalSparklinesBuilder.selectSignals(
             configured: nil,
@@ -200,8 +199,7 @@ final class LiveSignalSparklinesAdapterTests: XCTestCase {
 
 // MARK: - State holder: phase / freshness / telemetry / wiring
 
-@MainActor
-final class LiveSignalSparklinesModelTests: XCTestCase {
+@MainActor final class LiveSignalSparklinesModelTests: XCTestCase {
     private func makeModel(
         _ update: LiveSignalSparklinesUpdate,
         telemetry: LiveSignalSparklinesTelemetry = OSLogLiveSignalSparklinesTelemetry()
@@ -300,8 +298,7 @@ final class LiveSignalSparklinesModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class LiveSignalSparklinesRegistryTests: XCTestCase {
+@MainActor final class LiveSignalSparklinesRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = LiveSignalSparklinesWidget.registration
         XCTAssertEqual(registration.id, "live-signal-sparklines")
@@ -334,8 +331,7 @@ final class LiveSignalSparklinesRegistryTests: XCTestCase {
 
 // MARK: - Accessibility copy
 
-@MainActor
-final class LiveSignalSparklinesAccessibilityTests: XCTestCase {
+@MainActor final class LiveSignalSparklinesAccessibilityTests: XCTestCase {
     func testRowLabelIncludesNameValueAndTrend() {
         let row = SignalRowProjection(
             signal: "BatteryLevel",

@@ -21,8 +21,7 @@ import XCTest
 
 // MARK: - Adapter: projection (computeStartLevelDist consumer parity)
 
-@MainActor
-final class BatteryLevelBuilderTests: XCTestCase {
+@MainActor final class BatteryLevelBuilderTests: XCTestCase {
     func testRangeLabelsMatchWebDeciles() {
         XCTAssertEqual(BatteryLevelBuilder.rangeLabel(forIndex: 0), "0-10%")
         XCTAssertEqual(BatteryLevelBuilder.rangeLabel(forIndex: 4), "40-50%")
@@ -99,8 +98,7 @@ final class BatteryLevelBuilderTests: XCTestCase {
 
 // MARK: - State holder: BatteryLevelChartModel
 
-@MainActor
-final class BatteryLevelChartModelTests: XCTestCase {
+@MainActor final class BatteryLevelChartModelTests: XCTestCase {
     private func makeModel(
         initial: BatteryLevelUpdate?,
         telemetry: BatteryLevelChartTelemetry = SpyBatteryLevelTelemetry()
@@ -198,8 +196,7 @@ final class BatteryLevelChartModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
-@MainActor
-final class BatteryLevelAccessibilityTests: XCTestCase {
+@MainActor final class BatteryLevelAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }
 

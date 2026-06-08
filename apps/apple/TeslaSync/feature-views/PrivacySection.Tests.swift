@@ -41,7 +41,8 @@ private func makePrivacyHarness(
     let environment = InMemoryPrivacyEnvironmentSource(initial: initial)
     let recentPages = InMemoryRecentPagesStore(count: recent)
     let consentStore = InMemoryConsentStore(state: consent)
-    let silenceStore = PrivacySectionInMemoryConfirmSilenceStore(silenced: silenced ? [PrivacyModel.confirmSilenceKey] : [])
+    let silenceStore =
+        PrivacySectionInMemoryConfirmSilenceStore(silenced: silenced ? [PrivacyModel.confirmSilenceKey] : [])
     let model = PrivacyModel(
         environment: environment,
         recentPages: recentPages,
@@ -62,8 +63,7 @@ private func makePrivacyHarness(
 
 // MARK: - Phases + freshness + telemetry
 
-@MainActor
-final class PrivacyModelLifecycleTests: XCTestCase {
+@MainActor final class PrivacyModelLifecycleTests: XCTestCase {
     func testStartsInLoadingUntilPolicyResolves() {
         let harness = makePrivacyHarness(initial: PrivacyEnvironmentUpdate(status: .loading))
         XCTAssertEqual(harness.model.phase, .loading)
@@ -129,8 +129,7 @@ final class PrivacyModelLifecycleTests: XCTestCase {
 
 // MARK: - Recent-pages clear flow + silence machinery
 
-@MainActor
-final class PrivacyClearFlowTests: XCTestCase {
+@MainActor final class PrivacyClearFlowTests: XCTestCase {
     func testRequestWithEntriesPresentsConfirmation() {
         let harness = makePrivacyHarness(recent: 5)
         harness.model.requestClearRecentPages()
@@ -193,8 +192,7 @@ final class PrivacyClearFlowTests: XCTestCase {
 
 // MARK: - Consent mutations + toasts
 
-@MainActor
-final class PrivacyConsentFlowTests: XCTestCase {
+@MainActor final class PrivacyConsentFlowTests: XCTestCase {
     func testAcceptSetsStateAndToasts() {
         let harness = makePrivacyHarness(consent: .unknown)
         harness.model.performConsent(.accept)

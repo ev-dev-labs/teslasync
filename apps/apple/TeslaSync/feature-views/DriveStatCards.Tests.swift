@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Projection (web parity)
 
-@MainActor
-final class DriveStatCardsProjectionTests: XCTestCase {
+@MainActor final class DriveStatCardsProjectionTests: XCTestCase {
     private let imperial = DriveStatCardsFormatting(
         distanceUnit: "mi", speedUnit: "mph", locale: "en-US",
         precision: 2, currencySymbol: "$", costPerKwh: 0.12
@@ -179,8 +178,7 @@ final class DriveStatCardsProjectionTests: XCTestCase {
 
 // MARK: - State holder: phases + refresh + telemetry
 
-@MainActor
-final class DriveStatCardsModelTests: XCTestCase {
+@MainActor final class DriveStatCardsModelTests: XCTestCase {
     private func makeModel(
         _ update: DriveStatCardsUpdate,
         telemetry: DriveStatCardsTelemetry = OSLogDriveStatCardsTelemetry()

@@ -23,8 +23,7 @@ private let enUS = Locale(identifier: "en_US")
 
 // MARK: - Adapter: cached payload → projection (parity with the web useMemo)
 
-@MainActor
-final class TelemetryErrorsWidgetProjectionTests: XCTestCase {
+@MainActor final class TelemetryErrorsWidgetProjectionTests: XCTestCase {
     func testActiveVINCountCountsOnlyActive() {
         let vins = [
             TelemetryErrorVIN(id: 1, vin: "a", active: true),
@@ -114,8 +113,7 @@ final class TelemetryErrorsWidgetProjectionTests: XCTestCase {
 
 // MARK: - Status verdict
 
-@MainActor
-final class TelemetryErrorsStatusTests: XCTestCase {
+@MainActor final class TelemetryErrorsStatusTests: XCTestCase {
     func testResolveAndLabel() {
         XCTAssertEqual(TelemetryErrorsStatus.resolve(activeVINCount: 0), .healthy)
         XCTAssertEqual(TelemetryErrorsStatus.resolve(activeVINCount: 3), .errors)
@@ -126,8 +124,7 @@ final class TelemetryErrorsStatusTests: XCTestCase {
 
 // MARK: - Formatters: fmtInt / formatRelative / ISO parse parity
 
-@MainActor
-final class TelemetryErrorsWidgetFormatTests: XCTestCase {
+@MainActor final class TelemetryErrorsWidgetFormatTests: XCTestCase {
     func testIntGrouping() {
         XCTAssertEqual(TelemetryErrorsWidgetFormat.int(18234, locale: enUS), "18,234")
         XCTAssertEqual(TelemetryErrorsWidgetFormat.int(0, locale: enUS), "0")
@@ -173,8 +170,7 @@ final class TelemetryErrorsWidgetFormatTests: XCTestCase {
 
 // MARK: - State holder: phases + freshness + telemetry + source wiring
 
-@MainActor
-final class TelemetryErrorsWidgetModelTests: XCTestCase {
+@MainActor final class TelemetryErrorsWidgetModelTests: XCTestCase {
     private func makeModel(
         _ update: TelemetryErrorsUpdate,
         telemetry: TelemetryErrorsWidgetTelemetry = TelemetryErrorsWidgetOSLogTelemetryErrorsTelemetry()
@@ -264,8 +260,7 @@ final class TelemetryErrorsWidgetModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class TelemetryErrorsRegistryTests: XCTestCase {
+@MainActor final class TelemetryErrorsRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = TelemetryErrorsWidget.registration
         XCTAssertEqual(registration.id, "telemetry-errors")
@@ -291,8 +286,7 @@ final class TelemetryErrorsRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary + row label content
 
-@MainActor
-final class TelemetryErrorsWidgetAccessibilityTests: XCTestCase {
+@MainActor final class TelemetryErrorsWidgetAccessibilityTests: XCTestCase {
     func testSummaryIncludesStatusAndCount() {
         let summary = TelemetryErrorsWidgetAccessibility.summary(activeVINCount: 3, status: .errors)
         XCTAssertTrue(summary.contains("Errors"))

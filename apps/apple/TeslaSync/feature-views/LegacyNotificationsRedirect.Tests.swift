@@ -22,8 +22,7 @@ import XCTest
 
 // MARK: - Adapter: location → resolved redirect (web component body parity)
 
-@MainActor
-final class LegacyNotificationsRedirectResolverTests: XCTestCase {
+@MainActor final class LegacyNotificationsRedirectResolverTests: XCTestCase {
     private func resolve(_ search: String) -> ResolvedRedirect {
         LegacyNotificationsRedirectResolver.resolve(LegacyNotificationsLocation(search: search))
     }
@@ -106,8 +105,7 @@ final class LegacyNotificationsRedirectResolverTests: XCTestCase {
 
 // MARK: - Tab map parity (web TAB_TO_ROUTE)
 
-@MainActor
-final class NotificationsRedirectTabTests: XCTestCase {
+@MainActor final class NotificationsRedirectTabTests: XCTestCase {
     func testRawValuesMatchWebTabKeys() {
         XCTAssertEqual(NotificationsRedirectTab.allCases.map(\.rawValue), ["inbox", "archived", "channels"])
     }
@@ -132,8 +130,7 @@ final class NotificationsRedirectTabTests: XCTestCase {
 
 // MARK: - State holder + telemetry (P1/S8 + P1/S11)
 
-@MainActor
-final class LegacyNotificationsRedirectModelTests: XCTestCase {
+@MainActor final class LegacyNotificationsRedirectModelTests: XCTestCase {
     private func makeModel(
         search: String,
         telemetry: any LegacyNotificationsRedirectTelemetry,
@@ -214,8 +211,7 @@ final class LegacyNotificationsRedirectModelTests: XCTestCase {
 
 // MARK: - Telemetry slug (P1/S11 view.opened)
 
-@MainActor
-final class LegacyNotificationsRedirectSurfaceTests: XCTestCase {
+@MainActor final class LegacyNotificationsRedirectSurfaceTests: XCTestCase {
     func testReportOpenEmitsSurfaceSlug() {
         let spy = SpyTelemetry()
         LegacyNotificationsRedirectSurface.reportOpen(to: spy)

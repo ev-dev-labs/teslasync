@@ -71,7 +71,6 @@ public struct TSDashboardWidgetMetadata: Equatable, Sendable {
 
 // MARK: - Diagnostics seam (P1/S11)
 
-
 /// Inert default used in production until diagnostics is wired, and in previews.
 @MainActor
 public final class NoopDashboardWidgetTelemetry: DashboardWidgetTelemetry {

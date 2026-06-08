@@ -21,8 +21,7 @@ import XCTest
 
 // MARK: - Adapter: formatting (title / trigger / timestamp)
 
-@MainActor
-final class WhyEndedPanelFormatTests: XCTestCase {
+@MainActor final class WhyEndedPanelFormatTests: XCTestCase {
     func testTransitionTitleComposesWithArrow() {
         let title = WhyEndedPanelFormat.transitionTitle(fsmName: "drive", fromState: "driving", toState: "parked")
         XCTAssertEqual(title, "drive: driving → parked")
@@ -62,8 +61,7 @@ final class WhyEndedPanelFormatTests: XCTestCase {
 
 // MARK: - Adapter: builder (transition / signal rows + projection)
 
-@MainActor
-final class WhyEndedPanelBuilderTests: XCTestCase {
+@MainActor final class WhyEndedPanelBuilderTests: XCTestCase {
     func testTransitionRowCarriesTitleTriggerAndTime() {
         let data = DriveDiagnosticTransitionData(
             id: 7,
@@ -137,8 +135,7 @@ final class WhyEndedPanelBuilderTests: XCTestCase {
 
 // MARK: - Adapter: pagination math (web DataTable pagination)
 
-@MainActor
-final class WhyEndedSignalPagingTests: XCTestCase {
+@MainActor final class WhyEndedSignalPagingTests: XCTestCase {
     func testPageCountRoundsUpAndFloorsAtOne() {
         XCTAssertEqual(WhyEndedSignalPaging.pageCount(total: 0, pageSize: 25), 1)
         XCTAssertEqual(WhyEndedSignalPaging.pageCount(total: 25, pageSize: 25), 1)
@@ -168,8 +165,7 @@ final class WhyEndedSignalPagingTests: XCTestCase {
 
 // MARK: - State holder: phase resolution
 
-@MainActor
-final class WhyEndedPanelPhaseTests: XCTestCase {
+@MainActor final class WhyEndedPanelPhaseTests: XCTestCase {
     func testLoadingWithoutDataShowsLoading() {
         XCTAssertEqual(WhyEndedPanelModel.resolvePhase(status: .loading, hasData: false), .loading)
     }
@@ -191,8 +187,7 @@ final class WhyEndedPanelPhaseTests: XCTestCase {
 
 // MARK: - State holder: model wiring
 
-@MainActor
-final class WhyEndedPanelModelTests: XCTestCase {
+@MainActor final class WhyEndedPanelModelTests: XCTestCase {
     private func makeModel(
         _ update: WhyEndedPanelUpdate? = nil,
         telemetry: WhyEndedPanelTelemetry = OSLogWhyEndedPanelTelemetry()
@@ -310,8 +305,7 @@ final class WhyEndedPanelModelTests: XCTestCase {
 
 // MARK: - Accessibility
 
-@MainActor
-final class WhyEndedPanelAccessibilityTests: XCTestCase {
+@MainActor final class WhyEndedPanelAccessibilityTests: XCTestCase {
     func testTransitionRowLabelJoinsTitleSubtitleTime() {
         let row = WhyEndedTransitionRow(
             id: 1,

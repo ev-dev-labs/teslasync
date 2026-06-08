@@ -22,8 +22,7 @@ private let fixedFormat: @Sendable (Date) -> String = { _ in "FMT" }
 
 // MARK: - State holder: wiring + telemetry + mutation flow
 
-@MainActor
-final class TOTPEnrollmentModelTests: XCTestCase {
+@MainActor final class TOTPEnrollmentModelTests: XCTestCase {
     func testStartEmitsTelemetryOnceAndStarts() {
         let spy = SpyTOTPTelemetry()
         let (model, source) = makeModel(telemetry: spy)

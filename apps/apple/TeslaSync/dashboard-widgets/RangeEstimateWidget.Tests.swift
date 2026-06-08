@@ -19,8 +19,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web widget)
 
-@MainActor
-final class RangeEstimateAdapterTests: XCTestCase {
+@MainActor final class RangeEstimateAdapterTests: XCTestCase {
     private let sample = RangeStateDTO(ratedRangeMeters: 405_000, idealRangeMeters: 450_000)
 
     /// Pins the exact display strings the web widget produces for the km preference:
@@ -105,8 +104,7 @@ final class RangeEstimateAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class RangeEstimatePhaseTests: XCTestCase {
+@MainActor final class RangeEstimatePhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         XCTAssertEqual(RangeEstimateModel.resolvePhase(status: .loading, hasData: false), .loading)
         XCTAssertEqual(RangeEstimateModel.resolvePhase(status: .loading, hasData: true), .content)
@@ -119,8 +117,7 @@ final class RangeEstimatePhaseTests: XCTestCase {
     }
 }
 
-@MainActor
-final class RangeEstimateModelTests: XCTestCase {
+@MainActor final class RangeEstimateModelTests: XCTestCase {
     private func makeModel(
         _ update: RangeEstimateUpdate,
         telemetry: RangeEstimateTelemetry = OSLogRangeEstimateTelemetry()
@@ -211,8 +208,7 @@ final class RangeEstimateModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class RangeEstimateRegistryTests: XCTestCase {
+@MainActor final class RangeEstimateRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = RangeEstimateWidget.registration
         XCTAssertEqual(registration.id, "range-estimate")
@@ -242,8 +238,7 @@ final class RangeEstimateRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class RangeEstimateAccessibilityTests: XCTestCase {
+@MainActor final class RangeEstimateAccessibilityTests: XCTestCase {
     func testSummaryIncludesEveryMetric() {
         let projection = RangeEstimateProjector.project(
             state: RangeStateDTO(ratedRangeMeters: 405_000, idealRangeMeters: 450_000),

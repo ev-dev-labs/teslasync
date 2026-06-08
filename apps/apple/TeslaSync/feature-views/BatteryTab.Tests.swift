@@ -21,8 +21,7 @@ import XCTest
 
 // MARK: - Adapter: conversion / formatting / projection (web parity)
 
-@MainActor
-final class BatteryTabAdapterTests: XCTestCase {
+@MainActor final class BatteryTabAdapterTests: XCTestCase {
     private let locale = "en_US"
 
     func testDistanceConversionMatchesWebFactors() {
@@ -154,8 +153,7 @@ final class BatteryTabAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + projection + refresh + telemetry
 
-@MainActor
-final class BatteryTabModelTests: XCTestCase {
+@MainActor final class BatteryTabModelTests: XCTestCase {
     private func sampleTrend() -> [BatteryTrendPointDTO] {
         [
             BatteryTrendPointDTO(
@@ -279,8 +277,7 @@ final class BatteryTabModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
-@MainActor
-final class BatteryTabAccessibilityTests: XCTestCase {
+@MainActor final class BatteryTabAccessibilityTests: XCTestCase {
     func testMetricsSummaryIncludesLabelsValuesAndUnits() {
         let latest = BatteryTrendPointDTO(
             date: "2026-05-01", healthScore: 95, capacityWh: 75000,

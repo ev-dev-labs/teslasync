@@ -18,8 +18,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web slide)
 
-@MainActor
-final class PatternsAdapterTests: XCTestCase {
+@MainActor final class PatternsAdapterTests: XCTestCase {
     private let sample = PatternsReviewDTO(
         avgDistancePerDriveKm: 42,
         avgEfficiencyWhKm: 175,
@@ -131,8 +130,7 @@ final class PatternsAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class PatternsPhaseTests: XCTestCase {
+@MainActor final class PatternsPhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         XCTAssertEqual(PatternsSlideModel.resolvePhase(status: .loading, hasData: false), .loading)
         XCTAssertEqual(PatternsSlideModel.resolvePhase(status: .loading, hasData: true), .content)
@@ -145,8 +143,7 @@ final class PatternsPhaseTests: XCTestCase {
     }
 }
 
-@MainActor
-final class PatternsModelTests: XCTestCase {
+@MainActor final class PatternsModelTests: XCTestCase {
     private func makeModel(
         _ update: PatternsUpdate,
         telemetry: PatternsTelemetry = OSLogPatternsTelemetry()
@@ -238,8 +235,7 @@ final class PatternsModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class PatternsAccessibilityTests: XCTestCase {
+@MainActor final class PatternsAccessibilityTests: XCTestCase {
     private let projection = PatternsProjector.project(
         stats: PatternsReviewDTO(
             avgDistancePerDriveKm: 42,

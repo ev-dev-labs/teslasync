@@ -2,8 +2,7 @@ import XCTest
 @testable import TeslaSync
 
 /// Pure tests for the settings value type, measurement system, and stores.
-@MainActor
-final class AppSettingsDataTests: XCTestCase {
+@MainActor final class AppSettingsDataTests: XCTestCase {
     func testDefaultsArePrivacyFirst() {
         let settings = AppSettings.default
         XCTAssertFalse(settings.analyticsOptIn, "analytics must be opt-in (off by default)")
@@ -89,8 +88,7 @@ private final class FakeBiometric: BiometricSettingControlling {
 
 /// Tests the observable settings model: persistence, change hook, biometric
 /// reconciliation, and cache clearing.
-@MainActor
-final class AppSettingsModelTests: XCTestCase {
+@MainActor final class AppSettingsModelTests: XCTestCase {
     func testSettersPersistThroughStore() {
         let store = InMemoryAppSettingsStore()
         let model = AppSettingsModel(storage: store)

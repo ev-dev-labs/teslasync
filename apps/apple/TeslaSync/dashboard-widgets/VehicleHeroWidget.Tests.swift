@@ -57,8 +57,7 @@ private func idleState(inside: Double? = 22.5) -> VehicleStateInput {
 
 // MARK: - Adapter: converters + formatters + firmware
 
-@MainActor
-final class VehicleHeroWidgetAdapterTests: XCTestCase {
+@MainActor final class VehicleHeroWidgetAdapterTests: XCTestCase {
     func testDistanceConversionMatchesWebConstants() {
         XCTAssertEqual(VehicleHeroConvert.distance(1000, "km"), 1, accuracy: 1e-9)
         XCTAssertEqual(VehicleHeroConvert.distance(1609.344, "mi"), 1, accuracy: 1e-9)
@@ -98,8 +97,7 @@ final class VehicleHeroWidgetAdapterTests: XCTestCase {
 
 // MARK: - Adapter: status catalog
 
-@MainActor
-final class VehicleHeroStatusCatalogTests: XCTestCase {
+@MainActor final class VehicleHeroStatusCatalogTests: XCTestCase {
     func testKnownStatesCarryToneDotAndLabel() {
         let online = VehicleHeroStatusCatalog.visual(for: "online", localize: echo)
         XCTAssertEqual(online.label, "Online")
@@ -127,8 +125,7 @@ final class VehicleHeroStatusCatalogTests: XCTestCase {
 
 // MARK: - Projection: gauges
 
-@MainActor
-final class VehicleHeroGaugeTests: XCTestCase {
+@MainActor final class VehicleHeroGaugeTests: XCTestCase {
     private func gauges(_ state: VehicleStateInput, _ prefs: UnitDisplayPrefs = metric) -> [VehicleHeroGauge] {
         VehicleHeroWidgetProjection.build(
             vehicle: vehicle, state: state, firmware: "fw", prefs: prefs, localize: echo
@@ -179,10 +176,15 @@ final class VehicleHeroGaugeTests: XCTestCase {
 
 // MARK: - Projection: charging detail + stat cards
 
-@MainActor
-final class VehicleHeroStatTests: XCTestCase {
+@MainActor final class VehicleHeroStatTests: XCTestCase {
     private func projection(_ state: VehicleStateInput?, firmware: String = "2026.8.1") -> VehicleHeroWidgetProjection {
-        VehicleHeroWidgetProjection.build(vehicle: vehicle, state: state, firmware: firmware, prefs: metric, localize: echo)
+        VehicleHeroWidgetProjection.build(
+            vehicle: vehicle,
+            state: state,
+            firmware: firmware,
+            prefs: metric,
+            localize: echo
+        )
     }
 
     func testChargingDetailOnlyWhenCharging() {
@@ -224,8 +226,7 @@ final class VehicleHeroStatTests: XCTestCase {
 
 // MARK: - Projection: header + a11y
 
-@MainActor
-final class VehicleHeroHeaderTests: XCTestCase {
+@MainActor final class VehicleHeroHeaderTests: XCTestCase {
     func testSubtitleJoinsModelTrimAndVin() {
         XCTAssertEqual(
             VehicleHeroWidgetProjection.subtitle(for: vehicle), "Model 3 Long Range · VIN123"
@@ -236,7 +237,13 @@ final class VehicleHeroHeaderTests: XCTestCase {
 
     func testTitleFallsBackToVinAndStatusDefaultsOffline() {
         let anon = VehicleInput(id: 1, vin: "VIN999", displayName: "", model: "M", trimBadging: "")
-        let proj = VehicleHeroWidgetProjection.build(vehicle: anon, state: nil, firmware: "—", prefs: metric, localize: echo)
+        let proj = VehicleHeroWidgetProjection.build(
+            vehicle: anon,
+            state: nil,
+            firmware: "—",
+            prefs: metric,
+            localize: echo
+        )
         XCTAssertEqual(proj.title, "VIN999")
         XCTAssertFalse(proj.hasState)
         XCTAssertEqual(proj.status.label, "Offline") // state nil → "offline"
@@ -261,10 +268,10 @@ final class VehicleHeroHeaderTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry
 
-@MainActor
-final class VehicleHeroWidgetModelTests: XCTestCase {
+@MainActor final class VehicleHeroWidgetModelTests: XCTestCase {
     private func make(
-        _ update: VehicleHeroWidgetUpdate, telemetry: VehicleHeroWidgetTelemetry = VehicleHeroWidgetOSLogVehicleHeroTelemetry()
+        _ update: VehicleHeroWidgetUpdate,
+        telemetry: VehicleHeroWidgetTelemetry = VehicleHeroWidgetOSLogVehicleHeroTelemetry()
     ) -> (VehicleHeroWidgetModel, VehicleHeroWidgetInMemoryVehicleHeroSource) {
         let source = VehicleHeroWidgetInMemoryVehicleHeroSource(initial: update)
         return (VehicleHeroWidgetModel(source: source, telemetry: telemetry), source)
@@ -309,7 +316,12 @@ final class VehicleHeroWidgetModelTests: XCTestCase {
         model.refresh()
         XCTAssertEqual(source.refreshCount, 2)
 
-        source.push(VehicleHeroWidgetUpdate(status: .loaded, connection: .offline, vehicle: vehicle, state: drivingState()))
+        source.push(VehicleHeroWidgetUpdate(
+            status: .loaded,
+            connection: .offline,
+            vehicle: vehicle,
+            state: drivingState()
+        ))
         XCTAssertEqual(model.connection, .offline)
         XCTAssertEqual(model.phase, .content)
         XCTAssertEqual(model.projection?.status.label, "Driving")
@@ -318,8 +330,7 @@ final class VehicleHeroWidgetModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class VehicleHeroWidgetRegistryTests: XCTestCase {
+@MainActor final class VehicleHeroWidgetRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = VehicleHeroWidget.registration
         XCTAssertEqual(registration.id, "vehicle-hero")

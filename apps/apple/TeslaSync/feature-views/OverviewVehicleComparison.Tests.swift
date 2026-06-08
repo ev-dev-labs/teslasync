@@ -35,8 +35,7 @@ private enum OverviewSampleFleet {
 
 // MARK: - Adapter: guards / conversions / formatting
 
-@MainActor
-final class OverviewComparisonBuilderMathTests: XCTestCase {
+@MainActor final class OverviewComparisonBuilderMathTests: XCTestCase {
     func testSafeCoalescesNonFinite() {
         XCTAssertEqual(OverviewComparisonBuilder.safe(12.5), 12.5)
         XCTAssertEqual(OverviewComparisonBuilder.safe(.nan), 0)
@@ -79,8 +78,7 @@ final class OverviewComparisonBuilderMathTests: XCTestCase {
 
 // MARK: - Adapter: leaderboard / radar / slices / bars
 
-@MainActor
-final class OverviewComparisonBuilderProjectionTests: XCTestCase {
+@MainActor final class OverviewComparisonBuilderProjectionTests: XCTestCase {
     func testLeaderboardSortsAscendingWithRanks() {
         let entries = OverviewComparisonBuilder.leaderboard(OverviewSampleFleet.vehicles, unit: .km)
         XCTAssertEqual(entries.map(\.rank), [1, 2, 3])
@@ -151,8 +149,7 @@ final class OverviewComparisonBuilderProjectionTests: XCTestCase {
 
 // MARK: - Adapter: phase / freshness / relative time
 
-@MainActor
-final class OverviewComparisonBuilderStateTests: XCTestCase {
+@MainActor final class OverviewComparisonBuilderStateTests: XCTestCase {
     func testResolvePhase() {
         XCTAssertEqual(OverviewComparisonBuilder.resolvePhase(status: .loading, vehicleCount: 0), .loading)
         XCTAssertEqual(OverviewComparisonBuilder.resolvePhase(status: .loaded, vehicleCount: 0), .empty)
@@ -193,8 +190,7 @@ final class OverviewComparisonBuilderStateTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class OverviewComparisonModelTests: XCTestCase {
+@MainActor final class OverviewComparisonModelTests: XCTestCase {
     private func makeModel(
         _ update: OverviewComparisonUpdate,
         telemetry: OverviewComparisonTelemetry = OSLogOverviewComparisonTelemetry()
@@ -272,8 +268,7 @@ final class OverviewComparisonModelTests: XCTestCase {
 
 // MARK: - Accessibility label content
 
-@MainActor
-final class OverviewComparisonAccessibilityTests: XCTestCase {
+@MainActor final class OverviewComparisonAccessibilityTests: XCTestCase {
     func testRadarMetricLabelsResolve() {
         XCTAssertEqual(OverviewComparisonAccessibility.radarMetricLabel(.distance), "Distance")
         XCTAssertEqual(OverviewComparisonAccessibility.radarMetricLabel(.energy), "Energy")

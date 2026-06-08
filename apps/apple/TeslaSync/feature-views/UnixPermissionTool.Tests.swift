@@ -18,8 +18,7 @@ import XCTest
 
 // MARK: - Adapter: input → projection (port parity with the web tool)
 
-@MainActor
-final class UnixPermissionProjectorTests: XCTestCase {
+@MainActor final class UnixPermissionProjectorTests: XCTestCase {
     /// Pins the PERMS map verbatim against the web `constants.ts` table.
     func testPermsTableMatchesWebConstants() {
         XCTAssertEqual(UnixPermissionPerms.triad(for: "0"), "---")
@@ -86,8 +85,7 @@ final class UnixPermissionProjectorTests: XCTestCase {
 
 // MARK: - State holder: phases + preset selection + telemetry
 
-@MainActor
-final class UnixPermissionToolModelTests: XCTestCase {
+@MainActor final class UnixPermissionToolModelTests: XCTestCase {
     func testInitialPhaseContentForDefault() {
         let model = UnixPermissionToolModel()
         XCTAssertEqual(model.octal, "755")
@@ -129,8 +127,7 @@ final class UnixPermissionToolModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class UnixPermissionAccessibilityTests: XCTestCase {
+@MainActor final class UnixPermissionAccessibilityTests: XCTestCase {
     func testSummaryIncludesEveryTriadAndSymbolic() throws {
         let projection = try XCTUnwrap(UnixPermissionProjector.project(octal: "755"))
         let summary = UnixPermissionAccessibility.summary(for: projection)

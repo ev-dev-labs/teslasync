@@ -21,8 +21,7 @@ import XCTest
 
 // MARK: - Adapter: status / event resolution
 
-@MainActor
-final class AutomationFeedStatusTests: XCTestCase {
+@MainActor final class AutomationFeedStatusTests: XCTestCase {
     func testStatusParseAndFallback() {
         XCTAssertEqual(AutomationRunStatus.parse("success"), .success)
         XCTAssertEqual(AutomationRunStatus.parse("partial"), .partial)
@@ -68,8 +67,7 @@ final class AutomationFeedStatusTests: XCTestCase {
 
 // MARK: - Adapter: formatting
 
-@MainActor
-final class AutomationFeedFormatTests: XCTestCase {
+@MainActor final class AutomationFeedFormatTests: XCTestCase {
     func testDurationFormatting() {
         XCTAssertEqual(AutomationFeedFormat.duration(nil), "—")
         XCTAssertEqual(AutomationFeedFormat.duration(0), "0ms")
@@ -104,8 +102,7 @@ final class AutomationFeedFormatTests: XCTestCase {
 
 // MARK: - Adapter: projection
 
-@MainActor
-final class AutomationFeedAdapterTests: XCTestCase {
+@MainActor final class AutomationFeedAdapterTests: XCTestCase {
     func testDisplayName() {
         XCTAssertEqual(AutomationFeedAdapter.displayName(name: "Morning", automationId: 7), "Morning")
         XCTAssertEqual(AutomationFeedAdapter.displayName(name: nil, automationId: 7), "#7")
@@ -196,8 +193,7 @@ final class AutomationFeedAdapterTests: XCTestCase {
 
 // MARK: - Projection: phase resolution across every branch
 
-@MainActor
-final class AutomationFeedProjectionTests: XCTestCase {
+@MainActor final class AutomationFeedProjectionTests: XCTestCase {
     private var sampleHistory: [AutomationHistoryInput] {
         [AutomationHistoryInput(id: "1", automationName: "A", status: "success", triggeredAt: "2026-01-05T15:04:05Z")]
     }
@@ -255,8 +251,7 @@ final class AutomationFeedProjectionTests: XCTestCase {
 
 // MARK: - State holder: wiring + telemetry + stale auto-refresh
 
-@MainActor
-final class AutomationFeedModelTests: XCTestCase {
+@MainActor final class AutomationFeedModelTests: XCTestCase {
     private func makeModel(
         _ input: AutomationFeedInput,
         telemetry: AutomationFeedTelemetry = OSLogAutomationFeedTelemetry()
@@ -337,8 +332,7 @@ final class AutomationFeedModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
-@MainActor
-final class AutomationFeedAccessibilityTests: XCTestCase {
+@MainActor final class AutomationFeedAccessibilityTests: XCTestCase {
     /// Bundle-free localizer that returns the English fallback (the web `t` default).
     private let localize: AutomationFeedAccessibility.Localize = { _, fallback in fallback }
 

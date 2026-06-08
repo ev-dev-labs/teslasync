@@ -19,8 +19,7 @@
 import XCTest
 @testable import TeslaSync
 
-@MainActor
-final class AuditPanelAdapterTests: XCTestCase {
+@MainActor final class AuditPanelAdapterTests: XCTestCase {
     private let locale = Locale(identifier: "en_US")
     private let timeZone = TimeZone(identifier: "UTC")!
     private let now = Date(timeIntervalSince1970: 1_700_000_000)
@@ -149,8 +148,7 @@ final class AuditPanelAdapterTests: XCTestCase {
 
 // MARK: - Presentation resolver (every state)
 
-@MainActor
-final class AuditPanelPresentationTests: XCTestCase {
+@MainActor final class AuditPanelPresentationTests: XCTestCase {
     private let locale = Locale(identifier: "en_US")
     private let timeZone = TimeZone(identifier: "UTC")!
     private let now = Date(timeIntervalSince1970: 1_700_000_000)
@@ -236,8 +234,7 @@ final class AuditPanelPresentationTests: XCTestCase {
 
 // MARK: - Telemetry + model
 
-@MainActor
-final class AuditPanelModelTests: XCTestCase {
+@MainActor final class AuditPanelModelTests: XCTestCase {
     func testViewOpenedEventCarriesSurfaceSlug() {
         XCTAssertEqual(AuditPanel.surfaceSlug, "AuditPanel")
         XCTAssertEqual(

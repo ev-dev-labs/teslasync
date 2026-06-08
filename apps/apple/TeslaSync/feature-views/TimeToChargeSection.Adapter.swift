@@ -125,7 +125,10 @@ public enum TimeToChargeProjection {
 
     /// The average crossing-session duration for a band, or `nil` when none cross
     /// (web `cross.length ? avg(...) : null`).
-    private static func bandAverage(_ dcSessions: [TimeToChargeSectionChargingSessionSummary], startCeiling: Double) -> Double? {
+    private static func bandAverage(
+        _ dcSessions: [TimeToChargeSectionChargingSessionSummary],
+        startCeiling: Double
+    ) -> Double? {
         let crossing = dcSessions.filter { crosses($0, startCeiling: startCeiling) }
         guard !crossing.isEmpty else { return nil }
         let durations = crossing.map {

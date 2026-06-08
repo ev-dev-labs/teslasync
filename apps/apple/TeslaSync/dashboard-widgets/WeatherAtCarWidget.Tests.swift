@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web widget)
 
-@MainActor
-final class WeatherAtCarAdapterTests: XCTestCase {
+@MainActor final class WeatherAtCarAdapterTests: XCTestCase {
     private let sample = WeatherStateDTO(outsideTempCelsius: 21.6, latitude: 37.4221, longitude: -122.0841)
 
     /// Pins the exact display the web widget produces for the °C preference:
@@ -124,8 +123,7 @@ final class WeatherAtCarAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class WeatherAtCarPhaseTests: XCTestCase {
+@MainActor final class WeatherAtCarPhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         XCTAssertEqual(WeatherAtCarModel.resolvePhase(status: .loading, hasData: false), .loading)
         XCTAssertEqual(WeatherAtCarModel.resolvePhase(status: .loading, hasData: true), .content)
@@ -138,8 +136,7 @@ final class WeatherAtCarPhaseTests: XCTestCase {
     }
 }
 
-@MainActor
-final class WeatherAtCarModelTests: XCTestCase {
+@MainActor final class WeatherAtCarModelTests: XCTestCase {
     private func makeModel(
         _ update: WeatherAtCarUpdate,
         telemetry: WeatherAtCarTelemetry = OSLogWeatherAtCarTelemetry()
@@ -233,8 +230,7 @@ final class WeatherAtCarModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class WeatherAtCarRegistryTests: XCTestCase {
+@MainActor final class WeatherAtCarRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = WeatherAtCarWidget.registration
         XCTAssertEqual(registration.id, "weather-at-car")
@@ -264,8 +260,7 @@ final class WeatherAtCarRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class WeatherAtCarAccessibilityTests: XCTestCase {
+@MainActor final class WeatherAtCarAccessibilityTests: XCTestCase {
     func testSummaryIncludesTemperatureAndCoordinates() throws {
         let projection = try XCTUnwrap(
             WeatherAtCarProjector.project(

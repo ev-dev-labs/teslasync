@@ -21,8 +21,7 @@ import XCTest
 
 // MARK: - Adapter: numeric guards (port of `safe`)
 
-@MainActor
-final class ChargingNumericTests: XCTestCase {
+@MainActor final class ChargingNumericTests: XCTestCase {
     func testSafeReturnsFiniteValues() {
         XCTAssertEqual(ChargingNumeric.safe(42.5), 42.5)
         XCTAssertEqual(ChargingNumeric.safe(0), 0)
@@ -46,8 +45,7 @@ final class ChargingNumericTests: XCTestCase {
 
 // MARK: - Adapter: charger-brand leaderboard (port of `brandLeaderboard`)
 
-@MainActor
-final class BrandLeaderboardTests: XCTestCase {
+@MainActor final class BrandLeaderboardTests: XCTestCase {
     func testEmptyBrandsProduceNoRows() {
         XCTAssertTrue(ChargingProjection.brandLeaderboard([]).isEmpty)
     }
@@ -85,8 +83,7 @@ final class BrandLeaderboardTests: XCTestCase {
 
 // MARK: - Adapter: charger-type shares (port of `chargerTypes.map`)
 
-@MainActor
-final class ChargerTypeShareTests: XCTestCase {
+@MainActor final class ChargerTypeShareTests: XCTestCase {
     func testEmptyTypesProduceNoShares() {
         XCTAssertTrue(ChargingProjection.chargerTypeShares([]).isEmpty)
     }
@@ -117,8 +114,7 @@ final class ChargerTypeShareTests: XCTestCase {
 
 // MARK: - Adapter: monthly-trend dual-axis scale
 
-@MainActor
-final class MonthlyTrendScaleTests: XCTestCase {
+@MainActor final class MonthlyTrendScaleTests: XCTestCase {
     private let points = [
         MonthlyChargePoint(month: "Jan", energy: 300, avgPower: 50, sessions: 20),
         MonthlyChargePoint(month: "Feb", energy: 420, avgPower: 66, sessions: 29)
@@ -156,8 +152,7 @@ final class MonthlyTrendScaleTests: XCTestCase {
 
 // MARK: - Formatting: web `formatCurrency` / `fmtInt` parity
 
-@MainActor
-final class ChargingFormattingTests: XCTestCase {
+@MainActor final class ChargingFormattingTests: XCTestCase {
     private let formatting = DefaultChargingDetailFormatting()
 
     func testCurrencyUsesSymbolGroupingAndFixedDecimals() {
@@ -183,8 +178,7 @@ final class ChargingFormattingTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class ChargingAccessibilityTests: XCTestCase {
+@MainActor final class ChargingAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let formatting = DefaultChargingDetailFormatting()
 
@@ -242,8 +236,7 @@ final class ChargingAccessibilityTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class ChargingDetailModelTests: XCTestCase {
+@MainActor final class ChargingDetailModelTests: XCTestCase {
     private func makeModel(
         _ update: ChargingAnalyticsUpdate,
         telemetry: ChargingDetailTelemetry = OSLogChargingDetailTelemetry()

@@ -14,8 +14,7 @@
 import XCTest
 @testable import TeslaSync
 
-@MainActor
-final class FSMTimelineChartModelTests: XCTestCase {
+@MainActor final class FSMTimelineChartModelTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
     private let nowMs: Int64 = 1_700_000_400_000
     private var now: Date {

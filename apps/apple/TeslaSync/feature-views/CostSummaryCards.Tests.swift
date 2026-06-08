@@ -15,8 +15,7 @@ import XCTest
 
 // MARK: - Adapter: formatting (web parity)
 
-@MainActor
-final class CostFormatTests: XCTestCase {
+@MainActor final class CostFormatTests: XCTestCase {
     func testSafeCoercesNonFinite() {
         XCTAssertEqual(CostFormat.safe(42), 42, accuracy: 0.0001)
         XCTAssertEqual(CostFormat.safe(.nan), 0)
@@ -69,8 +68,7 @@ final class CostFormatTests: XCTestCase {
 
 // MARK: - Adapter: projection (web parity)
 
-@MainActor
-final class CostSummaryProjectionTests: XCTestCase {
+@MainActor final class CostSummaryProjectionTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     private let imperial = CostSummaryUnitContext(
@@ -212,8 +210,7 @@ final class CostSummaryProjectionTests: XCTestCase {
 
 // MARK: - State holder: phases + refresh + telemetry
 
-@MainActor
-final class CostSummaryModelTests: XCTestCase {
+@MainActor final class CostSummaryModelTests: XCTestCase {
     private func makeModel(
         _ update: CostSummaryUpdate,
         telemetry: CostSummaryTelemetry = OSLogCostSummaryTelemetry()
@@ -360,8 +357,7 @@ final class CostSummaryModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
-@MainActor
-final class CostSummaryAccessibilityTests: XCTestCase {
+@MainActor final class CostSummaryAccessibilityTests: XCTestCase {
     func testCardSummaryReadsLabelValueSubtitle() {
         let card = CostSummaryCardModel(
             id: "totalCost",

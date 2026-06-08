@@ -44,8 +44,7 @@ private enum SpeedHeatmapFixture {
 
 // MARK: - Adapter: cached drives → heatmap (port parity with the web derive block)
 
-@MainActor
-final class SpeedHeatmapAdapterTests: XCTestCase {
+@MainActor final class SpeedHeatmapAdapterTests: XCTestCase {
     func testConvertSpeedFromSI() {
         XCTAssertEqual(SpeedHeatmapBuilder.convertSpeedFromSI(10, to: .kilometersPerHour), 36, accuracy: 1e-9)
         XCTAssertEqual(
@@ -134,8 +133,7 @@ final class SpeedHeatmapAdapterTests: XCTestCase {
 
 // MARK: - Adapter: colour ramp + axis labels + value types
 
-@MainActor
-final class SpeedHeatmapColorTests: XCTestCase {
+@MainActor final class SpeedHeatmapColorTests: XCTestCase {
     private func assertColor(_ color: RGBAColor, _ red: Double, _ green: Double, _ blue: Double, _ alpha: Double) {
         XCTAssertEqual(color.red, red, accuracy: 1e-9)
         XCTAssertEqual(color.green, green, accuracy: 1e-9)
@@ -195,8 +193,7 @@ final class SpeedHeatmapColorTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class SpeedHeatmapModelTests: XCTestCase {
+@MainActor final class SpeedHeatmapModelTests: XCTestCase {
     private func makeModel(
         _ update: SpeedHeatmapUpdate,
         telemetry: SpeedHeatmapTelemetry = OSLogSpeedHeatmapTelemetry()
@@ -294,8 +291,7 @@ final class SpeedHeatmapModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class SpeedHeatmapRegistryTests: XCTestCase {
+@MainActor final class SpeedHeatmapRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = SpeedHeatmapWidget.registration
         XCTAssertEqual(registration.id, "speed-heatmap")
@@ -324,8 +320,7 @@ final class SpeedHeatmapRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary + per-cell description content
 
-@MainActor
-final class SpeedHeatmapAccessibilityTests: XCTestCase {
+@MainActor final class SpeedHeatmapAccessibilityTests: XCTestCase {
     private func grid() -> [[HeatCell]] {
         SpeedHeatmapBuilder.buildHeatmap(
             drives: [SpeedHeatmapDrive(startDate: SpeedHeatmapFixture.date(day: 0, hour: 8), avgSpeedMps: 10)],

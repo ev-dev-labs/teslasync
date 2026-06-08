@@ -23,8 +23,7 @@ import XCTest
 
 // MARK: - Adapter: numeric guard (port of `safe`)
 
-@MainActor
-final class ChargerTypeNumericTests: XCTestCase {
+@MainActor final class ChargerTypeNumericTests: XCTestCase {
     func testSafeReturnsFiniteValues() {
         XCTAssertEqual(ChargerTypeNumeric.safe(42.5), 42.5)
         XCTAssertEqual(ChargerTypeNumeric.safe(0), 0)
@@ -41,8 +40,7 @@ final class ChargerTypeNumericTests: XCTestCase {
 
 // MARK: - Adapter: breakdown rows (port of `data.map`)
 
-@MainActor
-final class ChargerTypeProjectionTests: XCTestCase {
+@MainActor final class ChargerTypeProjectionTests: XCTestCase {
     private let data = [
         ChargerTypeDatum(name: "A", cost: 75, energy: 100, sessions: 10),
         ChargerTypeDatum(name: "B", cost: 25, energy: 50, sessions: 5)
@@ -108,8 +106,7 @@ final class ChargerTypeProjectionTests: XCTestCase {
 
 // MARK: - Formatting: web `formatCurrency` / `fmtInt` / `fmtNumber` / `fmtWithUnit`
 
-@MainActor
-final class ChargerTypeFormattingTests: XCTestCase {
+@MainActor final class ChargerTypeFormattingTests: XCTestCase {
     private let formatting = DefaultChargerTypeFormatting()
 
     func testCurrencyUsesSymbolGroupingAndFixedDecimals() {
@@ -150,8 +147,7 @@ final class ChargerTypeFormattingTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class ChargerTypeAccessibilityTests: XCTestCase {
+@MainActor final class ChargerTypeAccessibilityTests: XCTestCase {
     private let formatting = DefaultChargerTypeFormatting()
     private let labels = ChargerTypeRowLabels(
         sessions: "sessions",
@@ -235,8 +231,7 @@ final class ChargerTypeAccessibilityTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class ChargerTypeModelTests: XCTestCase {
+@MainActor final class ChargerTypeModelTests: XCTestCase {
     private func makeModel(
         _ update: ChargerTypeUpdate,
         telemetry: ChargerTypeTelemetry = OSLogChargerTypeTelemetry()

@@ -19,8 +19,7 @@ import XCTest
 
 // MARK: - Adapter: cached rows → projection (port of buildChartData)
 
-@MainActor
-final class MotorHistoryAdapterTests: XCTestCase {
+@MainActor final class MotorHistoryAdapterTests: XCTestCase {
     private func snapshot(
         ts: String?,
         torque: Double? = nil,
@@ -170,8 +169,7 @@ final class MotorHistoryAdapterTests: XCTestCase {
 
 // MARK: - Scale: temp ↔ torque plotting space
 
-@MainActor
-final class MotorHistoryScaleTests: XCTestCase {
+@MainActor final class MotorHistoryScaleTests: XCTestCase {
     func testTempToTorqueRoundTrips() {
         let scale = MotorChartScale(torqueMax: 450, tempMax: 120)
         let projected = scale.tempToTorque(100)
@@ -194,8 +192,7 @@ final class MotorHistoryScaleTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class MotorHistoryModelTests: XCTestCase {
+@MainActor final class MotorHistoryModelTests: XCTestCase {
     private func loaded(_ torque: Double = 120) -> MotorHistoryUpdate {
         MotorHistoryUpdate(
             status: .loaded,
@@ -256,7 +253,11 @@ final class MotorHistoryModelTests: XCTestCase {
             MotorHistoryUpdate(
                 status: .loaded,
                 connection: .offline,
-                snapshots: [MotorHistoryWidgetSnapshotInput(ts: "2024-01-01T00:00:00Z", diTorque: 10, diStatorTemp: 90)],
+                snapshots: [MotorHistoryWidgetSnapshotInput(
+                    ts: "2024-01-01T00:00:00Z",
+                    diTorque: 10,
+                    diStatorTemp: 90
+                )],
                 measurement: .imperial,
                 updatedAt: Date()
             )
@@ -269,8 +270,7 @@ final class MotorHistoryModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class MotorHistoryRegistryTests: XCTestCase {
+@MainActor final class MotorHistoryRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = MotorHistoryWidget.registration
         XCTAssertEqual(registration.id, "motor-history")
@@ -296,8 +296,7 @@ final class MotorHistoryRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class MotorHistoryAccessibilityTests: XCTestCase {
+@MainActor final class MotorHistoryAccessibilityTests: XCTestCase {
     func testSummaryIncludesLatestTorqueAndStator() {
         let projection = MotorHistoryProjectionBuilder.build(
             snapshots: [MotorHistoryWidgetSnapshotInput(ts: "2024-01-01T00:00:00Z", diTorque: 240, diStatorTemp: 75)],

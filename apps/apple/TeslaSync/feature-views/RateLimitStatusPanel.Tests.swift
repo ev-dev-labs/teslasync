@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Number formatting (port of web fmtNumber)
 
-@MainActor
-final class RateLimitNumberFormatTests: XCTestCase {
+@MainActor final class RateLimitNumberFormatTests: XCTestCase {
     private let enUS = Locale(identifier: "en-US")
 
     func testDefaultPrecisionIsTwoDecimals() {
@@ -45,8 +44,7 @@ final class RateLimitNumberFormatTests: XCTestCase {
 
 // MARK: - Duration formatting (port of web formatDurationMsLong)
 
-@MainActor
-final class RateLimitDurationTests: XCTestCase {
+@MainActor final class RateLimitDurationTests: XCTestCase {
     func testNullishAndNonPositiveReturnDash() {
         XCTAssertEqual(RateLimitDuration.long(nil), "—")
         XCTAssertEqual(RateLimitDuration.long(0), "—")
@@ -69,8 +67,7 @@ final class RateLimitDurationTests: XCTestCase {
 
 // MARK: - Relative time (port of web formatRelative)
 
-@MainActor
-final class RateLimitRelativeTests: XCTestCase {
+@MainActor final class RateLimitRelativeTests: XCTestCase {
     private let base = Date(timeIntervalSince1970: 1_762_000_000)
 
     func testNilReturnsDash() {
@@ -101,8 +98,7 @@ final class RateLimitRelativeTests: XCTestCase {
 
 // MARK: - Wire decode (snake_case → model)
 
-@MainActor
-final class RateLimitDecodeTests: XCTestCase {
+@MainActor final class RateLimitDecodeTests: XCTestCase {
     private func decode(_ json: String) -> RateLimitStatusResponse? {
         RateLimitStatusResponse.decode(Data(json.utf8))
     }
@@ -143,8 +139,7 @@ final class RateLimitDecodeTests: XCTestCase {
 
 // MARK: - Row projection (web RateLimitRow inline maths)
 
-@MainActor
-final class RateLimitRowProjectionTests: XCTestCase {
+@MainActor final class RateLimitRowProjectionTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_762_000_000)
 
     private func scope(
@@ -215,8 +210,7 @@ final class RateLimitRowProjectionTests: XCTestCase {
 
 // MARK: - Projection: phase resolution + overlays
 
-@MainActor
-final class RateLimitProjectionTests: XCTestCase {
+@MainActor final class RateLimitProjectionTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_762_000_000)
 
     private func response(scopeCount: Int) -> RateLimitStatusResponse {
@@ -274,8 +268,7 @@ final class RateLimitProjectionTests: XCTestCase {
 
 // MARK: - State holder: wiring + telemetry
 
-@MainActor
-final class RateLimitModelTests: XCTestCase {
+@MainActor final class RateLimitModelTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_762_000_000)
 
     private func response(scopeCount: Int, resetOffset: TimeInterval? = nil) -> RateLimitStatusResponse {
@@ -331,8 +324,7 @@ final class RateLimitModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class RateLimitAccessibilityTests: XCTestCase {
+@MainActor final class RateLimitAccessibilityTests: XCTestCase {
     func testRowSummaryJoinsResolvedFragments() {
         let summary = RateLimitAccessibility.rowSummary(
             name: "Internal API",

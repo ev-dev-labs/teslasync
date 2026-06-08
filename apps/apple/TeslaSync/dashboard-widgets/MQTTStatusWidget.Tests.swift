@@ -22,8 +22,7 @@ private let enUS = Locale(identifier: "en_US")
 
 // MARK: - Adapter: cached payload → projection (port parity with the web useMemo)
 
-@MainActor
-final class MQTTStatusProjectionTests: XCTestCase {
+@MainActor final class MQTTStatusProjectionTests: XCTestCase {
     func testEmptyVehiclesYieldsZeros() {
         let stats = MQTTStatusProjection.stats(from: MQTTStatusData(connected: true, broker: "b", vehicles: []))
         XCTAssertEqual(stats.totalMessages, 0)
@@ -79,8 +78,7 @@ final class MQTTStatusProjectionTests: XCTestCase {
 
 // MARK: - Formatters: fmtNumber / fmtInt / formatRelative parity
 
-@MainActor
-final class MQTTStatusFormatTests: XCTestCase {
+@MainActor final class MQTTStatusFormatTests: XCTestCase {
     func testNumberFixedDecimalsAndGrouping() {
         XCTAssertEqual(MQTTStatusFormat.number(1234.56, decimals: 1, locale: enUS), "1,234.6")
         XCTAssertEqual(MQTTStatusFormat.number(0, decimals: 1, locale: enUS), "0.0")
@@ -130,8 +128,7 @@ final class MQTTStatusFormatTests: XCTestCase {
 
 // MARK: - State holder: phases + freshness + telemetry + source wiring
 
-@MainActor
-final class MQTTStatusModelTests: XCTestCase {
+@MainActor final class MQTTStatusModelTests: XCTestCase {
     private func makeModel(
         _ update: MQTTStatusUpdate,
         telemetry: MQTTStatusTelemetry = OSLogMQTTStatusTelemetry()
@@ -218,8 +215,7 @@ final class MQTTStatusModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class MQTTStatusRegistryTests: XCTestCase {
+@MainActor final class MQTTStatusRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = MQTTStatusWidget.registration
         XCTAssertEqual(registration.id, "mqtt-status")
@@ -245,8 +241,7 @@ final class MQTTStatusRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class MQTTStatusAccessibilityTests: XCTestCase {
+@MainActor final class MQTTStatusAccessibilityTests: XCTestCase {
     func testSummaryIncludesStatusAndCounts() {
         let summary = MQTTStatusAccessibility.summary(
             brokerConnected: true,

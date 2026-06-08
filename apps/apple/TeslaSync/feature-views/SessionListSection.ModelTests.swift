@@ -16,8 +16,7 @@ import XCTest
 
 // MARK: - State holder
 
-@MainActor
-final class SessionListModelTests: XCTestCase {
+@MainActor final class SessionListModelTests: XCTestCase {
     private func sampleItems() -> [SessionListItem] {
         let base = Date(timeIntervalSince1970: 1_000_000)
         return [

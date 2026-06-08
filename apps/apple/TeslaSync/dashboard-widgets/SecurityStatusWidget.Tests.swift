@@ -19,8 +19,7 @@ import XCTest
 
 // MARK: - Adapter: door / window parsing (port parity with the web useMemo)
 
-@MainActor
-final class SecuritySignalParserTests: XCTestCase {
+@MainActor final class SecuritySignalParserTests: XCTestCase {
     func testOpenDoorCountTreatsNativeTrueAsOneOpenDoor() {
         XCTAssertEqual(SecuritySignalParser.openDoorCount(.boolean(true)), 1)
     }
@@ -69,8 +68,7 @@ final class SecuritySignalParserTests: XCTestCase {
 
 // MARK: - Adapter: cell projection (port parity with the web `cells` useMemo)
 
-@MainActor
-final class SecurityCellsBuilderTests: XCTestCase {
+@MainActor final class SecurityCellsBuilderTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let keyTap: (String, String) -> String = { key, _ in "L:\(key)" }
 
@@ -157,8 +155,7 @@ final class SecurityCellsBuilderTests: XCTestCase {
 
 // MARK: - Adapter: status → tone mapping
 
-@MainActor
-final class SecurityCellStatusTests: XCTestCase {
+@MainActor final class SecurityCellStatusTests: XCTestCase {
     func testToneMapping() {
         XCTAssertEqual(SecurityCellStatus.ok.tone, .success)
         XCTAssertEqual(SecurityCellStatus.warning.tone, .warning)
@@ -178,8 +175,7 @@ final class SecurityCellStatusTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class SecurityModelTests: XCTestCase {
+@MainActor final class SecurityModelTests: XCTestCase {
     private func makeModel(
         _ update: SecurityUpdate,
         telemetry: SecurityTelemetry = OSLogSecurityTelemetry()
@@ -263,8 +259,7 @@ final class SecurityModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class SecurityRegistryTests: XCTestCase {
+@MainActor final class SecurityRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = SecurityStatusWidget.registration
         XCTAssertEqual(registration.id, "security-status")
@@ -290,8 +285,7 @@ final class SecurityRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class SecurityAccessibilityTests: XCTestCase {
+@MainActor final class SecurityAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testCellSummaryCombinesLabelValueAndStatusWord() {

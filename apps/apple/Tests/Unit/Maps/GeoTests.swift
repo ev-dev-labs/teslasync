@@ -3,8 +3,7 @@ import XCTest
 @testable import TeslaSync
 
 /// Pure-logic tests for the geospatial helpers.
-@MainActor
-final class GeoTests: XCTestCase {
+@MainActor final class GeoTests: XCTestCase {
     func testCoordinateValidity() {
         XCTAssertTrue(TSGeo.isValid(CLLocationCoordinate2D(latitude: 37.77, longitude: -122.42)))
         XCTAssertFalse(TSGeo.isValid(CLLocationCoordinate2D(latitude: 0, longitude: 0)))

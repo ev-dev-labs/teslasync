@@ -19,8 +19,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (web view-local parity)
 
-@MainActor
-final class MediaNowPlayingAdapterTests: XCTestCase {
+@MainActor final class MediaNowPlayingAdapterTests: XCTestCase {
     func testNilSnapshotProducesNilProjection() {
         XCTAssertNil(MediaProjectionBuilder.build(from: nil))
     }
@@ -93,8 +92,7 @@ final class MediaNowPlayingAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class MediaNowPlayingModelTests: XCTestCase {
+@MainActor final class MediaNowPlayingModelTests: XCTestCase {
     private func makeModel(
         _ update: MediaNowPlayingUpdate,
         telemetry: MediaNowPlayingTelemetry = OSLogMediaNowPlayingTelemetry()
@@ -172,8 +170,7 @@ final class MediaNowPlayingModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class MediaNowPlayingRegistryTests: XCTestCase {
+@MainActor final class MediaNowPlayingRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = MediaNowPlayingWidget.registration
         XCTAssertEqual(registration.id, "media-now-playing")
@@ -199,8 +196,7 @@ final class MediaNowPlayingRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class MediaNowPlayingAccessibilityTests: XCTestCase {
+@MainActor final class MediaNowPlayingAccessibilityTests: XCTestCase {
     func testSummaryIncludesTrackPlayStateAndSource() {
         let media = MediaNowPlaying(
             title: "Midnight City",

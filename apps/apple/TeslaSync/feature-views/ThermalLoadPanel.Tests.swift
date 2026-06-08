@@ -56,8 +56,7 @@ private func samplePayload(
 
 // MARK: - Number formatting (port of numberFormat.ts fmtNumber / fmtInt / fmtPercent)
 
-@MainActor
-final class ThermalFormatNumberTests: XCTestCase {
+@MainActor final class ThermalFormatNumberTests: XCTestCase {
     func testNumberGroupsAndFixesDecimals() {
         XCTAssertEqual(ThermalFormat.number(1234.5, decimals: 1, locale: enUS), "1,234.5")
         XCTAssertEqual(ThermalFormat.number(64, decimals: 1, locale: enUS), "64.0")
@@ -82,8 +81,7 @@ final class ThermalFormatNumberTests: XCTestCase {
 
 // MARK: - Temperature formatting (web `formatTemperature` via `displayTemp`)
 
-@MainActor
-final class ThermalFormatTemperatureTests: XCTestCase {
+@MainActor final class ThermalFormatTemperatureTests: XCTestCase {
     func testCelsiusOneDecimalNoSpace() {
         XCTAssertEqual(ThermalFormat.temperature(64, unit: .celsius, locale: enUS), "64.0°C")
         XCTAssertEqual(ThermalFormat.temperature(31.25, unit: .celsius, locale: enUS), "31.3°C")
@@ -114,8 +112,7 @@ final class ThermalFormatTemperatureTests: XCTestCase {
 
 // MARK: - Inline-metric value fallbacks (web `peakPower > 0` / `stats ?`)
 
-@MainActor
-final class ThermalFormatMetricTests: XCTestCase {
+@MainActor final class ThermalFormatMetricTests: XCTestCase {
     func testPeakPowerIntegerWithUnitOrDash() {
         XCTAssertEqual(ThermalFormat.powerInteger(245, locale: enUS), "245 kW")
         XCTAssertEqual(ThermalFormat.powerInteger(245.7, locale: enUS), "246 kW")
@@ -144,8 +141,7 @@ final class ThermalFormatMetricTests: XCTestCase {
 
 // MARK: - Severity ladder (web `tempSeverityColor`)
 
-@MainActor
-final class ThermalSeverityTests: XCTestCase {
+@MainActor final class ThermalSeverityTests: XCTestCase {
     func testNilReadingIsUnknown() {
         XCTAssertEqual(ThermalSeverity.forTemperature(nil, maxTemp: 150), .unknown)
     }
@@ -171,8 +167,7 @@ final class ThermalSeverityTests: XCTestCase {
 
 // MARK: - Bar fraction (web `MetricBar` `min(value / max * 100, 100)`)
 
-@MainActor
-final class ThermalBarTests: XCTestCase {
+@MainActor final class ThermalBarTests: XCTestCase {
     func testProportionalFill() {
         XCTAssertEqual(ThermalBar.fraction(value: 64, maxTemp: 150), 64.0 / 150.0, accuracy: 1e-9)
     }
@@ -194,8 +189,7 @@ final class ThermalBarTests: XCTestCase {
 
 // MARK: - Sensor reading derived values
 
-@MainActor
-final class ThermalSensorReadingTests: XCTestCase {
+@MainActor final class ThermalSensorReadingTests: XCTestCase {
     func testFractionAndSeverity() {
         let good = sensor("frontMotor", 64, maxTemp: 150)
         XCTAssertEqual(good.fraction, 64.0 / 150.0, accuracy: 1e-9)
@@ -212,8 +206,7 @@ final class ThermalSensorReadingTests: XCTestCase {
 
 // MARK: - Severity → tone mapping (web colour ladder)
 
-@MainActor
-final class ThermalToneMapTests: XCTestCase {
+@MainActor final class ThermalToneMapTests: XCTestCase {
     func testEachSeverityMapsToATone() {
         XCTAssertEqual(ThermalToneMap.tone(for: .unknown), .neutral)
         XCTAssertEqual(ThermalToneMap.tone(for: .good), .success)
@@ -224,8 +217,7 @@ final class ThermalToneMapTests: XCTestCase {
 
 // MARK: - Projection (web render branches + P4 leaf contract)
 
-@MainActor
-final class ThermalLoadProjectionTests: XCTestCase {
+@MainActor final class ThermalLoadProjectionTests: XCTestCase {
     func testErrorTakesPrecedence() {
         let resolved = ThermalLoadProjection.resolve(
             ThermalLoadInput(payload: samplePayload(), errorMessage: "boom")
@@ -266,8 +258,7 @@ final class ThermalLoadProjectionTests: XCTestCase {
 
 // MARK: - State holder: wiring, telemetry, freshness
 
-@MainActor
-final class ThermalLoadModelTests: XCTestCase {
+@MainActor final class ThermalLoadModelTests: XCTestCase {
     private func makeModel(
         _ input: ThermalLoadInput,
         telemetry: ThermalLoadTelemetry = OSLogThermalLoadTelemetry()
@@ -353,8 +344,7 @@ final class ThermalLoadModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class ThermalAccessibilityTests: XCTestCase {
+@MainActor final class ThermalAccessibilityTests: XCTestCase {
     func testSensorLabelJoinsParts() {
         XCTAssertEqual(
             ThermalAccessibility.sensorLabel(name: "Front Motor", value: "64.0°C"),

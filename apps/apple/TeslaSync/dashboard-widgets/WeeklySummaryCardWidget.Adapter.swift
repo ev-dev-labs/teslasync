@@ -109,7 +109,10 @@ public enum WeeklySummaryBuilder {
     /// Builds the formatted projection from the cached digest. Returns `nil`
     /// when there is no cached snapshot (the web renders its empty state when
     /// `metrics` — i.e. `data` — is absent).
-    public static func project(_ dto: WeeklySummaryCardWidgetDigestDTO?, units: WeeklyUnitPrefs) -> WeeklySummaryProjection? {
+    public static func project(
+        _ dto: WeeklySummaryCardWidgetDigestDTO?,
+        units: WeeklyUnitPrefs
+    ) -> WeeklySummaryProjection? {
         guard let dto else { return nil }
         let metrics = metrics(from: dto, units: units)
         let locale = units.localeIdentifier

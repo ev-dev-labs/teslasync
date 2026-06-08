@@ -36,8 +36,7 @@ private final class SpyIndex: SearchableIndexing, @unchecked Sendable {
 }
 
 /// Tests Spotlight route indexing (privacy-gated) and the recent-routes store.
-@MainActor
-final class SpotlightTests: XCTestCase {
+@MainActor final class SpotlightTests: XCTestCase {
     func testItemCarriesRouteIdentity() {
         let item = SpotlightIndexer.item(for: .charging)
         XCTAssertEqual(item.uniqueIdentifier, "charging")

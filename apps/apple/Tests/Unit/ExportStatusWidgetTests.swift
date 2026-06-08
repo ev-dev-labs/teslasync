@@ -6,8 +6,7 @@ import XCTest
 /// the observable model's provider binding. These exercise every rendered branch
 /// (loading / empty / error / content / stale / offline) without a snapshot library
 /// (none is vendored), driving the same state the SwiftUI view switches on.
-@MainActor
-final class ExportStatusWidgetTests: XCTestCase {
+@MainActor final class ExportStatusWidgetTests: XCTestCase {
     // MARK: Status normalisation
 
     func testStatusNormalisationIsLenient() {

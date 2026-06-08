@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Adapter: formatting (web fmtNumber / Currency / SI / formatTimeAgo parity)
 
-@MainActor
-final class RecentActivityFormatTests: XCTestCase {
+@MainActor final class RecentActivityFormatTests: XCTestCase {
     private let enUS = Locale(identifier: "en-US")
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
@@ -101,8 +100,7 @@ final class RecentActivityFormatTests: XCTestCase {
 
 // MARK: - Adapter: activity feed projection
 
-@MainActor
-final class RecentActivityFeedProjectionTests: XCTestCase {
+@MainActor final class RecentActivityFeedProjectionTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let now = Date(timeIntervalSince1970: 1_733_580_000)
 
@@ -204,8 +202,7 @@ final class RecentActivityFeedProjectionTests: XCTestCase {
 
 // MARK: - Adapter: battery trend + performance + phase
 
-@MainActor
-final class RecentActivityPanelProjectionTests: XCTestCase {
+@MainActor final class RecentActivityPanelProjectionTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     private func drive(_ id: String, end: Int?) -> RecentActivityDrive {

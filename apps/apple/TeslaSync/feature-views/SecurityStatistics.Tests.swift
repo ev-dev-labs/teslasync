@@ -35,8 +35,7 @@ private let sampleSnapshot = SecurityStatsSnapshot(
 
 // MARK: - Adapter: cached snapshot → projection
 
-@MainActor
-final class SecurityStatisticsAdapterTests: XCTestCase {
+@MainActor final class SecurityStatisticsAdapterTests: XCTestCase {
     /// English-fallback localizer (bundle-free) used by the projection tests.
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
@@ -146,8 +145,7 @@ final class SecurityStatisticsAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + freshness + telemetry + seam wiring
 
-@MainActor
-final class SecurityStatisticsModelTests: XCTestCase {
+@MainActor final class SecurityStatisticsModelTests: XCTestCase {
     func testInitialStateIsLoading() {
         let model = SecurityStatisticsModel(source: InMemorySecurityStatisticsSource(autoResponds: false))
         XCTAssertEqual(model.phase, .loading)

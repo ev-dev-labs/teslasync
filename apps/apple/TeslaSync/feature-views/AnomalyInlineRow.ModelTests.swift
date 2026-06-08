@@ -72,8 +72,7 @@
         }
     }
 
-    @MainActor
-    final class AnomalyInlineRowModelTests: XCTestCase {
+    @MainActor final class AnomalyInlineRowModelTests: XCTestCase {
         private func makeModel(
             source: InMemoryAnomalyInlineRowSource,
             telemetry: SpyAnomalyInlineRowTelemetry = SpyAnomalyInlineRowTelemetry(),

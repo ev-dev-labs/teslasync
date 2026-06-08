@@ -12,8 +12,7 @@
 import XCTest
 @testable import TeslaSync
 
-@MainActor
-final class BackendStatusModelTests: XCTestCase {
+@MainActor final class BackendStatusModelTests: XCTestCase {
     private func makeModel(
         initial: BackendStatusUpdate?,
         telemetry: BackendStatusTelemetry = SpyBackendStatusTelemetry()

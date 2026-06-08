@@ -22,8 +22,7 @@ import XCTest
 
 // MARK: - Adapter: conversion / projection / phase (web parity)
 
-@MainActor
-final class OverviewAdapterTests: XCTestCase {
+@MainActor final class OverviewAdapterTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testSafeCoercesMissingAndNonFinite() {
@@ -158,8 +157,7 @@ final class OverviewAdapterTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
-@MainActor
-final class OverviewAccessibilityTests: XCTestCase {
+@MainActor final class OverviewAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testSeriesSummaryIncludesMinMaxLatest() {
@@ -224,8 +222,7 @@ final class OverviewAccessibilityTests: XCTestCase {
 
 // MARK: - State holder: phases + refresh + units + nav + telemetry
 
-@MainActor
-final class OverviewModelTests: XCTestCase {
+@MainActor final class OverviewModelTests: XCTestCase {
     private func sampleUpdate(
         status: OverviewLoadStatus = .loaded,
         connection: OverviewConnection = .live,

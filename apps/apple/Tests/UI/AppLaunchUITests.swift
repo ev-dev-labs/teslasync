@@ -1,8 +1,7 @@
 import XCTest
 
 /// Smoke test: the app launches to its navigation shell on both idioms.
-@MainActor
-final class AppLaunchUITests: XCTestCase {
+@MainActor final class AppLaunchUITests: XCTestCase {
     override func setUp() {
         super.setUp()
         continueAfterFailure = false

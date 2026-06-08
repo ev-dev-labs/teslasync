@@ -60,8 +60,7 @@ private func sampleBreakdown(
 
 // MARK: - Number formatting (port of numberFormat.ts fmtNumber / fmtPercent / fmtWithUnit)
 
-@MainActor
-final class AcDcFormatNumberTests: XCTestCase {
+@MainActor final class AcDcFormatNumberTests: XCTestCase {
     func testNumberGroupsAndFixesTwoDecimals() {
         XCTAssertEqual(AcDcFormat.number(1000, locale: enUS), "1,000.00")
         XCTAssertEqual(AcDcFormat.number(1234.5, locale: enUS), "1,234.50")
@@ -87,8 +86,7 @@ final class AcDcFormatNumberTests: XCTestCase {
 
 // MARK: - Energy scaling (web `value >= 1000 ? MWh : kWh`)
 
-@MainActor
-final class AcDcFormatEnergyTests: XCTestCase {
+@MainActor final class AcDcFormatEnergyTests: XCTestCase {
     func testBelowThresholdStaysKWh() {
         XCTAssertEqual(AcDcFormat.energyScaled(999.5, locale: enUS), "999.50 kWh")
         XCTAssertEqual(AcDcFormat.energyScaled(0, locale: enUS), "0.00 kWh")
@@ -103,8 +101,7 @@ final class AcDcFormatEnergyTests: XCTestCase {
 
 // MARK: - Duration (port of dateFormat.ts formatDurationMinutes)
 
-@MainActor
-final class AcDcFormatDurationTests: XCTestCase {
+@MainActor final class AcDcFormatDurationTests: XCTestCase {
     func testSubHourRendersMinutesOnly() {
         XCTAssertEqual(AcDcFormat.duration(45, locale: enUS), "45m")
         XCTAssertEqual(AcDcFormat.duration(0, locale: enUS), "0m")
@@ -128,8 +125,7 @@ final class AcDcFormatDurationTests: XCTestCase {
 
 // MARK: - Energy split fractions (web grid `templateColumns`)
 
-@MainActor
-final class AcDcSplitTests: XCTestCase {
+@MainActor final class AcDcSplitTests: XCTestCase {
     func testProportionalShares() {
         let split = AcDcSplit.fractions(ac: 4500, dc: 8200, total: 12700)
         XCTAssertEqual(split.ac, 4500.0 / 12700.0, accuracy: 1e-9)
@@ -157,8 +153,7 @@ final class AcDcSplitTests: XCTestCase {
 
 // MARK: - Per-type rows (web `[ac, dc].filter(count > 0)`)
 
-@MainActor
-final class AcDcRowsTests: XCTestCase {
+@MainActor final class AcDcRowsTests: XCTestCase {
     func testKeepsBothTypesWhenBothHaveSessions() {
         let breakdown = sampleBreakdown(ac: sampleBucket(count: 30), dc: sampleBucket(count: 12))
         let rows = AcDcRows.rows(for: breakdown)
@@ -183,8 +178,7 @@ final class AcDcRowsTests: XCTestCase {
 
 // MARK: - Row-derived values (web averages + `$/kWh`)
 
-@MainActor
-final class AcDcTableRowTests: XCTestCase {
+@MainActor final class AcDcTableRowTests: XCTestCase {
     private let row = AcDcTableRow(
         id: "ac",
         kind: .ac,
@@ -223,8 +217,7 @@ final class AcDcTableRowTests: XCTestCase {
 
 // MARK: - Projection (web render branches + P4 leaf contract)
 
-@MainActor
-final class AcDcStatsProjectionTests: XCTestCase {
+@MainActor final class AcDcStatsProjectionTests: XCTestCase {
     private var dataBreakdown: AcDcBreakdown {
         sampleBreakdown(
             ac: sampleBucket(energy: 4500, cost: 12.3, count: 30, totalDuration: 1500, freeCount: 2, freeEnergy: 300),
@@ -278,8 +271,7 @@ final class AcDcStatsProjectionTests: XCTestCase {
 
 // MARK: - State holder: wiring, telemetry, freshness
 
-@MainActor
-final class AcDcStatsModelTests: XCTestCase {
+@MainActor final class AcDcStatsModelTests: XCTestCase {
     private func makeModel(
         _ input: AcDcStatsInput,
         telemetry: AcDcStatsTelemetry = OSLogAcDcStatsTelemetry()
@@ -368,8 +360,7 @@ final class AcDcStatsModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class AcDcAccessibilityTests: XCTestCase {
+@MainActor final class AcDcAccessibilityTests: XCTestCase {
     func testRowLabelJoinsParts() {
         XCTAssertEqual(
             AcDcAccessibility.rowLabel(type: "AC Charging", sessions: "30", energy: "4.50 MWh", cost: "12.30"),

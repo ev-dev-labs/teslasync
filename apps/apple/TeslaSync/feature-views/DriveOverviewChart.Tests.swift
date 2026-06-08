@@ -59,8 +59,7 @@ private enum DriveFixture {
 
 // MARK: - Projection
 
-@MainActor
-final class DriveOverviewProjectionTests: XCTestCase {
+@MainActor final class DriveOverviewProjectionTests: XCTestCase {
     private let enUS = DriveFixture.enUS
     private let units = DriveFixture.units
 
@@ -193,8 +192,7 @@ final class DriveOverviewProjectionTests: XCTestCase {
 
 // MARK: - Number formatting
 
-@MainActor
-final class DriveNumberFormatTests: XCTestCase {
+@MainActor final class DriveNumberFormatTests: XCTestCase {
     private let enUS = DriveFixture.enUS
 
     func testNumberAndInt() {
@@ -216,8 +214,7 @@ final class DriveNumberFormatTests: XCTestCase {
 
 // MARK: - Series identity + units
 
-@MainActor
-final class DriveSeriesKindTests: XCTestCase {
+@MainActor final class DriveSeriesKindTests: XCTestCase {
     func testHexAndDash() {
         XCTAssertEqual(DriveSeriesKind.speed.hex, "#3b82f6")
         XCTAssertEqual(DriveSeriesKind.power.hex, "#f59e0b")
@@ -256,8 +253,7 @@ final class DriveSeriesKindTests: XCTestCase {
 
 // MARK: - State holder
 
-@MainActor
-final class DriveOverviewChartModelTests: XCTestCase {
+@MainActor final class DriveOverviewChartModelTests: XCTestCase {
     private func makeModel(
         initial: DriveOverviewUpdate?,
         telemetry: DriveOverviewTelemetry = SpyDriveOverviewTelemetry()
@@ -365,8 +361,7 @@ final class DriveOverviewChartModelTests: XCTestCase {
 
 // MARK: - Accessibility
 
-@MainActor
-final class DriveOverviewAccessibilityTests: XCTestCase {
+@MainActor final class DriveOverviewAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testChartSummaryIncludesCountAndSeries() {

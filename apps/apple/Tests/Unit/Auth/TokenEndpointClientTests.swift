@@ -34,8 +34,7 @@ class MockURLProtocol: URLProtocol {
     override func stopLoading() {}
 }
 
-@MainActor
-final class TokenEndpointClientTests: XCTestCase {
+@MainActor final class TokenEndpointClientTests: XCTestCase {
     private let tokenURL = OIDCConfiguration.url("https://auth.example.com/application/o/token/")
 
     private func makeSession() -> URLSession {

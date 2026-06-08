@@ -19,8 +19,7 @@ import XCTest
 
 // MARK: - Adapter: outcome + props → projection
 
-@MainActor
-final class BackupActionsCardAdapterTests: XCTestCase {
+@MainActor final class BackupActionsCardAdapterTests: XCTestCase {
     /// English-fallback localizer (bundle-free) used by the projection tests.
     private let echo: (String, String) -> String = { _, fallback in fallback }
     /// English-fallback `%@` formatter (bundle-free).
@@ -115,8 +114,7 @@ final class BackupActionsCardAdapterTests: XCTestCase {
 
 // MARK: - State holder: run lifecycle + invalidation + guard + telemetry
 
-@MainActor
-final class BackupActionsCardModelTests: XCTestCase {
+@MainActor final class BackupActionsCardModelTests: XCTestCase {
     private func waitUntilRunning(_ model: BackupActionsCardModel) async {
         for _ in 0 ..< 50 where !model.isRunning {
             await Task.yield()

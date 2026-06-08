@@ -46,6 +46,7 @@
             ActionBuilderModel(actions: actions, channels: channels, telemetry: telemetry)
         }
     }
+
     #Preview("Empty") {
         ActionBuilder(model: ActionBuilderPreviewData.model([]))
             .padding()

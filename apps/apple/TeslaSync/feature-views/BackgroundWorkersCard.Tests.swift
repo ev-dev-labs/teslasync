@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Wire decode (snake_case → model)
 
-@MainActor
-final class WorkersDecodeTests: XCTestCase {
+@MainActor final class WorkersDecodeTests: XCTestCase {
     private func decode(_ json: String) -> WorkersHealthSnapshot? {
         WorkersHealthSnapshot.decode(Data(json.utf8))
     }
@@ -72,8 +71,7 @@ final class WorkersDecodeTests: XCTestCase {
 
 // MARK: - Host normalisation (port of web shortHost)
 
-@MainActor
-final class WorkersShortHostTests: XCTestCase {
+@MainActor final class WorkersShortHostTests: XCTestCase {
     func testStripsSchemeAndHealthzSuffix() {
         XCTAssertEqual(WorkersAdapter.shortHost("http://notification-worker:8081/healthz"), "notification-worker:8081")
         XCTAssertEqual(WorkersAdapter.shortHost("https://nw-1:8081/healthz"), "nw-1:8081")
@@ -90,8 +88,7 @@ final class WorkersShortHostTests: XCTestCase {
 
 // MARK: - Latency rounding (port of web fmtLatency)
 
-@MainActor
-final class WorkersLatencyTests: XCTestCase {
+@MainActor final class WorkersLatencyTests: XCTestCase {
     func testNilAndNonFiniteReturnNil() {
         XCTAssertNil(WorkersAdapter.roundedLatencyMs(nil))
         XCTAssertNil(WorkersAdapter.roundedLatencyMs(.infinity))
@@ -109,8 +106,7 @@ final class WorkersLatencyTests: XCTestCase {
 
 // MARK: - Grouping + severity rollup (port of web groupByName)
 
-@MainActor
-final class WorkersGroupingTests: XCTestCase {
+@MainActor final class WorkersGroupingTests: XCTestCase {
     private func instance(
         _ name: String,
         _ host: String,
@@ -194,8 +190,7 @@ final class WorkersGroupingTests: XCTestCase {
 
 // MARK: - Two-axis summary (web top-line counts)
 
-@MainActor
-final class WorkersSummaryTests: XCTestCase {
+@MainActor final class WorkersSummaryTests: XCTestCase {
     private func instance(_ name: String, _ host: String, _ status: WorkerInstanceStatus) -> WorkerInstance {
         WorkerInstance(name: name, host: host, status: status)
     }
@@ -235,8 +230,7 @@ final class WorkersSummaryTests: XCTestCase {
 
 // MARK: - Projection: phase resolution + overlays
 
-@MainActor
-final class WorkersProjectionTests: XCTestCase {
+@MainActor final class WorkersProjectionTests: XCTestCase {
     private func response(_ count: Int) -> WorkersHealthSnapshot {
         let workers = (0 ..< count).map { index in
             WorkerInstance(
@@ -296,8 +290,7 @@ final class WorkersProjectionTests: XCTestCase {
 
 // MARK: - State holder: wiring + telemetry
 
-@MainActor
-final class BackgroundWorkersModelTests: XCTestCase {
+@MainActor final class BackgroundWorkersModelTests: XCTestCase {
     private func response(_ count: Int) -> WorkersHealthSnapshot {
         let workers = (0 ..< count).map { index in
             WorkerInstance(name: "worker-\(index)", host: "http://w\(index):80/healthz", status: .healthy)
@@ -355,8 +348,7 @@ final class BackgroundWorkersModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class WorkersAccessibilityTests: XCTestCase {
+@MainActor final class WorkersAccessibilityTests: XCTestCase {
     func testGroupSummaryJoinsResolvedFragments() {
         let summary = WorkersAccessibility.groupSummary(
             name: "notification-worker",

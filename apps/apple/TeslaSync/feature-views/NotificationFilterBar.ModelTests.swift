@@ -14,8 +14,7 @@
 import XCTest
 @testable import TeslaSync
 
-@MainActor
-final class NotificationFilterModelTests: XCTestCase {
+@MainActor final class NotificationFilterModelTests: XCTestCase {
     private struct Harness {
         let model: NotificationFilterModel
         let source: InMemoryNotificationFilterSource

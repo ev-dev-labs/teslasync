@@ -27,8 +27,7 @@
     import XCTest
     @testable import TeslaSync
 
-    @MainActor
-    final class BatteryPillTests: XCTestCase {
+    @MainActor final class BatteryPillTests: XCTestCase {
         private let enUS = Locale(identifier: "en_US")
 
         // MARK: - Tint ladder (web `level >= 60 ? good : level >= 30 ? warning : critical`)

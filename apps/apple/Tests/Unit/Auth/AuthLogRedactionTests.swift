@@ -4,8 +4,7 @@ import XCTest
 
 /// Verifies the redacting logger never lets tokens, VINs, or precise coordinates
 /// escape (ADR-016).
-@MainActor
-final class AuthLogRedactionTests: XCTestCase {
+@MainActor final class AuthLogRedactionTests: XCTestCase {
     func testRedactsAccessTokenLikeStrings() {
         let secret = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9aaaaaaaaaaaaaaaa"
         XCTAssertFalse(AuthLog.redact("token=\(secret)").contains(secret))

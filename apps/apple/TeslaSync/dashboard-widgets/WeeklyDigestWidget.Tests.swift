@@ -41,8 +41,7 @@ private enum WeeklyDigestFixture {
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web widget)
 
-@MainActor
-final class WeeklyDigestAdapterTests: XCTestCase {
+@MainActor final class WeeklyDigestAdapterTests: XCTestCase {
     func testMilesProjectionMatchesWeb() {
         let units = WeeklyDigestUnitPrefs(distance: .miles, localeIdentifier: "en_US")
         let projection = WeeklyDigestProjector.project(data: WeeklyDigestFixture.sample, units: units, copy: .fallback)
@@ -221,8 +220,7 @@ final class WeeklyDigestAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class WeeklyDigestPhaseTests: XCTestCase {
+@MainActor final class WeeklyDigestPhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         // Web `WidgetShell`: loading and error short-circuit BEFORE the body (error wins over cache).
         XCTAssertEqual(WeeklyDigestModel.resolvePhase(status: .loading, hasData: false), .loading)
@@ -235,8 +233,7 @@ final class WeeklyDigestPhaseTests: XCTestCase {
     }
 }
 
-@MainActor
-final class WeeklyDigestModelTests: XCTestCase {
+@MainActor final class WeeklyDigestModelTests: XCTestCase {
     private func makeModel(
         _ update: WeeklyDigestUpdate,
         telemetry: WeeklyDigestTelemetry = OSLogWeeklyDigestTelemetry()
@@ -337,8 +334,7 @@ final class WeeklyDigestModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class WeeklyDigestRegistryTests: XCTestCase {
+@MainActor final class WeeklyDigestRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = WeeklyDigestWidget.registration
         XCTAssertEqual(registration.id, "weekly-digest")
@@ -365,8 +361,7 @@ final class WeeklyDigestRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class WeeklyDigestAccessibilityTests: XCTestCase {
+@MainActor final class WeeklyDigestAccessibilityTests: XCTestCase {
     func testSummaryIncludesTitleAndEveryRow() {
         let units = WeeklyDigestUnitPrefs(distance: .miles, localeIdentifier: "en_US")
         let projection = WeeklyDigestProjector.project(data: WeeklyDigestFixture.sample, units: units, copy: .fallback)

@@ -13,8 +13,7 @@
 import XCTest
 @testable import TeslaSync
 
-@MainActor
-final class FavoritesBarModelTests: XCTestCase {
+@MainActor final class FavoritesBarModelTests: XCTestCase {
     private struct Harness {
         let model: FavoritesBarModel
         let source: InMemoryFavoritesSource

@@ -38,8 +38,7 @@ private let sampleValues = DynamicsSummaryStatsValues(
 
 // MARK: - Number formatting (port of numberFormat.ts)
 
-@MainActor
-final class DynamicsSummaryStatsFormatTests: XCTestCase {
+@MainActor final class DynamicsSummaryStatsFormatTests: XCTestCase {
     func testDecimalPadsAndGroups() {
         XCTAssertEqual(DynamicsSummaryStatsFormat.decimal(142.6, fractionDigits: 1, locale: enUS), "142.6")
         XCTAssertEqual(DynamicsSummaryStatsFormat.decimal(1284, fractionDigits: 1, locale: enUS), "1,284.0")
@@ -72,8 +71,7 @@ final class DynamicsSummaryStatsFormatTests: XCTestCase {
 
 // MARK: - Temperature conversion (web `convertTempFromSI`)
 
-@MainActor
-final class DynamicsSummaryStatsTemperatureTests: XCTestCase {
+@MainActor final class DynamicsSummaryStatsTemperatureTests: XCTestCase {
     func testCelsiusIsIdentity() {
         XCTAssertEqual(DynamicsSummaryStatsTemperatureUnit.celsius.convert(47.5), 47.5, accuracy: 0.0001)
         XCTAssertEqual(DynamicsSummaryStatsTemperatureUnit.celsius.convert(0), 0, accuracy: 0.0001)
@@ -95,8 +93,7 @@ final class DynamicsSummaryStatsTemperatureTests: XCTestCase {
 
 // MARK: - Formatting facade (web fmtNumber + temperature pipeline)
 
-@MainActor
-final class DynamicsSummaryStatsFormattingTests: XCTestCase {
+@MainActor final class DynamicsSummaryStatsFormattingTests: XCTestCase {
     func testNumberCountAndTemperatureValue() {
         XCTAssertEqual(celsiusFmt.number(142.6), "142.6")
         XCTAssertEqual(celsiusFmt.count(1284), "1284")
@@ -113,8 +110,7 @@ final class DynamicsSummaryStatsFormattingTests: XCTestCase {
 
 // MARK: - Responsive column math (web grid-cols-2 / md:3 / lg:6)
 
-@MainActor
-final class DynamicsSummaryStatsLayoutTests: XCTestCase {
+@MainActor final class DynamicsSummaryStatsLayoutTests: XCTestCase {
     func testColumnsAtBreakpoints() {
         XCTAssertEqual(DynamicsSummaryStatsLayout.columnCount(forWidth: 320), 2)
         XCTAssertEqual(DynamicsSummaryStatsLayout.columnCount(forWidth: 767), 2)
@@ -127,8 +123,7 @@ final class DynamicsSummaryStatsLayoutTests: XCTestCase {
 
 // MARK: - Projection: branches + tile wiring
 
-@MainActor
-final class DynamicsSummaryStatsProjectionTests: XCTestCase {
+@MainActor final class DynamicsSummaryStatsProjectionTests: XCTestCase {
     func testLoadingBranchMakesEveryTileLoading() {
         let resolved = DynamicsSummaryStatsProjection.resolve(
             DynamicsSummaryStatsInput(values: sampleValues, formatting: celsiusFmt, isLoading: true)
@@ -195,8 +190,7 @@ final class DynamicsSummaryStatsProjectionTests: XCTestCase {
 
 // MARK: - Tile facade resolution
 
-@MainActor
-final class DynamicsSummaryStatsCardTests: XCTestCase {
+@MainActor final class DynamicsSummaryStatsCardTests: XCTestCase {
     private func torqueTile(_ value: DynamicsSummaryStatsCardValue) -> DynamicsSummaryStatsCard {
         DynamicsSummaryStatsCard(
             id: "avgTorque",
@@ -236,8 +230,7 @@ final class DynamicsSummaryStatsCardTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class DynamicsSummaryStatsAccessibilityTests: XCTestCase {
+@MainActor final class DynamicsSummaryStatsAccessibilityTests: XCTestCase {
     func testCardLabelWithUnit() {
         XCTAssertEqual(
             DynamicsSummaryStatsAccessibility.cardLabel(label: "Avg Torque", value: "142.6", unit: "Nm"),
@@ -259,8 +252,7 @@ final class DynamicsSummaryStatsAccessibilityTests: XCTestCase {
 
 // MARK: - i18n facade
 
-@MainActor
-final class DynamicsSummaryStatsStringsTests: XCTestCase {
+@MainActor final class DynamicsSummaryStatsStringsTests: XCTestCase {
     func testUnitSymbolsAndSentinelsResolveToFallback() {
         XCTAssertEqual(SSDStrings.string("dynamics.unit.nm", "Nm"), "Nm")
         XCTAssertEqual(SSDStrings.string("dynamics.unit.kw", "kW"), "kW")
@@ -271,8 +263,7 @@ final class DynamicsSummaryStatsStringsTests: XCTestCase {
 
 // MARK: - State holder: wiring + telemetry
 
-@MainActor
-final class DynamicsSummaryStatsModelTests: XCTestCase {
+@MainActor final class DynamicsSummaryStatsModelTests: XCTestCase {
     private func makeModel(
         _ input: DynamicsSummaryStatsInput,
         telemetry: DynamicsSummaryStatsTelemetry

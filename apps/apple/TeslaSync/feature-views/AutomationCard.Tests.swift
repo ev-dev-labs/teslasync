@@ -58,8 +58,7 @@ private enum Fixture {
 
 // MARK: - Adapter: status / toggle / menu / conflict / freshness
 
-@MainActor
-final class AutomationCardAdapterTests: XCTestCase {
+@MainActor final class AutomationCardAdapterTests: XCTestCase {
     func testStatusProjectionPrecedence() {
         XCTAssertEqual(AutomationStatus.project(autoDisabled: true, enabled: true), .autoDisabled)
         XCTAssertEqual(AutomationStatus.project(autoDisabled: false, enabled: false), .disabled)
@@ -165,8 +164,7 @@ final class AutomationCardAdapterTests: XCTestCase {
 
 // MARK: - Formatting: timeAgo / dateTime / confirm
 
-@MainActor
-final class AutomationCardFormattingTests: XCTestCase {
+@MainActor final class AutomationCardFormattingTests: XCTestCase {
     private let echo = AutomationCardLocalizer.echo
 
     func testTimeAgoBuckets() {
@@ -202,8 +200,7 @@ final class AutomationCardFormattingTests: XCTestCase {
 
 // MARK: - Accessibility + i18n key parity
 
-@MainActor
-final class AutomationCardAccessibilityTests: XCTestCase {
+@MainActor final class AutomationCardAccessibilityTests: XCTestCase {
     private let echo = AutomationCardLocalizer.echo
 
     func testHeaderLabelComposesNameStatusAndChip() {
@@ -246,8 +243,7 @@ final class AutomationCardAccessibilityTests: XCTestCase {
 
 // MARK: - Telemetry (P1/S11 view.opened)
 
-@MainActor
-final class AutomationCardTelemetryTests: XCTestCase {
+@MainActor final class AutomationCardTelemetryTests: XCTestCase {
     private final class Recorder: AutomationCardTelemetry, @unchecked Sendable {
         private let lock = NSLock()
         private var stored: [String] = []

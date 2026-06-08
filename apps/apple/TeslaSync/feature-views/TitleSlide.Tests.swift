@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Adapter: formatting / projection (web parity)
 
-@MainActor
-final class TitleSlideAdapterTests: XCTestCase {
+@MainActor final class TitleSlideAdapterTests: XCTestCase {
     func testYearGroupsLikeWebFmtNumber() {
         // Web `<AnimatedNumber value={data.year} />` → fmtNumber(year, 0) → grouped in en-US.
         XCTAssertEqual(TitleSlideFormat.year(2026, localeIdentifier: "en_US"), "2,026")
@@ -77,8 +76,7 @@ final class TitleSlideAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + refresh + telemetry
 
-@MainActor
-final class TitleSlideModelTests: XCTestCase {
+@MainActor final class TitleSlideModelTests: XCTestCase {
     private func makeModel(
         _ update: TitleSlideUpdate,
         telemetry: TitleSlideTelemetry = OSLogTitleSlideTelemetry()
@@ -181,8 +179,7 @@ final class TitleSlideModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
-@MainActor
-final class TitleSlideAccessibilityTests: XCTestCase {
+@MainActor final class TitleSlideAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testSummarySpeaksTitleYearVehicle() {

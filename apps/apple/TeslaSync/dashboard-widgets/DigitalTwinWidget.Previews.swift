@@ -18,7 +18,12 @@ import SwiftUI
         return model
     }
 
-    private let previewVehicle = DigitalTwinWidgetTwinVehicle(id: 1, displayName: "Model Y", vin: "5YJYG", exteriorColor: "blue")
+    private let previewVehicle = DigitalTwinWidgetTwinVehicle(
+        id: 1,
+        displayName: "Model Y",
+        vin: "5YJYG",
+        exteriorColor: "blue"
+    )
 
     #Preview("Content") {
         DigitalTwinWidget(

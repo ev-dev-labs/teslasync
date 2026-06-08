@@ -21,8 +21,7 @@ import XCTest
 
 // MARK: - Adapter: segments + stripe (parity with the web derive block)
 
-@MainActor
-final class StateTimelineBuilderTests: XCTestCase {
+@MainActor final class StateTimelineBuilderTests: XCTestCase {
     func testBuildSegmentsEmptyWhenTotalIsZero() {
         let input = [
             StateSummaryEntry(state: "driving", totalMin: 0),
@@ -86,8 +85,7 @@ final class StateTimelineBuilderTests: XCTestCase {
 
 // MARK: - Adapter: formatting + kind parsing
 
-@MainActor
-final class StateTimelineFormatTests: XCTestCase {
+@MainActor final class StateTimelineFormatTests: XCTestCase {
     func testDecimalAndIntegerGroupAndRound() {
         XCTAssertEqual(StateTimelineFormat.decimal(25.806, fractionDigits: 1), "25.8")
         XCTAssertEqual(StateTimelineFormat.decimal(25.85, fractionDigits: 1), "25.9")
@@ -128,8 +126,7 @@ final class StateTimelineFormatTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class StateTimelineModelTests: XCTestCase {
+@MainActor final class StateTimelineModelTests: XCTestCase {
     private func makeModel(
         _ update: StateTimelineUpdate,
         telemetry: StateTimelineTelemetry = OSLogStateTimelineTelemetry()
@@ -217,8 +214,7 @@ final class StateTimelineModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class StateTimelineRegistryTests: XCTestCase {
+@MainActor final class StateTimelineRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = StateTimelineWidget.registration
         XCTAssertEqual(registration.id, "state-timeline")
@@ -247,8 +243,7 @@ final class StateTimelineRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class StateTimelineAccessibilityTests: XCTestCase {
+@MainActor final class StateTimelineAccessibilityTests: XCTestCase {
     func testSummaryIncludesEveryStateLabelAndPercent() {
         let projection = StateTimelineBuilder.project(
             summary: [

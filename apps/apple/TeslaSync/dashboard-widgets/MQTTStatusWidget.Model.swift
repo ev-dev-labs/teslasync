@@ -222,8 +222,6 @@ public final class InMemoryMQTTStatusSource: MQTTStatusSource {
 
 // MARK: - Registry metadata (canonical: registry/system.ts → "mqtt-status")
 
-
-
 // MARK: - Localization facade (P1/S10) — SwiftUI half
 
 public extension MQTTStatusStrings {

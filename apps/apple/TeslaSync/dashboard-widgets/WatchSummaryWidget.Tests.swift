@@ -59,8 +59,7 @@ enum WatchSummaryFixtures {
 
 // MARK: - Adapter: cached summary → projection (port parity with the web widget)
 
-@MainActor
-final class WatchSummaryAdapterTests: XCTestCase {
+@MainActor final class WatchSummaryAdapterTests: XCTestCase {
     func testProjectionMetricUnits() {
         let projection = WatchSummaryProjector.project(
             summary: WatchSummaryFixtures.online,
@@ -150,8 +149,7 @@ final class WatchSummaryAdapterTests: XCTestCase {
 
 // MARK: - Conversions (port parity with unitConversion.ts)
 
-@MainActor
-final class WatchSummaryConversionTests: XCTestCase {
+@MainActor final class WatchSummaryConversionTests: XCTestCase {
     func testDistanceFactors() {
         XCTAssertEqual(convertWatchDistanceFromSI(1000, to: .kilometers), 1, accuracy: 1e-9)
         XCTAssertEqual(convertWatchDistanceFromSI(1609.344, to: .miles), 1, accuracy: 1e-9)
@@ -171,8 +169,7 @@ final class WatchSummaryConversionTests: XCTestCase {
 
 // MARK: - Format helpers (port parity with numberFormat.ts + the web TimeStamp)
 
-@MainActor
-final class WatchSummaryFormatTests: XCTestCase {
+@MainActor final class WatchSummaryFormatTests: XCTestCase {
     func testNumberRoundsHalfAwayFromZeroAndGroups() {
         XCTAssertEqual(WatchSummaryFormat.number(1000, decimals: 0), "1,000")
         XCTAssertEqual(WatchSummaryFormat.number(0.5, decimals: 0), "1")
@@ -205,8 +202,7 @@ final class WatchSummaryFormatTests: XCTestCase {
 
 // MARK: - Tones (battery bands + vehicle-state maps)
 
-@MainActor
-final class WatchSummaryToneTests: XCTestCase {
+@MainActor final class WatchSummaryToneTests: XCTestCase {
     func testBatteryToneBands() {
         XCTAssertEqual(WatchBatteryTone.forLevel(nil), .unknown)
         XCTAssertEqual(WatchBatteryTone.forLevel(.nan), .unknown)
@@ -251,8 +247,7 @@ final class WatchSummaryToneTests: XCTestCase {
 
 // MARK: - Layout (web `size` → isCompact)
 
-@MainActor
-final class WatchSummaryLayoutTests: XCTestCase {
+@MainActor final class WatchSummaryLayoutTests: XCTestCase {
     func testIsCompactMatrix() {
         XCTAssertTrue(WatchSummaryLayout.isCompact(cols: 0))
         XCTAssertTrue(WatchSummaryLayout.isCompact(cols: 1))

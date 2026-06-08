@@ -18,8 +18,7 @@ import XCTest
 
 // MARK: - Adapter: value preview (parity with the web `previewValue`)
 
-@MainActor
-final class FlagsValuePreviewTests: XCTestCase {
+@MainActor final class FlagsValuePreviewTests: XCTestCase {
     func testNullRendersLiteralNull() {
         XCTAssertEqual(FlagsValuePreview.preview(.null), "null")
     }
@@ -74,8 +73,7 @@ final class FlagsValuePreviewTests: XCTestCase {
 
 // MARK: - Adapter: key sort + toggle (parity with the web `useSortToggle`)
 
-@MainActor
-final class FlagsSortTests: XCTestCase {
+@MainActor final class FlagsSortTests: XCTestCase {
     private func rows(_ keys: [String]) -> [FeatureFlagEntry] {
         keys.map { FeatureFlagEntry(key: $0, value: .null) }
     }
@@ -112,8 +110,7 @@ final class FlagsSortTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class FlagsTableModelTests: XCTestCase {
+@MainActor final class FlagsTableModelTests: XCTestCase {
     private let sampleRows = [
         FeatureFlagEntry(key: "beta_dashboard", value: .bool(true)),
         FeatureFlagEntry(key: "max_export_rows", value: .number(5000))
@@ -212,8 +209,7 @@ final class FlagsTableModelTests: XCTestCase {
 
 // MARK: - Accessibility content
 
-@MainActor
-final class FlagsTableAccessibilityTests: XCTestCase {
+@MainActor final class FlagsTableAccessibilityTests: XCTestCase {
     func testSummaryFallsBackWhenEmpty() {
         let summary = FlagsTableAccessibility.summary(for: .empty)
         XCTAssertTrue(summary.contains("No feature flags"))

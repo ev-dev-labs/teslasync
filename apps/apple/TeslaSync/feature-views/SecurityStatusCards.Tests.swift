@@ -25,8 +25,7 @@ private let echo: @Sendable (String, String) -> String = { _, fallback in fallba
 
 // MARK: - Logic: doorClosed (port of ./helpers.ts doorClosed)
 
-@MainActor
-final class SecurityCardsDoorLogicTests: XCTestCase {
+@MainActor final class SecurityCardsDoorLogicTests: XCTestCase {
     func testAbsentIsClosed() {
         XCTAssertTrue(SecurityCardsLogic.doorClosed(.absent))
     }
@@ -62,8 +61,7 @@ final class SecurityCardsDoorLogicTests: XCTestCase {
 
 // MARK: - Logic: windows (port of parseWindowState / allWindowsClosed)
 
-@MainActor
-final class SecurityCardsWindowLogicTests: XCTestCase {
+@MainActor final class SecurityCardsWindowLogicTests: XCTestCase {
     func testParseWindowState() {
         XCTAssertEqual(SecurityCardsLogic.parseWindowState(.text("Closed")), .closed)
         XCTAssertEqual(SecurityCardsLogic.parseWindowState(.text("0")), .closed)
@@ -96,8 +94,7 @@ final class SecurityCardsWindowLogicTests: XCTestCase {
 
 // MARK: - Signal truthiness (web `value ?`)
 
-@MainActor
-final class SecurityCardsSignalValueTests: XCTestCase {
+@MainActor final class SecurityCardsSignalValueTests: XCTestCase {
     func testTruthiness() {
         XCTAssertTrue(SecurityCardsSignalValue.boolean(true).isTruthy)
         XCTAssertFalse(SecurityCardsSignalValue.boolean(false).isTruthy)
@@ -111,8 +108,7 @@ final class SecurityCardsSignalValueTests: XCTestCase {
 
 // MARK: - Projection: the six cards across events
 
-@MainActor
-final class SecurityCardsProjectionTests: XCTestCase {
+@MainActor final class SecurityCardsProjectionTests: XCTestCase {
     private func card(_ cards: [SecurityCardViewModel], _ id: String) -> SecurityCardViewModel {
         guard let match = cards.first(where: { $0.id == id }) else {
             return SecurityCardViewModel(
@@ -204,8 +200,7 @@ final class SecurityCardsProjectionTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class SecurityCardsAccessibilityTests: XCTestCase {
+@MainActor final class SecurityCardsAccessibilityTests: XCTestCase {
     func testAccessibilityLabelCombinesTitleValueDetail() {
         let cards = SecurityCardsProjection.cards(
             latest: SecurityCardsLatest(locked: true),
@@ -218,8 +213,7 @@ final class SecurityCardsAccessibilityTests: XCTestCase {
 
 // MARK: - Phase resolution
 
-@MainActor
-final class SecurityCardsPhaseTests: XCTestCase {
+@MainActor final class SecurityCardsPhaseTests: XCTestCase {
     private let event = SecurityCardsLatest(locked: true)
 
     func testLoadingWithoutDataIsLoading() {
@@ -258,8 +252,7 @@ final class SecurityCardsPhaseTests: XCTestCase {
 
 // MARK: - State holder: wiring + telemetry + stale auto-refresh
 
-@MainActor
-final class SecurityCardsModelTests: XCTestCase {
+@MainActor final class SecurityCardsModelTests: XCTestCase {
     private func makeModel(
         _ update: SecurityCardsUpdate,
         telemetry: SecurityCardsTelemetry = OSLogSecurityCardsTelemetry()

@@ -20,8 +20,7 @@ private func iso(_ secondsAgo: TimeInterval) -> String {
 
 // MARK: - Number / integer / count / plain-int formatting
 
-@MainActor
-final class AiUsageNumberTests: XCTestCase {
+@MainActor final class AiUsageNumberTests: XCTestCase {
     func testNumberGroupsAndFixesTwoDecimals() {
         XCTAssertEqual(AiUsageNumber.number(1234.5, locale: enUS), "1,234.50")
         XCTAssertEqual(AiUsageNumber.number(0, locale: enUS), "0.00")
@@ -56,8 +55,7 @@ final class AiUsageNumberTests: XCTestCase {
 
 // MARK: - Micro-cents → dollars + currency
 
-@MainActor
-final class AiUsageMoneyTests: XCTestCase {
+@MainActor final class AiUsageMoneyTests: XCTestCase {
     func testMicroCentsAsDollarsDividesByOneMillion() {
         XCTAssertEqual(AiUsageNumber.microCentsAsDollars(1_234_560), 1.23456, accuracy: 1e-9)
         XCTAssertEqual(AiUsageNumber.microCentsAsDollars(50_000_000), 50, accuracy: 1e-9)
@@ -80,8 +78,7 @@ final class AiUsageMoneyTests: XCTestCase {
 
 // MARK: - Error-rate intent (web `errorIntent`)
 
-@MainActor
-final class AiUsageIntentTests: XCTestCase {
+@MainActor final class AiUsageIntentTests: XCTestCase {
     func testNoErrorsOrNoCallsIsNormal() {
         XCTAssertEqual(AiUsageIntent.forErrorRate(errorCount: 0, callCount: 42), .normal)
         XCTAssertEqual(AiUsageIntent.forErrorRate(errorCount: 5, callCount: 0), .normal)
@@ -99,8 +96,7 @@ final class AiUsageIntentTests: XCTestCase {
 
 // MARK: - Relative-time bucket (web `formatRelativeTime`)
 
-@MainActor
-final class AiUsageRelativeTests: XCTestCase {
+@MainActor final class AiUsageRelativeTests: XCTestCase {
     func testBucketsSecondsMinutesHoursDays() {
         XCTAssertEqual(AiUsageRelative.bucket(fromISO: iso(35), now: fixedNow), .seconds(35))
         XCTAssertEqual(AiUsageRelative.bucket(fromISO: iso(300), now: fixedNow), .minutes(5))
@@ -127,8 +123,7 @@ final class AiUsageRelativeTests: XCTestCase {
 
 // MARK: - Recent-row summary (web `summarizeRecentRow`)
 
-@MainActor
-final class AiUsageSummaryTests: XCTestCase {
+@MainActor final class AiUsageSummaryTests: XCTestCase {
     func testSummaryJoinsFeatureModelTokensRelative() {
         let row = AiUsageRecentRow(
             id: 1,

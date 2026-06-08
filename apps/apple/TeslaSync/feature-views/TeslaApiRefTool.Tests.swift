@@ -23,8 +23,7 @@ import XCTest
 
 // MARK: - Adapter: filter / tone / phase / freshness / format
 
-@MainActor
-final class TeslaApiRefBuilderTests: XCTestCase {
+@MainActor final class TeslaApiRefBuilderTests: XCTestCase {
     private var catalog: [TeslaApiEndpoint] {
         TeslaApiCatalog.endpoints
     }
@@ -113,8 +112,7 @@ final class TeslaApiRefBuilderTests: XCTestCase {
 
 // MARK: - Catalog parity (port of the web `TESLA_ENDPOINTS`)
 
-@MainActor
-final class TeslaApiCatalogTests: XCTestCase {
+@MainActor final class TeslaApiCatalogTests: XCTestCase {
     func testCatalogMatchesWebConstant() {
         let endpoints = TeslaApiCatalog.endpoints
         XCTAssertEqual(endpoints.count, 11)
@@ -130,8 +128,7 @@ final class TeslaApiCatalogTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class TeslaApiRefModelTests: XCTestCase {
+@MainActor final class TeslaApiRefModelTests: XCTestCase {
     private func makeModel(
         _ update: ApiRefUpdate,
         telemetry: TeslaApiRefTelemetry = OSLogTeslaApiRefTelemetry()
@@ -215,8 +212,7 @@ final class TeslaApiRefModelTests: XCTestCase {
 
 // MARK: - Accessibility label content
 
-@MainActor
-final class TeslaApiRefAccessibilityTests: XCTestCase {
+@MainActor final class TeslaApiRefAccessibilityTests: XCTestCase {
     func testRowLabelIncludesMethodPathAndDescription() {
         let endpoint = TeslaApiEndpoint(method: "GET", path: "/api/1/vehicles", desc: "List vehicles")
         let label = TeslaApiRefAccessibility.rowLabel(for: endpoint)

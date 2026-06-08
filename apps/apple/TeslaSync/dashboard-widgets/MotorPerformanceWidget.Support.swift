@@ -13,8 +13,6 @@ import SwiftUI
 
 // MARK: - Registry metadata (canonical: registry/vehicle.ts → "motor-performance")
 
-
-
 // MARK: - Localization facade (P1/S10) — web `t(key, default)`
 
 /// Resolves the surface's strings by key with the web English fallback, so the view holds no hardcoded
@@ -88,7 +86,8 @@ public enum MotorTorqueZone: String, Sendable, Equatable {
 
 // MARK: - Display-boundary projection (adapter: cached SI → render-ready)
 
-/// The render-ready projection of a `MotorPerformanceWidgetSnapshotInput`, computed at the display boundary. Pure + public
+/// The render-ready projection of a `MotorPerformanceWidgetSnapshotInput`, computed at the display boundary. Pure +
+/// public
 /// so the SI → display mapping (web data derivations + `convertTempFromSI` + `fmtInt`/`fmtNumber`) is
 /// unit-tested without rendering the view.
 public struct MotorProjection: Sendable, Equatable {

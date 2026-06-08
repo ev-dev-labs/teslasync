@@ -12,8 +12,7 @@
 import XCTest
 @testable import TeslaSync
 
-@MainActor
-final class MarkdownRendererModelTests: XCTestCase {
+@MainActor final class MarkdownRendererModelTests: XCTestCase {
     private func makeModel(
         initial: MarkdownRendererUpdate?,
         telemetry: any MarkdownRendererTelemetry = OSLogMarkdownRendererTelemetry(),

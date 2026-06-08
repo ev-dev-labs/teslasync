@@ -16,8 +16,7 @@ import XCTest
 
 // MARK: - Setting-enum parsing (port of lib/parseSettingEnum.ts)
 
-@MainActor
-final class GeneralSettingsEnumParseTests: XCTestCase {
+@MainActor final class GeneralSettingsEnumParseTests: XCTestCase {
     func testDistanceEnumVariants() {
         XCTAssertEqual(GeneralSettingsAdapter.parseSettingEnum("DistanceUnitMiles", category: .distance), "Miles")
         XCTAssertEqual(GeneralSettingsAdapter.parseSettingEnum("distanceunitkm", category: .distance), "Kilometers")
@@ -54,8 +53,7 @@ final class GeneralSettingsEnumParseTests: XCTestCase {
 
 // MARK: - Sync units from car (port of `syncUnitsFromCar`)
 
-@MainActor
-final class GeneralSettingsSyncTests: XCTestCase {
+@MainActor final class GeneralSettingsSyncTests: XCTestCase {
     func testImperialCarSnapsFormToImperial() {
         let prefs = CarPreferences(
             distanceUnit: "DistanceUnitMiles",
@@ -115,8 +113,7 @@ final class GeneralSettingsSyncTests: XCTestCase {
 
 // MARK: - Phase + freshness resolution (ADR-013)
 
-@MainActor
-final class GeneralSettingsResolutionTests: XCTestCase {
+@MainActor final class GeneralSettingsResolutionTests: XCTestCase {
     func testPhaseResolution() {
         XCTAssertEqual(GeneralSettingsAdapter.resolvePhase(settings: .loading, hasCachedForm: false), .loading)
         XCTAssertEqual(GeneralSettingsAdapter.resolvePhase(settings: .loading, hasCachedForm: true), .content)
@@ -163,8 +160,7 @@ final class GeneralSettingsResolutionTests: XCTestCase {
 
 // MARK: - Decimal preview + currency + catalogs
 
-@MainActor
-final class GeneralSettingsFormattingTests: XCTestCase {
+@MainActor final class GeneralSettingsFormattingTests: XCTestCase {
     func testDecimalPreviewMatchesToFixed() {
         XCTAssertEqual(GeneralSettingsAdapter.decimalPreview(precision: 0, locale: "en-US"), "14")
         XCTAssertEqual(GeneralSettingsAdapter.decimalPreview(precision: 2, locale: "en-US"), "14.25")
@@ -198,8 +194,7 @@ final class GeneralSettingsFormattingTests: XCTestCase {
 
 // MARK: - Localization facade (P1/S10) + identity
 
-@MainActor
-final class GeneralSettingsLocalizationTests: XCTestCase {
+@MainActor final class GeneralSettingsLocalizationTests: XCTestCase {
     func testStringResolvesFallback() {
         // With no catalog at unit-test time, NSLocalizedString returns the
         // `value` fallback — proving the key + English default are wired.
@@ -224,8 +219,7 @@ final class GeneralSettingsLocalizationTests: XCTestCase {
 
 // MARK: - Accessibility copy
 
-@MainActor
-final class GeneralSettingsAccessibilityTests: XCTestCase {
+@MainActor final class GeneralSettingsAccessibilityTests: XCTestCase {
     func testFreshnessLabels() {
         XCTAssertEqual(GeneralSettingsAccessibility.freshnessLabel(.fresh), "Live")
         XCTAssertEqual(GeneralSettingsAccessibility.freshnessLabel(.fetching), "Updating…")

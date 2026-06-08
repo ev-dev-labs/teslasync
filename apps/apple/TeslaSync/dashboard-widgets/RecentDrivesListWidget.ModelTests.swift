@@ -16,8 +16,7 @@
 import XCTest
 @testable import TeslaSync
 
-@MainActor
-final class RecentDrivesModelTests: XCTestCase {
+@MainActor final class RecentDrivesModelTests: XCTestCase {
     private func makeModel(
         _ update: RecentDrivesUpdate,
         telemetry: RecentDrivesTelemetry = OSLogRecentDrivesTelemetry()
@@ -109,8 +108,7 @@ final class RecentDrivesModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class RecentDrivesRegistryTests: XCTestCase {
+@MainActor final class RecentDrivesRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = RecentDrivesListWidget.registration
         XCTAssertEqual(registration.id, "recent-drives-list")
@@ -137,8 +135,7 @@ final class RecentDrivesRegistryTests: XCTestCase {
 
 // MARK: - Accessibility content
 
-@MainActor
-final class RecentDrivesAccessibilityTests: XCTestCase {
+@MainActor final class RecentDrivesAccessibilityTests: XCTestCase {
     func testRowLabelIncludesEveryFieldWhenWide() {
         let projection = RecentDrivesProjector.project(
             drives: [RecentDrivesFixtures.driveA],

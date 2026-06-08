@@ -3,8 +3,7 @@ import XCTest
 @testable import TeslaSync
 
 /// Pure-logic tests for the component library (no rendering / framework needed).
-@MainActor
-final class ComponentLogicTests: XCTestCase {
+@MainActor final class ComponentLogicTests: XCTestCase {
     private struct SortRow: Identifiable {
         let id: Int
         let key: Int

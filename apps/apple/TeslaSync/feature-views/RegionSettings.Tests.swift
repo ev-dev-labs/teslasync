@@ -48,8 +48,7 @@ private let sampleRecord = RegionRecord(
 
 // MARK: - Adapter: date formatting (port of dateFormat.ts formatDateTime)
 
-@MainActor
-final class RegionFormatDateTests: XCTestCase {
+@MainActor final class RegionFormatDateTests: XCTestCase {
     func testNilDateFallsBackToDash() {
         XCTAssertEqual(RegionFormat.dateTime(nil, locale: enUS, timeZone: utc), RegionFormat.dash)
     }
@@ -75,8 +74,7 @@ final class RegionFormatDateTests: XCTestCase {
 
 // MARK: - Adapter: region + Fleet API URL shaping
 
-@MainActor
-final class RegionFormatValueTests: XCTestCase {
+@MainActor final class RegionFormatValueTests: XCTestCase {
     func testRegionTrimsWhitespace() {
         XCTAssertEqual(RegionFormat.region("  na  "), "na")
         XCTAssertEqual(RegionFormat.region("eu"), "eu")
@@ -99,8 +97,7 @@ final class RegionFormatValueTests: XCTestCase {
 
 // MARK: - Projection (web render branches + P4 leaf contract)
 
-@MainActor
-final class RegionSettingsProjectionTests: XCTestCase {
+@MainActor final class RegionSettingsProjectionTests: XCTestCase {
     private func resolve(_ input: RegionSettingsInput) -> RegionSettingsResolved {
         RegionSettingsProjection.resolve(input, locale: enUS, timeZone: utc)
     }
@@ -154,8 +151,7 @@ final class RegionSettingsProjectionTests: XCTestCase {
 
 // MARK: - State holder: wiring, telemetry, freshness, toast
 
-@MainActor
-final class RegionSettingsModelTests: XCTestCase {
+@MainActor final class RegionSettingsModelTests: XCTestCase {
     private func makeModel(
         _ input: RegionSettingsInput,
         telemetry: RegionSettingsTelemetry = OSLogRegionSettingsTelemetry(),
@@ -275,8 +271,7 @@ final class RegionSettingsModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class RegionAccessibilityTests: XCTestCase {
+@MainActor final class RegionAccessibilityTests: XCTestCase {
     func testInfoLabelJoinsParts() {
         XCTAssertEqual(
             RegionAccessibility.infoLabel(label: "Region", value: "na"),

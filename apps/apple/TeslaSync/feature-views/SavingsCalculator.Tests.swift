@@ -21,8 +21,7 @@
 import XCTest
 @testable import TeslaSync
 
-@MainActor
-final class SavingsCalculatorAdapterTests: XCTestCase {
+@MainActor final class SavingsCalculatorAdapterTests: XCTestCase {
     private let locale = Locale(identifier: "en_US")
 
     // MARK: Decode
@@ -191,8 +190,7 @@ final class SavingsCalculatorAdapterTests: XCTestCase {
 
 // MARK: - Presentation resolver (every state)
 
-@MainActor
-final class SavingsCalculatorPresentationTests: XCTestCase {
+@MainActor final class SavingsCalculatorPresentationTests: XCTestCase {
     private let locale = Locale(identifier: "en_US")
     private let data = SavingsCalculatorData(
         energyKwh: 400,
@@ -284,8 +282,7 @@ final class SavingsCalculatorPresentationTests: XCTestCase {
 
 // MARK: - Telemetry + model
 
-@MainActor
-final class SavingsCalculatorModelTests: XCTestCase {
+@MainActor final class SavingsCalculatorModelTests: XCTestCase {
     private let data = SavingsCalculatorData(
         energyKwh: 400,
         costDollars: 300,

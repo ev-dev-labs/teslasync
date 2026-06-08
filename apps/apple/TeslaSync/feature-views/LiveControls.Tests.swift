@@ -27,8 +27,7 @@ private let fallbackLocalize: @Sendable (String, String) -> String = { _, fallba
 
 // MARK: - Counter math (web `inWindow` / `total` / `outside` / `dual`)
 
-@MainActor
-final class LiveControlsCounterTests: XCTestCase {
+@MainActor final class LiveControlsCounterTests: XCTestCase {
     func testDualCountsFromWindowAndTotal() {
         let counter = LiveControlsProjection.counter(windowCount: 12, totalCount: 87, bufferCount: nil)
         XCTAssertEqual(counter.inWindow, 12)
@@ -99,8 +98,7 @@ final class LiveControlsCounterTests: XCTestCase {
 
 // MARK: - Window options (web `WINDOW_OPTIONS`)
 
-@MainActor
-final class LiveControlsWindowOptionsTests: XCTestCase {
+@MainActor final class LiveControlsWindowOptionsTests: XCTestCase {
     func testOptionMinutesMatchWebOrder() {
         XCTAssertEqual(LiveControlsCopy.windowOptions.map(\.minutes), [5, 10, 30, 120])
     }
@@ -117,8 +115,7 @@ final class LiveControlsWindowOptionsTests: XCTestCase {
 
 // MARK: - Projection
 
-@MainActor
-final class LiveControlsProjectionTests: XCTestCase {
+@MainActor final class LiveControlsProjectionTests: XCTestCase {
     func testProjectionMapsControlledProps() {
         let state = LiveControlsState(
             isLive: false,
@@ -147,8 +144,7 @@ final class LiveControlsProjectionTests: XCTestCase {
 
 // MARK: - Render resolution
 
-@MainActor
-final class LiveControlsRenderTests: XCTestCase {
+@MainActor final class LiveControlsRenderTests: XCTestCase {
     func testLoadingPhase() {
         XCTAssertEqual(LiveControlsModel.render(for: .loading), .loading)
     }
@@ -176,8 +172,7 @@ final class LiveControlsRenderTests: XCTestCase {
 
 // MARK: - Format / accessibility copy (what the view speaks)
 
-@MainActor
-final class LiveControlsFormatTests: XCTestCase {
+@MainActor final class LiveControlsFormatTests: XCTestCase {
     private let single = LiveControlsCopy.buffered.resolved(fallbackLocalize)
     private let dual = LiveControlsCopy.bufferedDual.resolved(fallbackLocalize)
     private let tooltip = LiveControlsCopy.bufferedTooltip.resolved(fallbackLocalize)
@@ -216,8 +211,7 @@ final class LiveControlsFormatTests: XCTestCase {
 
 // MARK: - Copy catalog
 
-@MainActor
-final class LiveControlsCopyTests: XCTestCase {
+@MainActor final class LiveControlsCopyTests: XCTestCase {
     func testCatalogKeysAndFallbacksNonEmpty() {
         XCTAssertFalse(LiveControlsCopy.all.isEmpty)
         for entry in LiveControlsCopy.all {
@@ -251,8 +245,7 @@ final class LiveControlsCopyTests: XCTestCase {
 
 // MARK: - State holder
 
-@MainActor
-final class LiveControlsModelTests: XCTestCase {
+@MainActor final class LiveControlsModelTests: XCTestCase {
     private func sampleState() -> LiveControlsState {
         LiveControlsState(isLive: true, windowMinutes: 10, windowCount: 3, totalCount: 9)
     }

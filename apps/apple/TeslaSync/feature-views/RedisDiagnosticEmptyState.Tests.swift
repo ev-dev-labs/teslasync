@@ -24,8 +24,7 @@ private let fallbackLocalize: @Sendable (String, String) -> String = { _, fallba
 
 // MARK: - Projection: the nine-branch ladder
 
-@MainActor
-final class RedisDiagnosticProjectionTests: XCTestCase {
+@MainActor final class RedisDiagnosticProjectionTests: XCTestCase {
     private func resolve(
         meta: RedisSignalsMeta? = nil,
         serverError: RedisApiError? = nil,
@@ -169,8 +168,7 @@ final class RedisDiagnosticProjectionTests: XCTestCase {
 
 // MARK: - Other-vehicle key filtering (web `filter(id !== self && field_count > 0)`)
 
-@MainActor
-final class RedisDiagnosticOtherKeysTests: XCTestCase {
+@MainActor final class RedisDiagnosticOtherKeysTests: XCTestCase {
     func testFiltersSelfAndZeroFieldCounts() {
         let keys = [
             RedisSignalKeyEntry(vehicleId: 1, fieldCount: 230, displayName: "Falcon"),
@@ -185,8 +183,7 @@ final class RedisDiagnosticOtherKeysTests: XCTestCase {
 
 // MARK: - Chips-phase resolution (model seam)
 
-@MainActor
-final class RedisDiagnosticChipsPhaseTests: XCTestCase {
+@MainActor final class RedisDiagnosticChipsPhaseTests: XCTestCase {
     private let metaFallthrough = RedisSignalsMeta(
         liveSignalStoreMode: .hybrid, redisKey: "k", redisFieldCount: 0, l1SignalCount: 0, vehicleVin: ""
     )
@@ -237,8 +234,7 @@ final class RedisDiagnosticChipsPhaseTests: XCTestCase {
 
 // MARK: - Adapter helpers: chip name / format / docs URL / interpolation
 
-@MainActor
-final class RedisDiagnosticAdapterTests: XCTestCase {
+@MainActor final class RedisDiagnosticAdapterTests: XCTestCase {
     func testChipNamePrefersDisplayNameThenVINThenFallback() {
         let named = RedisSignalKeyEntry(vehicleId: 3, fieldCount: 1, vehicleVin: "VINX", displayName: "Falcon")
         XCTAssertEqual(RedisDiagnosticCopy.chipName(for: named, localize: fallbackLocalize), "Falcon")
@@ -292,8 +288,7 @@ final class RedisDiagnosticAdapterTests: XCTestCase {
 
 // MARK: - State holder: wiring + telemetry
 
-@MainActor
-final class RedisDiagnosticModelTests: XCTestCase {
+@MainActor final class RedisDiagnosticModelTests: XCTestCase {
     private func makeModel(
         _ input: RedisDiagnosticInput,
         telemetry: RedisDiagnosticTelemetry = OSLogRedisDiagnosticTelemetry()
@@ -345,8 +340,7 @@ final class RedisDiagnosticModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class RedisDiagnosticAccessibilityTests: XCTestCase {
+@MainActor final class RedisDiagnosticAccessibilityTests: XCTestCase {
     func testBannerSummaryCombinesTitleAndBody() {
         let summary = RedisDiagnosticAccessibility.bannerSummary(title: "Redis is unreachable", body: "Check the pod.")
         XCTAssertEqual(summary, "Redis is unreachable. Check the pod.")

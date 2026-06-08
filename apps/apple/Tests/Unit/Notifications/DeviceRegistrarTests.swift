@@ -3,8 +3,7 @@ import XCTest
 
 /// The HTTP device registrar: request shape (path/method/headers/body) and the
 /// single 401-refresh + retry-once policy.
-@MainActor
-final class DeviceRegistrarTests: XCTestCase {
+@MainActor final class DeviceRegistrarTests: XCTestCase {
     private let baseURL = URL(string: "https://api.example.com")!
 
     private func registration() -> DeviceRegistration {

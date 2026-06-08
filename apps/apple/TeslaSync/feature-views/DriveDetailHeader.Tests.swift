@@ -69,8 +69,7 @@ private enum DriveHeaderFixture {
 
 // MARK: - Adapter: date / time / timezone formatting (web parity)
 
-@MainActor
-final class DriveDetailHeaderFormatTests: XCTestCase {
+@MainActor final class DriveDetailHeaderFormatTests: XCTestCase {
     private let start = DriveHeaderFixture.instant(year: 2026, month: 4, day: 4, hour: 14, minute: 30)
 
     func testDateMatchesWebMediumStyle() {
@@ -106,8 +105,7 @@ final class DriveDetailHeaderFormatTests: XCTestCase {
 
 // MARK: - Adapter: projector (route/fallback title + subtitle)
 
-@MainActor
-final class DriveDetailHeaderProjectorTests: XCTestCase {
+@MainActor final class DriveDetailHeaderProjectorTests: XCTestCase {
     private func project(_ drive: DriveHeaderDTO) -> DriveHeaderProjection {
         DriveDetailHeaderProjector.project(drive: drive, prefs: DriveHeaderFixture.laPrefs)
     }
@@ -150,8 +148,7 @@ final class DriveDetailHeaderProjectorTests: XCTestCase {
 
 // MARK: - State holder: phases + refresh + telemetry
 
-@MainActor
-final class DriveDetailHeaderModelTests: XCTestCase {
+@MainActor final class DriveDetailHeaderModelTests: XCTestCase {
     private func makeModel(
         _ update: DriveDetailHeaderUpdate,
         telemetry: DriveDetailHeaderTelemetry = OSLogDriveDetailHeaderTelemetry()
@@ -264,8 +261,7 @@ final class DriveDetailHeaderModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
-@MainActor
-final class DriveDetailHeaderAccessibilityTests: XCTestCase {
+@MainActor final class DriveDetailHeaderAccessibilityTests: XCTestCase {
     func testSummaryIncludesTitleAndSubtitle() {
         let projection = DriveDetailHeaderProjector.project(
             drive: DriveHeaderFixture.drive(),
@@ -280,8 +276,7 @@ final class DriveDetailHeaderAccessibilityTests: XCTestCase {
 // MARK: - View: per-state render smoke (every state materializes)
 
 #if canImport(UIKit) || canImport(AppKit)
-    @MainActor
-    final class DriveDetailHeaderViewStateTests: XCTestCase {
+    @MainActor final class DriveDetailHeaderViewStateTests: XCTestCase {
         private func renders(_ update: DriveDetailHeaderUpdate) -> Bool {
             let source = InMemoryDriveDetailHeaderSource(initial: update)
             let model = DriveDetailHeaderModel(source: source)

@@ -247,8 +247,6 @@ public final class InMemoryOnboardingChecklistSource: OnboardingChecklistSource 
 // app target reconciles them with the single canonical definition.
 //
 
-
-
 // MARK: - Localization facade (P1/S10) — web `t(key, default)`
 
 /// Resolves the surface's strings by key with the web English fallback, so the

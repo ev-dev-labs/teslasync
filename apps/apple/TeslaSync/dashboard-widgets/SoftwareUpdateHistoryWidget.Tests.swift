@@ -35,8 +35,7 @@ private func daysBefore(_ days: Int) -> Date {
 
 // MARK: - Adapter: status mapping (parity with the web STATUS_MAP)
 
-@MainActor
-final class SoftwareUpdateStatusTests: XCTestCase {
+@MainActor final class SoftwareUpdateStatusTests: XCTestCase {
     func testRawParsingRoundTrips() {
         XCTAssertEqual(SoftwareUpdateStatus(raw: "installed"), .installed)
         XCTAssertEqual(SoftwareUpdateStatus(raw: "installing"), .installing)
@@ -85,8 +84,7 @@ final class SoftwareUpdateStatusTests: XCTestCase {
 
 // MARK: - Adapter: feed projection (parity with the web feedItems useMemo)
 
-@MainActor
-final class SoftwareUpdateProjectionTests: XCTestCase {
+@MainActor final class SoftwareUpdateProjectionTests: XCTestCase {
     func testCurrentIsFirstInstalledFromOriginalOrder() {
         let updates = [
             SoftwareUpdate(id: "a", version: "2024.8.7", status: .installed, installedAt: minutesBefore(40)),
@@ -186,8 +184,7 @@ final class SoftwareUpdateProjectionTests: XCTestCase {
 
 // MARK: - Adapter: compact latest badge (parity with the web CompactView)
 
-@MainActor
-final class SoftwareUpdateLatestTests: XCTestCase {
+@MainActor final class SoftwareUpdateLatestTests: XCTestCase {
     func testInstalledLatestShowsCurrentSuccess() {
         let updates = [SoftwareUpdate(id: "1", version: "2024.8.7", status: .installed, installedAt: minutesBefore(5))]
         let latest = SoftwareUpdateProjection.latest(from: updates)
@@ -223,8 +220,7 @@ final class SoftwareUpdateLatestTests: XCTestCase {
 
 // MARK: - Adapter: relative-time formatter (port of formatRelativeTime)
 
-@MainActor
-final class SoftwareUpdateRelativeFormatterTests: XCTestCase {
+@MainActor final class SoftwareUpdateRelativeFormatterTests: XCTestCase {
     func testBuckets() {
         XCTAssertEqual(
             SoftwareUpdateRelativeFormatter.string(for: fixedNow.addingTimeInterval(-30), now: fixedNow, locale: enUS),

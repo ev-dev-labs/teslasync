@@ -22,8 +22,7 @@ import XCTest
 
 // MARK: - Adapter: formatting (web fmtNumber / Currency / fmtWithUnit / formatDuration parity)
 
-@MainActor
-final class QuickMetricsFormatTests: XCTestCase {
+@MainActor final class QuickMetricsFormatTests: XCTestCase {
     private let enUS = Locale(identifier: "en-US")
 
     func testCountGroupsThousands() {
@@ -87,8 +86,7 @@ final class QuickMetricsFormatTests: XCTestCase {
 
 // MARK: - Adapter: projection (web stats consumer parity)
 
-@MainActor
-final class QuickMetricsProjectionTests: XCTestCase {
+@MainActor final class QuickMetricsProjectionTests: XCTestCase {
     private let enUS = Locale(identifier: "en-US")
 
     private func fullStats() -> QuickMetricsStats {
@@ -181,8 +179,7 @@ final class QuickMetricsProjectionTests: XCTestCase {
 
 // MARK: - State holder: QuickMetricsModel
 
-@MainActor
-final class QuickMetricsModelTests: XCTestCase {
+@MainActor final class QuickMetricsModelTests: XCTestCase {
     private func sampleStats() -> QuickMetricsStats {
         QuickMetricsStats(
             totalEnergy: 1000,
@@ -321,8 +318,7 @@ final class QuickMetricsModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
-@MainActor
-final class QuickMetricsAccessibilityTests: XCTestCase {
+@MainActor final class QuickMetricsAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     private func metrics() -> [QuickMetric] {

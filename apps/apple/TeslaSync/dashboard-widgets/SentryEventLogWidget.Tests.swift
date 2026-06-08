@@ -22,8 +22,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (parity with deriveEvent / feedItems)
 
-@MainActor
-final class SentryAdapterTests: XCTestCase {
+@MainActor final class SentryAdapterTests: XCTestCase {
     /// English-fallback localizer (bundle-free) used by the value tests.
     private let echo: (String, String) -> String = { _, fallback in fallback }
     /// Key-revealing localizer so tests can assert the exact i18n key used.
@@ -158,8 +157,7 @@ final class SentryAdapterTests: XCTestCase {
 
 // MARK: - Layout: size → eventLimit / subtitle gate (web parity)
 
-@MainActor
-final class SentryLayoutTests: XCTestCase {
+@MainActor final class SentryLayoutTests: XCTestCase {
     func testEventLimitWideTallAndSmall() {
         // Wide (cols >= 3) → 10, regardless of rows.
         XCTAssertEqual(SentryLayout.eventLimit(for: DashboardWidgetSize(cols: 3, rows: 1)), 10)
@@ -181,8 +179,7 @@ final class SentryLayoutTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class SentryModelTests: XCTestCase {
+@MainActor final class SentryModelTests: XCTestCase {
     private func makeModel(
         _ update: SentryUpdate,
         telemetry: SentryTelemetry = OSLogSentryTelemetry()
@@ -263,8 +260,7 @@ final class SentryModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class SentryRegistryTests: XCTestCase {
+@MainActor final class SentryRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = SentryEventLogWidget.registration
         XCTAssertEqual(registration.id, "sentry-event-log")
@@ -290,8 +286,7 @@ final class SentryRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class SentryAccessibilityTests: XCTestCase {
+@MainActor final class SentryAccessibilityTests: XCTestCase {
     private func item(title: String, subtitle: String) -> SentryFeedItem {
         SentryFeedItem(
             id: "1",

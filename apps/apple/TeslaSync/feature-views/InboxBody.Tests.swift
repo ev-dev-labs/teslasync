@@ -12,8 +12,7 @@
 import XCTest
 @testable import TeslaSync
 
-@MainActor
-final class InboxBodyProjectionTests: XCTestCase {
+@MainActor final class InboxBodyProjectionTests: XCTestCase {
     // MARK: Enums + filters
 
     func testSeverityParseFallsBackToInfo() {

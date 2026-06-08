@@ -94,8 +94,7 @@ private struct InboxTestError: Error {}
 
 // MARK: - Tests
 
-@MainActor
-final class InboxBodyModelTests: XCTestCase {
+@MainActor final class InboxBodyModelTests: XCTestCase {
     private func iso() -> String {
         ISO8601DateFormatter().string(from: Date())
     }

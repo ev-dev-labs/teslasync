@@ -12,8 +12,7 @@ import XCTest
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class OptimizerAccessibilityTests: XCTestCase {
+@MainActor final class OptimizerAccessibilityTests: XCTestCase {
     private let formatting = DefaultOptimizerFormatting()
 
     private func number(_ value: Double, _ decimals: Int) -> String {
@@ -145,8 +144,7 @@ final class OptimizerAccessibilityTests: XCTestCase {
 
 // MARK: - State holder: phases + projections + telemetry + source wiring
 
-@MainActor
-final class OptimizerModelTests: XCTestCase {
+@MainActor final class OptimizerModelTests: XCTestCase {
     private func makeModel(
         _ update: ChargingOptimizerUpdate,
         telemetry: OptimizerTelemetry = OSLogOptimizerTelemetry()

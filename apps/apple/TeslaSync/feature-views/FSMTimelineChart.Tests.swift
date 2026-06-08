@@ -23,8 +23,7 @@ import XCTest
 
 // MARK: - Adapter: projection (web FSMTimelineChart useMemo parity)
 
-@MainActor
-final class FSMTimelineProjectorTests: XCTestCase {
+@MainActor final class FSMTimelineProjectorTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
 
     /// A bucket-aligned `now` (a multiple of the 10-minute cell), so the six-hour
@@ -202,8 +201,7 @@ final class FSMTimelineProjectorTests: XCTestCase {
 
 // MARK: - Formatting
 
-@MainActor
-final class FSMTimelineFormatTests: XCTestCase {
+@MainActor final class FSMTimelineFormatTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
 
     func testCountRendersWholeNumber() {
@@ -224,8 +222,7 @@ final class FSMTimelineFormatTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
-@MainActor
-final class FSMTimelineChartAccessibilityTests: XCTestCase {
+@MainActor final class FSMTimelineChartAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let posix = Locale(identifier: "en_US_POSIX")

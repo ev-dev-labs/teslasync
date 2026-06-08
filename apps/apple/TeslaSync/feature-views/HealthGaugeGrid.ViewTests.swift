@@ -13,8 +13,7 @@
     import XCTest
     @testable import TeslaSync
 
-    @MainActor
-    final class HealthGaugeGridViewStateTests: XCTestCase {
+    @MainActor final class HealthGaugeGridViewStateTests: XCTestCase {
         private func renders(_ update: HealthGaugeGridUpdate) -> Bool {
             let source = InMemoryHealthGaugeGridSource(initial: update)
             let model = HealthGaugeGridModel(source: source)

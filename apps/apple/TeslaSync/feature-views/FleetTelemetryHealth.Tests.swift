@@ -34,8 +34,7 @@ private func toneName(_ tone: TSTone) -> String {
 
 // MARK: - Adapter: recency / normalization / projection (web parity)
 
-@MainActor
-final class FleetHealthAdapterTests: XCTestCase {
+@MainActor final class FleetHealthAdapterTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let window = FleetHealthProjection.recencyWindow
 
@@ -116,8 +115,7 @@ final class FleetHealthAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + filter + refresh + telemetry
 
-@MainActor
-final class FleetHealthModelTests: XCTestCase {
+@MainActor final class FleetHealthModelTests: XCTestCase {
     private func makeModel(
         _ update: FleetHealthUpdate,
         telemetry: FleetHealthTelemetry = OSLogFleetHealthTelemetry()
@@ -257,8 +255,7 @@ final class FleetHealthModelTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
-@MainActor
-final class FleetHealthAccessibilityTests: XCTestCase {
+@MainActor final class FleetHealthAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testVINRowSummary() {

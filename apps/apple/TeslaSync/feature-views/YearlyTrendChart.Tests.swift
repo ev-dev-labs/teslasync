@@ -30,8 +30,7 @@ private func samplePoints() -> [YearlyTrendPointInput] {
 
 // MARK: - Adapter: numeric guards
 
-@MainActor
-final class YearlyTrendMathTests: XCTestCase {
+@MainActor final class YearlyTrendMathTests: XCTestCase {
     func testSafeGuardsNonFinite() {
         XCTAssertEqual(YearlyTrendMath.safe(5), 5, accuracy: 1e-9)
         XCTAssertEqual(YearlyTrendMath.safe(.nan), 0, accuracy: 1e-9)
@@ -50,8 +49,7 @@ final class YearlyTrendMathTests: XCTestCase {
 
 // MARK: - Adapter: projection (web chart `data`)
 
-@MainActor
-final class YearlyTrendProjectionTests: XCTestCase {
+@MainActor final class YearlyTrendProjectionTests: XCTestCase {
     func testEmptyProjectionForNilInput() {
         let projection = YearlyTrendProjection.make(from: nil)
         XCTAssertFalse(projection.hasAny)
@@ -101,8 +99,7 @@ final class YearlyTrendProjectionTests: XCTestCase {
 
 // MARK: - State holder: phases + refresh + telemetry
 
-@MainActor
-final class YearlyTrendChartModelTests: XCTestCase {
+@MainActor final class YearlyTrendChartModelTests: XCTestCase {
     private func makeModel(
         _ update: YearlyTrendUpdate,
         telemetry: YearlyTrendTelemetry = OSLogYearlyTrendTelemetry()
@@ -191,8 +188,7 @@ final class YearlyTrendChartModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
-@MainActor
-final class YearlyTrendAccessibilityTests: XCTestCase {
+@MainActor final class YearlyTrendAccessibilityTests: XCTestCase {
     func testSummary() {
         let bars = YearlyTrendProjection.make(from: samplePoints()).bars
         let summary = YearlyTrendAccessibility.summary(

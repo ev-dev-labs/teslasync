@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Adapter: projection (chargerTypeStats parity)
 
-@MainActor
-final class ChargerTypeChartProjectionTests: XCTestCase {
+@MainActor final class ChargerTypeChartProjectionTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
     private let base = Date(timeIntervalSince1970: 1_700_000_000)
 
@@ -158,8 +157,7 @@ final class ChargerTypeChartProjectionTests: XCTestCase {
 
 // MARK: - State holder: ChargerTypeChartModel
 
-@MainActor
-final class ChargerTypeChartModelTests: XCTestCase {
+@MainActor final class ChargerTypeChartModelTests: XCTestCase {
     private let base = Date(timeIntervalSince1970: 1_700_000_000)
 
     private func sampleSessions() -> [ChargingSessionInput] {
@@ -275,8 +273,7 @@ final class ChargerTypeChartModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
-@MainActor
-final class ChargerTypeChartAccessibilityTests: XCTestCase {
+@MainActor final class ChargerTypeChartAccessibilityTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }
@@ -300,7 +297,12 @@ final class ChargerTypeChartAccessibilityTests: XCTestCase {
     }
 
     func testRowLabelCarriesColumnFigures() {
-        let label = ChargerTypeChartAccessibility.rowLabel(points[0], name: "Supercharger", locale: posix, localize: echo)
+        let label = ChargerTypeChartAccessibility.rowLabel(
+            points[0],
+            name: "Supercharger",
+            locale: posix,
+            localize: echo
+        )
         XCTAssertEqual(label, "Supercharger: Sessions 5, Avg kW 160.0, Avg kWh 55.0, Avg minutes 25")
     }
 }

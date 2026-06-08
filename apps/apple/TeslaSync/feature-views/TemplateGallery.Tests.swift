@@ -30,8 +30,7 @@ private func templateGalleryPreset(_ id: String) -> TemplateGalleryTemplate {
 
 // MARK: - Canonical catalog integrity (web `DASHBOARD_PRESETS`)
 
-@MainActor
-final class TemplateGalleryCatalogTests: XCTestCase {
+@MainActor final class TemplateGalleryCatalogTests: XCTestCase {
     private var templates: [TemplateGalleryTemplate] {
         TemplateGalleryCatalog.templates
     }
@@ -101,8 +100,7 @@ final class TemplateGalleryCatalogTests: XCTestCase {
 
 // MARK: - Mini-grid packer (web `buildDefaultLayouts` — lg breakpoint)
 
-@MainActor
-final class TemplateGalleryAdapterGridTests: XCTestCase {
+@MainActor final class TemplateGalleryAdapterGridTests: XCTestCase {
     private func template(_ id: String) -> TemplateGalleryTemplate {
         guard let match = TemplateGalleryCatalog.templates.first(where: { $0.id == id }) else {
             fatalError("missing preset \(id)")
@@ -158,8 +156,7 @@ final class TemplateGalleryAdapterGridTests: XCTestCase {
 
 // MARK: - Category icons (web `useCategoryIcons`)
 
-@MainActor
-final class TemplateGalleryCategoryIconTests: XCTestCase {
+@MainActor final class TemplateGalleryCategoryIconTests: XCTestCase {
     private func template(_ id: String) -> TemplateGalleryTemplate {
         templateGalleryPreset(id)
     }
@@ -192,8 +189,7 @@ final class TemplateGalleryCategoryIconTests: XCTestCase {
 
 // MARK: - Phase + card/detail projections (cached → projection)
 
-@MainActor
-final class TemplateGalleryProjectionTests: XCTestCase {
+@MainActor final class TemplateGalleryProjectionTests: XCTestCase {
     func testPhaseProjectsLoadedEmptyAndFailed() {
         XCTAssertEqual(
             TemplateGalleryAdapter.phase(from: .success(TemplateGalleryCatalog.templates)),
@@ -231,8 +227,7 @@ final class TemplateGalleryProjectionTests: XCTestCase {
 
 // MARK: - Localization (web `t(key, fallback)`)
 
-@MainActor
-final class TemplateGalleryStringsTests: XCTestCase {
+@MainActor final class TemplateGalleryStringsTests: XCTestCase {
     func testReturnsFallbackWhenKeyIsAbsent() {
         XCTAssertEqual(TemplateGalleryStrings.string("templates.title", "Dashboard Templates"), "Dashboard Templates")
         XCTAssertEqual(TemplateGalleryStrings.string("common.back", "Back"), "Back")
@@ -247,8 +242,7 @@ final class TemplateGalleryStringsTests: XCTestCase {
 
 // MARK: - Accessibility phrasing
 
-@MainActor
-final class TemplateGalleryAccessibilityTests: XCTestCase {
+@MainActor final class TemplateGalleryAccessibilityTests: XCTestCase {
     func testCardLabelNamesTheTemplateAndCount() {
         let label = TemplateGalleryAccessibility.cardLabel(name: "Daily Commuter", widgetCount: 7)
         XCTAssertTrue(label.contains("Daily Commuter"), label)
@@ -270,8 +264,7 @@ final class TemplateGalleryAccessibilityTests: XCTestCase {
 
 // MARK: - Telemetry (P1/S11 view.opened)
 
-@MainActor
-final class TemplateGalleryTelemetryTests: XCTestCase {
+@MainActor final class TemplateGalleryTelemetryTests: XCTestCase {
     func testReportOpenEmitsSurfaceSlug() {
         let spy = SpyTemplateGalleryTelemetry()
         TemplateGallerySurface.reportOpen(to: spy)
@@ -290,8 +283,7 @@ final class TemplateGalleryTelemetryTests: XCTestCase {
 
 // MARK: - Model (selection + phase)
 
-@MainActor
-final class TemplateGalleryModelTests: XCTestCase {
+@MainActor final class TemplateGalleryModelTests: XCTestCase {
     func testCanonicalModelOpensLoadedWithTenTemplates() {
         let model = TemplateGalleryModel(telemetry: SpyTemplateGalleryTelemetry())
         XCTAssertEqual(model.phase, .loaded(TemplateGalleryCatalog.templates))

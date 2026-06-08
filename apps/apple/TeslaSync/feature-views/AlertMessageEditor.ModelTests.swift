@@ -15,8 +15,7 @@
 import XCTest
 @testable import TeslaSync
 
-@MainActor
-final class AlertMessageEditorModelTests: XCTestCase {
+@MainActor final class AlertMessageEditorModelTests: XCTestCase {
     private func tokens() -> [AlertMessageTokenDTO] {
         [
             AlertMessageTokenDTO(key: "BatteryLevel", label: "Battery level (%)", group: "Signals"),

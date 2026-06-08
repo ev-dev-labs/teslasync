@@ -22,8 +22,7 @@ import XCTest
 
 // MARK: - Adapter: projection (web SOCRouteChart body parity)
 
-@MainActor
-final class SOCRouteChartProjectionTests: XCTestCase {
+@MainActor final class SOCRouteChartProjectionTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
 
     /// A two-leg planned route: deplete to 22%, charge, deplete to 18%, charge.
@@ -199,8 +198,7 @@ final class SOCRouteChartProjectionTests: XCTestCase {
 
 // MARK: - Formatting
 
-@MainActor
-final class SOCRouteChartFormatTests: XCTestCase {
+@MainActor final class SOCRouteChartFormatTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
 
     func testPercentRendersWholeNumber() {
@@ -232,8 +230,7 @@ final class SOCRouteChartFormatTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
-@MainActor
-final class SOCRouteChartAccessibilityTests: XCTestCase {
+@MainActor final class SOCRouteChartAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let posix = Locale(identifier: "en_US_POSIX")

@@ -3,8 +3,7 @@ import XCTest
 
 /// Tests the command domain: kind metadata, the safety gate, the request shape,
 /// and the executor seams.
-@MainActor
-final class VehicleCommandTests: XCTestCase {
+@MainActor final class VehicleCommandTests: XCTestCase {
     func testAllKindsHaveMetadataAndConfirm() {
         XCTAssertEqual(VehicleCommandKind.allCases.count, 13)
         for kind in VehicleCommandKind.allCases {

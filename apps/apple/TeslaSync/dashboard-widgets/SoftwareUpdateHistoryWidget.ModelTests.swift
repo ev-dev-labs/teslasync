@@ -29,8 +29,7 @@ private func minutesBefore(_ minutes: Int) -> Date {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class SoftwareUpdateHistoryModelTests: XCTestCase {
+@MainActor final class SoftwareUpdateHistoryModelTests: XCTestCase {
     private func makeModel(
         _ update: SoftwareUpdateHistoryUpdate,
         telemetry: SoftwareUpdateHistoryTelemetry = OSLogSoftwareUpdateHistoryTelemetry()
@@ -138,8 +137,7 @@ final class SoftwareUpdateHistoryModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class SoftwareUpdateHistoryRegistryTests: XCTestCase {
+@MainActor final class SoftwareUpdateHistoryRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = SoftwareUpdateHistoryWidget.registration
         XCTAssertEqual(registration.id, "software-update-history")
@@ -170,8 +168,7 @@ final class SoftwareUpdateHistoryRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class SoftwareUpdateHistoryAccessibilityTests: XCTestCase {
+@MainActor final class SoftwareUpdateHistoryAccessibilityTests: XCTestCase {
     func testCompactSummaryComposesVersionAndStatus() {
         let latest = SoftwareUpdateLatest(
             version: "2024.8.7",

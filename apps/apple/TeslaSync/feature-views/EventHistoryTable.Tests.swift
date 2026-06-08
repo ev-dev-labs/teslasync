@@ -20,8 +20,7 @@ import XCTest
 
 // MARK: - Adapter: helpers.ts ports
 
-@MainActor
-final class EventHistoryAdapterTests: XCTestCase {
+@MainActor final class EventHistoryAdapterTests: XCTestCase {
     func testParseWindowState() {
         XCTAssertEqual(EventHistoryAdapter.parseWindowState(.string("Closed")), .closed)
         XCTAssertEqual(EventHistoryAdapter.parseWindowState(.string("0")), .closed)
@@ -132,8 +131,7 @@ final class EventHistoryAdapterTests: XCTestCase {
 
 // MARK: - Timestamp formatting (web TimeStamp / formatDateTime)
 
-@MainActor
-final class EventHistoryFormatTests: XCTestCase {
+@MainActor final class EventHistoryFormatTests: XCTestCase {
     func testEmptyAndInvalidReturnDash() {
         XCTAssertNil(EventHistoryFormat.parse(""))
         XCTAssertNil(EventHistoryFormat.parse("not-a-date"))
@@ -157,8 +155,7 @@ final class EventHistoryFormatTests: XCTestCase {
 
 // MARK: - Projection: phase resolution across every branch
 
-@MainActor
-final class EventHistoryProjectionTests: XCTestCase {
+@MainActor final class EventHistoryProjectionTests: XCTestCase {
     private var sampleEvents: [SecurityEventInput] {
         [SecurityEventInput(id: "1", createdAt: "2026-01-05T15:04:05Z", locked: .bool(true))]
     }
@@ -194,8 +191,7 @@ final class EventHistoryProjectionTests: XCTestCase {
 
 // MARK: - State holder: wiring + telemetry
 
-@MainActor
-final class EventHistoryModelTests: XCTestCase {
+@MainActor final class EventHistoryModelTests: XCTestCase {
     private func makeModel(
         _ input: EventHistoryInput,
         telemetry: EventHistoryTelemetry = OSLogEventHistoryTelemetry()
@@ -237,8 +233,7 @@ final class EventHistoryModelTests: XCTestCase {
 
 // MARK: - Accessibility + display text content
 
-@MainActor
-final class EventHistoryAccessibilityTests: XCTestCase {
+@MainActor final class EventHistoryAccessibilityTests: XCTestCase {
     /// Bundle-free localizer that returns the English fallback (the web `t` default).
     private let localize: EventHistoryAccessibility.Localize = { _, fallback in fallback }
 

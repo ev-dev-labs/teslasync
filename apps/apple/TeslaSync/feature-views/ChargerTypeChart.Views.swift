@@ -200,7 +200,12 @@ struct ChargerTypeBreakdownRows: View {
 
     private func rowAccessibility(for point: ChargerTypePoint) -> String {
         let name = ChargerTypeStrings.string(point.type.localizationKey, point.type.fallback)
-        return ChargerTypeChartAccessibility.rowLabel(point, name: name, locale: locale, localize: ChargerTypeStrings.string)
+        return ChargerTypeChartAccessibility.rowLabel(
+            point,
+            name: name,
+            locale: locale,
+            localize: ChargerTypeStrings.string
+        )
     }
 }
 

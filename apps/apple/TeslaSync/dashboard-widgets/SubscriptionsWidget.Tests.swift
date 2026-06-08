@@ -43,8 +43,7 @@ private enum SubscriptionsFixture {
 
 // MARK: - Adapter: cached envelope → projection (parity with the web pipeline)
 
-@MainActor
-final class SubscriptionsAdapterTests: XCTestCase {
+@MainActor final class SubscriptionsAdapterTests: XCTestCase {
     private let now = SubscriptionsFixture.now
     private let format = SubscriptionsFixture.format
     private let localize = SubscriptionsFixture.localize
@@ -169,8 +168,7 @@ final class SubscriptionsAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class SubscriptionsModelTests: XCTestCase {
+@MainActor final class SubscriptionsModelTests: XCTestCase {
     private func dataUpdate(
         status: SubscriptionsLoadStatus,
         connection: SubscriptionsConnection = .live
@@ -252,8 +250,7 @@ final class SubscriptionsModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor
-final class SubscriptionsRegistryTests: XCTestCase {
+@MainActor final class SubscriptionsRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = SubscriptionsWidget.registration
         XCTAssertEqual(registration.id, "subscriptions")
@@ -276,8 +273,7 @@ final class SubscriptionsRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-@MainActor
-final class SubscriptionsAccessibilityTests: XCTestCase {
+@MainActor final class SubscriptionsAccessibilityTests: XCTestCase {
     private let now = SubscriptionsFixture.now
     private let format = SubscriptionsFixture.format
     private let localize = SubscriptionsFixture.localize

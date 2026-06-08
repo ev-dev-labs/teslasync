@@ -79,8 +79,7 @@ enum RecentDrivesFixtures {
 
 // MARK: - Adapter: cached drives → projection (port parity with the web widget)
 
-@MainActor
-final class RecentDrivesAdapterTests: XCTestCase {
+@MainActor final class RecentDrivesAdapterTests: XCTestCase {
     func testProjectionKilometers() {
         let projection = RecentDrivesProjector.project(
             drives: RecentDrivesFixtures.all,
@@ -162,8 +161,7 @@ final class RecentDrivesAdapterTests: XCTestCase {
 
 // MARK: - Format helpers (port parity with numberFormat.ts + dateFormat.ts)
 
-@MainActor
-final class RecentDrivesFormatTests: XCTestCase {
+@MainActor final class RecentDrivesFormatTests: XCTestCase {
     func testNumberRoundsHalfAwayFromZero() {
         XCTAssertEqual(RecentDrivesFormat.number(1000, decimals: 0), "1,000")
         XCTAssertEqual(RecentDrivesFormat.number(0.5, decimals: 0), "1")
@@ -227,8 +225,7 @@ final class RecentDrivesFormatTests: XCTestCase {
 
 // MARK: - Layout (web `size` → driveLimit + isWide)
 
-@MainActor
-final class RecentDrivesLayoutTests: XCTestCase {
+@MainActor final class RecentDrivesLayoutTests: XCTestCase {
     func testDriveLimitMatrix() {
         XCTAssertEqual(RecentDrivesLayout.driveLimit(cols: 3, rows: 4), 10)
         XCTAssertEqual(RecentDrivesLayout.driveLimit(cols: 4, rows: 40), 10)
@@ -248,8 +245,7 @@ final class RecentDrivesLayoutTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor
-final class RecentDrivesPhaseTests: XCTestCase {
+@MainActor final class RecentDrivesPhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         XCTAssertEqual(RecentDrivesModel.resolvePhase(status: .loading, hasRows: false), .loading)
         XCTAssertEqual(RecentDrivesModel.resolvePhase(status: .loading, hasRows: true), .content)

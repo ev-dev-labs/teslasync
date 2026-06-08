@@ -234,8 +234,6 @@ public final class TelemetryErrorsWidgetInMemoryTelemetryErrorsSource: Telemetry
 
 // MARK: - Registry metadata (canonical: registry/system.ts → "telemetry-errors")
 
-
-
 // MARK: - Localization facade (P1/S10) — SwiftUI half
 
 public extension TelemetryErrorsStrings {

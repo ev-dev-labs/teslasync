@@ -3,8 +3,7 @@ import XCTest
 @testable import TeslaSync
 
 /// Pure-logic tests for the route registry + deep-link parser.
-@MainActor
-final class RouteTests: XCTestCase {
+@MainActor final class RouteTests: XCTestCase {
     func testEveryRouteHasUniquePathSegment() {
         let segments = AppRoute.allCases.map(\.pathSegment)
         XCTAssertEqual(Set(segments).count, AppRoute.allCases.count)

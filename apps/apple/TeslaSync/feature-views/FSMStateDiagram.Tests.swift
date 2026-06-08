@@ -16,12 +16,10 @@
 import Foundation
 import XCTest
 @testable import TeslaSync
- import TeslaSync
 
 // MARK: - Registry
 
-@MainActor
-final class FSMStateDiagramRegistryTests: XCTestCase {
+@MainActor final class FSMStateDiagramRegistryTests: XCTestCase {
     func testKnownTypesAreResolvable() {
         XCTAssertEqual(FSMRegistry.knownTypes.count, 8)
         for type in FSMRegistry.knownTypes {
@@ -82,8 +80,7 @@ final class FSMStateDiagramRegistryTests: XCTestCase {
 
 // MARK: - Projection
 
-@MainActor
-final class FSMStateDiagramProjectionTests: XCTestCase {
+@MainActor final class FSMStateDiagramProjectionTests: XCTestCase {
     private func transition(
         _ id: Int,
         _ ts: String,
