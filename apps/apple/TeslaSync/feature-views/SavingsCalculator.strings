@@ -1,0 +1,50 @@
+/*
+  SavingsCalculator.strings
+  TeslaSync — P4 feature view · 0118 · SavingsCalculator (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  SavingsCalculator resolves (table "SavingsCalculator") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-safe across the concurrent slots).
+
+  The source keys are the exact ones extracted from the web source
+  (web/src/features/charging/components/cost-analysis/SavingsCalculator.tsx). The
+  suffix keys carry the web `<Input suffix=…>` literals through the facade, and the
+  remaining keys back the native-only chrome (freshness chip, refresh/retry, and
+  the error / offline / loading copy).
+*/
+
+/* --- Source keys (web `t(...)` calls) --- */
+"costAnalysis.calculator.title" = "Gas vs Electric Savings Calculator";
+"costAnalysis.calculator.inputs" = "Your Assumptions";
+"costAnalysis.calculator.comparison" = "Comparison";
+"costAnalysis.calculator.gasPrice" = "Gas Price ($/gal)";
+"costAnalysis.calculator.mpg" = "Gas Car MPG";
+"costAnalysis.calculator.elecRate" = "Electricity Rate ($/kWh)";
+"costAnalysis.calculator.reset" = "Reset Defaults";
+"costAnalysis.calculator.gasCost" = "Gas Cost (equivalent)";
+"costAnalysis.calculator.evCost" = "EV Cost (actual)";
+"costAnalysis.calculator.totalSavings" = "Total Savings";
+"costAnalysis.calculator.overPeriod" = "over selected period";
+"costAnalysis.calculator.monthlySavings" = "Monthly Savings";
+"costAnalysis.calculator.perYear" = "/ year";
+"costAnalysis.calculator.noData" = "Not enough data for comparison";
+
+/* --- Input unit suffixes (web `<Input suffix=…>`) --- */
+"costAnalysis.calculator.gasPriceSuffix" = "$/gal";
+"costAnalysis.calculator.mpgSuffix" = "mpg";
+"costAnalysis.calculator.elecRateSuffix" = "$/kWh";
+
+/* --- Native chrome: freshness + actions --- */
+"calculator.live" = "Live";
+"calculator.stale" = "Stale";
+"calculator.offline" = "Offline";
+"calculator.refresh" = "Refresh";
+"calculator.retry" = "Retry";
+
+/* --- Native chrome: error / offline / loading --- */
+"calculator.errorTitle" = "Couldn't load the comparison";
+"calculator.offlineMessage" = "Offline — showing your last known comparison";
+"calculator.loading" = "Calculating your savings…";
