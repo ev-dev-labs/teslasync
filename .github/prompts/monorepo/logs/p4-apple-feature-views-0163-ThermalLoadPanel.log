@@ -1,0 +1,218 @@
+================================================================================
+P4 · Feature view · 0163 — ThermalLoadPanel (Apple)
+Run: 2026-06-07T22:24-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/284
+Base: ac5d2b837
+Prompt: P4/feature-views/0163 — Feature view: ThermalLoadPanel
+Web source (spec): web/src/features/driving/components/drivetrain-health/ThermalLoadPanel.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (0002 BackendTool / 0054
+      GuardModeWidget / 0036 DigitalTwinWidget precedent, ADR-012, Honesty rule 7 —
+      predecessor parity).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-…-CBDDD3140989, Booted)            OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  xcodegen ................... present (project generates cleanly, see deferred)    OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+  feature-views registration   PRESENT in both app targets (project.yml L37 iOS +
+                               L68 macOS); the unit-test targets source only
+                               Tests/Unit, so the per-surface *.Tests.swift wiring
+                               is the integration prompt's job (see DEFERRED)        WARN
+
+  Capability note: the prompt lists "Charts/maps used: (none)" and shared components
+  "@/components/ui · @/components/data-display · @/components/motion". The core
+  requirement is SwiftUI, which is AVAILABLE and PROVEN by real iOS-18-simulator AND
+  macOS-15 SDK compiles below. The capability-BLOCKED escape hatch ("SwiftUI/Charts/
+  MapKit unavailable") does NOT apply — the surface is authored, host-compiled on
+  both SDKs, and its full XCTest suite is host-executed green.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/ThermalLoadPanel.*) ===
+  ThermalLoadPanel.Adapter.swift   281  testable projection core (pure, Foundation-only,
+                                        no Shared) — ThermalTemperatureUnit (web
+                                        convertTempFromSI), ThermalUnitContext (useUnits
+                                        slice), ThermalSeverity (web tempSeverityColor
+                                        0.85/0.65 ladder), ThermalBar.fraction (web
+                                        MetricBar pct), ThermalSensorReading, ThermalFormat
+                                        (numberFormat.ts fmtInt/fmtNumber + unitConversion
+                                        formatTemperature, 1-dp, em-dash), ThermalAccessibility
+  ThermalLoadPanel.Model.swift     296  P1/S8 state-holder seam (ThermalLoadSource→
+                                        ThermalLoadModel) + P1/S11 telemetry seam
+                                        (view.opened) + P1/S10 strings facade + connection
+                                        axis + ThermalLoadPayload/Input/Resolved +
+                                        ThermalLoadProjection + InMemoryThermalLoadSource
+  ThermalLoadPanel.swift           154  the surface — glass panel + muted-uppercase header
+                                        (activity glyph + title) + freshness chip/refresh +
+                                        connectivity banner + state composition + surfaceSlug
+  ThermalLoadPanel.Views.swift     276  presentational subviews — severity bars (label +
+                                        tone-graded readout over TSMetricBar), inline-metric
+                                        grid (glyph + value + label, adaptive 2-/4-up),
+                                        loading/empty/error chrome, severity→TSTone map
+  ThermalLoadPanel.Previews.swift  141  #if DEBUG previews — one per state (data °C / data °F
+                                        / unknown readings / empty / loading / error / stale /
+                                        offline)
+  ThermalLoadPanel.Tests.swift     372  XCTest — adapter + projection + model + a11y (38 methods)
+  ThermalLoadPanel.strings          40  P1/S10 catalog contribution (table "ThermalLoadPanel")
+  Largest .swift = 372 lines (Tests; swiftlint file_length default honored). No file
+  imports the Shared xcframework (seams are Swift protocols; the prod app injects the
+  facade-backed source, previews/tests inject InMemoryThermalLoadSource).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources (web useTranslation + useUnits): bound through the P1/S8 seam
+    ThermalLoadSource→ThermalLoadModel. The parent (Drivetrain Health page) computes
+    `sensors` (from the drivetrain-health reading), `peakPower` / `avgPowerMax` (already
+    kW), and `DrivingStats`; this leaf renders that payload verbatim — no HTTP in the
+    view. The `useUnits` temperature unit/locale/precision ride in the ThermalUnitContext.
+  - Composition (web GlassPanel + MetricBar[] + InlineMetric[]):
+      • GlassPanel  -> TSGlassPanel.
+      • header      -> activity glyph (waveform.path.ecg) + muted-uppercase title
+                       (web `<h3 class="… uppercase tracking-wider text-muted">`).
+      • MetricBar   -> per-sensor row: label + severity-coloured temperature readout
+                       (web displayTemp → formatTemperature, °C/°F, 1-dp, no space,
+                       em-dash for null) over a TSMetricBar tinted by the web
+                       tempSeverityColor ladder (good→success/warning→warning/critical→
+                       danger/unknown→muted).
+      • InlineMetric-> glyph + value + label grid (Peak Power/bolt purple · Avg Power/
+                       trend cyan · Drives/activity green · Regen Ratio/shield amber),
+                       with the web `peakPower>0 ? fmtInt kW : —`, `avg>0 ? fmtNumber(,1)
+                       kW : —`, `stats ? fmtInt : —`, `stats ? fmtNumber(*100,1)% : —`
+                       fallbacks reproduced.
+  - States (ALL rendered, each a #if DEBUG preview + projection/model unit test):
+      loading (parent health resolving → skeleton bars + metric row) · empty (payload
+      with no sensors → friendly state, never a blank box) · error (parent failure →
+      Retry) · data (bars + metric grid) · stale (freshness chip + "Reconnecting" banner
+      + one-shot auto-refresh on the transition) · offline (cached payload + "Offline"
+      chip/banner).
+  - i18n (P1/S10): web keys preserved verbatim — drivetrain.thermalMetrics / .frontMotor
+    / .rearMotor / .inverter / .battery / .peakPower / .avgPower / .drivesLabel /
+    .regenRatio; native chrome namespaced thermal.* (live/stale/offline/refresh/
+    staleBanner/offlineBanner/loadingA11y/empty/errorTitle/retry). Every code-referenced
+    key is declared in ThermalLoadPanel.strings; NO English string literals in native
+    code (all via ThermalStrings facade + Text(verbatim:)). Unit symbols (°C/°F/kW/%) are
+    formatter literals, matching the AcDcStatsPanel precedent.
+  - Accessibility: VoiceOver labels on the panel (title), each sensor bar (combined
+    "name, temperature"), each inline metric (combined "label, value"), the freshness
+    chip, refresh button, and Retry; header carries .isHeader; Dynamic-Type system fonts
+    (Font.TS); reduce-motion honored (TSFadeIn / TSSkeleton).
+  - Telemetry (P1/S11): ThermalLoadModel.start() emits view.opened with surface slug
+    "ThermalLoadPanel" exactly once (OSLogThermalLoadTelemetry default; prod app injects
+    the shared diagnostics adapter). Asserted by testStartAppliesInitialAndEmitsTelemetryOnce.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 4 production files compiled together with the REAL apps/apple
+  component closure (../design/generated/apple/Tokens.swift + Sources/Design/** +
+  Sources/Components/** minus UnitFormatters.swift, which alone transitively needs the
+  Shared-backed SharedFacade; this surface does not use it). None import Shared.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK
+        xcrun --sdk iphonesimulator swiftc -typecheck \
+          -target arm64-apple-ios18.0-simulator -swift-version 6 <closure> <4 prod files>
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [3] swiftc -typecheck — DEBUG previews (-D DEBUG, Xcode #Preview macro plugin; the 4
+        production files + Previews + closure):
+        PREVIEWS_TYPECHECK_EXIT=0                                                  OK
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained
+        SwiftPM harness (module name "TeslaSync" so @testable import resolves; real
+        production Adapter/Model/surface/Views + real design tokens + real TS component
+        closure), Swift 6 language mode:
+          Test Suite 'TeslaSyncPackageTests.xctest' passed
+          Executed 38 tests, with 0 failures (0 unexpected) in 0.007 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: ThermalFormat number/int/percent + temperature (°C/°F/null/precision)
+        + power/drives/regen fallbacks; ThermalSeverity thresholds (0.65/0.85 inclusive,
+        nil, non-finite/zero ceiling); ThermalBar fraction (clamp, nil→0, ceiling guard);
+        ThermalSensorReading derived; ThermalToneMap; ThermalLoadProjection loading/empty/
+        error/data + unit-context carry; ThermalLoadModel start+view.opened-once, push,
+        stale one-shot auto-refresh, offline no-refresh, manual refresh, stop/re-arm,
+        surfaceSlug; ThermalAccessibility joins.
+  [4b] standalone swiftc logic harnesses (Xcode-independent, belt-and-suspenders):
+        adapter formatters/severity/fraction/a11y = 41 checks ALL_PASS;
+        projection + @Observable model wiring = 25 checks ALL_PASS.
+  [5] swiftlint --strict (6 surface .swift files; explicit paths — the repo .swiftlint.yml
+        `included:` lists TeslaSync/feature-views, lint run scoped to this surface):
+          Done linting! Found 0 violations, 0 serious in 6 files.
+        LINT_EXIT=0                                                               OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/6 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift) — gate path + an honest temp-dir
+        scan of the 6 shipped .swift files:
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                         -> XCODEGEN_EXIT=0 (project + targets + schemes).
+      - `xcodebuild -target TeslaSync-macOS build`  ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+          ** BUILD FAILED **                        -> MAC_BUILD_EXIT=65
+    Why deferred (independent, code-unrelated reasons — none is a defect in this surface;
+    identical disposition to the 0002 BackendTool / 0054 GuardModeWidget / 0036
+    DigitalTwinWidget predecessors, Honesty rule 7):
+      (a) Shared.xcframework not staged: the app target links the KMP core; staging it
+          needs a Kotlin/Native gradle build (apps/shared :core:assembleSharedXCFramework).
+          Independent of this UI surface; concrete missing-framework error captured above.
+      (b) macOS app/widget signing requires a development certificate on a signed runner
+          (ADR-012); concrete entitlements/signing error captured above.
+      (c) TEST WIRING: feature-views is registered into BOTH app targets (project.yml
+          L37/L68), but the unit-test targets (TeslaSyncTests / TeslaSync-macOSTests)
+          source only `Tests/Unit`, so the 92 existing per-surface *.Tests.swift (this one
+          included) are not yet routed into a test target / excluded from the app target.
+          That wiring is the downstream P4 integration/acceptance prompt's job; editing
+          project.yml is OUTSIDE this prompt's allowed files (ThermalLoadPanel.* + the log).
+    XCTest under Xcode runs in the TeslaSync(/-macOS) test target; here the SAME tests are
+    PROVEN GREEN (38/38) by the executed SwiftPM harness in step [4], and the surface
+    compiles against BOTH the iOS 18 and macOS 15 SDKs in steps [1]/[2].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source (loading/empty/error/data) plus the
+      P4 freshness axis (stale/offline) — implemented; each has a #if DEBUG preview; phase
+      logic unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (ThermalLoadSource→
+      ThermalLoadModel); no view HTTP. useUnits rides in ThermalUnitContext.
+  [x] Every i18n key from source has a matching catalog key — web drivetrain.* preserved
+      verbatim; native chrome thermal.* present; referenced==declared verified.
+  [x] Accessibility labels on every interactive element (refresh + Retry) and combined
+      values on bars / inline metrics / freshness chip; header carries .isHeader.
+  [x] Tests: adapter unit + per-state projection/model + a11y — 38 methods, EXECUTED
+      38/38, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured
+      evidence (xcframework + signing + test-wiring), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the xcodebuild build/test is
+                          shown DEFERRED with its real exit 65 + cause, not as pass.
+  2 No scope narrowing ... full surface (6 files + strings), all states, seams, tests.
+  3 No skip-and-assume ... web source + helpers/constants + parent page read end-to-end;
+                          every t() + render branch reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. GlassPanel + severity MetricBars + InlineMetric grid + the 4
+                          inline fallbacks + 6 states; web formatTemperature reproduced
+                          (convertTempFromSI, 1-dp, no-space suffix, em-dash).
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0002 BackendTool host-gate + deferral.
+  8 No commit on red ..... committed work is green on every runnable gate; the only
+                          non-green step is the environment-blocked xcframework/signing
+                          build, deferred with evidence (predecessor-accepted disposition).
+  9 No silent drift ...... test-target wiring deviation documented above (feature-views
+                          *.Tests.swift not yet routed to a test target; integration job).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE
