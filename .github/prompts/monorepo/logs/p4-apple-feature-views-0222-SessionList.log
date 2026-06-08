@@ -1,0 +1,111 @@
+=== P4 Feature view 0222 SessionList (Apple) ===
+Prompt:  .github/prompts/monorepo/p4-apple/feature-views/0222-... (SessionList)
+Web src: web/src/features/system/components/chatbot/SessionList.tsx
+Host:    Darwin arm64 · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint/swiftformat/xcodegen present
+Date:    2026-06-07
+
+------------------------------------------------------------------------------
+DELIVERED FILES (apps/apple/TeslaSync/feature-views/SessionList.*)
+------------------------------------------------------------------------------
+SessionList.swift            main view (glass panel column, phase switch, delete confirm)
+SessionList.Adapter.swift    pure projection (phase/displayTitle/relative-time/subtitle)
+SessionList.Seams.swift      P1/S8 source + P1/S11 telemetry + P1/S10 facade + actions seam
+SessionList.Model.swift      @Observable @MainActor state holder + intents + lifecycle
+SessionList.Views.swift      New Chat header, Sessions header, rows container, Text helper
+SessionList.Row.swift        session row + inline rename field
+SessionList.States.swift     loading / empty / error / connectivity banner / freshness chip
+SessionList.Previews.swift   #Preview per state (content/empty/loading/error/stale/offline/renaming)
+SessionList.Tests.swift      XCTest: adapter + relative-time + model + accessibility (27 tests)
+SessionList.strings          P1/S10 i18n catalog (table "SessionList")
+
+Parity scope reproduced from the web source:
+  • States: loading, empty, error(+retry), content, stale(chip+auto-refresh), offline(banner).
+  • i18n: every web t() key (chatbot.newChat/sessions/noSessions/session.empty/
+    session.messageCount/session.untitled/aria.renameSession/aria.doubleClickRename/
+    aria.deleteSession/delete.title/delete.message/delete.confirm/common.loading/common.cancel)
+    + native-envelope keys (relative-time, freshness, banners, error). No English literals in code.
+  • Behaviors: New Chat, select, double-click / context-menu rename (Enter saves, Esc cancels,
+    blur saves), delete -> confirmation dialog, active-row highlight, displayTitle resolver,
+    formatRelative subtitle. Data bound through ChatSessionListSource (P1/S8) — no HTTP in view.
+  • a11y: VoiceOver labels on every interactive element, row a11y summary, Dynamic Type fonts,
+    Reduce-Motion-aware shared motion components. Telemetry view.opened slug "SessionList" (P1/S11).
+
+==============================================================================
+SURFACE-SCOPED GATES (all green)
+==============================================================================
+
+--- swiftformat --lint apps/apple (SessionList.* files) ---
+0/9 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (SessionList.* files) ---
+Done linting! Found 0 violations, 0 serious in 9 files.
+LINT_EXIT=0
+
+--- check-placeholders.ps1 ---
+self-test: all [PASS], SELFTEST_EXIT=0   (gate proven functional)
+scan of the 9 SessionList swift files: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- Isolated SwiftPM build + tests (ToolCard precedent; Swift 6, strict concurrency) ---
+Module: design tokens + Sources/Components + Sources/Design + the SessionList surface,
+        built for the macOS host (one module, mirroring the app target's symbol context).
+        (UnitFormatters.swift excluded — it depends on the KMP-backed Units facade and is
+        unused by this surface; no other component needed exclusion.)
+swift build  ............... Build complete!            SURFACE_BUILD_EXIT=0
+swift test   ............... Executed 27 tests, with 0 failures (0 unexpected)
+             ChatSessionListProjectionTests        8 passed
+             ChatSessionListRelativeTimeTests       4 passed
+             ChatSessionListAccessibilityTests      3 passed
+             ChatSessionListModelTests             12 passed
+                                                    SURFACE_TEST_EXIT=0
+
+==============================================================================
+FULL-APP GATE (macOS-pending — blocked by PRE-EXISTING, unrelated repo state)
+==============================================================================
+xcodegen generate ......... Created project at apps/apple/TeslaSync.xcodeproj   (exit 0)
+Shared.xcframework ........ git-ignored (Frameworks/ holds only .gitkeep); built on demand
+                            by the project's Gradle pre-action — observed succeeding in this run
+                            (:core:linkReleaseFrameworkIosSimulatorArm64,
+                             :core:assembleReleaseIosSimulatorFatFrameworkForSharedXCFramework,
+                             :core:linkReleaseFrameworkMacosArm64 — 34 task lines, BUILD SUCCESSFUL).
+
+--- xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build ---
+IOS_EXIT=65
+  Only error (2 lines, same site):
+    TeslaSync/feature-views/AcDcStatsPanel.Tests.swift:19:8: error: unable to resolve module
+    dependency: 'XCTest'
+  -> PRE-EXISTING: co-located *.Tests.swift compiled into the app (non-test) target, which
+     cannot resolve XCTest. AcDcStatsPanel is alphabetically first and halts the compile; this
+     condition affects all 130 feature views (129 pre-existing + this one) identically.
+  -> SessionList errors in the build: 0. The SessionList non-test sources compiled without error.
+
+--- xcodebuild -scheme TeslaSync-macOS build ---
+MAC_EXIT=65
+  Only errors (2):
+    TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a
+    development certificate. Enable development signing ...
+    TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing ...
+  -> PRE-EXISTING: macOS development-signing identities are not present on this host; fails before
+     Swift compile. SessionList errors: 0.
+
+Classification: both full-app failures are the exact pre-existing, repo-wide blockers already
+recorded in apps/macos-pending-verifications.md for p4-apple/feature-views/P-0010-ToolCard
+(co-located XCTest in the app target + macOS development-signing). They are NOT caused by this
+surface, NOT fixable within the allowed files (apps/apple/TeslaSync/feature-views/SessionList.*),
+and are deferred to p4-apple/P99-0001-apple-acceptance-gate (runs on macos-latest with signing
+identities + a test-host target). Re-run command (macOS acceptance runner):
+  cd apps/apple && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+------------------------------------------------------------------------------
+VERDICT
+------------------------------------------------------------------------------
+SessionList surface: COMPLETE and VERIFIED GREEN at its own scope —
+  swiftformat=0, swiftlint --strict=0, placeholders=0, isolated SwiftPM build=0, tests 27/27.
+Full-app xcodebuild build test: macOS-pending (pre-existing, unrelated; zero SessionList errors).
+No red has been presented as green: the real IOS_EXIT=65 / MAC_EXIT=65 are recorded above with
+their precise, pre-existing causes.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,58 @@
+/*
+  SessionList.strings
+  TeslaSync — P4 feature view · 0222 · SessionList (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  SessionList resolves (table "SessionList") lives here with its web `t(key, default)`
+  English value. These entries fold into the app `Localizable.xcstrings` master catalog
+  at integration time; they are kept in a per-surface table so each parallel surface
+  prompt owns its own strings without editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/system/components/chatbot/SessionList.tsx). The remainder back the native
+  state envelope (relative-time subtitle pieces, freshness chip, connectivity banner,
+  error chrome) and the accessibility strings.
+*/
+
+/* --- Web parity: header + actions --- */
+"chatbot.newChat" = "New Chat";
+"chatbot.sessions" = "Sessions";
+"common.loading" = "Loading…";
+"common.cancel" = "Cancel";
+
+/* --- Web parity: empty + row copy --- */
+"chatbot.noSessions" = "No conversations yet";
+"chatbot.session.empty" = "Empty";
+"chatbot.session.messageCount" = "{{count}} msgs";
+"chatbot.session.untitled" = "Untitled conversation";
+
+/* --- Web parity: rename + delete affordances --- */
+"chatbot.aria.renameSession" = "Rename conversation";
+"chatbot.aria.doubleClickRename" = "Double-click to rename";
+"chatbot.aria.deleteSession" = "Delete conversation";
+"chatbot.delete.title" = "Delete conversation?";
+"chatbot.delete.message" = "This will permanently remove this conversation and all its messages.";
+"chatbot.delete.confirm" = "Delete";
+
+/* --- Accessibility (native VoiceOver) --- */
+"chatbot.aria.list" = "Conversations";
+"chatbot.aria.activeSession" = "Active conversation";
+
+/* --- Relative-time subtitle (web `formatRelative` thresholds) --- */
+"chatbot.session.justNow" = "Just now";
+"chatbot.session.minutesAgo" = "{{count}}m ago";
+"chatbot.session.hoursAgo" = "{{count}}h ago";
+"chatbot.session.daysAgo" = "{{count}}d ago";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"chatbot.sessions.live" = "Live";
+"chatbot.sessions.stale" = "Stale";
+"chatbot.sessions.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"chatbot.sessions.staleBanner" = "Reconnecting — this list may be out of date";
+"chatbot.sessions.offlineBanner" = "Offline — showing the last loaded conversations";
+
+/* --- Error chrome (page-owned fetch failure) --- */
+"chatbot.sessions.errorTitle" = "Couldn't load conversations";
+"chatbot.sessions.retry" = "Retry";
