@@ -1,0 +1,36 @@
+/*
+  AIUsageCard.strings
+  TeslaSync — P4 feature view · 0203 · AIUsageCard (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `AIUsageCard`
+  resolves (table "AIUsageCard") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/settings/components/AIUsageCard.tsx, namespace "settings"). The second group backs
+  the native chrome (the P4 leaf freshness / loading / error copy) so the Swift sources hold no
+  English prose literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"ai.settings.usage.title" = "Usage today";
+"ai.settings.usage.tokensIn" = "Tokens in";
+"ai.settings.usage.tokensOut" = "Tokens out";
+"ai.settings.usage.cost" = "Estimated cost";
+"ai.settings.usage.liveSuffix" = "Helix calls today.";
+"ai.settings.usage.placeholder" = "Usage populates as features run. Live numbers arrive in a follow-up update.";
+
+/* --- Native chrome: P4 leaf freshness / connectivity --- */
+"aiUsage.live" = "Live";
+"aiUsage.stale" = "Stale";
+"aiUsage.offline" = "Offline";
+"aiUsage.staleBanner" = "Reconnecting — usage may be stale";
+"aiUsage.offlineBanner" = "Offline — showing last known usage";
+"aiUsage.refresh" = "Refresh";
+
+/* --- Native chrome: loading / error states --- */
+"aiUsage.loadingA11y" = "Loading AI usage";
+"aiUsage.errorTitle" = "Couldn't load AI usage";
+"aiUsage.retry" = "Retry";
