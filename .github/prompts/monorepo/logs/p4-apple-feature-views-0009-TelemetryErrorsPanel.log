@@ -1,0 +1,210 @@
+================================================================================
+P4 · Feature view · 0009 — TelemetryErrorsPanel (Apple)
+Run: 2026-06-07T19:43-0700   Host: Darwin arm64 (macОS 26.x)   Slot: slot-130
+Prompt: P4/feature-views/0009 — Feature view: TelemetryErrorsPanel
+Web source (spec): web/src/features/admin/components/devtools/TelemetryErrorsPanel.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (ADR-012; 0036/0054 precedent).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iphonesimulator26.5 (iOS 18.0 deploy target)         OK
+  macOS SDK .................. macosx26.5 (macOS 15.0 deploy target)                OK
+  iPhone 16 simulator ........ present (83717DEE-70A3-4325-AA61-CBDDD3140989)       OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                           OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  surface in project.yml ..... 0 references (feature-views/ not yet target-registered)  WARN
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles below.
+  The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does
+  NOT apply — the surface is authored, host-compiled, and host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/TelemetryErrorsPanel.*) ===
+  TelemetryErrorsPanel.Adapter.swift   323  testable projection core — TelemetryJSON wire value +
+                                            extractTelemetryErrors/pickString port + 2-space JSON
+                                            emitter (JSON.stringify parity) + export(json+filename) +
+                                            formatDateTime + a11y row summary
+  TelemetryErrorsPanel.Model.swift     237  P1/S8 state-holder seam (TelemetryErrorsSource→Model) +
+                                            P1/S11 telemetry seam + P1/S10 TEStrings facade +
+                                            TelemetryErrorsProjection (idle/loading/error/data/empty) +
+                                            in-memory source
+  TelemetryErrorsPanel.Views.swift     254  presentational subviews — labeled box / idle / loading
+                                            (TSSkeleton) / error (+retry) / empty (TSStatusPill badge +
+                                            raw DisclosureGroup) / danger code chip / data table
+                                            (reuses shared TSDataTable) + ShareLink download
+  TelemetryErrorsPanel.swift            76  TelemetryErrorsPanel surface (state switch + onAppear
+                                            telemetry; web t(key,default) props)
+  TelemetryErrorsPanel.Previews.swift   96  #if DEBUG previews — one per state (idle / loading / error /
+                                            data / empty-healthy / empty-unknown-shape)
+  TelemetryErrorsPanel.Tests.swift     305  XCTest — extractor + export + format + projection + model +
+                                            a11y (26 methods)
+  TelemetryErrorsPanel.strings          32  P1/S10 catalog contribution (8 web-source keys + 4 native
+                                            chrome/a11y keys)
+  Every file <= 400 lines (house file_length). Total 1323 lines across 7 files (1291 Swift + 32 strings).
+  Shared TSDataTable/TSColumn/TSStatusPill/TSSkeleton are REUSED from the real component library (no
+  redeclaration → no duplicate symbols when compiled in the app module).
+
+=== PARITY (vs web TelemetryErrorsPanel.tsx) ===
+  Data sources -> NONE. The web source is a pure presentational leaf; its parent (FleetApiSection) owns
+    the `View Errors` mutation and passes props. The native surface mirrors this: the P1/S8
+    `TelemetryErrorsSource` carries the parent's prop snapshot (requested/loading/error/rawData/vin);
+    the view performs NO HTTP. The defensive extraction is reproduced natively so it is exercised
+    end-to-end rather than trusted from the caller.
+  Projection -> TelemetryErrorsExtractor.extract is a 1:1 port of web extractTelemetryErrors +
+    pickString: candidate order [root.errors, response.errors, response, root], first array wins;
+    per-row pick timestamp(reported_at,timestamp,created_at,ts) code(error_code,code,name,topic)
+    message(error_message,message,body,description) vin(vin); rowKey "ts|code|vin|i"; ok=false on an
+    unrecognised shape (incl. null/scalar) so the raw disclosure can surface. Verified by executed XCTest.
+  Composition -> the four web render branches + the leading idle branch, inside the labeled surface box
+    (web `rounded-lg bg-white/[0.02] p-3`): idle(title+italic hint) · loading(title+3-line TSSkeleton) ·
+    error(danger box + message + retry) · data(TSDataTable timestamp/code/message + ShareLink download) ·
+    empty(TSStatusPill 0/? badge + message + raw DisclosureGroup when !ok). Columns reproduce the web
+    errorColumns: formatDateTime|—, danger code chip|—, message|—.
+  Shared components -> @/components/ui -> shared TSDataTable (web DataTable), TSStatusPill (web Badge dot),
+    danger code chip (mirrors TSBadge tokens, taking the runtime code string the LocalizedStringKey-only
+    TSBadge can't express); @/components/feedback -> TSSkeleton (web Skeleton). Compiled against the REAL
+    apps/apple component library in the iOS+macOS typechecks below. Recharts -> none / Leaflet -> none.
+  States (all render) -> idle · loading · error · data · empty(healthy 0 / unknown ? + raw disclosure).
+    NOTE on stale/offline (the generic P4 states list): the web leaf has NO stale/offline chrome — its
+    parent's one-shot mutation owns connectivity, and an upstream/connectivity failure arrives as the
+    single `error` prop. Reproduced faithfully through the `error` branch (with a native retry
+    affordance, the QueryError-equivalent the states contract asks for). Inventing separate stale/offline
+    chrome here would be drift from the spec ("web source is THE specification"); it is deliberately not
+    added. Each state has a #if DEBUG preview and is unit-tested via the projection.
+  i18n -> all 8 source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    "Telemetry Errors", devtools.errorsIdle, devtools.errorsEmpty, devtools.errorsRaw, "Download Errors",
+    "Timestamp", "Code", "Message" — ALL present in TelemetryErrorsPanel.strings, plus 4 native chrome/
+    a11y keys (loading/retry/badge summaries). No English literals in native code (Text(verbatim:) over
+    the facade).
+  a11y -> retry button, download ShareLink, raw DisclosureGroup, and the empty badge each carry an
+    accessibilityLabel; the loading state is one labeled element; TelemetryErrorsAccessibility.rowSummary
+    is a tested combined-value seam; Dynamic Type via tokens; Reduce Motion gates the TSSkeleton shimmer.
+  Telemetry -> TelemetryErrorsModel.start() emits viewOpened(surface:"TelemetryErrorsPanel") -> bridges
+    the shared Telemetry.track(.screenView) (P1/S11). Asserted by a spy test (fires exactly once).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the 4 shipped non-preview files compiled together with the
+    REAL apps/apple component closure — generated Tokens + Badges + Skeletons + DataTable + Cards +
+    TSMaterial + Typography; none import the Shared xcframework):
+      xcrun swiftc -typecheck -sdk <iphonesimulator26.5> -target arm64-apple-ios18.0-simulator \
+        -swift-version 6  <component closure> <surface/Adapter/Model/Views>
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — DEBUG previews (-D DEBUG; the 5 surface files + real Tokens/Badges + a minimal
+    TSSkeleton/TSDataTable/TSColumn shim, isolating this surface's #Preview blocks from other components'
+    DEBUG previews — real DataTable/Skeletons pull TSCard→Cards' preview→TSButton):
+      PREVIEWS_TYPECHECK_EXIT=0                                                     OK
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM harness
+    (real production Adapter/Model/Views/surface + real design tokens + real TSStatusPill badges +
+    minimal TSSkeleton/TSDataTable render shims), Swift 6 language mode (.swiftLanguageMode(.v6)):
+      Executed 26 tests, with 0 failures (0 unexpected) in 0.008 seconds
+        TelemetryErrorsExtractorTests     9/9  (envelope / root.errors / response-array / root-array /
+                                               alternate field names + number coercion / unknown shape /
+                                               nil+scalar / healthy-empty / pickString precedence + rowKey)
+        TelemetryErrorsExportTests        3/3  (pretty JSON in key order + filename / empty-vin "all" +
+                                               "[]" / JSON string escaping)
+        TelemetryErrorsFormatTests        2/2  (empty+invalid -> —, valid ISO -> human readable)
+        TelemetryErrorsProjectionTests    7/7  (idle / loading precedence / error precedence / data /
+                                               empty-healthy-no-raw / empty-unknown-raw / empty-no-response)
+        TelemetryErrorsModelTests         3/3  (start applies initial + telemetry-once + startCount==1 /
+                                               refresh delegation / push updates projection + export)
+        TelemetryErrorsAccessibilityTests 2/2  (row summary combines fields / dashes empty code+message)
+      SWIFT_TEST_EXIT=0                                                             OK
+[5] swiftlint --strict on the 6 surface .swift files (explicit paths; the repo .swiftlint.yml `included:`
+    does not list TeslaSync/feature-views — that wiring is the P4 integration prompt's job — so the bare
+    gate `swiftlint --strict` SKIPS this dir; run explicitly here):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0                                                                   OK
+[6] swiftformat --lint on the 6 surface .swift files (config: apps/apple/.swiftformat):
+      0/6 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; pwsh):
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host):
+      - `xcodegen generate` -> XCODEGEN_EXIT=0 (project + targets + schemes generate cleanly).
+      - `grep -c TelemetryErrorsPanel TeslaSync.xcodeproj/project.pbxproj` -> 0 (surface not registered).
+      - `xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build` ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          error: "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" have entitlements that require signing with
+                 a development certificate.
+          ** BUILD FAILED **   MAC_BUILD_EXIT=65
+    Why deferred (three independent, code-unrelated reasons — none is a defect in this surface;
+    identical disposition to the 0036/0054 predecessor surfaces, Honesty rule 7):
+      (a) NOT-YET-REGISTERED: project.yml's app targets source `Sources/` + `TeslaSync/dashboard-widgets`;
+          this surface lives at `TeslaSync/feature-views/` with 0 references in project.yml (proven: 0
+          pbxproj refs). It is registered into the XcodeGen target + the admin surface by the downstream
+          P4 integration/acceptance prompt. Editing project.yml is OUTSIDE this prompt's allowed files.
+          Running xcodebuild now would build the app WITHOUT these files — ZERO evidence about this
+          deliverable. Steps [1]/[2] DO compile this surface against the real library, and step [4]
+          EXECUTES its full XCTest suite — the meaningful validation.
+      (b) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native gradle build (apps/shared/gradlew :core:assembleSharedXCFramework). Independent
+          of this UI surface; concrete missing-framework error captured above.
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    XCTest under Xcode runs in the TeslaSync(/-macOS) test target; here the SAME tests are PROVEN GREEN
+    (26/26) by the executed SwiftPM harness in step [4], and the views/model/adapter compile against
+    both the iOS 18 and macOS 15 SDKs in steps [1]/[2].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (idle/loading/error/data/empty incl. raw disclosure) — implemented;
+      each has a #if DEBUG preview; projection unit-tested + executed green. (stale/offline absent from the
+      web leaf by design — see PARITY note; upstream failure flows through `error`.)
+  [x] Hooks bind through the shared P1/S8 state-holder seam (TelemetryErrorsSource->Model); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — all 8 source keys present in the strings.
+  [x] Accessibility labels on every interactive element (retry, download, disclosure, badge).
+  [x] Tests: adapter (extract/export/format) + projection per-state + model wiring + a11y — 26 methods,
+      EXECUTED 26/26 green.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured evidence.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real MAC_BUILD_EXIT=65
+                       framework+signing error captured; every "OK" is a command actually run with its
+                       real exit code (incl. a 26/26 executed XCTest run and iOS+macOS SDK compiles).
+  2  No scope narrowing: implemented ALL web states/columns/download + i18n + a11y + telemetry.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (Shims used ONLY in the
+                       throwaway typecheck/test harness, never in shipped surface files.)
+  5  No parity shortcuts: faithful port of extractTelemetryErrors/pickString + JSON.stringify export +
+                       formatDateTime + all four render branches + the raw-response disclosure.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml (integration prompt's scope) and did
+                       NOT edit the shared Localizable.xcstrings (parallel-unsafe) — strings shipped as
+                       the per-surface table, exactly like 0036/0054.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed TelemetryErrorsPanel.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native TelemetryErrorsPanel shipped at parity with the web source: pure-Swift
+  defensive extractor + JSON export + timestamp formatter (executed-green XCTest, 26/26), P1/S8
+  state-holder seam (no view HTTP), P1/S11 telemetry, every state + i18n key + a11y label, columns
+  reproducing the web errorColumns. All host-runnable gates pass AND the surface compiles against BOTH
+  the iOS 18 simulator and macOS 15 SDKs with the real Xcode 26 toolchain under Swift 6 strict
+  concurrency. The Xcode app build/test is DEFERRED to the downstream integration/signed runner
+  (surface not yet target-registered + Shared.xcframework KMP staging + macOS signing — none a defect in
+  this code, all outside this prompt's allowed files), matching the 0036/0054 "code-complete + DEFERRED
+  Xcode gate" precedent (ADR-012).
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/TelemetryErrorsPanel.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0009-TelemetryErrorsPanel.log
+  git commit -m "feat(apps/apple/feature-views): add TelemetryErrorsPanel surface (P4)"
+
+EXIT=0
+STATUS=DONE

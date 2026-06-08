@@ -1,0 +1,32 @@
+/*
+  TelemetryErrorsPanel.strings
+  TeslaSync — P4 feature view · 0009 · TelemetryErrorsPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `TelemetryErrorsPanel` resolves (table "TelemetryErrorsPanel") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/admin/components/devtools/TelemetryErrorsPanel.tsx + its FleetApiSection
+  call site + the errorColumns headers). The second group backs the native-only
+  chrome (loading / retry / accessibility) the Apple HIG states contract requires.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"Telemetry Errors" = "Telemetry Errors";
+"devtools.errorsIdle" = "Click View Errors to fetch recent Fleet Telemetry errors for this vehicle.";
+"devtools.errorsEmpty" = "No Fleet Telemetry errors reported for this vehicle.";
+"devtools.errorsRaw" = "Show raw Tesla response";
+"Download Errors" = "Download Errors";
+"Timestamp" = "Timestamp";
+"Code" = "Code";
+"Message" = "Message";
+
+/* --- Native chrome: states + accessibility --- */
+"admin.telemetryErrors.loadingA11y" = "Loading telemetry errors";
+"admin.telemetryErrors.retry" = "Retry";
+"admin.telemetryErrors.okBadgeA11y" = "Zero errors reported";
+"admin.telemetryErrors.unknownBadgeA11y" = "Unrecognized response shape";
