@@ -1,0 +1,236 @@
+================================================================================
+P4 · Feature view · 0159 — StatorTempChart (Apple)
+Run: 2026-06-07T22:29-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/280
+Base: ad64202bf
+Prompt: P4/feature-views/0159 — Feature view: StatorTempChart
+Web source (spec): web/src/features/driving/components/drivetrain-health/StatorTempChart.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (0002 BackendTool / 0010 ToolCard /
+      0054 GuardModeWidget precedent, ADR-012, Honesty rule 7 — predecessor parity).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-…-CBDDD3140989, Booted)            OK
+  Swift Charts ............... present in both SDKs (this surface USES it — LineMark
+                               + RuleMark; web Recharts LineChart → Swift Charts)    OK
+  MapKit ..................... present (this surface uses NONE — no map)             OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  xcodegen ................... 2.45.x (project generates cleanly, see deferred)     OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+  apps/shared KMP gradle ..... release Kotlin/Native link KILLED on this runner    BLOCKED
+                               ("Gradle build daemon has been stopped: stop command
+                               received") — debug XCFramework builds, release does not.
+
+  Capability note: the prompt's auto-extracted "Charts/maps used: (none)" understates
+  the web source, which renders a Recharts three-line `LineChart` with two
+  `<ReferenceLine>`s. The native parity REQUIRES Swift Charts, which is AVAILABLE and
+  PROVEN by the host SwiftPM build below (the Views/Chart files compile + the surface
+  renders LineMark×3 + RuleMark×2). The capability-BLOCKED escape hatch ("SwiftUI/
+  Charts/MapKit unavailable") does NOT apply — the surface is authored, host-compiled
+  under Swift 6 strict concurrency, and host-tested (31/31).
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/StatorTempChart.*) ===
+  StatorTempChart.swift           74  surface shell — TSFadeIn glass card + header + stale/
+                                      offline banner + phase switch (loading/empty/error/content)
+                                      + accessibilitySummary; surfaceSlug "StatorTempChart"
+  StatorTempChart.Adapter.swift  251  pure projection core — convertStatorTempFromSI (°C identity /
+                                      °F c*9/5+32, ported 1:1 from lib/unitConversion.ts) +
+                                      StatorTempProjector (project / displayValue nil-gap / chartRows
+                                      connectNulls / thresholdLines / axisTickIndices / timeLabel /
+                                      resolvePhase) + StatorTempFormat + StatorTempSurface +
+                                      StatorTempAccessibility (Foundation-only, host-testable)
+  StatorTempChart.Catalog.swift  324  value types — StatorTempUnit, StatorSeries(+Color),
+                                      StatorThreshold(+Tone,+Line), StatorTempSnapshot (SI input),
+                                      StatorTempPoint, StatorTempRow, phase/status/connection enums,
+                                      StatorTempProjection (hasRenderableData = points.count > 1)
+  StatorTempChart.Model.swift    273  P1/S8 state-holder seam (StatorTempChartSource→Model) +
+                                      P1/S11 telemetry seam (view.opened) + P1/S10 strings facade +
+                                      unit prefs + stale auto-refresh + InMemoryStatorTempSource
+  StatorTempChart.Views.swift    238  presentational chrome — header (thermometer/title/subtitle +
+                                      freshness chip) + connectivity banner + 3-series legend +
+                                      loading skeleton + empty (ContentUnavailableView) + error+retry
+  StatorTempChart.Chart.swift    248  Swift Charts chart — LineMark×3 (front/rear-left/rear-right,
+                                      .monotone, connectNulls) + RuleMark×2 (Normal 60 / Warm 80,
+                                      converted, dashed, labeled) + chartXSelection tooltip + axes;
+                                      series/threshold color tokens + unit-suffixed naming
+  StatorTempChart.Previews.swift 102  #if DEBUG previews — one per state (content °C/°F, front+
+                                      rear-left only, stale, offline, loading, empty, single, error)
+  StatorTempChart.Tests.swift    359  XCTest — adapter + projector + model + a11y (31 methods)
+  StatorTempChart.strings         47  P1/S10 catalog contribution (table "StatorTempChart")
+  Largest .swift = 359 lines (swiftlint file_length<=400 honored; Adapter/Views split into
+  .Catalog/.Chart companions to stay within budget, matching the house one-concern-per-file
+  convention). No file imports the Shared xcframework (seams are Swift protocols; the prod
+  app injects the facade-backed source, previews/tests inject InMemoryStatorTempSource).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources (web useTranslation + useUnits): bound through the P1/S8 seam
+    StatorTempChartSource→StatorTempChartModel. The source maps the drivetrain-health
+    page's `motorHistory` query (motor_temp_c_front / _rear / inverter_temp_c, SI °C) +
+    useUnits temperature pref into StatorTempSnapshot + prefs. No data fetch in the view.
+  - SI provenance: the web parent (DrivetrainHealthPage L128-130) pre-converts each
+    reading via toTemperatureDisplay==convertTempFromSI, so the web plots display units
+    while the two <ReferenceLine>s convert SI 60/80 themselves. The native surface carries
+    SI Celsius and converts BOTH the series AND the thresholds in the projector — identical
+    displayed numbers, conversion moved to the render boundary (Phase-48 SI-canonical).
+  - Composition (web FadeIn + ChartContainer + Recharts LineChart + Legend):
+      • FadeIn(delay 0.23)   -> TSFadeIn(delay: 0.23) (reduce-motion honored).
+      • LineChart 3×<Line>   -> Chart { LineMark } ×3, .monotone (web type:'monotone'),
+                                lineWidth 2 (web strokeWidth:2), no dots (web dot:false),
+                                gaps skipped so the line connects (web connectNulls:true).
+        stroke #ef4444/#a855f7/#06b6d4 -> Color.TS.chartSeriesTemperature/Power/Regen.
+      • 2×<ReferenceLine>    -> RuleMark(y:) ×2 at convert(60)/convert(80), dashed,
+                                labeled "Normal"/"Warm"; stroke #4ade80/#fbbf24 ->
+                                Color.TS.statusSuccess/statusWarning.
+      • <Tooltip ChartTooltip>-> chartXSelection RuleMark + tooltip card (time header +
+                                present-series rows).
+      • <Legend>             -> bottom 3-swatch legend, full line names + unit suffix.
+  - Web render gate `if (data.length <= 1) return null;` -> the EMPTY state (≤1 snapshot →
+    friendly ContentUnavailableView, never a blank box); ≥2 snapshots → the chart.
+  - States (ALL rendered, each with a #if DEBUG preview + a model/projector unit test):
+      loading (skeleton) · empty (web return-null / 0–1 snapshot) · error (QueryError +
+      Retry) · content (chart+legend) · stale (freshness chip + "may be stale" banner +
+      one guarded auto-refresh) · offline (cached chart kept + offline chip + banner).
+  - i18n (P1/S10): web keys preserved VERBATIM — drivetrain.statorTempHistory(.aria),
+    statorTempSub, col.time/stator/statorRel/statorRer, statorTemp(/RearLeft/RearRight),
+    normal, warm; native chrome namespaced drivetrain.statorTemp.* (live/stale/offline/
+    banners/loading/noData/emptyHint/errorTitle/retry/snapshots/latest) + common.noData.
+    Referenced==declared verified: 25 keys referenced in code == 25 declared in .strings,
+    0 referenced-but-undeclared. NO English string literals in native code (all via the
+    StatorTempStrings facade + Text(verbatim:)).
+  - Accessibility: VoiceOver labels on the chart (aria string), every LineMark row
+    (series + time + value), the freshness chip, the legend swatches, the retry button;
+    the surface carries a combined chartSummary (title + snapshot count + latest readings);
+    Dynamic-Type system fonts (Font.TS); reduce-motion honored (TSFadeIn + TSSkeleton +
+    chart animation gated on accessibilityReduceMotion).
+  - Telemetry (P1/S11): StatorTempChartModel.start() emits view.opened with surface slug
+    "StatorTempChart" exactly once (OSLogStatorTempChartTelemetry default; prod app injects
+    the shared diagnostics adapter) — asserted by testStartEmitsViewOpenedOnce.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 7 production files compiled together with the REAL apps/apple
+  closure (design Tokens + Components/Motion/Motion.swift {TSFadeIn} + the verbatim
+  TSSkeleton block from Components/Feedback/Skeletons.swift); none import the Shared
+  xcframework. (The 88 surfaces' co-located *.Tests.swift already make the full app
+  target un-buildable on any runner — see XCODE-ONLY below — so the surface is proven
+  via a self-contained SwiftPM harness, the 0002 BackendTool / 0010 ToolCard precedent.)
+
+  [1] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained
+        SwiftPM harness (real production swift/Adapter/Catalog/Model/Views/Chart/Previews
+        + real design Tokens + real TSFadeIn + verbatim TSSkeleton), swift-tools 6.0
+        (Swift 6 language mode / strict concurrency), Xcode 26.5 toolchain:
+          Build complete! (6.78s)
+          Test Suite 'StatorTempAdapterTests'       passed —  7 tests, 0 failures
+          Test Suite 'StatorTempProjectorTests'     passed —  9 tests, 0 failures
+          Test Suite 'StatorTempModelTests'         passed — 12 tests, 0 failures
+          Test Suite 'StatorTempAccessibilityTests' passed —  3 tests, 0 failures
+          Executed 31 tests, with 0 failures (0 unexpected) in 0.013 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: °C/°F conversion + Fahrenheit threshold math (140/176), nil/non-finite
+        gap preservation, formatting, formatTime parity, series/threshold catalog order
+        + tokens + keys, connectNulls chart rows, axisTickIndices thinning, the
+        data.length<=1 render gate, resolvePhase matrix; model loading/empty/error/content,
+        unit-aware projection, refresh delegation, stale auto-refresh once-per-episode,
+        offline no-refresh, connection/refreshing tracking, view.opened-once + slug;
+        a11y chart + per-point summaries.
+  [2] swiftlint --strict (8 surface .swift files; explicit paths — the repo .swiftlint.yml
+        config applied):
+          Done linting! Found 0 violations, 0 serious in 8 files.
+        LINT_EXIT=0                                                               OK
+  [3] swiftformat --lint (config apps/apple/.swiftformat):
+          0/8 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [4] check-placeholders.ps1 (ADR-011 stub gate; swift) — run on the StatorTempChart.*
+        surface (all 9 files):
+          ./apps/tools/check-placeholders.ps1 -Path <StatorTempChart surface> -Language swift
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the signed CI runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode 26.5 toolchain):
+      - `xcodegen generate`                          -> XCODEGEN_EXIT=0 (project + targets + schemes).
+      - `xcodebuild -scheme TeslaSync …iPhone 16 build` reached the scheme pre-action
+          "Stage Shared.xcframework" (Gradle :core:assembleSharedXCFramework) and FAILED:
+          "Gradle build daemon has been stopped: stop command received" during
+          :core:linkReleaseFrameworkIosSimulatorArm64 -> IOS_BUILD_EXIT=65.
+      - `apps/shared/gradlew --no-daemon :core:assembleSharedXCFramework` (direct retry):
+          the DEBUG XCFramework wrote out OK, then the process was killed again
+          ("Daemon is stopping immediately stop command received") during the RELEASE
+          Kotlin/Native link -> GRADLE_EXIT=1. The release Shared.xcframework (the variant
+          the Apple build links) cannot be produced on this runner.
+      - `xcodebuild -target TeslaSync-macOS build` (skips the gradle pre-action) ->
+          error: "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" have entitlements that require
+                 signing with a development certificate.
+          error: There is no XCFramework found at '.../Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **                          -> MAC_BUILD_EXIT=65
+    Why deferred (three independent, code-unrelated reasons — none is a defect in this
+    surface; identical disposition to the 0002 BackendTool / 0010 ToolCard / 0054
+    GuardModeWidget predecessors, Honesty rule 7):
+      (a) Shared.xcframework not staged: the app target links the KMP core; staging it
+          needs a Kotlin/Native gradle build whose RELEASE link is killed on this runner
+          (captured above). This is the documented macos-pending prerequisite
+          (apps/macos-pending-verifications.md: "Shared.xcframework actual binary
+          produced + signed — macOS-pending"). Independent of this UI surface.
+      (b) Pre-existing, unrelated app-target collisions make the WHOLE app target
+          un-buildable regardless of this surface (the 0010 ToolCard finding, still true):
+            • `public struct DashboardWidgetSize` is redefined 10× across
+              Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/* (invalid
+              redeclaration); `PowerFlowConnection` likewise.
+            • 88 co-located `*.Tests.swift` under TeslaSync/feature-views/ import XCTest
+              into the app target (project.yml globs feature-views into the app, not into
+              a test bundle). This surface's StatorTempChart.Tests.swift follows that same
+              established layout and is instead EXECUTED green via the SwiftPM harness [1].
+      (c) macOS app/widget signing requires a development certificate on a signed runner
+          (ADR-012; captured entitlements error above).
+    XCTest under Xcode runs in the TeslaSync(/-macOS) test target; here the SAME tests are
+    PROVEN GREEN (31/31) by the executed SwiftPM harness in step [1], and the full surface
+    (incl. the Swift Charts Chart + Views) compiles under Swift 6 strict concurrency.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/content/stale/offline) — each
+      has a #if DEBUG preview; phase logic unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (StatorTempChartSource→
+      StatorTempChartModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — web drivetrain.* preserved
+      verbatim; native chrome drivetrain.statorTemp.* present; referenced(25)==declared(25).
+  [x] Accessibility labels on every interactive/!surface element (chart aria, per-row
+      values, legend, freshness chip, retry); combined chartSummary present.
+  [x] Tests: adapter unit + projector + per-state model + a11y — 31 methods, EXECUTED
+      31/31, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured
+      evidence (xcframework gradle-killed + pre-existing collisions + signing), predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the xcodebuild build/test is
+                          shown DEFERRED with its real exit 65 + cause, not as pass.
+  2 No scope narrowing ... full surface (8 .swift + strings), all states, seams, tests,
+                          Swift Charts chart with both reference lines.
+  3 No skip-and-assume ... web source + its parent (DrivetrainHealthPage) read end-to-end;
+                          every t() + branch + the SI-conversion provenance reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. 3 LineMarks + 2 RuleMark reference lines + legend + tooltip +
+                          6 states + connectNulls + monotone + dot:false all reproduced.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0002 BackendTool / 0010 ToolCard host-gate
+                          + xcodebuild deferral.
+  8 No commit on red ..... committed work is green on every runnable gate; the only
+                          non-green steps are the environment-killed xcframework gradle
+                          build + pre-existing app-target collisions + unsigned runner,
+                          deferred with evidence (predecessor-accepted disposition).
+  9 No silent drift ...... Adapter/Views split into .Catalog/.Chart documented above
+                          (file_length budget; house one-concern-per-file convention).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE
