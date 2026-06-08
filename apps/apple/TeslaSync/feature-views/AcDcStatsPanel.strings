@@ -1,0 +1,51 @@
+/*
+  AcDcStatsPanel.strings
+  TeslaSync — P4 feature view · 0096 · AcDcStatsPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `AcDcStatsPanel` resolves (table "AcDcStatsPanel") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/charging/components/charging-list/AcDcStatsPanel.tsx). The second group
+  backs the native chrome: the AC/DC/Total abbreviations and the "N sessions" wording
+  the web hardcodes in English, plus the P4 leaf freshness / loading / empty / error
+  copy, so the Swift sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"charging.stats.chargingByType" = "Charging Stats by Type";
+"charging.stats.energySplitLabel" = "Energy Split (AC vs DC)";
+"charging.table.acCharging" = "AC Charging";
+"charging.table.dcCharging" = "DC Charging";
+"charging.table.type" = "Type";
+"charging.table.sessionCount" = "Sessions";
+"charging.table.energy" = "Energy";
+"charging.table.cost" = "Cost";
+"charging.table.costPerKwh" = "$/kWh";
+"charging.table.avgEnergy" = "Avg Energy";
+"charging.table.avgTime" = "Avg Time";
+"charging.table.free" = "Free";
+"charging.table.freeCharged" = "Free charged";
+"charging.table.freeEnergy" = "Free energy";
+
+/* --- Native chrome: abbreviations + counts the web hardcodes --- */
+"acdc.acAbbrev" = "AC";
+"acdc.dcAbbrev" = "DC";
+"acdc.totalLabel" = "Total";
+"acdc.freeSessions" = "%lld sessions";
+
+/* --- Native chrome: P4 leaf freshness / loading / empty / error --- */
+"acdc.live" = "Live";
+"acdc.stale" = "Stale";
+"acdc.offline" = "Offline";
+"acdc.staleBanner" = "Reconnecting — data may be stale";
+"acdc.offlineBanner" = "Offline — showing last known data";
+"acdc.refresh" = "Refresh";
+"acdc.loadingA11y" = "Loading charging stats";
+"acdc.empty" = "No charging sessions to break down yet.";
+"acdc.errorTitle" = "Couldn't load charging stats";
+"acdc.retry" = "Retry";
