@@ -1,0 +1,139 @@
+=== P4 Feature view 0092 SpeedTrendChart (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh · Java 17
+  Destinations       : iOS Simulator "iPhone 16" present · macOS 26.5 SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 7m36s; release + debug
+                       XCFrameworks staged to apps/apple/Frameworks/Shared.xcframework).
+  Capability         : SwiftUI + Swift Charts present, iOS/macOS SDKs + iPhone 16 simulator present
+                       → NOT capability-BLOCKED. (This surface uses no MapKit — web "Charts / maps used: none".)
+
+WEB SOURCE (the specification)
+  web/src/features/charging/components/charging-curve/SpeedTrendChart.tsx — a two-series monthly trend chart.
+    props: sessions: ChargingSession[]  (the parent charging-curve page owns isLoading / error / freshness).
+    monthlyTrend (useMemo):
+      • group by month = (started_at ?? '').slice(0,7)            → "YYYY-MM"
+      • powerKw = convertPowerFromSI(peak_power_w ?? 0, 'kW')     == w / 1000
+      • isDcSession(s) = !!(charger_type || (peak_power_w && peak_power_w > 20_000))  → dc[] else ac[]
+      • sort months asc (localeCompare); per month dcAvgKw/acAvgKw = Math.round(avg(values) * 10) / 10
+    render: ChartContainer(title/subtitle/aria/export) → Recharts LineChart with two <Line> (dcAvgKw palette[0],
+            acAvgKw palette[1]), <YAxis label "Avg kW">, <XAxis month>, <Tooltip ChartTooltip>; bottom legend
+            "DC Fast" (cyan) / "AC / Home" (emerald). Empty handled by ChartContainer overlay when no rows.
+  Data sources (prompt): useTranslation, useChartPalette.  Shared components: @/components/charts.  Maps: none.
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/feature-views/SpeedTrendChart.*)
+  SpeedTrendChart.Adapter.swift   (399) — pure (Foundation-only) projection: SpeedTrendSession (web ChargingSession
+                                          subset), SpeedSeries (dc/ac → order/colorIndex/name+legend keys),
+                                          MonthlySpeedPoint (web MonthlySpeed), SpeedTrendRow, SpeedTrend{Phase,
+                                          LoadStatus,Connection}, SpeedTrendProjection (monthlyTrend / isDcSession /
+                                          chartRows / resolvePhase / monthKey / monthLabel / average / roundedTenth),
+                                          SpeedTrendFormat (locale decimal + kW), SpeedTrendSurface (slug),
+                                          SpeedTrendAccessibility (chart summary + per-month VoiceOver value).
+  SpeedTrendChart.Model.swift     (246) — P1/S11 telemetry seam (OSLog "view.opened"), P1/S10 i18n facade
+                                          (NSLocalizedString table "SpeedTrendChart" + web fallbacks), SpeedTrendUpdate
+                                          snapshot, P1/S8 SpeedTrendChartSource seam, @Observable SpeedTrendChartModel
+                                          (projects sessions → points/rows, phase + freshness, once-only view.opened,
+                                          guarded stale auto-refresh, offline keeps cache), InMemorySpeedTrendSource.
+  SpeedTrendChart.Views.swift     (399) — header (title+subtitle+freshness chip), stale/offline banner, two-series
+                                          Swift Charts LineMark chart (palette-keyed color+symbol, x-selection
+                                          RuleMark tooltip, "Avg kW" Y label), bottom legend (DC Fast / AC / Home),
+                                          loading skeleton, empty (ContentUnavailableView), error (retry).
+  SpeedTrendChart.swift           ( 69) — SpeedTrendChart View: TSFadeIn card, switch over phase (loading/error/
+                                          empty/content), onAppear start / onDisappear stop, a11y summary label.
+  SpeedTrendChart.Previews.swift  ( 87) — #if DEBUG previews: Content / Empty / Loading / Error / Stale / Offline.
+  SpeedTrendChart.strings         ( 52) — P1/S10 catalog (table "SpeedTrendChart"): the 11 web source keys + the
+                                          native state-envelope keys; plutil -lint = OK.
+  SpeedTrendChart.Tests.swift     (330) — 31 XCTest cases (adapter projection + formatting + state holder + a11y).
+  No shared wiring edits needed: feature-views is already a source path for TeslaSync / TeslaSync-macOS and an
+  included dir for swiftlint (added by the P4/0010 ToolCard wiring); the per-surface .strings keeps i18n
+  self-contained exactly as the sibling SentryModeChart surface does. Zero files outside SpeedTrendChart.* touched.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  ChartContainer card     → GlassPanel-equivalent: Color.TS.surface + TSRadius.lg + Color.TS.border, TSFadeIn(0.2).
+  Recharts LineChart      → SwiftUI Charts `Chart { LineMark }`, catmullRom, circle symbols (web dot r=3).
+  palette[0]/palette[1]   → TSChartPalette.color(at: 0)/(at: 1) for BOTH line stroke AND its legend swatch
+                            (the native legend swatch reuses the line color, resolving the web's cosmetic
+                            legend-vs-line color mismatch — documented, not silent).
+  <YAxis label "Avg kW">  → chartYAxisLabel "Avg kW"; <XAxis month> → localized "MMM yyyy" axis label over the
+                            raw "YYYY-MM" key (em dash for an invalid key); ChartTooltip → x-selection tooltip.
+  legend DC Fast/AC Home  → SpeedTrendLegend with charging.curve.dcFast / charging.curve.acHome.
+  i18n      : every string via the P1/S10 facade; the 11 web source keys are present + parity-checked (below).
+  a11y      : chart accessibilityLabel = the web ariaLabel; per-month .accessibilityValue "{month}: DC Avg X kW,
+              AC Avg Y kW"; card-level summary "Charging Speed Trend: N months. Latest {month}: …". Dynamic Type
+              (Font.TS roles), Reduce Motion respected (TSFadeIn / animation gated).
+  states    : web content/empty WIDENED to loading/content/empty/error/stale/offline (the P4 envelope, supplied by
+              the bound source — same precedent as the sibling SentryModeChart surface). No blank surfaces.
+  telemetry : view.opened surface="SpeedTrendChart" via SpeedTrendChartModel.start (P1/S11), default OSLog sink.
+
+i18n SOURCE-KEY PARITY  (every key extracted from the web source has a catalog entry)
+  OK charging.curve.speedTrend          OK charging.curve.col.month       OK charging.curve.dcAvg
+  OK charging.curve.speedTrendDesc      OK charging.curve.col.dcAvgKw      OK charging.curve.acAvg
+  OK charging.curve.speedTrend.aria     OK charging.curve.col.acAvgKw      OK charging.curve.dcFast
+  OK charging.curve.avgKw               OK charging.curve.acHome
+  (col.dcAvgKw / col.acAvgKw are the web export-table headers — carried in the catalog for full key parity.)
+
+GATES
+  [GREEN]    swiftformat --lint apps/apple                          : 0/862 files require formatting        (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict  (SpeedTrendChart scope, 6 files)   : 0 violations, 0 serious                (LINT_EXIT=0)
+             swiftlint --strict  (whole app, FYI)                   : 1 PRE-EXISTING violation — function_body_length
+                                                                       in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+                                                                       (NOT a SpeedTrendChart file; not introduced here).
+  [GREEN]    check-placeholders.ps1 (SpeedTrendChart.* files)       : PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 (PLACEHOLDER_EXIT=0)
+                                                                       (self-test PASS; the gate's bare -Path prefix
+                                                                        does not resolve in the flat feature-views
+                                                                        layout, so the exact surface files were scanned.)
+  [GREEN]    SpeedTrendChart build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode,
+             strict-concurrency complete = same as the app), compiling the EXACT shipped SpeedTrendChart.*
+             sources against the REAL repo design-system files (Tokens.swift / TSDesign.swift / Motion.swift /
+             Skeletons.swift; TSCard copied verbatim as the one leaf Skeletons.swift references):
+                 Build complete!  ·  Executed 31 tests, with 0 failures                                       (SWIFT_TEST_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO SpeedTrendChart errors; all blockers pre-exist this change):
+    iOS  : the app target fails at module-dependency resolution because the repo's co-located *.Tests.swift files
+           `import XCTest` into the app target (XCTest is unavailable to a plain app target) — e.g. the build
+           reports it against the PRE-EXISTING TeslaSync/feature-views/AuditPanel.Tests.swift. This co-located-test
+           convention (33 files, incl. every sibling surface's *.Tests.swift) is exactly the blocker recorded in
+           apps/macos-pending-verifications.md and is owned by the P4/P99 acceptance gate, not a single surface.
+    macOS: additionally requires a development SIGNING certificate ("TeslaSync-macOS"/"TeslaSyncWidgets-macOS" have
+           entitlements that require signing with a development certificate), which this runner does not provision.
+    grep of BOTH full-app build logs for "SpeedTrendChart … error:" = 0 hits (iOS:0, macOS:0). The 4 iOS + 4 macOS
+    error lines are entirely the two pre-existing categories above. These are the artifacts ADR-012 defers to the
+    macos-latest CI runner; task rule forbids fixing pre-existing unrelated breakage from a feature-view prompt.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                          explicitly DEFERRED with evidence — never reported as passing.
+  2  No scope narrowing : every web region + branch reproduced — DC/AC split, isDcSession heuristic, w→kW, one-decimal
+                          rounding, month sort, both lines, Y "Avg kW" label, tooltip, DC Fast / AC / Home legend.
+  3  No skip-and-assume : every gate executed on THIS runner; raw exits pasted; both Xcode failures confirmed, not assumed.
+  4  No stubs as final  : complete production surface + 31 real tests; placeholder scanner = 0; no TODO/stub/mock.
+  5  No parity shortcut : palette/labels/tooltip/legend/units/i18n/a11y/telemetry all mapped to platform tokens + verified.
+  6  No delegation      : implemented directly; no agents/sub-tasks.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry, P4 core all consumed.
+  8  No commit on red   : the COMMITTED artifact (SpeedTrendChart.*) is GREEN on every host gate AND on a real isolated
+                          Swift 6 strict-concurrency build+test; the deferred full-app gate is RED only on pre-existing,
+                          unrelated surfaces (co-located XCTest convention + macOS signing) this commit neither introduces nor touches.
+  9  No silent drift    : changes are confined to apps/apple/TeslaSync/feature-views/SpeedTrendChart.* (7 files) + this log.
+                          One documented native enhancement: legend swatch reuses the line's palette color (web cosmetic
+                          mismatch); one documented native widening: web content/empty → full P4 state envelope.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic SpeedTrendChart shipped at parity with the web source and INDEPENDENTLY VERIFIED:
+  it compiles and its 31 tests pass under the app's own Swift 6 strict-concurrency rules, against the real design-system,
+  with swiftlint/swiftformat/placeholder all green. The full-app iOS-Simulator + macOS xcodebuild build/test gate is
+  DEFERRED (not failed by this code): it is blocked by the repo-wide co-located-XCTest-in-app convention and by macOS
+  development-signing — both pre-existing, both owned by the P4/P99 acceptance gate on a signed macos-latest CI runner
+  per apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 surface to date (e.g. p4-apple-feature-views-0010-ToolCard).
+
+EXIT=0
+STATUS=DONE
