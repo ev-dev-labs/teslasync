@@ -30,7 +30,7 @@
 /* --- Service labels (web t('widget.uptime.${key}', humanize(key))) --- */
 "widget.uptime.database" = "Database";
 "widget.uptime.mqtt" = "MQTT";
-"widget.uptime.tesla_api" = "Tesla API";
+"widget.uptime.tesla_api" = "Tesla Api";
 "widget.uptime.fleet_telemetry" = "Fleet Telemetry";
 
 /* --- Status words (web renders the raw status; localized for known states) --- */

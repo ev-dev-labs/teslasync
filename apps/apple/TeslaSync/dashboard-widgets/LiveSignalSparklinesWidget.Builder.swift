@@ -150,6 +150,14 @@ public enum LiveSignalSparklinesBuilder {
     /// Projects the full row list for a snapshot — the headline "cached → projection"
     /// adapter the view binds to.
     public static func projectRows(_ update: LiveSignalSparklinesUpdate) -> [SignalRowProjection] {
+        if update.status == .loading,
+           update.availableSignals.isEmpty,
+           update.configuredSignals == nil,
+           update.liveValues.isEmpty,
+           update.histories.isEmpty
+        {
+            return []
+        }
         let signals = selectSignals(configured: update.configuredSignals, available: update.availableSignals)
         return signals.enumerated().map { index, signal in
             projectRow(

@@ -37,14 +37,14 @@ import XCTest
     }
 
     func testDayKeyIsUTCAndStable() {
-        // 2026-06-07T00:00:00Z exactly.
+        // 1780531200 = 2026-06-04T00:00:00Z exactly.
         let instant = Date(timeIntervalSince1970: 1_780_531_200)
-        XCTAssertEqual(SolarProductionBuilder.dayKey(instant), "2026-06-07")
+        XCTAssertEqual(SolarProductionBuilder.dayKey(instant), "2026-06-04")
     }
 
     func testSinceKeyIsThirtyDaysBeforeToday() {
-        let instant = Date(timeIntervalSince1970: 1_780_531_200) // 2026-06-07Z
-        XCTAssertEqual(SolarProductionBuilder.sinceKey(from: instant), "2026-05-08")
+        let instant = Date(timeIntervalSince1970: 1_780_531_200) // 2026-06-04Z
+        XCTAssertEqual(SolarProductionBuilder.sinceKey(from: instant), "2026-05-05")
     }
 
     func testEmptyHistoryYieldsEmptyProjection() {

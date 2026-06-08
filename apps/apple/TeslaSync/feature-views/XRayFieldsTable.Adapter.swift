@@ -131,7 +131,11 @@ public enum XRayFieldsSorter {
     ) -> [XRayFieldStat] {
         let factor = direction == .ascending ? 1 : -1
         return rows.sorted { lhs, rhs in
-            comparison(lhs, rhs, key: key) * factor < 0
+            let primary = comparison(lhs, rhs, key: key)
+            if primary != 0 {
+                return primary * factor < 0
+            }
+            return comparison(lhs, rhs, key: .field) < 0
         }
     }
 

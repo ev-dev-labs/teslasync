@@ -59,6 +59,7 @@ public struct SessionPage: Sendable, Equatable {
 public enum SessionPaginator {
     public static func slice(_ items: [SessionListItem], page: Int, pageSize: Int) -> [SessionListItem] {
         let window = SessionPage(page: page, pageSize: pageSize, total: items.count)
+        guard page >= 1, page <= window.pageCount else { return [] }
         let range = window.range
         guard range.lowerBound < items.count, !range.isEmpty else { return [] }
         return Array(items[range])

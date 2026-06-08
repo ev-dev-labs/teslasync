@@ -32,7 +32,7 @@ private func xrayISO(secondsAgo: Double) -> String {
 
 private enum XRayFixtures {
     static let rows: [XRayFieldStat] = [
-        XRayFieldStat(field: "battery_level", sampleCount: 10, lastSeenAt: xrayISO(secondsAgo: 300), valueKind: 3),
+        XRayFieldStat(field: "battery_level", sampleCount: 50, lastSeenAt: xrayISO(secondsAgo: 300), valueKind: 3),
         XRayFieldStat(field: "ambient_temp", sampleCount: 90, lastSeenAt: xrayISO(secondsAgo: 60), valueKind: 6),
         XRayFieldStat(field: "charge_state", sampleCount: 50, lastSeenAt: xrayISO(secondsAgo: 1000), valueKind: 1)
     ]
@@ -120,11 +120,11 @@ private final class SpyTelemetry: XRayFieldsTelemetry, @unchecked Sendable {
     func testSampleCountSort() {
         XCTAssertEqual(
             XRayFieldsSorter.sorted(XRayFixtures.rows, key: .sampleCount, direction: .descending).map(\.sampleCount),
-            [90, 50, 10]
+            [90, 50, 50]
         )
         XCTAssertEqual(
             XRayFieldsSorter.sorted(XRayFixtures.rows, key: .sampleCount, direction: .ascending).map(\.sampleCount),
-            [10, 50, 90]
+            [50, 50, 90]
         )
     }
 

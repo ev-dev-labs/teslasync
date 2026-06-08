@@ -264,6 +264,7 @@ public enum SolarProductionFormat {
         formatter.numberStyle = .decimal
         formatter.minimumFractionDigits = fractionDigits
         formatter.maximumFractionDigits = fractionDigits
+        formatter.roundingMode = .halfUp
         return formatter
     }
 
