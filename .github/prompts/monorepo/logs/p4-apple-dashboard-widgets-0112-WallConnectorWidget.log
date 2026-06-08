@@ -1,0 +1,193 @@
+=== P4 Dashboard widget 0112 WallConnectorWidget (Apple) ===
+Surface : apps/apple/TeslaSync/dashboard-widgets/WallConnectorWidget.*
+Web src : web/src/features/dashboard/widgets/WallConnectorWidget.tsx  (THE spec)
+Registry: id="wall-connector" category=charging default=2x4 min=1x2 max=4x40 (registry/charging.ts)
+Runner  : Darwin arm64 · Swift 6.3.2 (Xcode 26.5, Build 17F42) · iPhoneSimulator26.5 SDK · macOS 15 SDK
+          swiftlint + swiftformat (Homebrew) · pwsh 7 · xcodegen · DEVELOPER_DIR=/Applications/Xcode.app
+Date    : 2026-06-07
+
+--------------------------------------------------------------------------------
+CAPABILITY CHECK (prompt: requires SwiftUI + Swift Charts + MapKit, iOS18/iPadOS18/macOS15 HIG)
+--------------------------------------------------------------------------------
+  SwiftUI      : available (Xcode 26.5 toolchain).
+  Swift Charts : available — surface uses `import Charts` (BarMark) for the daily-kWh bar chart.
+  MapKit       : not required by this surface (web "Charts/maps used" = none; no Leaflet/recharts map).
+  Targets      : iOS 18.0 simulator + macOS 15.0 both compile the surface (evidence below).
+  => Capability PRESENT. Not BLOCKED on platform capability.
+
+--------------------------------------------------------------------------------
+HOST GATES (runnable on this runner) — all GREEN
+--------------------------------------------------------------------------------
+[1] swiftlint --strict  (config apps/apple/.swiftlint.yml, 6 shipped .swift files)
+    > Done linting! Found 0 violations, 0 serious in 6 files.
+    LINT_EXIT=0
+
+[2] swiftformat --lint  (config apps/apple/.swiftformat, 6 shipped .swift files)
+    > 0/6 files require formatting.
+    FORMAT_EXIT=0
+
+[3] iOS 18 simulator typecheck of the shipped surface (+ throwaway design-token shim; -D DEBUG)
+    cmd: xcrun -sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator \
+         -swift-version 6 -D DEBUG \
+         WallConnectorWidget.Adapter.swift .Model.swift .Views.swift WallConnectorWidget.swift \
+         .Previews.swift  /tmp/wc-harness/TokenShim.swift
+    (Adapter + Model + Views + main view + Previews all typecheck against the iOS 18 SDK.)
+    IOS_TYPECHECK_EXIT=0
+
+[4] macOS 15 executed XCTest + full SwiftUI/Charts compile (throwaway SPM harness, platforms=[.macOS(.v15)])
+    Package WCKit = real Adapter+Model+Views+WallConnectorWidget.swift + token shim; tests = real
+    WallConnectorWidget.Tests.swift (`@testable import TeslaSync` -> `@testable import WCKit`).
+    cmd: swift test   (DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer)
+    > Test Suite 'WallConnectorAdapterTests'     Executed 10 tests, with 0 failures
+    > Test Suite 'WallConnectorModelTests'       Executed 11 tests, with 0 failures
+    > Test Suite 'WallConnectorRegistryTests'    Executed  2 tests, with 0 failures
+    > Test Suite 'WallConnectorAccessibilityTests' Executed 2 tests, with 0 failures
+    > Test Suite 'All tests' passed              Executed 25 tests, with 0 failures (0 unexpected)
+    MAC_SPM_TEST_EXIT=0   (also proves the SwiftUI surface + Swift Charts compile clean on macOS 15)
+
+[5] check-placeholders.ps1 (ADR-011 stub gate)
+    (a) self-test (scanner integrity):  all [PASS]  (dirty->4, NotImplementedException, Kotlin TODO(,
+        clean->0, opt-out-with-reason allowed, opt-out-without-reason flagged)   SELFTEST_EXIT=0
+    (b) REAL scan of the 6 shipped .swift files (copied to a temp dir so the recursive -LiteralPath
+        scan actually visits them; -Language swift):
+        > PLACEHOLDER_ALLOWED=0
+        > PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0
+    (c) exact prompt-gate form `-Path apps/apple/TeslaSync/dashboard-widgets/WallConnectorWidget`
+        is a path PREFIX (no such literal dir) -> scanner returns COUNT=0 vacuously. Recorded, but the
+        binding verification is (b), which truly scanned the shipped files. EXIT=0 either way.
+    grep cross-check (case-insensitive) for TODO|FIXME|XXX|Coming soon|Placeholder|Lorem|stub|mock|
+        NotImplemented|fatalError("unimpl in the 6 files: NO FORBIDDEN TOKENS FOUND.
+
+--------------------------------------------------------------------------------
+FULL XCODE APP BUILD/TEST — attempted with REAL Xcode, captured, DEFERRED (NOT shown green)
+--------------------------------------------------------------------------------
+Prereq: xcodegen generate
+    > Created project at .../apps/apple/TeslaSync.xcodeproj   XCODEGEN_EXIT=0
+    > schemes present: TeslaSync.xcscheme, TeslaSync-macOS.xcscheme  (the prompt's two schemes exist)
+    (generated .xcodeproj is git-ignored; removed after capture so the tree stays clean.)
+
+[A] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+    > Pre-action "Stage Shared.xcframework via Gradle…" : SUCCEEDED
+        "xcframework successfully written out to .../Shared.xcframework"
+        (the absent Frameworks/Shared.xcframework — only a .gitkeep is committed — is BUILT at build
+         time from the KMP core; so the framework is NOT the blocker here.)
+    > ** BUILD FAILED **    IOS_EXIT=65
+    > Real cause — exactly 2 `error:` lines, BOTH a PREDECESSOR's test file (alphabetically first):
+        DigitalTwinWidget.Tests.swift:17:8: error: unable to resolve module dependency: 'XCTest'
+      project.yml lists `TeslaSync/dashboard-widgets` as APP-target sources, so every per-surface
+      `*.Tests.swift` (all ~22 surfaces, mine included) is compiled INTO the app target, where
+      `import XCTest` cannot resolve and `@testable import TeslaSync` is a self-import. The compile
+      aborts at the first XCTest import it reaches (DigitalTwin < WallConnector), before semantic
+      analysis. WallConnectorWidget.Tests.swift emits ONLY the same benign warning every predecessor
+      emits ("file is part of module 'TeslaSync'; ignoring import") — NO WallConnector-specific error,
+      NO duplicate-symbol error against any WallConnector non-test file.
+    => Wiring the per-surface `*.Tests.swift` into the XCTest target is a project.yml integration step,
+       outside this prompt's allowed files (WallConnectorWidget.* + this log) and explicitly out of
+       scope ("did NOT self-register into project.yml"), matching the 0073/0054/0036 precedent.
+
+[B] xcodebuild -scheme TeslaSync-macOS build
+    > Pre-action "Stage Shared.xcframework via Gradle…" : ran (Gradle cache warm).
+    > ** BUILD FAILED **    MAC_EXIT=65
+    > Real cause — 2 `error:` lines, both code-signing / entitlements (before any Swift compile):
+        "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+        "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+      project.yml ships DEVELOPMENT_TEAM="" + CODE_SIGN_STYLE=Automatic; macOS hardened entitlements
+      need a signing identity that only a signed/integration runner provides. NOT a defect in this
+      surface, and no WallConnector error.
+
+Net: both xcodebuild steps fail for INTEGRATION/ENVIRONMENT reasons (iOS: per-surface Tests.swift
+compiled into the app target via project.yml; macOS: dev code-signing required) — neither caused by
+the WallConnector surface. The surface itself is independently proven to compile against BOTH the
+iOS 18 simulator SDK and the macOS 15 SDK and to pass 25/25 executed XCTest, with zero lint/format/
+placeholder findings. xcodebuild app build/test is DEFERRED to the downstream integration/signed
+runner, per the established 0073 PowerFlowHistory / 0054 GuardMode / 0036 DigitalTwin precedent.
+
+--------------------------------------------------------------------------------
+PARITY MAP (web WallConnectorWidget.tsx -> native)
+--------------------------------------------------------------------------------
+Data sources (bound via P1/S8 state-holder seam — no HTTP in the view):
+  useTeslaEnergySites          -> WallConnectorUpdate.site (WallConnectorSiteInput.energySiteID)
+  useTeslaWCChargingHistory    -> WallConnectorUpdate.history ([WallConnectorEntryInput] ts+energyWh)
+  useEnergy / useTranslation   -> WallConnectorModel + WallConnectorStrings (P1/S10 facade)
+Projection (pure, unit-tested — port of the web useMemo memos):
+  chartData daily byDay map    -> WallConnectorProjection.dailyBars (sum energy_wh/1000 per day, M/D)
+  monthTotalKwh/Sessions/avg   -> WallConnectorProjection.summary (isSameMonth filter; avg=total/count)
+  hasData (some energy>0)      -> WallConnectorProjection.hasData
+States (every web branch reproduced — never a blank box):
+  loading  -> skeleton chrome (2 stat skeletons compact / 3 + chart skeleton standard)
+  no site  -> WallConnectorEmptyState "No Tesla Energy site linked"            (emptyReason .noSite)
+  no data  -> WallConnectorEmptyState "No Wall Connector data"                 (emptyReason .noData)
+  error    -> error chrome + Retry (web WidgetShell QueryError)
+  content  -> stat row (+ bar chart in standard); compact = This Month + Sessions, no chart
+  stale/offline -> freshness chip (live/stale/offline) on the header (ADR-013)
+Composition: isCompact = cols<=1 (no title, no chart, 2 stats) ; isWide = cols>=3 (denser Y ticks).
+Chart: web Recharts <BarChart><Bar fill="#10b981" radius=[4,4,0,0]> -> Swift Charts BarMark,
+  WallConnectorPalette.bar = sRGB(0.063,0.725,0.506) == #10b981, .cornerRadius(4), categorical M/D X.
+i18n keys (every web t() key -> P1/S10 table "WallConnectorWidget"):
+  title, noSite, noData, monthTotal(This Month), sessions(Sessions), avgPerSession(Avg / Session),
+  energy(Energy)  + unitKwh + native chrome (live/stale/offline/refresh/retry/open/loading/errorTitle/
+  axisDate/openA11y/description). No English literals in code — all via WallConnectorStrings.string.
+A11y: VoiceOver labels on every interactive control (refresh/retry/open) + stat cells + chart summary;
+  Dynamic Type (TS font tokens), Reduce Motion respected by TSSkeleton. Tested in WallConnectorAccessibilityTests.
+Telemetry (P1/S11): WallConnectorModel.start() emits view.opened surface="WallConnectorWidget" once
+  (OSLogWallConnectorTelemetry default; asserted by testStartEmitsViewOpenedTelemetryOnce).
+
+--------------------------------------------------------------------------------
+FILES SHIPPED (allowed scope: WallConnectorWidget.* + this log)
+--------------------------------------------------------------------------------
+  WallConnectorWidget.Adapter.swift   pure projection core + formatters + a11y (Foundation-only)
+  WallConnectorWidget.Model.swift     P1/S8 source seam + InMemory source + @Observable model + P1/S11
+                                      telemetry + registry types + P1/S10 strings facade
+  WallConnectorWidget.Views.swift     stat row + Swift Charts bar chart (#10b981) + empty state
+  WallConnectorWidget.swift           main surface: header/freshness/refresh/open + states + compact/standard
+  WallConnectorWidget.Previews.swift  #Preview for content/wide/compact/no-data/no-site/loading/error/offline/stale
+  WallConnectorWidget.Tests.swift     adapter + model + registry + a11y (25 tests, executed green via SPM)
+  WallConnectorWidget.strings         i18n catalog (per-surface table; folded into Localizable.xcstrings at integration)
+
+=== HONESTY COVENANT ===
+  1  No red-as-green   : the two xcodebuild app builds are shown DEFERRED with their REAL EXIT=65 and
+                         real captured causes (iOS: predecessor DigitalTwinWidget.Tests.swift XCTest
+                         unresolved because *.Tests.swift compile into the app target; macOS: dev
+                         code-signing). Every "OK" above is a command actually run with its real exit
+                         code (incl. an executed 25/25 XCTest run + iOS18 + macOS15 SDK compiles).
+  2  No scope narrowing: implemented ALL states (loading/no-site/no-data/error/content/stale/offline) +
+                         the daily-kWh bar chart + compact & standard composition + i18n + a11y +
+                         telemetry + registry.
+  3  No skip-and-assume: each host gate executed; the full xcodebuild was actually attempted (not
+                         assumed) and its failure root-caused from the real log.
+  4  No stubs as final : complete implementations; placeholder COUNT=0 (real scan) + grep-clean. Shim
+                         used ONLY in the throwaway typecheck/SPM harness, NEVER in shipped files.
+  5  No parity shortcuts: faithful port of the chartData daily aggregation + month summary memos + the
+                         single emerald <Bar> (exact #10b981, rounded top, categorical M/D) + the two
+                         empty messages + compact-vs-standard stat sets.
+  6  No delegation      : authored directly; no sub-agent delegation of the surface (delegation FORBIDDEN).
+  7  No predecessor bypass: did NOT edit project.yml / dashboard grid and did NOT touch the shared
+                         Localizable.xcstrings (parallel-unsafe) — strings shipped as the per-surface
+                         table exactly like 0073/0054/0036; DashboardWidgetSize/Registration defined
+                         locally (deduped at integration), mirroring MotorHistory/DigitalTwin/MQTTStatus.
+  8  No commit on red   : committing on all-green host gates; the xcodebuild steps are explicitly
+                         DEFERRED (integration/signed-runner scope), not passed off as green.
+  9  No silent drift    : changes confined to the allowed WallConnectorWidget.* files + this log
+                         (git status: only those 7 are new; pre-existing web edits left untouched;
+                         generated .xcodeproj/DerivedData removed).
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native WallConnectorWidget shipped at parity with the web source: a pure
+  Foundation-only projection core (executed-green XCTest, 25/25), a P1/S8 state-holder seam (no view
+  HTTP), P1/S11 view.opened telemetry, every web state + every i18n key + VoiceOver labels, and a
+  Swift Charts bar chart reproducing the web's single emerald daily-kWh series. Registry-correct
+  (wall-connector, charging, 2x4 / 1x2 / 4x40). All host-runnable gates pass AND the surface compiles
+  against BOTH the iOS 18 simulator and the macOS 15 SDK under Swift 6. The full Xcode app build/test
+  is DEFERRED to the downstream integration/signed runner (per-surface *.Tests.swift target wiring +
+  macOS dev signing — both outside this prompt's allowed files and not defects in this surface),
+  matching the 0073 PowerFlowHistory / 0054 GuardMode / 0036 DigitalTwin precedent.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/WallConnectorWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0112-WallConnectorWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add WallConnectorWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE
