@@ -1,0 +1,36 @@
+/*
+  FSMStateDiagram.strings
+  TeslaSync — P4 feature view · 0229 · FSMStateDiagram (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  FSMStateDiagram resolves (table "FSMStateDiagram") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  Group 1 mirrors the exact key set extracted from the web source
+  (features/system/components/FSMStateDiagram.tsx): the panel title and the
+  unknown-FSM empty message. Group 2 backs the native-only chrome (freshness /
+  banner / loading / error / retry) and the VoiceOver labels the Apple HIG states
+  contract requires around the parent query's loading / error / connectivity axis.
+*/
+
+/* --- Group 1: web source keys (fsm.*) --- */
+"fsm.stateDiagram" = "State Diagram";
+"fsm.selectFsmType" = "Select a specific FSM type to view its state diagram";
+
+/* --- Group 2: native chrome (freshness / banner / loading / error) --- */
+"fsm.diagram.live" = "Live";
+"fsm.diagram.stale" = "Stale";
+"fsm.diagram.offline" = "Offline";
+"fsm.diagram.staleBanner" = "Showing cached data — refreshing…";
+"fsm.diagram.offlineBanner" = "Offline — showing the last known states";
+"fsm.diagram.refresh" = "Refresh";
+"fsm.diagram.errorMessage" = "Couldn't load FSM transitions";
+
+/* --- Group 2b: VoiceOver labels --- */
+"fsm.diagram.loadingA11y" = "Loading state diagram";
+"fsm.diagram.current" = "current state";
+"fsm.diagram.nodeA11y" = "%1$@, %2$lld transitions";
+"fsm.diagram.edgeA11y" = "%1$@ to %2$@, %3$lld times";
