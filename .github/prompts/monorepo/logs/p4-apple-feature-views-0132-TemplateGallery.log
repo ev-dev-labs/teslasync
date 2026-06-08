@@ -1,0 +1,148 @@
+=== P4 Feature view 0132 TemplateGallery (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon) — swift target arm64-apple-macosx26.0
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · pwsh 7 present
+  SDK                : MacOSX.sdk (CommandLineTools) — SwiftUI + Swift Charts + MapKit + CoreLocation present;
+                       the surface was compiled, linked, and RUN against the macOS 15 SDK (-target arm64-apple-macos15,
+                       -swift-version 6 = the app's own Swift 6 strict-concurrency mode).
+  Capability (Xcode) : Xcode.app is NOT installed on this runner. `xcode-select -p` = /Library/Developer/CommandLineTools;
+                       `xcodebuild -version` -> "tool 'xcodebuild' requires Xcode, but active developer directory
+                       '/Library/Developer/CommandLineTools' is a command line tools instance"; `xcrun --find xctest`
+                       -> "unable to find utility 'xctest'"; `xcrun simctl` -> "unable to find utility 'simctl'".
+                       => the two full-app `xcodebuild build test` gate steps (iOS Simulator + macOS) cannot be invoked
+                       on THIS runner; they are DEFERRED to the macOS acceptance gate (see DISPOSITION). The SwiftUI/
+                       Charts/MapKit FRAMEWORKS themselves are present and were verified (compile + link + run below),
+                       so the surface itself is independently verified green — it is not framework-capability-blocked.
+
+WEB SOURCE (the specification)
+  web/src/features/dashboard/components/TemplateGallery.tsx — a Modal that swaps IN PLACE between:
+    GALLERY : StaggerContainer grid → a dashed "Blank Dashboard" card (onApply('__blank__'))
+                                     + one TemplateCard per DASHBOARD_PRESETS entry
+              TemplateCard = MiniGridPreview + name + <Badge>{widgets.length}</Badge> + desc(line-clamp-2)
+                             + useCategoryIcons() row (first widget icon per category, max 5)
+    DETAIL  : FadeIn → MiniGridPreview(h-48) + name + desc + "{{count}} widgets"
+                       + 2-col widget grid (def.icon + def.name) + [Back] [Use This Template]
+    title   : selected ? t('templates.detail') : t('templates.title')   (dynamic, in the Modal chrome)
+  Data: DASHBOARD_PRESETS (10 presets) + getWidgetDef (registry) + buildDefaultLayouts (lg auto-flow pack) +
+        useCategoryIcons (pure useMemo). NO fetch -> the web carries NO loading/error/stale/offline branch;
+        the preset catalog is a static client-seed import, available offline by construction.
+  Data sources listed by the prompt: useTranslation (P1/S10 i18n) · useCategoryIcons (pure derivation).
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/feature-views/TemplateGallery.*)
+  TemplateGallery.Model.swift      — surface id (slug, __blank__), value types (category, sizing, widget, template,
+                                      grid item/grid, card/detail projections)
+  TemplateGallery.State.swift      — TemplateGalleryPhase (loading/loaded/empty/failed -> every state renders),
+                                      TemplateGalleryCatalogSource (P1/S8 seam) + error, TemplateGalleryStrings
+                                      (P1/S10 facade, table "TemplateGallery"), TemplateGalleryAccessibility
+  TemplateGallery.Catalog.swift    — canonical catalog: 10 presets reproducing DASHBOARD_PRESETS + the registry
+                                      metadata (name/category/sizes) + lucide->SF Symbol map; canonical source
+  TemplateGallery.Adapter.swift    — mini-grid auto-flow packer (web buildDefaultLayouts lg), category icons
+                                      (web useCategoryIcons), card/detail/phase projections (cached -> projection)
+  TemplateGallery.Telemetry.swift  — TemplateGalleryTelemetry seam + OSLogTemplateGalleryTelemetry (redaction-safe
+                                      os_log "view.opened")
+  TemplateGallery.swift            — @MainActor @Observable TemplateGalleryModel (P1/S8) + TemplateGallery view
+                                      (dynamic-title chrome, TSRouteTransition in-place swap, phase switch) +
+                                      .tsTemplateGallery sheet presenter (web <Modal open onClose>)
+  TemplateGallery.Views.swift      — TemplateGalleryList/BlankCard/Card/Detail/WidgetChip/CategoryRow/CountBadge
+  TemplateGallery.Components.swift — MiniGrid (web MiniGridPreview) + card chrome + loading/empty/error surfaces
+  TemplateGallery.Previews.swift   — #if DEBUG previews: gallery, detail, empty, error, loading, dark
+  TemplateGallery.Tests.swift      — XCTest: catalog integrity, grid packer, category icons, projections, phase,
+                                      strings, accessibility, telemetry, model selection (per-surface bundle,
+                                      folded into the TeslaSync(/-macOS) test targets at integration time)
+  TemplateGallery.strings          — P1/S10 catalog contribution (chrome + 10 names + 10 descs + a11y + states +
+                                      16 category labels), folds into Localizable.xcstrings at integration time
+  Wiring: project.yml + .swiftlint.yml ALREADY include "TeslaSync/feature-views" (verified) — no wiring change
+          required; the diff is confined to TemplateGallery.* + this log (prompt allowed-files honoured).
+
+PARITY MAPPING (web -> Apple platform tokens; no Tailwind ported)
+  Modal                  -> self-contained sheet surface (dynamic title + close) presented via .tsTemplateGallery
+  FadeIn/Stagger/Route   -> TSFadeIn / TSStaggerContainer+Item / TSRouteTransition (Sources/Components/Motion)
+  Button / Badge         -> TSButton / neutral Capsule count badge (TSBadge styling, verbatim numeral)
+  GlassPanel chrome      -> TSGlassPanel-style surfaces + Color.TS.surfaceGlass/border (Sources/Components/UI)
+  lucide icons           -> SF Symbols (validated vs the system catalog: Battery->battery.100, Zap->bolt.fill,
+                            Workflow->arrow.triangle.branch, DoorOpen->door.left.hand.open, Rocket->checklist,
+                            HeartPulse->waveform.path.ecg.rectangle, CircleDot->smallcircle.filled.circle.fill, ...)
+  MiniGridPreview        -> GeometryReader tile layout from the packed lg layout (cols/safeMaxY aspect ratio)
+  i18n                   -> TemplateGalleryStrings (key + web fallback), table "TemplateGallery"; zero English
+                            literals in the view body (all via key+fallback, exactly like web t(key, default)).
+                            Widget def.name is DATA (rendered verbatim) — parity with web {def.name}.
+  a11y                   -> card label "<name>, <n> widgets" + hint; blank label combines title+desc; category
+                            chips named; mini-grid summarised; icons decorative; Dynamic Type via tokens;
+                            reduce-motion honoured by the motion components + the card press style.
+  telemetry              -> view.opened surface="TemplateGallery" via TemplateGallerySurface.reportOpen (P1/S11).
+  states                 -> loading (skeleton cards) / loaded (gallery|detail) / empty (ContentUnavailableView) /
+                            error (retry) all render; offline is intrinsic (bundled catalog); no invented
+                            stale/offline chrome (the web source has no freshness concept) = no silent drift.
+
+GATES
+  [GREEN]    swiftformat --lint  (TemplateGallery.* , 10 files)        : 0/10 require formatting        FORMAT_EXIT=0
+             swiftformat --lint  (apps/apple, whole — gate scope, FYI) : 1/1112 require formatting — the ONE file is
+                                                                          TeslaSync/feature-views/ActionBuilder.Previews.swift
+                                                                          (blankLinesBetweenScopes), a DIFFERENT, PRE-EXISTING
+                                                                          surface NOT introduced/touched here. Zero
+                                                                          TemplateGallery files flagged.
+  [GREEN]    swiftlint --strict  (TemplateGallery.* , 10 files)        : 0 violations                   LINT_EXIT=0
+  [GREEN]    check-placeholders.ps1 -Path <surface> -Language swift    : PLACEHOLDER_ALLOWED=0
+                                                                          PLACEHOLDER_COUNT=0           PLACEHOLDER_EXIT=0
+  [GREEN]    swiftc -typecheck  (8 shipped production files + the REAL repo design-system: Tokens.swift +
+             Sources/Components/* + Sources/Design/*), -swift-version 6 -strict-concurrency=complete
+             -target arm64-apple-macos15                                : 0 errors / 0 warnings         TYPECHECK_EXIT=0
+  [GREEN]    swiftc -typecheck  (TemplateGallery.Tests.swift, in-module against the same sources, XCTest shimmed
+             because XCTest ships with Xcode/absent here)              : 0 errors / 0 warnings         TYPECHECK_TESTS_EXIT=0
+  [GREEN]    RUNTIME EXECUTION — the EXACT shipped TemplateGallery.* sources were compiled to a native executable
+             (Swift 6, strict concurrency, macOS 15) against the real design-system and RUN, asserting every
+             data-layer test case at runtime: catalog order/counts/instance-ids/full metadata coverage; the
+             minimal-preset mini-grid packing == the web auto-flow [(0,0,1,2)(1,0,2,2)(3,0,1,2)(0,2,4,2), rows=4];
+             no tile overflows 4 cols; empty-template fallback rows=2; useCategoryIcons order+icons+cap5+limit;
+             phase loaded/empty/failed; card/detail projections; widgetCount "7 widgets"/"1 widgets"; a11y phrasing;
+             telemetry slug "TemplateGallery"; model selection + empty/failed sources.
+                  Output: "ALL TEMPLATEGALLERY RUNTIME CHECKS PASSED"  BUILD_EXIT=0  RUN_EXIT=0
+  [GREEN]    SF Symbol validation (AppKit NSImage(systemSymbolName:)) : every symbol used by the surface resolves
+                                                                         in the system catalog.
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : NOT RUN
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : NOT RUN
+  WHY DEFERRED (NOT a TemplateGallery failure):
+    This runner has only CommandLineTools — no Xcode.app — so xcodebuild / xctest / simctl cannot be invoked
+    (raw errors pasted under PREFLIGHT). The full-app iOS-Simulator + macOS build/test gate is therefore owned by
+    the P4/P99 Apple acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md
+    (the same disposition every prior P4 surface used, e.g. p4-apple-feature-views-0010-ToolCard). It is additionally
+    blocked, on ANY runner, by the pre-existing parallel-merge collisions that doc enumerates (duplicate
+    DashboardWidgetSize/PowerFlowConnection across dashboard-widget files; co-located *.Tests.swift; macOS signing)
+    — all outside this prompt's scope (task rule: do not fix pre-existing unrelated breakage). The TemplateGallery
+    surface itself is verified green INDEPENDENTLY above (typecheck + a compiled, executed runtime harness).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild steps are reported [DEFERRED]/NOT RUN with raw
+                           capability evidence — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced — gallery grid, Blank card, TemplateCard (mini-grid,
+                           badge, desc, category icons), Detail (preview, widget grid, Back/Use), dynamic title.
+  3  No skip-and-assume  : every host-runnable gate EXECUTED on THIS runner; raw exits pasted; the xcodebuild
+                           unavailability is demonstrated (not assumed) via xcode-select/xcodebuild/xcrun output.
+  4  No stubs as final   : complete production surface; the placeholder scanner = 0; the data layer is RUN, not
+                           just compiled. (StubSource/SpyTelemetry are test doubles, in tests only.)
+  5  No parity shortcut  : layout packer, category-icon derivation, i18n keys+fallbacks, a11y, telemetry, every
+                           preset's widgets/sizes all reproduced + verified against the web source.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 (Observable model + injectable source), P1/S9 tokens, P1/S10 i18n facade,
+                           P1/S11 view.opened, P4 component library — all present and consumed.
+  8  No commit on red    : the COMMITTED artifact is GREEN on every host-runnable gate AND on a real compiled+executed
+                           runtime harness; the deferred full-app gate is a runner-toolchain matter (no Xcode), not a
+                           code failure, and is the repo's sanctioned macos-pending deferral.
+  9  No silent drift     : changes confined to TemplateGallery.* + this log; no stale/offline UI invented; the web
+                           source's absence of remote phases is documented, not papered over.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic TemplateGallery shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: the exact shipped sources compile AND RUN under the app's own Swift 6 strict-concurrency rules against
+  the real design-system, with every data-layer assertion passing at runtime, and swiftlint/swiftformat/placeholder/
+  SF-symbol all green. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this
+  code): xcodebuild/xctest/simctl are unavailable on this CommandLineTools-only runner, and the full-app build is
+  separately blocked by pre-existing, unrelated parallel-merge collisions + macOS signing — both owned by the P4/P99
+  acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md. This matches the repo's
+  sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE
