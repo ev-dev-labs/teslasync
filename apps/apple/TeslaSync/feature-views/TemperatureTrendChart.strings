@@ -1,0 +1,49 @@
+/*
+  TemperatureTrendChart.strings
+  TeslaSync — P4 feature view · 0162 · TemperatureTrendChart (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `TemperatureTrendChart` resolves (table "TemperatureTrendChart") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/driving/components/drivetrain-health/TemperatureTrendChart.tsx). The
+  remainder back the native state envelope (freshness chip, connectivity banner,
+  loading / empty / error chrome) and the chart axis / accessibility summaries.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"drivetrain.tempHistory" = "Temperature Trend";
+"drivetrain.tempHistorySub" = "Outside temperature recorded during recent drives";
+"drivetrain.tempHistory.aria" = "Outside temperature trend line chart per recent drive";
+"drivetrain.col.date" = "Date";
+"drivetrain.col.outside" = "Outside";
+"drivetrain.outsideTemp" = "Outside Temp";
+"drivetrain.warmZone" = "Warm Zone";
+"drivetrain.freezing" = "Freezing";
+
+/* --- Shared --- */
+"common.noData" = "No data available";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"drivetrain.temp.live" = "Live";
+"drivetrain.temp.stale" = "Stale";
+"drivetrain.temp.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"drivetrain.temp.staleBanner" = "Reconnecting — temperature trend may be stale";
+"drivetrain.temp.offlineBanner" = "Offline — showing the last loaded temperature trend";
+
+/* --- Accessibility summary --- */
+"drivetrain.temp.driveCount" = "drives";
+"drivetrain.temp.latest" = "Latest";
+"drivetrain.temp.noReading" = "no reading";
+
+/* --- Loading / empty / error chrome --- */
+"drivetrain.temp.loading" = "Loading temperature trend";
+"drivetrain.temp.emptyHint" = "Outside temperature trends will appear here once at least two recent drives are recorded.";
+"drivetrain.temp.errorTitle" = "Couldn't load temperature trend";
+"drivetrain.temp.retry" = "Retry";
