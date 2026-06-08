@@ -1,0 +1,35 @@
+/*
+  StatHeroSlide.strings
+  TeslaSync — P4 feature view · 0068 · StatHeroSlide (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `StatHeroSlide` resolves (table "StatHeroSlide") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  The first block is the exact set of keys extracted from the web source
+  (features/analytics/components/review/StatHeroSlide.tsx). The `{{percent}}` /
+  `{{days}}` tokens are i18next interpolation placeholders the adapter substitutes.
+  The remaining keys back the native-only chrome (loading / empty / error copy,
+  freshness chip, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"yearReview.distanceComparison" = "That's {{percent}}% around the Earth!";
+"yearReview.distanceSmall" = "Every kilometer counts!";
+"yearReview.energyUnit" = "kWh charged";
+"yearReview.energyComparison" = "Enough to power a home for {{days}} days";
+
+/* --- Native chrome: states --- */
+"statHero.loading" = "Loading year in review";
+"statHero.noData" = "No year-in-review data";
+"statHero.emptyHint" = "Drive through the year to build up your recap.";
+"statHero.errorTitle" = "Couldn't load year in review";
+
+/* --- Native chrome: actions + freshness --- */
+"statHero.retry" = "Retry";
+"statHero.refresh" = "Refresh";
+"statHero.offlineBanner" = "Offline — showing last known recap";
+"statHero.staleBanner" = "Reconnecting — recap may be stale";
