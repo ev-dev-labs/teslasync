@@ -1,0 +1,103 @@
+/*
+  NotificationChannelsView.strings
+  TeslaSync — P4 feature view · 0188 · NotificationChannelsView (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface (table
+  "NotificationChannelsView"). Every key the native surface resolves lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its strings without editing the
+  shared catalog.
+
+  The first groups are the EXACT keys extracted from the web source
+  (web/src/features/notifications/components/NotificationChannelsView.tsx). The web
+  hardcodes the channel/field labels in `CHANNEL_TYPES`; the native HIG contract requires
+  every visible string to resolve through the facade, so each label is given a stable key
+  with the web English as its fallback. The remaining keys back the native chrome (toast,
+  freshness chip, banners, and the load/empty/error states the P4 state list requires).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"notifications.channels.nameRequired" = "Name is required";
+"notifications.channels.testSuccess" = "Test notification sent successfully!";
+"notifications.channels.testSuccessShort" = "Test sent!";
+"notifications.channels.testFailed" = "Test failed";
+"notifications.channels.editTitle" = "Edit Channel";
+"notifications.channels.addTitle" = "Add Channel";
+"notifications.channels.typeLabel" = "Channel Type";
+"notifications.channels.nameLabel" = "Channel Name";
+"notifications.channels.namePlaceholderPrefix" = "My";
+"notifications.channels.configLabel" = "Configuration";
+"notifications.channels.testHint" = "Save then click \"Send Test\" to verify the configuration.";
+"notifications.channels.enabled" = "Enabled";
+"notifications.channels.disabled" = "Disabled";
+"notifications.channels.testing" = "Testing…";
+"notifications.channels.test" = "Test Connection";
+"notifications.channels.add" = "Add Channel";
+"notifications.channels.active" = "Active";
+"notifications.channels.toggledOff" = "Channel disabled";
+"notifications.channels.toggledOn" = "Channel enabled";
+"notifications.channels.toggleFailed" = "Failed to toggle channel";
+"notifications.channels.testShort" = "Test";
+"notifications.channels.deleted" = "Channel deleted";
+"notifications.channels.deleteFailed" = "Failed to delete channel";
+"notifications.channels.empty.title" = "No channels configured";
+"notifications.channels.empty.message" = "Add a notification channel to start receiving alerts via Discord, Slack, Telegram, Email, and more.";
+
+/* --- Stats row (web `MetricCard` labels) --- */
+"notifications.stats.sent" = "Total Sent";
+"notifications.stats.failed" = "Failed";
+"notifications.stats.pending" = "Pending";
+"notifications.stats.activeChannels" = "Active Channels";
+
+/* --- Shared/common keys (web `t('common.*')`) --- */
+"common.cancel" = "Cancel";
+"common.saving" = "Saving…";
+"common.update" = "Update";
+"common.create" = "Create";
+"common.edit" = "Edit";
+"common.delete" = "Delete";
+
+/* --- Channel provider labels (web `CHANNEL_TYPES[].label`) --- */
+"notifications.channels.kind.discord" = "Discord";
+"notifications.channels.kind.slack" = "Slack";
+"notifications.channels.kind.telegram" = "Telegram";
+"notifications.channels.kind.email" = "Email";
+"notifications.channels.kind.webhook" = "Webhook";
+"notifications.channels.kind.ntfy" = "ntfy";
+"notifications.channels.kind.pushover" = "Pushover";
+
+/* --- Channel field labels (web `CHANNEL_TYPES[].fields[].label`) --- */
+"notifications.channels.field.webhook_url" = "Webhook URL";
+"notifications.channels.field.bot_token" = "Bot Token";
+"notifications.channels.field.chat_id" = "Chat ID";
+"notifications.channels.field.smtp_host" = "SMTP Host";
+"notifications.channels.field.smtp_port" = "SMTP Port";
+"notifications.channels.field.smtp_username" = "SMTP Username";
+"notifications.channels.field.smtp_password" = "SMTP Password";
+"notifications.channels.field.from_address" = "From Address";
+"notifications.channels.field.to_addresses" = "Recipients (comma-separated)";
+"notifications.channels.field.url" = "URL";
+"notifications.channels.field.method" = "HTTP Method";
+"notifications.channels.field.headers" = "Headers (JSON)";
+"notifications.channels.field.body_template" = "Body Template";
+"notifications.channels.field.server_url" = "Server URL";
+"notifications.channels.field.topic" = "Topic";
+"notifications.channels.field.user_key" = "User Key";
+"notifications.channels.field.app_token" = "App Token";
+
+/* --- Native chrome: save failure (web `setFormError(String(e))`) --- */
+"notifications.channels.saveFailed" = "Failed to save channel";
+
+/* --- Native chrome: accessibility labels --- */
+"notifications.channels.surfaceA11y" = "Notification channels";
+"notifications.channels.loadingA11y" = "Loading channels";
+"notifications.channels.toggleLabel" = "Toggle channel";
+
+/* --- Native chrome: live freshness chip + banners --- */
+"notifications.channels.refresh" = "Refresh";
+"notifications.channels.live" = "Live";
+"notifications.channels.stale" = "Stale";
+"notifications.channels.offline" = "Offline";
+"notifications.channels.staleBanner" = "Reconnecting — data may be stale";
+"notifications.channels.offlineBanner" = "Offline — showing last known data";
