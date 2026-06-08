@@ -1,0 +1,48 @@
+/*
+  MotorEfficiencyInsights.strings
+  TeslaSync — P4 feature view · 0171 · MotorEfficiencyInsights (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `MotorEfficiencyInsights` resolves (table "MotorEfficiencyInsights") lives here with
+  its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/driving/components/driving-dynamics/MotorEfficiencyInsights.tsx). The
+  second group backs the native chrome: the surface title that hosts the freshness
+  affordance, plus the P4 leaf freshness / loading / error copy, so the Swift sources
+  hold no English prose literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"dynamics.torqueDistribution" = "Torque Distribution";
+"dynamics.throttleBehavior" = "Throttle Behavior";
+"dynamics.motorThermal" = "Motor Thermal";
+"dynamics.noMotorData" = "No motor data recorded yet";
+"dynamics.avgTorque" = "Avg Torque";
+"dynamics.maxTorque" = "Max Torque";
+"dynamics.highTorqueTime" = "High Torque Time";
+"dynamics.avgPower" = "Avg Power";
+"dynamics.drivingStyle" = "Style";
+"dynamics.conservative" = "Conservative";
+"dynamics.moderate" = "Moderate";
+"dynamics.aggressive" = "Aggressive";
+"dynamics.avgMotorTemp" = "Avg Motor Temp";
+"dynamics.maxMotorTemp" = "Max Motor Temp";
+"dynamics.thermalGood" = "Thermal: Good";
+"dynamics.thermalWarm" = "Thermal: Warm";
+"dynamics.thermalHot" = "Thermal: Hot";
+
+/* --- Native chrome: surface title + P4 leaf freshness / loading / error --- */
+"dynamics.motorEfficiency" = "Motor Efficiency";
+"motorEfficiency.live" = "Live";
+"motorEfficiency.stale" = "Stale";
+"motorEfficiency.offline" = "Offline";
+"motorEfficiency.staleBanner" = "Reconnecting — data may be stale";
+"motorEfficiency.offlineBanner" = "Offline — showing last known data";
+"motorEfficiency.refresh" = "Refresh";
+"motorEfficiency.loadingA11y" = "Loading motor efficiency";
+"motorEfficiency.errorTitle" = "Couldn't load motor data";
+"motorEfficiency.retry" = "Retry";
