@@ -1,0 +1,48 @@
+/*
+  WallConnectorWidget.strings
+  TeslaSync — P4 dashboard widget · 0112 · WallConnectorWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `WallConnectorWidget` resolves (table "WallConnectorWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first block is the exact set of keys extracted from the web source
+  (features/dashboard/widgets/WallConnectorWidget.tsx). The remaining keys back the
+  native-only chrome (freshness chip, retry/empty/error copy, axis + accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.wallConnector.title" = "Wall Connector";
+"widget.wallConnector.noSite" = "No Tesla Energy site linked";
+"widget.wallConnector.noData" = "No Wall Connector data";
+"widget.wallConnector.monthTotal" = "This Month";
+"widget.wallConnector.sessions" = "Sessions";
+"widget.wallConnector.avgPerSession" = "Avg / Session";
+"widget.wallConnector.energy" = "Energy";
+
+/* --- Registry metadata (registry/charging.ts → "wall-connector") --- */
+"widget.wallConnector.description" = "Home charging stats from Tesla Wall Connector: daily kWh, session history";
+
+/* --- Unit symbols (non-translated, surfaced through the facade) --- */
+"widget.wallConnector.unitKwh" = "kWh";
+
+/* --- Chart axis labels --- */
+"widget.wallConnector.axisDate" = "Date";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.wallConnector.live" = "Live";
+"widget.wallConnector.stale" = "Stale";
+"widget.wallConnector.offline" = "Offline";
+"widget.wallConnector.refresh" = "Refresh";
+"widget.wallConnector.retry" = "Retry";
+"widget.wallConnector.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.wallConnector.loading" = "Loading Wall Connector data";
+"widget.wallConnector.errorTitle" = "Couldn't load Wall Connector data";
+
+/* --- Accessibility --- */
+"widget.wallConnector.openA11y" = "Open the energy page";
