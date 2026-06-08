@@ -1,0 +1,148 @@
+=== P4 Feature view 0129 QuickNav (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.x (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh · Java 17
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5) present · macOS 15 SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL; debug + release XCFrameworks
+                       staged to apps/apple/Frameworks/Shared.xcframework — both xcodebuild runs logged
+                       "✓ Shared.xcframework staged").
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS simulators + KMP all present → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/dashboard/components/QuickNav.tsx — a static, PURELY presentational shortcut grid
+  (its only hook is useTranslation):
+    <div grid grid-cols-2 sm:grid-cols-4 gap-3>
+      NAV_ITEMS.map( nav =>
+        <Link to={nav.to}>
+          <GlassPanel hover p-4>
+            <div flex items-center gap-3>
+              icon box (rounded-lg p-2, bg {color}10, icon h-5 w-5 {color})
+              <p text-sm font-semibold text-primary>{t(nav.labelKey, nav.label)}</p>
+              <p text-[10px] text-muted>{t(nav.descKey, nav.desc)}</p>
+              <ChevronRight h-4 w-4 text-gray-700 group-hover:text-secondary/>
+        </Link> )
+  NAV_ITEMS = Drives(/drives,#00f0ff) · Charging(/charging,#10b981) · Analytics(/analytics,#a855f7)
+            · Battery(/battery,#f59e0b). i18n keys nav.{x}/nav.{x}Desc. No data/loading/empty/error branches
+  in the source itself (it is the inner grid the QuickNavWidget wrapper composes).
+
+ARTIFACTS SHIPPED (allowed scope: feature-views/QuickNav.* + this log — nothing else touched)
+  apps/apple/TeslaSync/feature-views/QuickNav.Adapter.swift   — pure core: QuickNavShortcut catalog (web NAV_ITEMS),
+                                                                QuickNavTileModel + QuickNavTileBuilder, QuickNavComponentLayout
+                                                                (2/4-col breakpoint), QuickNavPhase/CatalogStatus/Connection,
+                                                                QuickNavProjection, QuickNavSurface (slug), QuickNavComponentAccessibility
+  apps/apple/TeslaSync/feature-views/QuickNav.Model.swift     — P1/S11 telemetry seam (+OSLog default), P1/S10 i18n facade
+                                                                (table "QuickNav"), QuickNavCatalogUpdate, QuickNavCatalogSource,
+                                                                @Observable QuickNavViewModel (guarded stale auto-refresh),
+                                                                Static + InMemory sources, QuickNav.surfaceSlug
+  apps/apple/TeslaSync/feature-views/QuickNav.Views.swift     — content grid, shortcut tile (glass link), press style,
+                                                                loading grid, empty, error(+retry), stale/offline chip
+  apps/apple/TeslaSync/feature-views/QuickNav.swift           — QuickNav SwiftUI view (renders all states; onSelect host nav)
+  apps/apple/TeslaSync/feature-views/QuickNav.Previews.swift  — #if DEBUG previews for all 6 states
+  apps/apple/TeslaSync/feature-views/QuickNav.Tests.swift     — 42 XCTest cases
+  apps/apple/TeslaSync/feature-views/QuickNav.strings         — per-surface table "QuickNav" (web nav.* parity + chrome keys)
+  NO shared-wiring edits were needed (unlike the first feature-view 0010): "TeslaSync/feature-views" is ALREADY in
+  project.yml (iOS+macOS) and .swiftlint.yml, and strings use the per-surface .strings table convention (the later,
+  scope-compliant pattern used by SummaryStatsRow.strings / AlertsSection.strings) — so the shared catalog is NOT edited.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported; P1/S9 tokens only)
+  GlassPanel link            → glass tile (Color.TS.surfaceGlass + Color.TS.border, TSRadius.md), Button + press style
+  grid-cols-2 sm:grid-cols-4 → QuickNavComponentLayout.columns(forWidth:) (≥640 → 4, else 2), measured via onGeometryChange
+  lucide icons               → SF Symbols (Route→point.topleft…curvepath · BatteryCharging→battery.100.bolt ·
+                               Gauge→gauge.medium · Activity→waveform.path.ecg) in a 36×36 tinted chip
+  nav.color (#hex)           → QuickNavShortcut.accentColor — the EXACT web hex (dynamic per-item value, not a token)
+  routes                     → AppRouteParser parity: /drives→/driving, /charging→/charging, /analytics→/analytics,
+                               /battery→/energy (webPath retained for parity/diagnostics)
+  states (P4)                : loading(skeleton grid) · empty(ContentUnavailableView) · error(+Retry) ·
+                               content(live) · content(stale → chip + ONE guarded auto-refresh) · content(offline → cached + chip)
+  i18n                       : P1/S10 facade, table "QuickNav"; web nav.* keys + chrome keys; zero English literals in code
+  a11y                       : each tile = Button, combined label "<label>. <detail>" + hint "Opens <label>" + .isButton;
+                               grid container labeled; chips labeled; Reduce-Motion-aware press feedback; icon decorative
+  telemetry                  : view.opened surface="QuickNav" emitted once (P1/S11), default OSLog sink
+
+GATES
+  [GREEN]    swiftformat --lint  (feature-views/QuickNav scope, 6 files)   : 0/6 files require formatting        (FORMAT_EXIT=0)
+             swiftformat --lint apps/apple (whole app, FYI)                : 1 PRE-EXISTING file needs formatting —
+                                                                             feature-views/ActionBuilder.Previews.swift:48
+                                                                             (blankLinesBetweenScopes); NOT a QuickNav file.
+  [GREEN]    swiftlint --strict  (feature-views/QuickNav scope, 6 files)   : 0 violations, 0 serious            (LINT_EXIT=0)
+             swiftlint --strict  (whole app, FYI)                          : 1 PRE-EXISTING violation —
+                                                                             dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                                                                             (function_body_length); NOT a QuickNav file.
+  [GREEN]    check-placeholders.ps1  (QuickNav files)                      : PLACEHOLDER_COUNT=0               (PLACEHOLDER_EXIT=0)
+  [GREEN]    ISOLATED SwiftPM harness — swift-tools 6.0 (Swift 6 language mode), platforms macOS(.v15), compiling the
+             EXACT shipped QuickNav.* sources against the REAL repo design-system files (Tokens / TSMaterial / Cards /
+             Typography / Badges / Buttons / Skeletons / Motion) and RUNNING the shipped QuickNav.Tests.swift:
+                 Build complete!  ·  Executed 42 tests, with 0 failures (0 unexpected)                       (SWIFT_TEST_EXIT=0)
+             (covers: catalog/route/icon/color parity · tile builder · layout breakpoints · projection · accessibility ·
+              model phases + connection · guarded stale auto-refresh · offline-keeps-cache · telemetry-once ·
+              per-state ImageRenderer snapshot smoke for all 6 states)
+  [GREEN]    swiftc -typecheck  (iphonesimulator26.5, arm64-apple-ios18.0-simulator, -swift-version 6, -D DEBUG):
+             5 production files → 0 errors / 0 warnings ; QuickNav.Tests.swift (in-module) → 0 errors.
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build                                                      : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO QuickNav errors; every blocker pre-exists this change and is OUTSIDE the
+  allowed edit scope of feature-views/QuickNav.*):
+    iOS  : the app target fails to compile FIRST on a co-located test file —
+             feature-views/ActionBuilder.ModelTests.swift:11:8: error: unable to resolve module dependency: 'XCTest'
+           project.yml compiles the whole TeslaSync/feature-views + TeslaSync/dashboard-widgets dirs into the *app*
+           target, but 126 co-located *.Tests.swift / *.ModelTests.swift files there import XCTest (which the app target
+           does not link). This is the established per-surface convention (SummaryStatsRow.Tests.swift,
+           AlertsSection.Tests.swift, QuickNavWidget.Tests.swift, …). A SECOND, independent pre-existing breakage —
+           proven by isolated swiftc — is the parallel-merge duplicate-type collision: `public struct DashboardWidgetSize`
+           is declared 15× and `public struct DashboardWidgetRegistration` 13× across sibling widget files →
+           "invalid redeclaration of 'DashboardWidgetSize'" (e.g. dashboard-widgets/UptimeMonitorWidget.Model.swift:225/236).
+    macOS: additionally fails at code-signing — "TeslaSync-macOS / TeslaSyncWidgets-macOS have entitlements that require
+           signing with a development certificate" (DEVELOPMENT_TEAM="" — no signing identity provisioned on this runner) —
+           plus the same app-target source breakage as iOS.
+    All of these are owned by the P4/P99 Apple acceptance gate (signing/archive) + a dashboard-widget de-duplication /
+    test-target-relocation pass — NOT by a single feature-view prompt (task rule: do not fix pre-existing unrelated
+    breakage; allowed scope = feature-views/QuickNav.* + this log). grep of both build logs for
+    "QuickNav…error:" = 0 hits. This matches the sanctioned "code-complete + DEFERRED Xcode gate" disposition used by
+    every committed P4 feature-view surface to date (e.g. 0006, 0010, 0016, 0018).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65/MAC_EXIT=65) and explicitly
+                           DEFERRED with evidence — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced (4-shortcut catalog, icon/color/route mapping, both text
+                           lines, chevron) AND the full P4 state envelope (loading/empty/error/stale/offline/content).
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; the macOS failure was confirmed by a real
+                           build, not assumed; the duplicate-symbol break was reproduced with swiftc.
+  4  No stubs as final   : complete production view + 42 real tests that BUILD AND PASS in an isolated Swift 6 harness;
+                           placeholder scanner = 0. No TODO/FIXME/stub/placeholder/Lorem.
+  5  No parity shortcut  : catalog/keys/fallbacks/icons/exact-hex/routes/layout/all-6-states/a11y/telemetry all mapped to
+                           platform tokens + verified by tests.
+  6  No delegation       : implemented directly; no sub-agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 diagnostics all present + consumed.
+  8  No commit on red    : the COMMITTED artifact (QuickNav.* + this log) is GREEN on every host gate AND on a real isolated
+                           Swift 6 build+test (42/42); the deferred full-app gate is RED only on pre-existing, unrelated
+                           sibling files + macOS signing, which this commit neither introduces nor touches (0 QuickNav errors).
+  9  No silent drift     : changes confined to feature-views/QuickNav.{swift,Model,Adapter,Views,Previews,Tests}.swift +
+                           QuickNav.strings + this log. All 25 new symbols are collision-free vs the sibling QuickNavWidget.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic QuickNav shipped at parity with the web source and INDEPENDENTLY VERIFIED: it
+  builds and all 42 tests pass under the app's own Swift 6 strict-concurrency rules, against the real design-system, with
+  lint/format/placeholder all green on the QuickNav scope. The full-app iOS-Simulator + macOS xcodebuild build/test gate is
+  DEFERRED (not failed by this code): it is blocked by pre-existing co-located-test XCTest imports + parallel-merge
+  duplicate-type collisions across unrelated sibling files and by macOS development-signing — both owned by the P4/P99
+  acceptance gate, per the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface
+  to date.
+
+IOS_EXIT=65            (DEFERRED — pre-existing baseline breakage in sibling files; 0 QuickNav errors)
+MAC_EXIT=65            (DEFERRED — pre-existing macOS signing + same baseline; 0 QuickNav errors)
+LINT_EXIT=0            (QuickNav scope: 0 violations; 1 unrelated pre-existing whole-app violation noted FYI)
+FORMAT_EXIT=0          (QuickNav scope: 0/6; 1 unrelated pre-existing whole-app file noted FYI)
+PLACEHOLDER_EXIT=0
+SWIFT_TEST_EXIT=0      (isolated Swift 6 harness: Executed 42 tests, with 0 failures)
+TYPECHECK_EXIT=0       (production + tests, iphonesimulator, 0 errors)
+
+EXIT=0
+STATUS=DONE
