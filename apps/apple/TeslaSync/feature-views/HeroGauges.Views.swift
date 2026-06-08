@@ -1,126 +1,149 @@
 //
 //  HeroGauges.Views.swift
-//  TeslaSync — P4 feature view · 0058 · HeroGauges (Apple)
+//  TeslaSync — P4 feature view · 0103 · HeroGauges (Apple)
 //
-//  The presentational chrome composed by `HeroGauges`: the six-gauge responsive grid, the single
-//  gauge tile (web `MetricCard`), the tinted accent icon chip (web `MetricCard color`), the
-//  freshness chip, and the loading skeleton grid. All consume pre-localized strings from the
-//  P1/S10 facade and the shared P1/S9 tokens — no networking, no Tailwind ports.
+//  The presentational chrome composed by `HeroGauges`: the responsive gauge row, the single radial
+//  gauge (web `RadialGauge`), the Avg $/kWh readout (web `AnimatedNumber`), the freshness chip, and
+//  the loading skeleton row. All consume pre-localized strings from the P1/S10 facade and the
+//  shared P1/S9 tokens — no networking, no Tailwind ports.
 //
 
 import SwiftUI
 
-// MARK: - Accent → token mapping (web `neonColorMap`)
+// MARK: - Accent → token mapping (web RadialGauge hex colours)
 
 extension HeroAccent {
-    /// Maps the web `MetricCard` colour name to its adaptive design token, so the icon chip keeps
-    /// the source's palette (cyan / purple / green / amber) across light, dark, and high-contrast.
+    /// Maps the web `RadialGauge` colour to its adaptive design token. Each token's RGB is an exact
+    /// match for the web hex, so the arc keeps the source's palette across light, dark, and
+    /// high-contrast: cyan `#00f0ff`, green `#10b981`, amber `#f59e0b`, purple `#a855f7`.
     var color: Color {
         switch self {
         case .cyan: Color.TS.accent
-        case .purple: Color.TS.chartSeriesPower
         case .green: Color.TS.statusSuccess
         case .amber: Color.TS.statusWarning
+        case .purple: Color.TS.chartSeriesPower
         }
     }
 }
 
-// MARK: - Responsive gauge grid (web `grid-cols-2 md:grid-cols-3 lg:grid-cols-6`)
+// MARK: - Responsive gauge row (web `grid-cols-2 sm:grid-cols-3 md:grid-cols-5`)
 
-/// The six gauges in a responsive grid — two-up on compact widths, flowing to three/six-up on
-/// wider iPad / Mac windows, mirroring the web breakpoints via an adaptive column track.
+/// The four gauges plus the Avg $/kWh readout in a responsive grid — two-up on compact widths,
+/// flowing to three/five-up on wider iPad / Mac windows, mirroring the web breakpoints via an
+/// adaptive column track.
 struct HeroGaugesGrid: View {
     let projection: HeroGaugesProjection
 
-    private let columns = [GridItem(.adaptive(minimum: 150), spacing: TSSpacing.md, alignment: .top)]
+    private let columns = [GridItem(.adaptive(minimum: 116), spacing: TSSpacing.lg, alignment: .center)]
 
     var body: some View {
-        LazyVGrid(columns: columns, alignment: .leading, spacing: TSSpacing.md) {
-            ForEach(projection.tiles) { tile in
-                HeroGaugeTile(tile: tile)
+        LazyVGrid(columns: columns, alignment: .center, spacing: TSSpacing.lg) {
+            ForEach(projection.gauges) { gauge in
+                HeroRadialGaugeView(tile: gauge)
             }
+            HeroCostMetricTile(metric: projection.cost)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(verbatim: HeroGaugesAccessibility.summary(for: projection)))
     }
 }
 
-// MARK: - Gauge tile (web `MetricCard`)
+// MARK: - Radial gauge (web `RadialGauge`)
 
-/// One gauge: a small label + a large value + an optional unit subtitle, with a tinted accent icon
-/// chip — the native parity of the web `MetricCard`.
-struct HeroGaugeTile: View {
+/// One radial gauge: a neutral track ring, an accent-coloured progress arc filling `value / max`, a
+/// centre value + optional unit suffix, and a label below — the native parity of the web
+/// `RadialGauge`. The arc fills in on appear and honours Reduce Motion.
+struct HeroRadialGaugeView: View {
     let tile: HeroGaugeTileModel
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var fill: Double = 0
+
+    private let diameter: CGFloat = 104
+    private let lineWidth: CGFloat = 8
+
     var body: some View {
-        HStack(alignment: .top, spacing: TSSpacing.sm) {
-            VStack(alignment: .leading, spacing: TSSpacing.xs) {
-                Text(verbatim: tile.label)
-                    .font(Font.TS.caption)
-                    .textCase(.uppercase)
-                    .tracking(0.6)
-                    .foregroundStyle(Color.TS.textMuted)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                TSMetricValue(tile.value)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                if let subtitle = tile.subtitle {
-                    Text(verbatim: subtitle)
-                        .font(Font.TS.caption)
-                        .foregroundStyle(Color.TS.textMuted)
-                        .lineLimit(1)
-                }
+        VStack(spacing: TSSpacing.sm) {
+            ZStack {
+                Circle()
+                    .stroke(Color.TS.textMuted.opacity(0.22), lineWidth: lineWidth)
+                Circle()
+                    .trim(from: 0, to: fill)
+                    .stroke(
+                        tile.accent.color,
+                        style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+                    )
+                    .rotationEffect(.degrees(-90))
+                centreReadout
             }
-            Spacer(minLength: 0)
-            HeroAccentIconBox(systemName: tile.systemImage, accent: tile.accent)
+            .frame(width: diameter, height: diameter)
+            Text(verbatim: tile.label)
+                .font(Font.TS.caption)
+                .fontWeight(.medium)
+                .foregroundStyle(Color.TS.textMuted)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
-        .padding(TSSpacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            Color.TS.surfaceGlass,
-            in: RoundedRectangle(cornerRadius: TSRadius.md, style: .continuous)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: TSRadius.md, style: .continuous)
-                .strokeBorder(Color.TS.border, lineWidth: 1)
-        )
+        .padding(.vertical, TSSpacing.xs)
+        .onAppear { animate(to: tile.fraction) }
+        .onChange(of: tile.fraction) { _, newValue in animate(to: newValue) }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(verbatim: accessibilityLabel))
+        .accessibilityLabel(Text(verbatim: "\(tile.label) \(tile.spokenValue)"))
     }
 
-    private var accessibilityLabel: String {
-        if let subtitle = tile.subtitle {
-            return "\(tile.label) \(tile.value) \(subtitle)"
+    private var centreReadout: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 1) {
+            Text(verbatim: tile.value)
+                .font(Font.TS.section)
+                .fontWeight(.bold)
+                .monospacedDigit()
+                .foregroundStyle(Color.TS.textPrimary)
+            if let unit = tile.unit, !unit.isEmpty {
+                Text(verbatim: unit)
+                    .font(Font.TS.caption)
+                    .foregroundStyle(Color.TS.textMuted)
+            }
         }
-        return "\(tile.label) \(tile.value)"
+        .lineLimit(1)
+        .minimumScaleFactor(0.6)
+        .padding(.horizontal, lineWidth)
+    }
+
+    private func animate(to fraction: Double) {
+        let target = min(max(fraction, 0), 1)
+        withAnimation(reduceMotion ? nil : .easeOut(duration: TSMotion.slowDuration)) {
+            fill = target
+        }
     }
 }
 
-// MARK: - Accent icon chip (web `MetricCard` tinted icon box)
+// MARK: - Avg $/kWh readout (web `$<AnimatedNumber decimals={3}>`)
 
-/// A rounded, tinted container for the gauge's SF Symbol — the parity of the web `MetricCard`
-/// icon box (`bg color/10`, `ring color/20`). Mirrors `TSIconBox` but accepts the full hero accent
-/// palette (including purple) the shared `TSTone` does not carry.
-struct HeroAccentIconBox: View {
-    let systemName: String
-    let accent: HeroAccent
+/// The closing Avg $/kWh metric: an emerald-tinted animated currency value over an uppercase label,
+/// the parity of the web `<p class="text-2xl font-bold text-emerald-300">$<AnimatedNumber/></p>`.
+struct HeroCostMetricTile: View {
+    let metric: HeroCostMetric
 
     var body: some View {
-        Image(systemName: systemName)
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundStyle(accent.color)
-            .frame(width: 34, height: 34)
-            .background(
-                accent.color.opacity(0.12),
-                in: RoundedRectangle(cornerRadius: TSRadius.md, style: .continuous)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: TSRadius.md, style: .continuous)
-                    .strokeBorder(accent.color.opacity(0.22), lineWidth: 1)
-            )
-            .accessibilityHidden(true)
+        VStack(spacing: TSSpacing.xs) {
+            TSAnimatedNumber(formatted: metric.value)
+                .foregroundStyle(Color.TS.statusSuccess)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            Text(verbatim: metric.label)
+                .font(Font.TS.caption)
+                .textCase(.uppercase)
+                .tracking(0.6)
+                .foregroundStyle(Color.TS.textMuted)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, TSSpacing.xs)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(verbatim: "\(metric.label) \(metric.value)"))
     }
 }
 
@@ -164,52 +187,47 @@ struct HeroGaugesFreshnessChip: View {
 
     private var label: String {
         if isFetching {
-            return HeroGaugesStrings.string("analytics.hero.updating", "Updating")
+            return HeroGaugesStrings.string("charging.gauges.updating", "Updating")
         }
         switch connection {
-        case .live: return HeroGaugesStrings.string("analytics.hero.live", "Live")
-        case .stale: return HeroGaugesStrings.string("analytics.hero.stale", "Stale")
-        case .offline: return HeroGaugesStrings.string("analytics.hero.offline", "Offline")
+        case .live: return HeroGaugesStrings.string("charging.gauges.live", "Live")
+        case .stale: return HeroGaugesStrings.string("charging.gauges.stale", "Stale")
+        case .offline: return HeroGaugesStrings.string("charging.gauges.offline", "Offline")
         }
     }
 }
 
-// MARK: - Loading skeleton grid (web six `MetricSkeleton`s)
+// MARK: - Loading skeleton row (gauge-shaped skeletons)
 
-/// The initial-fetch skeleton chrome: six gauge-shaped skeletons in the same responsive grid (web
-/// `Array.from({ length: 6 }).map(() => <MetricSkeleton />)`), respecting Reduce Motion via the
-/// shared `TSSkeleton`.
+/// The initial-fetch skeleton chrome: five gauge-shaped skeletons in the same responsive grid,
+/// respecting Reduce Motion via the shared `TSSkeleton`.
 struct HeroGaugesLoadingGrid: View {
-    private let columns = [GridItem(.adaptive(minimum: 150), spacing: TSSpacing.md, alignment: .top)]
+    private let columns = [GridItem(.adaptive(minimum: 116), spacing: TSSpacing.lg, alignment: .center)]
 
     var body: some View {
-        LazyVGrid(columns: columns, alignment: .leading, spacing: TSSpacing.md) {
-            ForEach(0 ..< 6, id: \.self) { _ in
+        LazyVGrid(columns: columns, alignment: .center, spacing: TSSpacing.lg) {
+            ForEach(0 ..< 5, id: \.self) { _ in
                 HeroGaugeSkeletonTile()
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
         .accessibilityElement()
-        .accessibilityLabel(HeroGaugesStrings.text("analytics.hero.loading", "Loading fleet metrics"))
+        .accessibilityLabel(Text(verbatim: HeroGaugesStrings.string(
+            "charging.gauges.loading",
+            "Loading charging stats"
+        )))
     }
 }
 
-/// One skeleton gauge tile (web `MetricSkeleton`: a 60%×12 label bar over a 40%×24 value bar).
+/// One skeleton gauge tile: a ring-shaped outline over a short label bar.
 private struct HeroGaugeSkeletonTile: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: TSSpacing.sm) {
-            TSSkeleton(width: 64, height: 12)
-            TSSkeleton(width: 44, height: 24)
+        VStack(spacing: TSSpacing.sm) {
+            Circle()
+                .stroke(Color.TS.textMuted.opacity(0.22), lineWidth: 8)
+                .frame(width: 104, height: 104)
+            TSSkeleton(width: 56, height: 12)
         }
-        .padding(TSSpacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            Color.TS.surfaceGlass,
-            in: RoundedRectangle(cornerRadius: TSRadius.md, style: .continuous)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: TSRadius.md, style: .continuous)
-                .strokeBorder(Color.TS.border, lineWidth: 1)
-        )
+        .padding(.vertical, TSSpacing.xs)
     }
 }

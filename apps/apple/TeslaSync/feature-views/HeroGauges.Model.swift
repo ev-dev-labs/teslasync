@@ -1,12 +1,12 @@
 //
 //  HeroGauges.Model.swift
-//  TeslaSync — P4 feature view · 0058 · HeroGauges (Apple)
+//  TeslaSync — P4 feature view · 0103 · HeroGauges (Apple)
 //
 //  State-holder seam (P1/S8) + telemetry seam (P1/S11 diagnostics) + i18n facade
 //  (P1/S10). The view binds through `HeroGaugesModel`; no networking lives in the view.
-//  SwiftUI parity of features/analytics/components/analytics/HeroGauges.tsx — the six
-//  headline "hero" metric gauges (Distance, Drives, Energy, Efficiency, Gas Savings,
-//  CO₂ Saved) the Analytics overview renders above its tabs.
+//  SwiftUI parity of features/charging/components/charging-list/HeroGauges.tsx — the four
+//  headline charging "hero" gauges (Sessions, Energy, Total Cost, Avg Power) plus the
+//  Avg $/kWh readout the charging list renders above its session table.
 //
 //  Deliberately SwiftUI-free (Foundation + Observation + OSLog only) so the model + the
 //  projection it drives compile and run on a plain host and are pinned by unit tests; the
@@ -42,9 +42,9 @@ public struct OSLogHeroGaugesTelemetry: HeroGaugesTelemetry {
 
 // MARK: - State-holder seam (P1/S8 layer)
 
-/// The load lifecycle for the surface's analytics query, mirroring the shared `LoadableState`
-/// cases the production source projects from the `useFleetAnalytics` hook (web `isLoading`
-/// skeleton / resolved data / empty / failure).
+/// The load lifecycle for the surface's charging query, mirroring the shared `LoadableState`
+/// cases the production source projects from the `useCharging` hook (web `isLoading` skeleton /
+/// resolved `stats` / `stats === null` empty / failure).
 public enum HeroLoadStatus: Sendable, Equatable {
     case loading
     case loaded
@@ -60,80 +60,53 @@ public enum HeroConnection: Sendable, Equatable {
     case offline
 }
 
-/// The user's distance display preference, mirroring the web `DistanceUnitPref`
-/// (`'km' | 'mi' | 'ft'`) resolved by `useUnits()`. Carries the exact metres-per-unit divisor
-/// `convertDistanceFromSI` uses, plus the short symbol shown as a gauge subtitle.
-public enum HeroDistanceUnit: String, Sendable, Equatable, CaseIterable {
-    case kilometers = "km"
-    case miles = "mi"
-    case feet = "ft"
-
-    /// Exact metres-per-unit divisor used by `convertDistanceFromSI` (NIST-grade).
-    public var metersPerUnit: Double {
-        switch self {
-        case .kilometers: 1000
-        case .miles: 1609.344
-        case .feet: 0.3048
-        }
-    }
-
-    /// The short symbol shown next to a value (`km` / `mi` / `ft`).
-    public var symbol: String {
-        rawValue
-    }
-}
-
-/// The cached fleet-analytics inputs this surface reads — the subset of the web `FleetAnalytics`
-/// DTO `HeroGauges` consumes (`GET /analytics/fleet`). All fields are SI/raw as delivered by the
-/// API (`total_distance_km` is derived-SI km, `avg_efficiency_wh_km` is Wh/km); display
-/// conversion happens in `HeroGaugesProjector`.
-public struct HeroAnalyticsDTO: Sendable, Equatable {
-    public var totalDistanceKm: Double
-    public var totalDrives: Int
-    public var totalEnergyKwh: Double
+/// The computed charging summary this surface reads — the exact subset of the web `ChargingStats`
+/// DTO (from `computeStats(sessions)`) that `HeroGauges` consumes. `count` is the session count,
+/// `totalEnergy` is kWh, `totalCost` is in the user's currency, `avgPower` is kW, and
+/// `avgCostPerKwh` is currency-per-kWh. The shared `ChargingStore` projects these from the API
+/// the same way the web hook does; display formatting happens in `HeroGaugesProjector`.
+public struct ChargingStatsDTO: Sendable, Equatable {
+    public var count: Int
+    public var totalEnergy: Double
     public var totalCost: Double
-    public var avgEfficiencyWhKm: Double
+    public var avgPower: Double
+    public var avgCostPerKwh: Double
 
     public init(
-        totalDistanceKm: Double = 0,
-        totalDrives: Int = 0,
-        totalEnergyKwh: Double = 0,
+        count: Int = 0,
+        totalEnergy: Double = 0,
         totalCost: Double = 0,
-        avgEfficiencyWhKm: Double = 0
+        avgPower: Double = 0,
+        avgCostPerKwh: Double = 0
     ) {
-        self.totalDistanceKm = totalDistanceKm
-        self.totalDrives = totalDrives
-        self.totalEnergyKwh = totalEnergyKwh
+        self.count = count
+        self.totalEnergy = totalEnergy
         self.totalCost = totalCost
-        self.avgEfficiencyWhKm = avgEfficiencyWhKm
+        self.avgPower = avgPower
+        self.avgCostPerKwh = avgCostPerKwh
     }
 }
 
-/// The user's display preferences, mirroring `useUnits()` + `useFormatting()`. The view never
-/// reads settings directly; the source resolves these and pushes them with each snapshot.
+/// The user's display preferences for this surface, mirroring `useFormatting()`. The web component
+/// renders the currency symbol literally as "$"; the production app resolves the real symbol +
+/// locale and pushes them with each snapshot so the view never reads settings directly.
 public struct HeroUnitPrefs: Sendable, Equatable {
-    public var distance: HeroDistanceUnit
     public var currencySymbol: String
     public var localeIdentifier: String
 
-    public init(
-        distance: HeroDistanceUnit = .kilometers,
-        currencySymbol: String = "$",
-        localeIdentifier: String = "en_US"
-    ) {
-        self.distance = distance
+    public init(currencySymbol: String = "$", localeIdentifier: String = "en_US") {
         self.currencySymbol = currencySymbol
         self.localeIdentifier = localeIdentifier
     }
 }
 
-/// One coalesced snapshot pushed by a `HeroGaugesSource`: the cached analytics DTO + display
+/// One coalesced snapshot pushed by a `HeroGaugesSource`: the computed charging stats + display
 /// prefs plus their load/connection status. The model turns this into the projection.
 public struct HeroGaugesUpdate: Sendable, Equatable {
     public var status: HeroLoadStatus
     public var connection: HeroConnection
     public var isFetching: Bool
-    public var analytics: HeroAnalyticsDTO?
+    public var stats: ChargingStatsDTO?
     public var units: HeroUnitPrefs
     public var updatedAt: Date?
 
@@ -141,22 +114,22 @@ public struct HeroGaugesUpdate: Sendable, Equatable {
         status: HeroLoadStatus = .loading,
         connection: HeroConnection = .live,
         isFetching: Bool = false,
-        analytics: HeroAnalyticsDTO? = nil,
+        stats: ChargingStatsDTO? = nil,
         units: HeroUnitPrefs = HeroUnitPrefs(),
         updatedAt: Date? = nil
     ) {
         self.status = status
         self.connection = connection
         self.isFetching = isFetching
-        self.analytics = analytics
+        self.stats = stats
         self.units = units
         self.updatedAt = updatedAt
     }
 }
 
-/// The seam the view binds through. The production app implements this over the shared P1/S8
-/// state holders (`StateHolderModel<LoadableState<FleetAnalytics>>` from the KMP `AnalyticsStore`
-/// composed with the `SettingsStore` for `useUnits` + `useFormatting`); previews and tests use
+/// The seam the view binds through. The production app implements this over the shared P1/S8 state
+/// holders (`StateHolderModel<LoadableState<ChargingStats>>` from the KMP `ChargingStore` composed
+/// with the `SettingsStore` for `useFormatting`); previews and tests use
 /// `InMemoryHeroGaugesSource`. The view never talks to the network directly.
 @MainActor
 public protocol HeroGaugesSource: AnyObject {
@@ -216,8 +189,8 @@ public final class HeroGaugesModel {
         source.stop()
     }
 
-    /// Forces a network refresh (cached gauges stay visible). Wired to the retry affordance and
-    /// to the stale auto-refresh.
+    /// Forces a network refresh (cached gauges stay visible). Wired to the retry affordance and to
+    /// the stale auto-refresh.
     public func refresh() {
         source.refresh()
     }
@@ -234,14 +207,14 @@ public final class HeroGaugesModel {
         isFetching = update.isFetching
         units = update.units
         updatedAt = update.updatedAt
-        projection = update.analytics.map { HeroGaugesProjector.project(analytics: $0, units: update.units) }
-        phase = Self.resolvePhase(status: update.status, hasData: update.analytics != nil)
+        projection = update.stats.map { HeroGaugesProjector.project(stats: $0, units: update.units) }
+        phase = Self.resolvePhase(status: update.status, hasData: update.stats != nil)
     }
 
     /// Resolves the render phase. Mirroring the web shell: the skeleton shows only on the initial
-    /// fetch and the empty state when there is no analytics; whenever analytics is known the grid
-    /// renders (cached values stay visible behind a refresh / transient failure so an offline or
-    /// stale pod still shows the last-known gauges).
+    /// fetch and the empty state when there are no stats; whenever stats are known the grid renders
+    /// (cached values stay visible behind a refresh / transient failure so an offline or stale pod
+    /// still shows the last-known gauges).
     ///
     /// `nonisolated` because it is pure (touches no actor state); this lets the freshness/phase
     /// logic be unit-tested from a non-isolated context under Swift 6 strict concurrency.
@@ -304,8 +277,8 @@ public enum HeroGaugesSurface {
 /// Resolves the surface's strings by key with the web English fallback, so the view holds no
 /// hardcoded literals. Keys live in the "HeroGauges" table, folded into the app
 /// `Localizable.xcstrings` master catalog at integration time; the per-surface table keeps each
-/// parallel surface prompt owning its own strings without editing the shared catalog. `string`
-/// is Foundation-only so the adapter's accessibility summary can use it; the SwiftUI `text(_:_:)`
+/// parallel surface prompt owning its own strings without editing the shared catalog. `string` is
+/// Foundation-only so the adapter's accessibility summary can use it; the SwiftUI `text(_:_:)`
 /// helper lives in the view file.
 public enum HeroGaugesStrings {
     public static let table = "HeroGauges"

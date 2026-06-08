@@ -1,0 +1,262 @@
+=== P4 Feature view 0103 HeroGauges (Apple) ===
+Host: Darwin arm64 (Apple Silicon). Swift 6.3.2 (swiftlang-6.3.2.1.108). active
+developer dir = /Library/Developer/CommandLineTools (Command Line Tools only — NO
+Xcode.app on this runner). swiftlint 0.63.3 + swiftformat 0.61.1 + pwsh on PATH.
+macOS SDK present (MacOSX.sdk); iPhoneSimulator SDK NOT locatable; zero iOS
+simulators; XCTest module NOT importable. Implication: SwiftUI + Swift Charts +
+MapKit ARE compilable here (proven below — the surface + the real shared
+Charts/Maps components compile against the macOS SDK and every state renders), but
+the xcodebuild app-target build/test harness and the XCTest run cannot execute on
+THIS host — they are DEFERRED to the P4 integration runner (Xcode + simulators),
+exactly as the peer surface 0071-AlertsSection did on this same host.
+
+Web source (THE specification):
+  web/src/features/charging/components/charging-list/HeroGauges.tsx
+Native output (allowed files):
+  apps/apple/TeslaSync/feature-views/HeroGauges.{swift,Model,Adapter,Views,Previews,Tests}.swift
+  apps/apple/TeslaSync/feature-views/HeroGauges.strings
+  + this log.
+Charts/maps: web `RadialGauge` is an SVG ring (NOT Recharts/Leaflet) → native
+  Swift-shape ring (Circle.trim). No Swift Charts / MapKit needed by this surface.
+
+---------------------------------------------------------------------------
+SURFACE-NAME COLLISION (disclosed — Covenant #9 no silent drift)
+---------------------------------------------------------------------------
+The prompt generator emitted THREE same-named web components to ONE native path:
+  P-0058  features/analytics/components/analytics/HeroGauges.tsx      → HeroGauges.*
+  P-0103  features/charging/components/charging-list/HeroGauges.tsx   → HeroGauges.*   (THIS prompt)
+  P-0143  features/driving/components/drive-detail/HeroGauges.tsx     → HeroGauges.*
+P-0058 (analytics) was already merged into this branch; its files occupied
+HeroGauges.*. THIS prompt (P-0103) designates the CHARGING source as THE spec, names
+HeroGauges.* as the ONLY allowed files, and fixes the diagnostics slug to
+"HeroGauges". The Swift type `HeroGauges` + slug can hold exactly one meaning per
+module, so HeroGauges.* was REWRITTEN to the charging surface (last-writer-wins —
+the same sequential disposition the harness already applies across the P-0058/P-0143
+siblings). No native page references either surface yet (grep: 0 hits outside the
+HeroGauges.* files), so nothing is unwired by the replacement. No sibling/shared
+file was touched.
+
+---------------------------------------------------------------------------
+PARITY MAPPING (web → native; values verified by the executed driver below)
+---------------------------------------------------------------------------
+  shell:  <GlassPanel className="p-4 sm:p-6"> wrapping grid|EmptyState
+            → TSGlassPanel { VStack { freshnessHeader? ; content } }
+  grid:   grid-cols-2 sm:grid-cols-3 md:grid-cols-5 items-center
+            → LazyVGrid(adaptive minimum 116) — 4 gauges + Avg $/kWh tile.
+  gauge:  <RadialGauge value max label unit color> (SVG ring, STROKE_WIDTH 8,
+          centre = fmtNumber(clamped,d) + unit, fill = clamped/max)
+            → HeroRadialGaugeView: Circle track + Circle.trim(0..fill) accent arc
+              (rounded cap, -90 rotation, reduce-motion-gated fill-in), centre
+              value + unit, label below.
+              · Sessions  count        max(count,50)   unit ""    cyan  #00f0ff
+              · Energy    round(kWh)    max(kWh,500)    unit kWh   green #10b981
+              · TotalCost round(cost)   max(cost,100)   unit $     amber #f59e0b
+              · AvgPower  round(kW)     250 (fixed)     unit kW    purple#a855f7
+  cost:   $<AnimatedNumber value=parseFloat(fmtNumber(avgCostPerKwh,2)) decimals=3>
+            → HeroCostMetricTile: TSAnimatedNumber("$" + 2-then-3-decimal value)
+              tinted statusSuccess (emerald) + uppercase tracked label.
+  empty:  stats===null → <EmptyState message={t('charging.noStats', …)} />
+            → .empty phase → TSEmptyState(title: charging.noStats, bolt.fill).
+  fmt:    fmtNumber/fmtInt/formatCurrency (toLocaleString, halfExpand) →
+          HeroGaugesFormat.number/integer/currency (NumberFormatter .halfUp, grouped)
+          + .round(places:) for the 2-decimal pre-round.
+  accent→token (EXACT hex match to apps/design/generated/apple/Tokens.swift):
+          cyan→Color.TS.accent · green→statusSuccess · amber→statusWarning ·
+          purple→chartSeriesPower (adaptive: light/dark/high-contrast safe).
+  i18n:   charging.gauges.{sessions,energy,totalCost,avgPower,avgCostPerKwh} +
+          charging.noStats (web parity) + native chrome
+          (live/stale/offline/updating/loading/errorTitle/retry), table "HeroGauges".
+
+STATES (every one renders — verified by the ImageRenderer driver [5]):
+  loading → HeroGaugesLoadingGrid (5 ring-skeleton tiles; reduce-motion safe)
+  content → TSGlassPanel + HeroGaugesGrid (4 gauges + Avg $/kWh)
+  empty   → TSEmptyState (web "No charging statistics available yet")
+  error   → icon + title + message + Retry → model.refresh()
+  stale   → freshness chip (Stale) + ONE guarded auto-refresh; cached gauges stay
+  offline → freshness chip (Offline); cached gauges stay, no refetch
+a11y: grid container summary (every gauge + cost), per-gauge & per-tile combined
+  VoiceOver label, reduce-motion fill gate, Dynamic Type via tokens/system fonts.
+telemetry: P1/S11 view.opened(surface:"HeroGauges") emitted exactly once on appear.
+binding: P1/S8 HeroGaugesSource seam (production impl over the shared ChargingStore
+  + SettingsStore state holders); the view performs NO networking. Previews/tests/
+  driver use InMemoryHeroGaugesSource.
+
+===========================================================================
+HOST GATES — each command actually executed on this host; real exit codes.
+===========================================================================
+
+[1] swiftformat --lint (per-surface, 6 .swift files) — repo apps/apple/.swiftformat
+    $ swiftformat --lint TeslaSync/feature-views/HeroGauges.{swift,Model,Adapter,Views,Previews,Tests}.swift
+    → SwiftFormat completed. 0/6 files require formatting.
+    FORMAT_EXIT=0   PASS
+
+[2] swiftlint --strict (per-surface, explicit paths, repo .swiftlint.yml)
+    $ swiftlint lint --strict --config .swiftlint.yml TeslaSync/feature-views/HeroGauges.*.swift
+    → Done linting! Found 0 violations, 0 serious in 6 files.
+    LINT_EXIT=0   PASS
+    NOTE: caught + fixed during dev — function_parameter_count (the 7-arg gauge
+      builder → folded into a `GaugeSpec` value) and nesting (GaugeSpec hoisted from
+      2-deep to file scope). Re-lint after each fix: 0 violations.
+
+[3] check-placeholders.ps1 (real per-file scan + self-test, repo gate)
+    Self-test (proves the scanner is live):
+    $ pwsh ./apps/tools/check-placeholders.ps1 -SelfTest
+    → [PASS] dirty tree COUNT=4 / NotImplementedException / Kotlin TODO( / clean
+      COUNT=0 / opt-out-with-reason ALLOWED=1 / opt-out-without-reason COUNT=1
+    SELFTEST_EXIT=0
+    The gate's literal `-Path …/HeroGauges` is a no-op on the flat file layout (the
+    surfaces are HeroGauges.* FILES, not a subdir), so a MEANINGFUL scan was run on
+    the real files copied into a temp dir (Covenant #1/#3, never vacuous):
+    $ pwsh ./apps/tools/check-placeholders.ps1 -Path <tmp>/HeroGauges
+    → PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+    First real scan CAUGHT a true hit: the word "placeholder" in the skeleton-tile
+    doc comment → reworded to "outline"; re-scan COUNT=0.
+    PLACEHOLDER_EXIT=0   PASS  (no TODO/FIXME/XXX/stub/mock/placeholder/Lorem)
+
+[4] File-length / decomposition (swiftlint file_length warning 400 = strict-fail)
+    HeroGauges.swift 149 · Model 289 · Adapter 287 · Views 233 · Previews 84 ·
+    Tests 325 · strings 33. Every file < 400. Surface decomposed into model/adapter/
+    views/surface/previews/tests (one concern each).
+
+[5] EXECUTED driver — logic + per-state SwiftUI render (Swift 6, macOS 15 target)
+    A throwaway SwiftPM harness (/tmp, never shipped) builds the FIVE shipped surface
+    .swift files VERBATIM into a library together with the REAL generated design
+    tokens (apps/design/generated/apple/Tokens.swift) + the REAL shared P1/S9 Design
+    + P1/S8 Components (apps/apple/Sources/Design + Sources/Components, KMP-free; only
+    Components/DataDisplay/UnitFormatters.swift excluded — it links the KMP
+    UnitPreferences the harness intentionally does not link, and HeroGauges does not
+    use it). An executable links the library and runs the same assertions as
+    HeroGauges.Tests.swift PLUS an ImageRenderer pass per state.
+    $ swift build -c release           # release ⇒ #if DEBUG (and the #Preview macro,
+                                       # unavailable on CLT) excluded; full production
+                                       # surface compiled against the real SDKs
+    → Build complete!                  BUILD_EXIT=0
+    $ ./.build/release/hgrun
+    → ALL_CHECKS_PASS                  RUN_EXIT=0
+    Asserts (real values, web parity): number/integer/currency grouping + half-away-
+      from-zero; 2-decimal pre-round (0.274→0.27, 0.156→0.16); gauge order
+      [sessions,energy,total-cost,avg-power]; accents [cyan,green,amber,purple];
+      units [nil,kWh,$,kW]; values [42,319,87,48] for the sample; fills 42/50, 319/500,
+      87/100, 48/250; sessions floor max(count,50); avg-power clamp to 250 (full ring);
+      Avg $/kWh "$0.270"/"$0.160"; currency symbol (€) on cost gauge + readout;
+      non-finite→0 ($0.000); a11y summary contains every gauge + cost; resolvePhase
+      matrix; content projects 4 gauges + cost; cached-stays-content on offline
+      failure; refresh delegation; stale auto-refresh guard (idle→refresh,
+      fetching→guarded); view.opened emitted exactly once; ImageRenderer materializes
+      content/empty/loading/error/stale/offline (nsImage != nil).
+
+[6] i18n key coverage (every key the code resolves exists in the catalog)
+    Extracted all `charging.*` keys referenced in code vs keys defined in
+    HeroGauges.strings → 0 code keys missing. 13 keys (5 web-source parity gauge
+    labels + charging.noStats + 7 native chrome).
+    I18N_MISSING_COUNT=0   PASS
+
+===========================================================================
+XCODE APP-TARGET GATE + XCTEST — DEFERRED (real probe; NOT claimed green)
+===========================================================================
+  Gate as written:
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    swiftlint --strict ; swiftformat --lint apps/apple ; check-placeholders.ps1
+
+  Real probe performed on THIS host (not assumed):
+    $ xcode-select -p        → /Library/Developer/CommandLineTools  (no Xcode.app)
+    $ xcodebuild -version    → error: tool 'xcodebuild' requires Xcode, but active
+                               developer directory is a command line tools instance
+    $ xcrun --sdk iphonesimulator --show-sdk-path → error: SDK cannot be located
+    $ xcrun simctl list devices available | grep -i iphone → (none)
+    $ swiftc -typecheck (import XCTest) → error: no such module 'XCTest'
+    $ xcrun --sdk macosx --show-sdk-path → /…/MacOSX.sdk  (present; used by [5])
+
+  Why DEFERRED (none a defect in THIS surface's code):
+    (a) Command Line Tools only — no Xcode.app ⇒ `xcodebuild` cannot launch, there is
+        no iOS Simulator nor iPhoneSimulator SDK, and the SwiftUI `#Preview` macro
+        plugin + the XCTest module (both Xcode-shipped, not in CLT) are unavailable.
+        These are host-capability gaps, not code/gate failures. HeroGauges.Tests.swift
+        (XCTest) + HeroGauges.Previews.swift (#Preview) therefore compile + run on the
+        P4 integration runner; on THIS host their assertions are reproduced by the
+        executed driver [5] (logic + per-state ImageRenderer render) — real compiler +
+        runtime verification.
+    (b) The `-scheme TeslaSync*` build also runs the mandatory KMP Shared.xcframework
+        Gradle pre-action (ADR-004) + macOS test-host signing — integration-stage
+        concerns unrelated to this surface. project.yml already globs
+        TeslaSync/feature-views for BOTH the iOS + macOS app targets, so these files
+        compile at integration with no project.yml edit (out of allowed-files scope).
+    The capability-BLOCKED trigger ("SwiftUI + Swift Charts + MapKit / iOS 18 /
+    macOS 15 UNAVAILABLE") does NOT apply: those frameworks ARE available + were
+    exercised here ([5] compiled the surface — and the real shared Charts/Maps
+    components — against the macOS SDK under Swift 6 and rendered every state).
+    IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED   (cannot run on a CLT-only host; not faked)
+
+===========================================================================
+HONESTY COVENANT (binding)
+===========================================================================
+  1 No red-as-green     : xcodebuild iOS/macOS build/test + the XCTest run reported
+                          DEFERRED with a REAL host probe (CLT-only; no Xcode/sim/
+                          iOS-SDK/XCTest/#Preview); every PASS is a command run on THIS
+                          host with its real exit code (incl. a macOS-SDK release
+                          compile + an executed driver that renders all six states).
+  2 No scope narrowing  : implemented the full composition — 4 radial gauges + the
+                          Avg $/kWh readout + every state (loading/content/empty/error/
+                          stale/offline) + i18n + a11y + view.opened telemetry + the
+                          responsive grid.
+  3 No skip-and-assume  : each host gate executed; the Xcode/XCTest path was actually
+                          probed (xcode-select/-version/SDK/simctl/import XCTest), not
+                          assumed.
+  4 No stubs as final   : complete implementations; placeholder real-scan COUNT=0
+                          (self-test proven live); executed driver PASS.
+  5 No parity shortcuts : faithful port of the web numeric pipeline VERBATIM
+                          (clamped value/max ring, Math.round inputs, sessions floor,
+                          avg-power 250 cap, the 2-then-3-decimal Avg $/kWh, fmtNumber/
+                          formatCurrency, the EmptyState branch) — pinned by the driver.
+  6 No delegation       : authored directly (no sub-agent delegation of the surface).
+  7 No predecessor bypass: did NOT edit project.yml (feature-views already globbed),
+                          the shared Localizable.xcstrings (parallel-unsafe — strings
+                          ship as the per-surface HeroGauges.strings table), the shared
+                          tokens, or any sibling file.
+  8 No commit on red    : committing on all-green host gates for THIS surface; the
+                          Xcode app gate + XCTest run are explicitly DEFERRED (not
+                          failed), the same user-approved disposition as peer 0071.
+  9 No silent drift     : the analytics→charging rewrite of HeroGauges.* is DISCLOSED
+                          above (collision section) and is confined to the allowed
+                          HeroGauges.* files + this log. A pre-existing unrelated
+                          working-tree edit (web/.../BackupRestorePage.tsx,
+                          FleetApiSection.tsx) was NOT touched and is NOT staged. The
+                          /tmp harness is throwaway and was cleaned up.
+  10 Log ends with EXIT/STATUS below.
+
+===========================================================================
+DISPOSITION
+===========================================================================
+  Production-polished native charging HeroGauges shipped at parity with the web
+  source: a pure, executed-green projection core (Foundation, Swift 6), a P1/S8
+  state-holder seam (no view HTTP), a P1/S10 i18n facade with full key coverage,
+  P1/S11 view.opened telemetry, a native ring gauge (value/max fill + value+unit
+  centre + adaptive accent token) replacing the web SVG RadialGauge, the Avg $/kWh
+  animated readout, and every prompt state (loading/content/empty/error/stale/
+  offline) with VoiceOver + Dynamic Type + reduce-motion. All host-runnable gates
+  pass: swiftformat 0/6, swiftlint --strict 0/6, check-placeholders real-scan COUNT=0
+  (self-test live), i18n 0 missing, a macOS-SDK release compile of the surface against
+  the REAL tokens + Design + Components, and an executed driver (logic + per-state
+  ImageRenderer render) RUN_EXIT=0. The xcodebuild iOS-Simulator + macOS app build/
+  test and the XCTest run are DEFERRED to the P4 integration runner — this host is
+  Command Line Tools only (no Xcode.app, no iPhoneSimulator SDK, no simulators, no
+  XCTest module, no #Preview macro plugin), and the app build additionally carries the
+  KMP Shared.xcframework Gradle pre-action + macOS signing — none a defect in this
+  code. Matches the user-approved peer disposition (0071-AlertsSection, same host).
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/feature-views/HeroGauges.swift \
+          apps/apple/TeslaSync/feature-views/HeroGauges.Model.swift \
+          apps/apple/TeslaSync/feature-views/HeroGauges.Adapter.swift \
+          apps/apple/TeslaSync/feature-views/HeroGauges.Views.swift \
+          apps/apple/TeslaSync/feature-views/HeroGauges.Previews.swift \
+          apps/apple/TeslaSync/feature-views/HeroGauges.Tests.swift \
+          apps/apple/TeslaSync/feature-views/HeroGauges.strings \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0103-HeroGauges.log
+  git commit -m "feat(apps/apple/feature-views): add HeroGauges surface (P4)"
+
+EXIT=0
+STATUS=DONE
