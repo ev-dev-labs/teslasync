@@ -1,0 +1,62 @@
+/*
+  MotorHistoryCharts.strings
+  TeslaSync — P4 feature view · 0172 · MotorHistoryCharts (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `MotorHistoryCharts` resolves (table "MotorHistoryCharts") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first block is the exact set of keys extracted from the web source
+  (features/driving/components/driving-dynamics/MotorHistoryCharts.tsx). The
+  remainder back the native state envelope (freshness chip, connectivity banner,
+  loading / empty / error chrome), the chart unit suffixes, and the accessibility
+  summaries.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"dynamics.powerOverTime" = "Motor Power Over Time";
+"dynamics.powerOverTimeDesc" = "Drive and regen power from motor telemetry";
+"dynamics.powerOverTime.aria" = "Motor power and regen over time area chart";
+"dynamics.power" = "Power";
+"dynamics.regen" = "Regen";
+"dynamics.torqueHistory" = "Motor Torque History";
+"dynamics.torqueHistoryDesc" = "Front and rear motor torque over time";
+"dynamics.torqueHistory.aria" = "Front and rear motor torque over time line chart";
+"dynamics.torqueFront" = "Front Torque";
+"dynamics.torqueRear" = "Rear Torque";
+"dynamics.rpmHistory" = "Motor RPM History";
+"dynamics.rpmHistoryDesc" = "Front and rear motor RPM over time";
+"dynamics.rpmHistory.aria" = "Front and rear motor RPM over time line chart";
+"dynamics.rpmFront" = "Front RPM";
+"dynamics.rpmRear" = "Rear RPM";
+"dynamics.awaitingData" = "Awaiting motor telemetry data...";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"dynamics.live" = "Live";
+"dynamics.stale" = "Stale";
+"dynamics.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"dynamics.motorHistory.staleBanner" = "Reconnecting — motor telemetry may be stale";
+"dynamics.motorHistory.offlineBanner" = "Offline — showing the last loaded motor telemetry";
+
+/* --- Chart unit suffixes (non-translated, surfaced through the facade) --- */
+"dynamics.motorHistory.powerUnit" = "kW";
+"dynamics.motorHistory.torqueUnit" = "Nm";
+"dynamics.motorHistory.rpmUnit" = "RPM";
+
+/* --- Loading / empty / error chrome --- */
+"dynamics.motorHistory.loading" = "Loading motor telemetry";
+"dynamics.motorHistory.emptyHint" = "Motor power, torque and rpm traces appear here once the vehicle is driving.";
+"dynamics.motorHistory.errorTitle" = "Couldn't load motor telemetry";
+"dynamics.motorHistory.retry" = "Retry";
+
+/* --- Accessibility summaries --- */
+"common.noData" = "No data available";
+"dynamics.motorHistory.samplesNoun" = "samples";
+"dynamics.motorHistory.min" = "min";
+"dynamics.motorHistory.max" = "max";
+"dynamics.motorHistory.latest" = "latest";

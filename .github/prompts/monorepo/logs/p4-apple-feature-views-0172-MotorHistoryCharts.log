@@ -1,0 +1,164 @@
+=== P4 Feature view 0172 MotorHistoryCharts (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon · build 25F80)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh · Java 17.0.19
+  Destinations       : iOS Simulator "iPhone 16" present · macOS 15 SDK present.
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh on THIS runner
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL; release XCFramework staged to
+                       apps/apple/Frameworks/Shared.xcframework). Gradle + Kotlin/Native 2.4.0 warm in ~/.gradle + ~/.konan.
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS toolchain present → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/driving/components/driving-dynamics/MotorHistoryCharts.tsx — a presentational fragment of THREE
+  FadeIn-wrapped ChartContainers driven by one `motorHistory: MotorSnapshot[]` prop:
+    1) FadeIn(0.2)  ChartContainer t('dynamics.powerOverTime','Motor Power Over Time')
+                      subtitle t('dynamics.powerOverTimeDesc','Drive and regen power from motor telemetry')
+                      aria     t('dynamics.powerOverTime.aria','Motor power and regen over time area chart')
+                      AreaChart{ Area power #06b6d4 (gradient), Area regen #22c55e (gradient) }, YAxis unit=" kW",
+                      ChartLegend(state=useHiddenSeries('motor-power-history')) → power/regen toggle, Tooltip=<ChartTooltip/>
+    2) FadeIn(0.25) ChartContainer t('dynamics.torqueHistory','Motor Torque History')
+                      LineChart{ Line front #3b82f6 'Front Torque', Line rear #a855f7 'Rear Torque' }, YAxis unit=" Nm"
+    3) FadeIn(0.3)  ChartContainer t('dynamics.rpmHistory','Motor RPM History')
+                      LineChart{ Line front #06b6d4 'Front RPM', Line rear #a855f7 'Rear RPM' }, YAxis unit=" RPM"
+  Each chart: `xChartData.length > 0 ? <chart> : <EmptyState message=t('dynamics.awaitingData','Awaiting motor
+  telemetry data...')/>`. Data hooks: useTranslation, useDateFormat(formatTime), useHiddenSeries. The `toSpeedDisplay`
+  / `speedUnit` props are declared but NOT consumed → NO unit conversion (kW/Nm/rpm plotted as-is). The parent page
+  owns isLoading/refetch/freshness.
+
+ARTIFACTS SHIPPED (allowed set: feature-views/MotorHistoryCharts.* + this log)
+  apps/apple/TeslaSync/feature-views/MotorHistoryCharts.Adapter.swift   — pure Foundation core: MotorHistoryChartsSample
+                                                                         (MotorSnapshot subset), MotorHistoryChartsPoint
+                                                                         (the three web datasets unified on one Date axis),
+                                                                         MotorHistoryChartsProjection + Builder (the power/
+                                                                         torque/rpm useMemo port: null-preserving, ISO-8601
+                                                                         drop, ascending sort), phase/status/connection enums,
+                                                                         Series ids (power/regen), MotorHistoryChartsFormat,
+                                                                         MotorHistoryChartsSurface.slug, …Accessibility
+  apps/apple/TeslaSync/feature-views/MotorHistoryCharts.Model.swift     — P1/S8 source+model+update+in-memory source,
+                                                                         P1/S11 telemetry seam (view.opened), P1/S10 strings
+                                                                         facade, hidden-power-series toggle (web useHiddenSeries),
+                                                                         stale auto-refresh, surfaceSlug
+  apps/apple/TeslaSync/feature-views/MotorHistoryCharts.Charts.swift    — Swift Charts: MotorPowerAreaChart (AreaMark+LineMark,
+                                                                         gradient, interactive legend, selection tooltip),
+                                                                         MotorDualLineChart (shared torque/rpm LineMark + static
+                                                                         legend + tooltip), shared time/value axes + selection
+                                                                         helpers
+  apps/apple/TeslaSync/feature-views/MotorHistoryCharts.Views.swift     — chrome: section card (title+subtitle+freshness chip +
+                                                                         phase switch), connectivity banner, interactive/static
+                                                                         legend, tooltip, loading/empty/error states
+  apps/apple/TeslaSync/feature-views/MotorHistoryCharts.swift           — MotorHistoryCharts view: banner + 3 TSFadeIn sections
+                                                                         (delays 0.2/0.25/0.3) bound to the model
+  apps/apple/TeslaSync/feature-views/MotorHistoryCharts.Previews.swift  — #if DEBUG previews (content/empty/loading/error/stale/offline)
+  apps/apple/TeslaSync/feature-views/MotorHistoryCharts.Tests.swift     — 24 XCTest cases (adapter + model + a11y)
+  apps/apple/TeslaSync/feature-views/MotorHistoryCharts.strings         — P1/S10 table "MotorHistoryCharts"
+  (Views was split into Views.swift + Charts.swift to satisfy swiftlint file_length ≤ 400; both remain under the
+  prompt's "MotorHistoryCharts.*" allowed glob. No shared wiring needed: project.yml (TeslaSync/feature-views) +
+  .swiftlint.yml (feature-views) were already added by the P-0010 ToolCard predecessor; i18n lives in the per-surface
+  .strings table, so the shared Localizable.xcstrings is untouched.)
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  3× ChartContainer         → MotorHistoryChartsSection: Color.TS.surface card + 1px Color.TS.border, title Font.TS.panel
+                              (textPrimary) / subtitle Font.TS.caption (textMuted); switches over phase so loading/empty/
+                              error/content all render (never a blank box)
+  FadeIn(0.2/0.25/0.3)      → TSFadeIn(delay:) (web stagger reproduced exactly)
+  Recharts AreaChart        → Swift Charts AreaMark(gradient) + LineMark(stroke) ; power #06b6d4 → chartSeriesRegen,
+                              regen #22c55e → chartSeriesBattery (ADR-006 semantic token map), YAxis " kW"
+  Recharts LineChart (×2)   → shared MotorDualLineChart LineMark ; torque front #3b82f6 → chartSeriesSpeed, rear #a855f7 →
+                              chartSeriesPower, " Nm" ; rpm front #06b6d4 → chartSeriesRegen, rear #a855f7 → chartSeriesPower, " RPM"
+  ChartLegend + useHiddenSeries → interactive MotorHistoryChartsLegend (tap toggles, strikethrough hidden) bound to model
+                              hiddenPowerSeries via the shared TSChartFormat.toggleHidden ; torque/rpm use the static legend
+  ChartTooltip              → .chartXSelection RuleMark + annotation (time header + per-series value rows)
+  formatTime / useDateFormat → injected (Date)->String, default .shortened (the native formatTime)
+  EmptyState (Activity)     → ContentUnavailableView + SF Symbol "waveform.path.ecg", message t('dynamics.awaitingData')
+  states                    → loading skeleton / empty / error (retry) / stale+offline freshness chip + banner — every
+                              prompt-required state renders
+  i18n                      : every string via MotorHistoryChartsStrings (NSLocalizedString table "MotorHistoryCharts");
+                              zero English literals in code paths (fallbacks are the web t() defaults)
+  a11y                      : decorative glyphs .accessibilityHidden; surface summary (3 titles + sample count); per-chart
+                              .accessibilityValue (min/max/latest per series); legend toggles carry .isButton/.isSelected;
+                              Dynamic Type + Reduce Motion respected
+  telemetry                 : view.opened surface="MotorHistoryCharts" via MotorHistoryChartsSurface.slug (P1/S11), OSLog default sink
+
+GATES (raw exits on THIS runner)
+  [GREEN]    swiftformat --lint  (feature-views/MotorHistoryCharts.* — 7 swift files) : 0/7 require formatting     (FORMAT_EXIT=0)
+             swiftformat --lint apps/apple (whole tree, FYI)                          : 1/1331 PRE-EXISTING —
+                                                                                        TeslaSync/feature-views/ActionBuilder.Previews.swift
+                                                                                        (blankLinesBetweenScopes; NOT a MotorHistoryCharts
+                                                                                        file; present before this change).
+  [GREEN]    swiftlint --strict  (feature-views/MotorHistoryCharts.* — 7 files)       : 0 violations, 0 serious     (LINT_EXIT=0)
+             swiftlint --strict  (whole app, FYI)                                     : 1 PRE-EXISTING violation — function_body_length
+                                                                                        in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                                                                                        (NOT a MotorHistoryCharts file; present before this change).
+  [GREEN]    check-placeholders.ps1 (each shipped MotorHistoryCharts.*.swift, real scan): PLACEHOLDER_COUNT=0        (PLACEHOLDER_EXIT=0)
+             check-placeholders.ps1 -Path …/feature-views/MotorHistoryCharts (prompt-literal path) : PLACEHOLDER_COUNT=0
+                                                                                        (the literal prefix-path matches no dir/file, so the
+                                                                                        scanner returns clean; the per-file scan above is the
+                                                                                        substantive evidence — no TODO/stub/mock/placeholder/Lorem).
+  [GREEN]    MotorHistoryCharts build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode,
+             strict-concurrency complete = same as the app), compiling the EXACT shipped MotorHistoryCharts.* sources
+             (Adapter/Model/Charts/Views/swift/Previews) against the REAL repo shared component library (Sources/Components/*
+             + Sources/Design/* + generated Tokens.swift; only DataDisplay/UnitFormatters.swift excluded — it needs the
+             app-level \.tsUnits env key this surface does not use):
+                 Build complete!  ·  Executed 24 tests, with 0 failures                                            (SWIFT_TEST_EXIT=0)
+                 (9 adapter · 12 state-holder · 3 accessibility)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO MotorHistoryCharts errors; all blockers pre-exist this change):
+    Both schemes were run for real on this runner WITH the freshly-built Shared.xcframework staged.
+    iOS  : the only errors (4) are "feature-views/AcDcStatsPanel.Tests.swift:19: unable to resolve module dependency:
+           'XCTest'". This is the documented pre-existing architectural blocker — every feature-view ships a CO-LOCATED
+           *.Tests.swift, and project.yml compiles feature-views/ into the APP target, which does not link XCTest. It fails
+           on AcDcStatsPanel (alphabetically first) before reaching any other surface. grep "MotorHistoryCharts…error:" = 0.
+    macOS: the only errors are "TeslaSync-macOS / TeslaSyncWidgets-macOS has entitlements that require signing with a
+           development certificate" — this runner provisions no signing identity. grep "MotorHistoryCharts…error:" = 0.
+    These are exactly the items apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI runner and the
+    P4/P99 Apple acceptance gate (test-target wiring for co-located *.Tests.swift + signing) — owned there, NOT by a single
+    feature-view prompt (task rule: do not fix pre-existing unrelated breakage; also outside this prompt's allowed file
+    set). This matches the sanctioned disposition used by the P-0097 BatteryLevelChart and P-0010 ToolCard predecessors
+    (IOS_EXIT=65 / MAC_EXIT=65).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65/MAC_EXIT=65) and explicitly
+                           DEFERRED with raw evidence — never reported as passing. The whole-app swiftformat/swiftlint
+                           pre-existing reds (ActionBuilder.Previews.swift, LifetimeStatsWidget.Adapter.swift) are reported
+                           as RED-but-not-mine, not hidden.
+  2  No scope narrowing  : all three web charts + every branch reproduced (power area w/ interactive legend + tooltip, torque
+                           line, rpm line, the per-chart content/empty split) plus the full prompt state envelope
+                           (loading/error/stale/offline) and the useHiddenSeries toggle.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; the KMP framework was actually built + staged
+                           and BOTH xcodebuild schemes actually run — nothing assumed.
+  4  No stubs as final   : complete production surface (8 files) + 24 real tests; placeholder scanner = 0 on every file; no
+                           TODO/stub/mock/placeholder/Lorem.
+  5  No parity shortcut  : colors/opacity/gradients, unit suffixes, the three datasets' null-preserving derivation, the
+                           hidden-series toggle, typography, a11y and telemetry all mapped to platform tokens + unit-verified.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened telemetry, and the
+                           shared chart primitives (TSFadeIn, TSSkeleton, TSChartFormat) all present and consumed; mirrors the
+                           P-0097 BatteryLevelChart chart precedent + ToolCard (0010) gate disposition.
+  8  No commit on red    : the COMMITTED artifact (MotorHistoryCharts.* + this log) is GREEN on every host gate scoped to the
+                           surface AND on a real isolated Swift 6 strict-concurrency build+test; the deferred full-app gate is
+                           RED only on pre-existing, unrelated surfaces (co-located XCTest test files; macOS signing) this
+                           commit neither introduces nor touches.
+  9  No silent drift     : changes are confined to feature-views/MotorHistoryCharts.* (8 files) + this log. The generated
+                           .xcodeproj and staged Frameworks/Shared.xcframework are git-ignored and NOT committed (verified
+                           via git check-ignore + git status).
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic MotorHistoryCharts shipped at parity with the web source and INDEPENDENTLY VERIFIED:
+  it compiles and its 24 tests pass under the app's own Swift 6 strict-concurrency rules, against the real shared component
+  library, with lint/format/placeholder all green on the surface. The full-app iOS-Simulator + macOS xcodebuild build/test
+  gate is DEFERRED (not failed by this code): with the KMP Shared.xcframework freshly built and staged here, the only iOS
+  errors are the pre-existing co-located *.Tests.swift / XCTest-in-app-target issue (first hit in AcDcStatsPanel.Tests.swift)
+  and the only macOS errors are pre-existing development-signing requirements — zero MotorHistoryCharts errors in either.
+  Both are owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md.
+  This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE
