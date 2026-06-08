@@ -1,0 +1,229 @@
+================================================================================
+P4 · Dashboard widget · 0074 — ProjectedRangeWidget (Apple)
+Run: 2026-06-07T19:20-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/77
+Base: 39201cea
+Prompt: P4/dashboard-widgets/0074 — ProjectedRangeWidget
+Web source (spec): web/src/features/dashboard/widgets/ProjectedRangeWidget.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (0054 GuardModeWidget precedent, ADR-012).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)       OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15 deploy target)              OK
+  iPhone 16 simulator ........ present (83717DEE-… Shutdown)                        OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                            OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  surface in project.yml ..... 0 references (not yet target-registered)             WARN
+
+  NOTE: the default xcode-select path is /Library/Developer/CommandLineTools (no
+  iOS/macOS app SDK), so the bare `xcodebuild` errors out. A real Xcode 26.5 is
+  installed at /Applications/Xcode.app; every Xcode-toolchain step below was run
+  with DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer (same override the
+  0054 GuardModeWidget run used).
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles
+  below. The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable")
+  does NOT apply — the surface is authored, host-compiled, and host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/ProjectedRangeWidget.*) ===
+  ProjectedRangeWidget.Adapter.swift   270  testable projection core — ProjectedRangeUnits (km→display,
+                                            web convertDistanceFromSI parity) + ProjectedRangeFormat
+                                            (web fmtNumber) + ProjectedRangeHealthTier (web healthBadge)
+                                            + ProjectedRangeStats.project (EPA ratio + factor rows) +
+                                            comparisonTone + a11y summary
+  ProjectedRangeWidget.Model.swift     262  P1/S8 state-holder seam (ProjectedRangeSource→Model) + P1/S11
+                                            telemetry seam + P1/S10 strings facade + in-memory source
+  ProjectedRangeWidget.Views.swift     253  presentational subviews — ProjectedRangeChip / health badge /
+                                            connectivity banner / compact big-number / primary readout /
+                                            comparison bar / factors list + rows
+  ProjectedRangeWidget.swift           280  ProjectedRangeWidget surface (glass chrome + freshness chip +
+                                            refresh/Open + state switch + compact/standard/wide layouts +
+                                            registry)
+  ProjectedRangeWidget.Previews.swift  149  #if DEBUG previews — one per state (standard/wide/compact/
+                                            imperial/loading/no-data/error/stale/offline)
+  ProjectedRangeWidget.Tests.swift     304  XCTest — adapter + model + registry + a11y (23 methods)
+  ProjectedRangeWidget.strings          54  P1/S10 catalog contribution (14 source-parity keys + catalog
+                                            registration + native chrome + a11y)
+  Every .swift file <= 400 lines (house file_length). Shipping code (Adapter+Model+Views+Widget) = 1065
+  lines; total 1572 across 7 files. Shared registry types (DashboardWidgetSize / DashboardWidgetRegistration)
+  are REUSED from the 0036/0054 surfaces (no redeclaration → no duplicate symbols when they compile in the
+  app module — PROVEN by the cross-surface iOS+macOS typecheck in [A]/[B]).
+
+=== PARITY (vs web ProjectedRangeWidget.tsx) ===
+  Data sources -> bound via the shared state-holder seam (ProjectedRangeSource -> ProjectedRangeModel):
+    useProjectedRange, useVehicles, useEnergy, useUnits, useTranslation. The production app wires the
+    source over the projected-range query + the settings/units store; the view performs NO HTTP. The
+    payload (ProjectedRangeInput) mirrors web ProjectedRangeData: current_range_km, new_range_km,
+    degradation_pct, total_cycles, health_score, current_capacity_pct, avg_daily_km.
+  Projection -> ProjectedRangeStats.project reproduces the web useMemo derivations 1:1: distance values
+    promoted km→m→display via ProjectedRangeUnits (web convertDistanceFromSI; metric identity, imperial
+    /1609.344), EPA ratio rangePct = min(100, round(projected/epa*100)) (nil when epa<=0 or no projection),
+    health tier (>=90 Excellent / >=70 Good / >=50 Fair / else Poor → success/warning/danger), and the 4
+    factor rows (degradation/avgDaily/capacity/cycles) with the web `?? 0` fallbacks. Verified by executed
+    XCTest (23/23).
+  Composition -> glass shell chrome (Navigation icon + "Projected Range" title [hidden when compact] +
+    freshness chip + refresh + Open) · 1x2 compact (big accent number + unit + "Projected" + health badge,
+    web WidgetBigNumber) · 2x2 standard (primary readout + comparison bar, vertically centered) · >=3-col
+    wide (primary readout + comparison bar + scrollable Range Factors list). Comparison bar: "Projected" /
+    "EPA: …" header + tinted fill (>=80% green · >=60% amber · else red) + "{pct}% of EPA rated".
+  Shared components -> reuses Color.TS / Font.TS / TSSpacing / TSRadius / TSTone / TSSkeleton /
+    TSAnimatedNumber + ContentUnavailableView (compiled against the REAL apps/apple component library in
+    [A]/[B]/[C]). Web AnimatedNumber -> TSAnimatedNumber; web Badge -> ProjectedRangeChip (mirrors the
+    TSBadge tokens, extended to take a pre-localized String the LocalizedStringKey-only TSBadge can't
+    express). Recharts -> none / Leaflet -> none (no chart/map on this surface).
+  States (all render) -> loading (skeleton chrome) · empty ("No projected range data" + hint) · error
+    (retry affordance) · stale (chip + ProgressView + banner) · offline (cached value + chip + banner) ·
+    content (compact/standard/wide). Model phase resolution keeps cached content visible behind
+    refresh/errors, matching the web shell's data?…:EmptyState body.
+  i18n -> ALL 14 source strings resolve through the P1/S10 facade with the web t(key,default) fallback:
+    Excellent, Good, Fair, Poor, Battery Degradation, Avg Daily Usage, Current Capacity, Battery Cycles,
+    Projected Range, Projected, Range Factors, No projected range data, EPA, of EPA rated -> ALL PRESENT
+    in ProjectedRangeWidget.strings (verified: 27/27 code-referenced keys defined; 0 missing). No English
+    literals in native code (every Text is from the facade or Text(verbatim:) of data/pre-localized text).
+  a11y -> compact + primary readout carry a combined range summary value (ProjectedRangeAccessibility.
+    summary: title + value+unit + tier+score + "{pct}% of EPA rated"); each factor row a combined
+    label+value; comparison bar combined; every button an accessibilityLabel; decorative glyphs
+    accessibilityHidden; factor rows sized to the 44pt touch target; Dynamic Type via tokens; Reduce
+    Motion gates the TSSkeleton shimmer + TSAnimatedNumber transition.
+  Telemetry -> ProjectedRangeModel.start() emits viewOpened(surface:"ProjectedRangeWidget") -> bridges the
+    shared Telemetry.track(.screenView) (P1/S11). Asserted by a spy test (fires exactly once).
+  Registry -> ProjectedRangeWidget.registration: id "projected-range", category "battery", default 2x2,
+    min 1x2, max 3x40 (+ clamp()), matching registry/battery.ts. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[A] swiftc -typecheck — iOS 18 SIMULATOR SDK. All SHIPPING dashboard-widget code (this surface's 4 source
+    files + the 0036 DigitalTwinWidget suite that owns the shared registry types + the 0054 GuardModeWidget
+    suite) compiled together against the REAL apps/apple component library (design Tokens + Sources/Design +
+    the whole Sources/Components tree, minus the one Shared-coupled UnitFormatters.swift) + the real
+    MeasurementSystem; none import the Shared xcframework:
+      xcrun swiftc -typecheck -swift-version 6 -target arm64-apple-ios18.0-simulator -sdk <iPhoneSimulator26.5> \
+        <60 real component/design/units files> <15 shipping dashboard-widget files>
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[B] swiftc -typecheck — macOS 15 SDK (same file set, -target arm64-apple-macos15.0):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[C] swiftc -typecheck — DEBUG previews (-D DEBUG, real PreviewsMacros plugin). This surface's 5 files
+    (incl. ProjectedRangeWidget.Previews.swift #Preview blocks) + the real component library + a registry
+    extract, isolated from the sibling 0036 preview file (which has a pre-existing, unrelated
+    non-@MainActor previewModel under strict concurrency):
+      PREVIEWS_TYPECHECK_EXIT=0                                                     OK
+[D] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM harness
+    (real production Adapter/Model/Views/Widget + real design Tokens + real TSTone badges + real
+    MeasurementSystem; minimal TSSkeleton/TSAnimatedNumber/registry shims used ONLY in this throwaway
+    harness, never shipped), Swift 6 language mode (swift-tools-version 6.0):
+      Test Suite 'All tests' passed.  Executed 23 tests, with 0 failures (0 unexpected) in 0.006 seconds
+        ProjectedRangeAdapterTests       12/12  (distance metric/imperial, tier thresholds + tones,
+                                                comparison tones, rangePct round/clamp/zero-epa, null
+                                                projection, display strings + unit, imperial conversion,
+                                                factor values + fallbacks, factor label keys)
+        ProjectedRangeModelTests          7/7   (phase loading/empty/error/content, content-while-failed,
+                                                telemetry-once, refresh delegation, freshness+projection
+                                                tracking)
+        ProjectedRangeRegistryTests       2/2   (canonical projected-range metadata, clamp min/max)
+        ProjectedRangeAccessibilityTests  2/2   (summary value+health+EPA ratio; no-projection fallback)
+      NOTE: executing this suite caught a REAL Swift-6 defect first time through — three file-scope `let`
+      closures (#MutableGlobalVariable) — now fixed with @Sendable; would have failed the real XCTest
+      target too. Re-run after the fix: green.
+      SWIFT_TEST_EXIT=0                                                             OK
+[E] swiftlint --strict on the 6 surface .swift files (explicit paths; the repo .swiftlint.yml `included:`
+    does not list TeslaSync/dashboard-widgets — that wiring is the P4 integration prompt's job — so the
+    bare gate `swiftlint --strict` SKIPS this dir; run explicitly here):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0                                                                   OK
+[F] swiftformat --lint on the 6 surface .swift files (config: apps/apple/.swiftformat):
+      0/6 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[G] check-placeholders (ADR-011 stub gate) via pwsh:
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/ProjectedRangeWidget
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync      -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host, DEVELOPER_DIR→Xcode 26.5):
+      - `xcodegen generate` -> XCODEGEN_EXIT=0 (project + 12 targets + schemes generate cleanly).
+      - `grep -c ProjectedRange|dashboard-widgets project.yml` -> 0 (surface NOT target-registered).
+      - `xcodebuild -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO` ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **   XCBUILD_EXIT=65
+      (The `-scheme … build test` form additionally stalls on the scheme's "Stage Shared.xcframework"
+       pre-action, which invokes the Kotlin/Native gradle build — the same KMP dependency.)
+    Why deferred (three independent, code-unrelated reasons — none is a defect in this surface; identical
+    disposition to the 0054 predecessor surface, Honesty rule 7):
+      (a) NOT-YET-REGISTERED: project.yml's app targets glob `Sources/`; this surface lives at
+          TeslaSync/dashboard-widgets/ and has 0 references in project.yml. It is registered into the
+          XcodeGen target + the dashboard grid by the downstream P4 integration/acceptance prompt. Editing
+          project.yml is OUTSIDE this prompt's allowed files. Running xcodebuild now would build the app
+          WITHOUT these files and re-run the existing suite — ZERO evidence about this deliverable. Steps
+          [A]/[B] DO compile this surface against the real library for BOTH SDKs, and step [D] EXECUTES its
+          full XCTest suite — the meaningful validation.
+      (b) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native gradle build (apps/shared/gradlew :core:assembleSharedXCFramework). Independent of
+          this UI surface; concrete missing-framework error captured above (BUILD_EXIT=65).
+      (c) macOS/iOS app + widget signing requires a development certificate on a signed runner (ADR-012).
+    XCTest under Xcode runs in the TeslaSync/-macOS test target; here the SAME tests are PROVEN GREEN
+    (23/23) by the executed SwiftPM harness in step [D], and the views/model/adapter compile against BOTH
+    the iOS 18 and macOS 15 SDKs in steps [A]/[B].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) across compact/standard/
+      wide — implemented; each has a #if DEBUG preview; phase + projection logic unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (ProjectedRangeSource->Model); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — all 14 source strings present; 27/27
+      code-referenced keys defined in ProjectedRangeWidget.strings; 0 missing.
+  [x] Accessibility labels on every interactive element; readout + each factor row carry combined values.
+  [x] Tests: adapter unit + per-state model + registry + a11y — 23 methods, EXECUTED 23/23 green.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates + iOS/macOS SDK compiles + executed XCTest green; Xcode app
+      build/test DEFERRED with captured evidence (framework + registration, outside this prompt's files).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real BUILD_EXIT=65
+                       framework error captured; every "OK" is a command actually run with its real exit
+                       code (incl. a 23/23 EXECUTED XCTest run and iOS+macOS SDK compiles). The one real
+                       Swift-6 defect the test run surfaced is disclosed in [D] and was fixed, not hidden.
+  2  No scope narrowing: implemented ALL states/layouts/badges + comparison bar + factors + i18n + a11y +
+                       telemetry + registry + units (metric/imperial).
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (Shims used ONLY in the
+                       throwaway SwiftPM test harness, never in shipped surface files.)
+  5  No parity shortcuts: faithful port of convertDistanceFromSI/healthBadge/fmtNumber + EPA ratio + the
+                       full compact/standard/wide composition + every state.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / dashboard grid (integration prompt's
+                       scope) and did NOT edit the shared Localizable.xcstrings (parallel-unsafe) — strings
+                       shipped as the per-surface table, exactly like 0036/0054.
+  8  No commit on red  : committing on all-green host gates + iOS/macOS compiles + executed tests; Xcode
+                       app build/test explicitly DEFERRED (framework/registration), not failed by this code.
+  9  No silent drift   : changes confined to the allowed ProjectedRangeWidget.* files + this log. Two
+                       unrelated pre-existing working-tree edits (web/src/features/admin/*) are NOT mine
+                       and are NOT included in the commit.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native ProjectedRangeWidget shipped at parity with the web source: pure-Swift
+  projection core (executed-green XCTest, 23/23), P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry,
+  every state + layout (compact/standard/wide) + i18n key + a11y label, metric/imperial units, registry-
+  correct (projected-range, 2x2 / 1x2 / 3x40). All host-runnable gates pass AND the surface compiles
+  against BOTH the iOS 18 simulator and macOS 15 SDKs with the real Xcode 26 toolchain under Swift 6 strict
+  concurrency. The Xcode app build/test is DEFERRED to the downstream integration/signed runner (surface
+  not yet target-registered + Shared.xcframework KMP staging — neither a defect in this code, both outside
+  this prompt's allowed files), matching the 0054 GuardModeWidget "code-complete + DEFERRED Xcode gate"
+  precedent.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/ProjectedRangeWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0074-ProjectedRangeWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add ProjectedRangeWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE
