@@ -238,6 +238,13 @@ targets:
     platform: macOS
     sources:
       - path: Tests/Unit
+    settings:
+      base:
+        # The macOS app target overrides PRODUCT_NAME to "TeslaSync" (both
+        # platforms ship the same product name, ADR-002), so the hosted-test
+        # TEST_HOST must point at TeslaSync.app rather than the XcodeGen default
+        # derived from the target name (TeslaSync-macOS.app), which does not exist.
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/TeslaSync.app/Contents/MacOS/TeslaSync"
     dependencies:
       - target: TeslaSync-macOS
       - framework: Frameworks/Shared.xcframework

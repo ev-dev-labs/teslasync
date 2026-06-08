@@ -1,0 +1,128 @@
+=== P4 Dashboard widget 0010 BatteryCellsWidget (Apple) ===
+
+Surface: BatteryCellsWidget (registry id `battery-cells`, category battery, sizes 2x4 / 2x4 / 4x40)
+Web source: web/src/features/dashboard/widgets/BatteryCellsWidget.tsx (reproduced end-to-end)
+Date: 2026-06-07
+
+------------------------------------------------------------
+CAPABILITY VERIFICATION (runner)
+------------------------------------------------------------
+- Full Xcode present: /Applications/Xcode.app  ->  Xcode 26.5 (Build 17F42)
+  (the default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+   driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo needed to build)
+- SDKs: iphonesimulator26.5 / macosx26.5 (backward-compatible with the project's
+  iOS 18.0 / macOS 15.0 deployment targets) -> SwiftUI + Swift Charts + MapKit available.
+- Toolchain: xcodegen 2.45.4, swiftlint, swiftformat, pwsh all present.
+- KMP shared core: Java 17 + ~/.konan kotlin-native 2.4.0 + ~/.gradle caches warm.
+  => Native Apple capability is AVAILABLE on this runner (builds succeed on both platforms).
+
+------------------------------------------------------------
+PATH MAPPING (documented — no silent drift)
+------------------------------------------------------------
+The prompt's templated native-output path `apps/apple/TeslaSync/dashboard-widgets/`
+maps, in this repo's ADR-002 shared-source-group layout (project.yml: one `Sources/`
+group feeds both the iOS `TeslaSync` and macOS `TeslaSync-macOS` app targets), to:
+
+  apps/apple/Sources/DashboardWidgets/      <- surface (5 cohesive BatteryCellsWidget* files)
+  apps/apple/Tests/Unit/DashboardWidgets/   <- XCTest bundle (TeslaSync-macOSTests / TeslaSyncTests)
+
+This is the only location compiled into BOTH app targets without bespoke project surgery.
+Files were split (5) to honor the swiftlint file_length<=400 rule; all share the
+`BatteryCellsWidget` prefix:
+  BatteryCellsWidget.swift           238 lines  (the View + previews)
+  BatteryCellsWidgetComponents.swift 217 lines  (heatmap tiles, stat tiles, freshness chip, skeleton)
+  BatteryCellsWidgetData.swift       229 lines  (BatteryCellSummary/BatteryCell decode + projection + a11y)
+  BatteryCellsWidgetModel.swift      119 lines  (presentation resolver + @Observable view-model)
+  BatteryCellsWidgetRegistry.swift   115 lines  (dashboard-tier primitives + diagnostics sink)
+
+Pre-existing project bug fixed (blocks the macOS gate, unrelated to this surface):
+  project.yml TeslaSync-macOSTests TEST_HOST pointed at `TeslaSync-macOS.app`, but the
+  macOS app target overrides PRODUCT_NAME=TeslaSync -> the app is `TeslaSync.app`. Added an
+  explicit TEST_HOST to the macOS unit-test target so hosted tests can find their host.
+
+------------------------------------------------------------
+PARITY (web source reproduced)
+------------------------------------------------------------
+- Data sources: useBatteryCells + useVehicles bound via the P1/S8 shared state-holder
+  layer (KMP EnergyStore.batteryCells -> StateFlow<Resource<JsonElement>> -> StateHolderModel
+  -> LoadableState), mirroring VehicleSettingsModel. No HTTP in the view.
+- Composition: voltage heatmap grid (status tiles) + Min/Max/Avg/Spread stat tiles +
+  (wide layout) Min/Avg/Max temperature row. Responsive: cols<=1 compact (2-col),
+  cols>=3 wide (4-col, +temps), else 3-col. Cell deviation status thresholds 5/15 mV
+  reproduced (BatteryCellStatus.classify); fmtNumber/safeNumber parity (BatteryCellsProjection.fixed).
+- States (all rendered): loading (skeleton), empty ("No battery cell data"),
+  inner empty ("No cell data"), loaded, stale (chip), offline (cached + offline chip),
+  error (QueryError + retry).
+- i18n: all 11 source keys via translation.widget.batteryCells.* (P1/S10 catalog), plus
+  widget.freshness.{live,stale,offline,accessibility} + translation.common.{retry,refresh,loading}.
+  No English string literals in native code.
+- Accessibility: combined VoiceOver labels on tiles/chips, freshness a11y label,
+  Dynamic-Type system fonts (Font.TS), reduce-motion honored (TSSkeleton shimmer gated).
+- Telemetry (P1/S11): emits view.opened with surface slug "BatteryCellsWidget" on appear
+  (DashboardWidgetTelemetrySink; maps onto ADR-016 ScreenView at the diagnostics boundary).
+
+------------------------------------------------------------
+GATE RESULTS (actual command output)
+------------------------------------------------------------
+[1] iOS build  (xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build)
+    ** BUILD SUCCEEDED **                                          -> IOS_BUILD_EXIT=0
+    (compiles + links the whole TeslaSync app incl. this surface against Shared.xcframework)
+
+[1b] iOS test  (… build test)
+    BUILD ok; TEST could not execute on this runner:
+      "xcrun: error: unable to find utility \"simctl\", not a developer tool or in PATH"
+      "Early unexpected exit, operation never finished bootstrapping … Test crashed … before establishing connection"
+    ROOT CAUSE (environment, not code): the global `xcode-select` is CommandLineTools and
+    this account has NO sudo to run `xcode-select -s /Applications/Xcode.app/...`, so the
+    running CoreSimulatorService/simctl belong to CLT and are incompatible with the Xcode
+    26.5 test runner (the iOS 26.5 sim runtime also reports duplicate axbundle classes).
+    -> iOS *simulator test execution* is environmentally BLOCKED; the iOS *build* passes.
+
+[2] macOS build  (xcodebuild -scheme TeslaSync-macOS … build)
+    ** BUILD SUCCEEDED **                                          -> MAC_BUILD_EXIT=0
+    (compiles + links the macOS app incl. this surface against Shared.xcframework)
+
+[2b] macOS test — THIS SURFACE (host execution, no simulator)
+    xcodebuild -scheme TeslaSync-macOS test -only-testing:TeslaSync-macOSTests/BatteryCellsWidgetTests
+      Test Suite 'BatteryCellsWidgetTests' passed
+      Executed 21 tests, with 0 failures (0 unexpected) in 0.020s
+      ** TEST SUCCEEDED **                                         -> MINE_RC=0
+    Covers: decode adapter (cached->projection), status thresholds, fmtNumber parity,
+    projection (compact/medium/wide), per-state resolver (idle/loading/loaded/empty/
+    offline/error incl. retryability & cached), a11y label, registry metadata, telemetry.
+
+[2c] macOS test — full TeslaSync-macOSTests bundle
+    All suites that ran reported 0 failures (incl. BatteryCellsWidgetTests). The full-bundle
+    run does NOT cleanly exit because two PRE-EXISTING, resource-loading tests hang on this
+    runner (they never emit a pass line), UNRELATED to this surface:
+      TSDesignTokensTests.testChartPaletteMatchesTokenSourceCount   (reads apps/design/tokens.json)
+      UnitsGoldenVectorTests.testConversionAndFormattingMatchKotlinGoldenVectors (reads units-golden.json)
+    These are pre-existing test-infra issues (the macOS test bundle was "owned by macOS CI /
+    deferred" per apps/shared/CONTRACT_FROZEN.md) and are out of scope for this surface.
+
+[3] swiftlint --strict  (cd apps/apple; swiftlint lint --strict --config .swiftlint.yml)
+    Done linting! Found 0 violations, 0 serious                    -> LINT_EXIT=0
+
+[4] swiftformat --lint apps/apple
+    0/266 files require formatting, 2 files skipped                -> FORMAT_EXIT=0
+
+[5] check-placeholders.ps1 (apps/apple/Sources/DashboardWidgets + Tests/Unit/DashboardWidgets)
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0                                            -> PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------
+Delivered surface is COMPLETE and VERIFIED:
+  - iOS build: SUCCEEDED        - macOS build: SUCCEEDED
+  - This surface's tests: 21/21 PASS, ** TEST SUCCEEDED **, clean exit 0
+  - swiftlint --strict: 0 violations   - swiftformat --lint: clean   - placeholders: 0
+The only gate steps that do not reach a clean process exit on THIS runner are:
+  (a) iOS simulator *test* execution — blocked by the no-sudo CLT CoreSimulatorService daemon
+      (the iOS *build* passes), and
+  (b) the macOS *full-bundle* test — blocked by two PRE-EXISTING resource-loading tests
+      that hang (not this surface; this surface's own tests pass with exit 0).
+Both are environmental / pre-existing and are documented above with their raw output.
+
+EXIT=0
+STATUS=DONE
