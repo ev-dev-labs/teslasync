@@ -1,0 +1,59 @@
+/*
+  BackgroundWorkersCard.strings
+  TeslaSync — P4 feature view · 0240 · BackgroundWorkersCard (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `BackgroundWorkersCard` resolves (table "BackgroundWorkersCard") lives here with
+  the web English value. These entries fold into the app `Localizable.xcstrings`
+  master catalog at integration time; they are kept in a per-surface table so each
+  parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The web source (features/system/components/status/BackgroundWorkersCard.tsx) is
+  anonymous (it renders literal English, no t() calls). The first group reproduces
+  that verbatim copy as keyed strings; the second group backs the native-only
+  chrome (title / Refresh / stale / offline chips, retry, loading, accessibility)
+  the Apple HIG states contract requires.
+*/
+
+/* --- Verbatim copy from the web source (parity) --- */
+"backgroundWorkers.empty" = "No background workers reporting. Ensure the notification, export, and automation worker processes are running and reachable on their configured ports.";
+
+"backgroundWorkers.summary.typesLabel" = "Worker types";
+"backgroundWorkers.summary.typesValue" = "{{healthy}} of {{total}} types";
+"backgroundWorkers.summary.instancesLabel" = "Instances";
+"backgroundWorkers.summary.instancesValue" = "{{healthy}} of {{total}} instances";
+"backgroundWorkers.summary.replicatedLabel" = "Replicated";
+"backgroundWorkers.summary.replicatedValue" = "{{count}} of {{total}} {{noun}}";
+"backgroundWorkers.summary.replicatedSingle" = "single instance each";
+"backgroundWorkers.summary.typeNoun.one" = "type";
+"backgroundWorkers.summary.typeNoun.other" = "types";
+
+"backgroundWorkers.group.healthyChip" = "{{healthy}} / {{total}} healthy";
+"backgroundWorkers.group.instances.one" = "1 instance";
+"backgroundWorkers.group.instances.other" = "{{count}} instances";
+"backgroundWorkers.group.severity.healthy" = "all healthy";
+"backgroundWorkers.group.severity.degraded" = "degraded";
+"backgroundWorkers.group.severity.down" = "down";
+"backgroundWorkers.group.severity.unknown" = "unknown";
+
+"backgroundWorkers.instance.status.healthy" = "healthy";
+"backgroundWorkers.instance.status.unhealthy" = "unhealthy";
+"backgroundWorkers.instance.status.down" = "down";
+"backgroundWorkers.latency.none" = "—";
+"backgroundWorkers.latency.value" = "{{ms}} ms";
+
+"backgroundWorkers.scaleCallout.prefix" = "Running multiple instances of a worker? Set the following to a comma-separated list of hostnames:";
+"backgroundWorkers.scaleCallout.suffix" = "Each instance will then appear here with its own status and latency.";
+
+"backgroundWorkers.apiLogs" = "API logs";
+
+/* --- Native chrome: P4 states + accessibility --- */
+"backgroundWorkers.title" = "Background workers";
+"backgroundWorkers.subtitle" = "Per-instance health for the notification, export, and automation workers.";
+"backgroundWorkers.refresh" = "Refresh";
+"backgroundWorkers.retry" = "Retry";
+"backgroundWorkers.loading" = "Loading background workers…";
+"backgroundWorkers.loadingA11y" = "Loading background workers";
+"backgroundWorkers.error" = "Could not load background worker health. Check API logs and try again.";
+"backgroundWorkers.stale" = "Stale";
+"backgroundWorkers.offline" = "Offline";
