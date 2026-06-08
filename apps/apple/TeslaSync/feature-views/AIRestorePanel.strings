@@ -1,0 +1,95 @@
+/*
+  AIRestorePanel.strings
+  TeslaSync — P4 feature view · 0201 · AIRestorePanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `AIRestorePanel` resolves (table "AIRestorePanel") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys from the web source
+  (features/settings/components/AIRestorePanel.tsx). The second group is the
+  per-feature label keys it resolves via `ai.settings.feature.${id}.label`, a
+  verbatim port of the frozen `@/ai/features` name table (57 features). The third
+  group backs the native chrome: the P4 leaf freshness / loading / empty / error
+  copy, so the Swift sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"ai.settings.archive.title" = "Restore previous Helix selection?";
+"ai.settings.archive.description" = "You previously had these features enabled. Re-enable them now?";
+"ai.settings.archive.decline" = "No thanks";
+"ai.settings.archive.restore" = "Restore selection";
+
+/* --- Per-feature labels (port of @/ai/features AI_FEATURES names) --- */
+"ai.settings.feature.__redaction_bypass__.label" = "AI Redaction Bypass Report";
+"ai.settings.feature.__usage__.label" = "AI Usage Card";
+"ai.settings.feature.ai-provider-health.label" = "AI Provider Health (ops)";
+"ai.settings.feature.alert-tuning-suggestions.label" = "Alert tuning suggestions";
+"ai.settings.feature.anomaly-explanations.label" = "Anomaly explanation narration";
+"ai.settings.feature.auto-name-unnamed-locations.label" = "Auto-name unnamed locations";
+"ai.settings.feature.auto-trip-naming.label" = "Auto trip naming";
+"ai.settings.feature.battery-health-forecast-narrative.label" = "Battery health forecast narrative";
+"ai.settings.feature.cabin-temperature-impact-narrative.label" = "Cabin temperature impact narrative";
+"ai.settings.feature.charging-curve-fingerprint-clustering.label" = "Charging-curve fingerprint clustering";
+"ai.settings.feature.charging-diagnosis.label" = "Charging session diagnosis";
+"ai.settings.feature.chatbot-llm.label" = "LLM Chatbot";
+"ai.settings.feature.cost-forecast-narration.label" = "Cost forecast narration";
+"ai.settings.feature.cross-rule-conflict-detection.label" = "Cross-rule conflict detection";
+"ai.settings.feature.data-repair-suggestions.label" = "Data repair suggestions";
+"ai.settings.feature.digest-narration.label" = "Weekly digest narration";
+"ai.settings.feature.drive-coaching.label" = "Per-drive coaching";
+"ai.settings.feature.feedback-queue-triage.label" = "Feedback queue triage";
+"ai.settings.feature.geofence-aware-automation-suggestions.label" = "Geofence-aware automation suggestions";
+"ai.settings.feature.inbox-auto-categorization.label" = "Inbox auto-categorization";
+"ai.settings.feature.incident-timeline-summarizer.label" = "Incident timeline summarizer";
+"ai.settings.feature.learned-per-vehicle-anomaly-baselines.label" = "Learned per-vehicle anomaly baselines";
+"ai.settings.feature.lifetime-stats-qa.label" = "Lifetime stats Q&A";
+"ai.settings.feature.log-trace-summarization.label" = "Log and trace summarization";
+"ai.settings.feature.ml-charging-curve-clustering.label" = "Charging-curve clustering model";
+"ai.settings.feature.mqtt-sse-inspector-explanations.label" = "MQTT and SSE inspector explanations";
+"ai.settings.feature.nl-alert-builder.label" = "Natural-language alert builder";
+"ai.settings.feature.nl-automation-builder.label" = "Natural-language automation builder";
+"ai.settings.feature.nl-dashboard-composer.label" = "Helix natural-language dashboard composer";
+"ai.settings.feature.nl-drive-search-replay.label" = "NL drive search and replay";
+"ai.settings.feature.nl-grafana-panel.label" = "Helix natural-language Grafana panel";
+"ai.settings.feature.nl-search.label" = "Natural-language search";
+"ai.settings.feature.nl-sql-playground.label" = "Helix natural-language SQL playground";
+"ai.settings.feature.period-compare-narration.label" = "Period compare narration";
+"ai.settings.feature.pii-redaction-shared-exports.label" = "Helix export redaction advisor";
+"ai.settings.feature.predictive-maintenance.label" = "Predictive maintenance";
+"ai.settings.feature.preheat-precool-recommender.label" = "Preheat and precool recommender";
+"ai.settings.feature.quiet-hours-suggestion.label" = "Helix quiet-hours suggestion";
+"ai.settings.feature.rag-help.label" = "RAG-backed app help";
+"ai.settings.feature.range-prediction-model.label" = "Range prediction model";
+"ai.settings.feature.route-efficiency-suggestions.label" = "Route-efficiency suggestions";
+"ai.settings.feature.safety-setting-explainer.label" = "Helix safety setting explainer";
+"ai.settings.feature.signal-explorer-nl-filter.label" = "Signal explorer natural-language filter";
+"ai.settings.feature.smart-charge-schedule-suggestion.label" = "Smart-charge schedule suggestion";
+"ai.settings.feature.software-update-changelog-summarizer.label" = "Software update changelog summarizer";
+"ai.settings.feature.speed-profile-insights.label" = "Speed-profile insights";
+"ai.settings.feature.state-machine-debugger-narrator.label" = "State-machine debugger narrator";
+"ai.settings.feature.suggest-new-geofences.label" = "Suggest new geofences";
+"ai.settings.feature.tco-narration.label" = "TCO narration";
+"ai.settings.feature.tire-pressure-trend-reasoning.label" = "Tire pressure trend reasoning";
+"ai.settings.feature.trip-planner-llm-agent.label" = "Trip planner LLM agent";
+"ai.settings.feature.trip-postcard-share-card-image-generation.label" = "Trip postcard and share-card image generation";
+"ai.settings.feature.vampire-drain-explanation.label" = "Vampire-drain explanation";
+"ai.settings.feature.vehicle-paint-preview.label" = "Vehicle paint preview";
+"ai.settings.feature.voice-mode.label" = "Helix voice mode";
+"ai.settings.feature.watch-face-nl-response.label" = "Helix watch face natural-language response";
+"ai.settings.feature.yir-narration.label" = "Year-in-review narration";
+
+/* --- Native chrome: P4 leaf freshness / loading / empty / error --- */
+"airestore.live" = "Live";
+"airestore.stale" = "Stale";
+"airestore.offline" = "Offline";
+"airestore.staleBanner" = "Reconnecting — data may be stale";
+"airestore.offlineBanner" = "Offline — showing last known data";
+"airestore.refresh" = "Refresh";
+"airestore.loadingA11y" = "Loading restore options";
+"airestore.empty" = "No archived Helix selection to restore.";
+"airestore.errorTitle" = "Couldn't load restore options";
+"airestore.retry" = "Retry";
