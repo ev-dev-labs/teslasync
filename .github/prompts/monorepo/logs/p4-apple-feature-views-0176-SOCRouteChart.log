@@ -1,0 +1,242 @@
+=== P4 Feature view 0176 SOCRouteChart (Apple) ===
+Prompt : .github/prompts/monorepo/p4-apple/feature-views/0176 — Feature view: SOCRouteChart
+Web src : web/src/features/driving/components/SOCRouteChart.tsx  (THE spec)
+Native  : apps/apple/TeslaSync/feature-views/SOCRouteChart.*  (9 files)
+Runner  : Darwin (Apple silicon, macOS 26.x). Xcode 26.5 (17F42) via
+          DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer.
+          SDKs: iphonesimulator26.5, macosx26.5. Sim: iPhone 16 (booted).
+          swift 6.3.2 · swiftlint · swiftformat · xcodegen · pwsh · jdk 17.
+Capability: SwiftUI + Swift Charts present and exercised on THIS runner (this surface
+          uses SwiftUI + Swift Charts; no map). NOT capability-blocked.
+
+----------------------------------------------------------------------------------
+DELIVERABLE (9 files — the only files this prompt adds; all under SOCRouteChart.*)
+----------------------------------------------------------------------------------
+  SOCRouteChart.swift            — composable View; FadeIn card; phase switch over the
+                                   full state envelope (loading/empty/error/content),
+                                   freshness banner; binds SOCRouteChartModel (P1/S8).
+  SOCRouteChart.Adapter.swift    — pure core: SOCRoutePoint→SOCRouteSample rounding +
+                                   indexing, the web `chartData.length === 0`
+                                   content/empty threshold, phase resolution, the
+                                   charge-stop reference-line walk (verbatim web
+                                   `stopDistances` port), distance domain, start /
+                                   arrival / min / max SOC, nearest-sample tooltip
+                                   lookup, percent + distance formatting, a11y
+                                   summaries, surface slug.
+  SOCRouteChart.Model.swift      — P1/S8 state-holder seam (SOCRouteChartSource) +
+                                   @Observable SOCRouteChartModel (owns the tooltip
+                                   cursor `selectedDistance`, web Recharts <Tooltip>),
+                                   P1/S10 i18n facade (SOCRouteChartStrings), P1/S11
+                                   telemetry seam (view.opened),
+                                   InMemorySOCRouteChartSource for previews/tests.
+  SOCRouteChart.Views.swift      — header + freshness chip + stale/offline banner;
+                                   loading / empty / error states. Token-driven (P1/S9).
+  SOCRouteChart.Chart.swift      — the Swift Charts area chart (AreaMark green→amber→red
+                                   gradient + LineMark stroke + horizontal min-arrival
+                                   RuleMark + per-stop vertical RuleMarks + selection
+                                   tooltip), axis labels, and the reference-line chips.
+  SOCRouteChart.Previews.swift   — #Preview per state: Content/Empty/Loading/Error/Stale/Offline.
+  SOCRouteChart.strings          — P1/S10 catalog contribution (table "SOCRouteChart").
+  SOCRouteChart.Tests.swift      — 25 tests: adapter projection (16) + formatting (5) +
+                                   accessibility (4).
+  SOCRouteChart.ModelTests.swift — 13 tests: model state machine + tooltip cursor +
+                                   stale auto-refresh + offline + telemetry.
+
+  (.Views/.Chart and .Tests/.ModelTests are split per the repo's ≤400-line/file
+   convention — both files match the allowed `SOCRouteChart.*` set and the existing
+   chart-surface layout, e.g. ChargerTypeChart/SessionComparisonChart/YearlyTrendChart
+   which also carry both `.Views.swift` + `.Chart.swift`, and the established
+   `.ModelTests.swift` sibling.)
+
+----------------------------------------------------------------------------------
+WEB→NATIVE PARITY MAP (SOCRouteChart.tsx is the spec; every branch + label reproduced)
+----------------------------------------------------------------------------------
+  ChartContainer title "Battery Along Route"   → SOCRouteChartHeader  [i18n tripPlanner.socChart.title]
+  ariaLabel "Planned route battery state-…"    → Chart .accessibilityLabel
+                                                 [i18n tripPlanner.socChart.aria]
+                                                 + .accessibilityValue = points/start/arrival/min/stops summary
+  chartData = socCurve.map round(distance_m*10)/10, round(soc*10)/10
+                                                → SOCRouteChartProjection.samples (rounded1)
+  <AreaChart> green→amber→red url(#socGradient) → AreaMark LinearGradient stops
+                                                 success(.40)/warning(.20)/danger(.10) top→bottom
+  <Area stroke="#22c55e">                       → LineMark Color.TS.statusSuccess, 2pt
+  <YAxis domain={[0,100]} label "SOC %">        → .chartYScale(0...100) ticks 0/25/50/75/100,
+                                                 .chartYAxisLabel [i18n tripPlanner.socChart.col.soc]
+  <XAxis dataKey="distance" label "km">         → continuous x = sample.distance,
+                                                 .chartXAxisLabel "km" [i18n tripPlanner.socChart.axis.distance]
+  <ReferenceLine y={minArrivalSOC} "Min n%">    → horizontal RuleMark danger dashed [6,4]
+                                                 + SOCRouteChartMinArrivalLabel "Min n%" [i18n .min]
+  stopDistances walk (|soc-charge_from_soc|<5,  → SOCRouteChartProjection.chargeMarkers
+   cumulative advance, round(distance_m))         (verbatim port; tolerance 5; ordinal = matched index+1)
+  <ReferenceLine x={dist} "⚡ Stop i+1">         → vertical RuleMark speed(#3b82f6) dashed [4,4]
+                                                 + SOCRouteChartStopLabel bolt + "Stop n" [i18n .stop]
+  <Tooltip> "{v} km" / "{v}% SOC"               → .chartXSelection → nearest sample → SOCRouteChartTooltip
+  chartData.length === 0 ? <EmptyState> : <area>→ SOCRouteChartProjection.hasTrace (≥1) → .content/.empty
+  EmptyState "Plan a trip to see the SOC curve" → ContentUnavailableView [i18n tripPlanner.socChart.empty]
+  <FadeIn> (ChartContainer)                     → TSFadeIn
+  (P4 widening) web content/empty → full native envelope: + loading skeleton, + error/retry
+                (QueryError parity), + stale/offline freshness chip & banner (ADR-013).
+
+  Token map (web hex → platform token, theme-aware light/dark/highContrast):
+    #22c55e green  → Color.TS.statusSuccess     #ef4444 red  → Color.TS.statusDanger (exact)
+    #eab308 amber  → Color.TS.statusWarning     #3b82f6 blue → Color.TS.chartSeriesSpeed (exact)
+
+  i18n keys from the web source (all resolve through the P1/S10 facade, no English
+  literals in code): tripPlanner.socChart.title, .aria, .empty, .col.distance, .col.soc.
+  The web also renders the "Min %", "Stop N", and "km" labels as JSX literals — those
+  are keyed here (tripPlanner.socChart.min/.stop/.axis.distance) so NO English literal
+  lives in native code. Native-envelope keys (freshness/banner/loading/error/a11y) added.
+
+  States rendered (every one — never a blank box): loading, empty, error, stale,
+  offline, content. Telemetry: view.opened surface="SOCRouteChart" (P1/S11), once.
+
+  Documented parity note (no silent drift): the web plots the raw soc-curve
+  `distance_m` value as the x and labels the axis "km" (the field is already the
+  along-route value the web chart treats as the x category). The native surface
+  reproduces this verbatim — value plotted as-is, axis unit "km" — rather than
+  re-scaling, to stay faithful to the spec.
+
+----------------------------------------------------------------------------------
+SURFACE-SCOPED GATES (the committed artifact — all GREEN, raw exits)
+----------------------------------------------------------------------------------
+[swiftlint --strict — the 8 SOCRouteChart .swift files]
+  Done linting! Found 0 violations, 0 serious in 8 files.            SURFACE_LINT_EXIT=0
+
+[swiftformat --lint — the 8 SOCRouteChart .swift files]
+  0/8 files require formatting.                                      SURFACE_FORMAT_EXIT=0
+
+[file_length — every file ≤ 400 lines (repo ceiling enforced by --strict)]
+  Adapter 341 · Chart 301 · Model 277 · Tests 288 · Views 184 · ModelTests 170 ·
+  Previews 106 · swift 81  (max 341).                                FILELEN_OK=0
+
+[check-placeholders.ps1 — real scan of the 9 SOCRouteChart files]
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0                                                             PLACEHOLDER_EXIT=0
+  (The prompt's verbatim `-Path …/feature-views/SOCRouteChart` has no literal path on
+   disk → the script returns clean over an empty set [VERBATIM_PLACEHOLDER_EXIT=0]; to
+   make the check meaningful the scan above targets the real 9 files. raw grep for
+   TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not implemented/fatalError/stub/mock
+   across all 9 files = NONE.)
+
+[Isolated SwiftPM build+test — Swift 6 language mode (== app's complete strict
+ concurrency), macOS 15, against the REAL design system (generated Tokens.swift +
+ Sources/Components/Motion TSFadeIn + Sources/Components/Feedback TSSkeleton verbatim)]
+  Compiling SOCRouteChart.{swift,Adapter,Model,Views,Chart,Previews} … Build complete!
+                                                                     ISO_BUILD_EXIT=0
+  Test Suite 'All tests' passed. Executed 38 tests, with 0 failures (0 unexpected).
+    SOCRouteChartProjectionTests   16/16
+    SOCRouteChartFormatTests        5/5
+    SOCRouteChartAccessibilityTests 4/4
+    SOCRouteChartModelTests        13/13
+                                                                     ISO_TEST_EXIT=0
+
+----------------------------------------------------------------------------------
+PREREQUISITES (host setup, reproducible — executed on THIS runner)
+----------------------------------------------------------------------------------
+  apps/shared/gradlew :core:assembleSharedXCFramework  → BUILD SUCCESSFUL in 9m 23s;
+    staged apps/apple/Frameworks/Shared.xcframework (ADR-004; git-ignored).
+  cd apps/apple && xcodegen generate                   → TeslaSync.xcodeproj
+    (git-ignored). All 9 SOCRouteChart files wired into the TeslaSync /
+    TeslaSync-macOS targets (verified in project.pbxproj).
+
+----------------------------------------------------------------------------------
+FULL-APP / WHOLE-TREE GATES (raw exits — RED on PRE-EXISTING, UNRELATED code only)
+----------------------------------------------------------------------------------
+[xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test]
+  ** BUILD FAILED ** / ** TEST FAILED **
+  First+only error file: TeslaSync/feature-views/AcDcStatsPanel.Tests.swift:19:8:
+    error: unable to resolve module dependency: 'XCTest'
+  SOCRouteChart errors in this run: 0 (grep -c = 0).                 IOS_EXIT=65
+
+[xcodebuild -scheme TeslaSync-macOS build test]
+  ** BUILD FAILED **
+  error: "TeslaSync-macOS" has entitlements that require signing with a development
+         certificate. Enable development signing… (target 'TeslaSync-macOS')
+  error: "TeslaSyncWidgets-macOS" … requires signing with a development certificate.
+  SOCRouteChart errors in this run: 0 (grep -c = 0).                 MAC_EXIT=65
+
+[swiftlint --strict — whole apps/apple (1352 files)]
+  Found 1 violation, 1 serious:
+    dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: function_body_length
+  SOCRouteChart violations: 0 (the 8 SOCRouteChart log lines are 'Linting …' progress).
+                                                                     LINT_EXIT=2
+
+[swiftformat --lint apps/apple]
+  TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1: (blankLinesBetweenScopes)
+  SOCRouteChart violations: 0.                                       FORMAT_EXIT=1
+
+Why these are RED and why they are NOT this surface's defect (no red-as-green):
+  • The full-app iOS+macOS xcodebuild build/test gate is a KNOWN DEFERRED
+    verification for every P4 Apple surface — see apps/macos-pending-verifications.md
+    (row p4-apple/…/ToolCard) and the P4/P99-0001 apple-acceptance-gate that runs on a
+    signed `macos-latest` runner.
+  • iOS blocker: the repo-wide co-located `*.Tests.swift` convention compiles XCTest
+    files into the app target; the compiler stops at the alphabetically-first one,
+    AcDcStatsPanel.Tests.swift — NOT SOCRouteChart ("Ac" < "SOC"). ~100 surfaces share
+    it; SOCRouteChart's own .Tests/.ModelTests follow the SAME convention and add zero
+    NEW failure modes. (Their tests pass in the isolated SwiftPM bundle, which links
+    XCTest correctly — see ISO_TEST_EXIT=0 above.)
+  • macOS blocker: development-signing of TeslaSync-macOS / TeslaSyncWidgets-macOS
+    entitlements — no signing identity on this runner. Infra, not code.
+  • The two whole-tree lint/format hits are in LifetimeStatsWidget.Adapter.swift and
+    ActionBuilder.Previews.swift — pre-existing, parallel-merge artifacts, NOT
+    SOCRouteChart (identical to the 0148-SocChart run).
+  • These blockers are OUTSIDE this prompt's allowed file set
+    (apps/apple/TeslaSync/feature-views/SOCRouteChart.* + this log); they cannot be
+    fixed here, and SOCRouteChart introduces ZERO new errors into any of them
+    (grep-verified, count = 0 each).
+  • The COMMITTED artifact (SOCRouteChart.*) is GREEN on every surface-scoped gate AND
+    on a real isolated Swift 6 strict-concurrency build + 38/38 tests against the real
+    design system. "No commit on red" holds for the committed files.
+
+----------------------------------------------------------------------------------
+HONESTY COVENANT
+----------------------------------------------------------------------------------
+  1  No red-as-green   : every red exit (IOS_EXIT/MAC_EXIT/LINT_EXIT/FORMAT_EXIT)
+                         pasted raw + labeled red; their pre-existing, non-SOCRouteChart
+                         causes named with file:line; SOCRouteChart error count = 0 each.
+  2  No scope narrowing: full surface — all 6 states, gradient area + line, min-arrival
+                         + per-stop reference lines, tooltip, axes, a11y, i18n,
+                         telemetry, 38 tests. Nothing deferred or trimmed.
+  3  No skip-and-assume: every gate executed on THIS runner; raw exits pasted; the KMP
+                         xcframework actually built (9m23s), the project actually
+                         generated, both Xcode failures + both lint/format hits
+                         inspected, not assumed.
+  4  No stubs as final : complete production surface + 38 real tests; placeholder scan
+                         = 0; no TODO/stub/mock/placeholder/Lorem/fatalError.
+  5  No parity shortcut: title/aria/area+line/gradient(green→amber→red)/Y[0,100]/
+                         min-arrival line/charge-stop walk+lines/tooltip/empty/units/
+                         i18n/a11y/telemetry all mapped to platform tokens + verified.
+  6  No delegation     : implemented directly; no agents/sub-tasks.
+  7  No predecessor bypass: consumes P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n
+                         facade, P1/S11 telemetry, P4 core (TSFadeIn/TSSkeleton/
+                         Color.TS/Font.TS/TSSpacing/TSRadius/TSMotion).
+  8  No commit on red  : the COMMITTED files (SOCRouteChart.* + this log) are GREEN on
+                         every surface-scoped gate + isolated build/test; the deferred
+                         full-app/whole-tree reds live in files this commit neither adds
+                         nor touches.
+  9  No silent drift   : changes confined to apps/apple/TeslaSync/feature-views/
+                         SOCRouteChart.* (9 files) + this log. Documented widenings: web
+                         content/empty → full P4 state envelope (loading/error/stale/
+                         offline); the web cross-render <Tooltip> realized as an
+                         observable `selectedDistance` on the model. Documented spec
+                         fidelity: the web's raw-`distance_m`-as-x / "km"-axis behavior
+                         reproduced verbatim, not re-scaled.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic SOCRouteChart shipped at parity with the web
+  source and INDEPENDENTLY VERIFIED: it compiles and its 38 tests pass under the app's
+  own Swift 6 strict-concurrency rules, against the real design system, with
+  swiftlint / swiftformat / placeholder all green on the surface and every file within
+  the repo's ≤400-line ceiling. The full-app iOS-Simulator + macOS xcodebuild
+  build/test gate is DEFERRED (not failed by this code) — blocked by the repo-wide
+  co-located-XCTest-in-app convention and macOS development-signing, both pre-existing,
+  both owned by the P4/P99 acceptance gate on a signed macos-latest runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned
+  "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date
+  (e.g. 0148-SocChart, 0092-SpeedTrendChart, 0010-ToolCard).
+
+EXIT=0
+STATUS=DONE
