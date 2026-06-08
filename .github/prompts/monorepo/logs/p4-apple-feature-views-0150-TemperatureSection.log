@@ -1,0 +1,142 @@
+=== P4 Feature view 0150 TemperatureSection (Apple) ===
+
+Surface : apps/apple/TeslaSync/feature-views/TemperatureSection.*
+Web src : web/src/features/driving/components/drive-detail/TemperatureSection.tsx
+Runner  : Darwin arm64 (Mac Studio), Xcode 26.5 (via DEVELOPER_DIR=/Applications/Xcode.app),
+          Swift 6.3.2, swiftlint + swiftformat (Homebrew), pwsh 7, xcodegen, JDK 17.
+Note    : Shared host (not a dedicated sandbox) — see prohibited_actions / parallel-merge state.
+
+------------------------------------------------------------------------------
+FILES SHIPPED (9 — all match the allowed `TemperatureSection.*` glob)
+------------------------------------------------------------------------------
+  TemperatureSection.swift            main View — phase switch (loading/empty/error/content)
+  TemperatureSection.Adapter.swift    pure model types + projection struct (Foundation only)
+  TemperatureSection.Projector.swift  pure projector + phase resolver + formatting + a11y + slug
+  TemperatureSection.Model.swift      P1/S8 state-holder seam + P1/S11 telemetry + P1/S10 i18n facade
+  TemperatureSection.Views.swift      palette, header, freshness chip, banner, stat grid, legend, states
+  TemperatureSection.Chart.swift      4-series Swift Charts line chart + selection RuleMark + tooltip
+  TemperatureSection.Previews.swift   #Preview per state (content/°F/empty/loading/error/stale/offline)
+  TemperatureSection.Tests.swift      XCTest: adapter + projector + model + a11y (for TeslaSyncTests target)
+  TemperatureSection.strings          P1/S10 catalog (table "TemperatureSection")
+
+Parity reproduced from the web source:
+  - Data: SI °C samples from the drive query, converted at the display boundary via
+    convertTempSectionFromSI (°C identity / °F = c*9/5+32), exactly mirroring
+    useDriveDetailData's convertTempFromSI(unitPrefs.temperature). ADR-004 SI-on-disk honored.
+  - Gate: chartData.length > 1 && stats.hasAnyTemp -> tiles + chart, else empty
+    ("No temperature telemetry is available for this drive.").
+  - Up-to-6 stat tiles (Outside/Inside/Driver/Passenger avg, Climate status, Fan Avg·Max),
+    each rendered only when present; fmtNumber (precision 2) + fmtInt parity.
+  - 4 line series (outside/inside/driver/passenger), each only if that array is non-empty;
+    web stroke hues mapped to brand chart tokens (Speed=blue#3b82f6, Power=purple#a855f7 exact).
+  - useSyncedReferenceLineX + ChartTooltip -> native chartXSelection + RuleMark + tooltip.
+  - States widened to full P4 envelope: loading / empty / error(retry) / stale(chip+auto-refresh)
+    / offline(cached+chip) / content. view.opened telemetry (slug "TemperatureSection") on appear.
+  - Every literal resolves through the P1/S10 facade; no hardcoded English in code.
+  - VoiceOver: chart aria label + live summary value; per-tile combined labels; reduce-motion honored.
+
+==============================================================================
+A. PER-SURFACE HOST-RUNNABLE GATE  (deterministic on this runner)  ->  ALL GREEN
+==============================================================================
+
+[A1] swiftlint --strict (the 8 TemperatureSection .swift files)
+     $ swiftlint lint --strict --quiet TeslaSync/feature-views/TemperatureSection.*.swift \
+                                       TeslaSync/feature-views/TemperatureSection.swift
+     LINT_EXIT=0        (0 violations; 120-col warning-as-error budget respected)
+
+[A2] swiftformat --lint (same 8 files, repo .swiftformat: maxwidth 120, before-first wrapping,
+     --self remove, testable-bottom)
+     $ swiftformat --lint TeslaSync/feature-views/TemperatureSection.*.swift ...
+     SwiftFormat completed. 0/8 files require formatting.
+     FORMAT_EXIT=0
+
+[A3] check-placeholders.ps1 (no TODO/stub/mock/placeholder/Lorem in shipped code)
+     $ pwsh -NoProfile -Command "& ./tools/check-placeholders.ps1 -Path apple/TeslaSync/feature-views/TemperatureSection"
+     PLACEHOLDER_ALLOWED=0
+     PLACEHOLDER_COUNT=0
+     PLACEHOLDER_EXIT=0
+
+[A4] Isolated full-surface compile against the REAL SDKs (SwiftUI + Swift Charts),
+     surface files + design tokens (TSDesign + generated Tokens) + minimal shims:
+       macOS 15  (-sdk macosx -target arm64-apple-macos15.0)            COMPILE_EXIT=0
+       iOS 18 sim(-sdk iphonesimulator -target arm64-apple-ios18.0-sim) COMPILE_EXIT=0  (core files)
+     Zero diagnostics in any TemperatureSection.* file.
+
+[A5] Adapter/projector parity harness (Foundation-only, web-number parity), e.g.:
+       presentSeries == [.outside,.inside,.driver]; avg outside=15, inside=22, driver=22 (°C)
+       °F: points[0].outside==50, avg outside==59
+       climateStatus(1,4)=mostlyOff, (3,3)=on, (0,2)=off, (0,0)=nil
+       fan avg=4 max=6; tileKinds==[.outside,.inside,.driver,.climate,.fan]
+       content gate: single-sample -> hasContent=false; fmtNumber/temperature/plain/int parity
+       a11y summary == "Temperatures: Outside 15.00 °C, Inside 22.00 °C, Driver 22.00 °C"
+     RESULT: ALL_ADAPTER_ASSERTS_PASSED (RUN_EXIT=0)
+
+[A6] Model lifecycle harness (full surface compiled, @MainActor model driven via in-memory source) —
+     mirrors TemperatureSection.Tests.swift assertions:
+       loaded->content (2 pts, [outside,inside], avg outside 15); single-sample->empty;
+       loading->loading; failed("timeout")->error; view.opened emitted exactly once;
+       stale auto-refresh exactly once + re-arm on return-to-live (refreshCount 1 then 2);
+       offline keeps cached content with refreshCount 0; °F pref -> unitSymbol "°F", avg 59;
+       TemperatureSection.surfaceSlug == "TemperatureSection".
+     RESULT: MODEL_HARNESS_PASSED (RUN_EXIT=0)
+
+==============================================================================
+B. FULL-APP INTEGRATION GATE  (xcodebuild build test, iOS + macOS)  ->  DEFERRED
+==============================================================================
+Prereq executed successfully on this runner:
+  $ ./Scripts/build-shared-xcframework.sh   (KMP Kotlin/Native)
+  > Task :core:assembleSharedXCFramework ... BUILD SUCCESSFUL
+  Staged Shared.xcframework {ios-arm64, ios-arm64-simulator, macos-arm64}.
+
+  $ xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test  -> ** BUILD FAILED **
+  $ xcodebuild -scheme TeslaSync-macOS                                                  build test  -> ** BUILD FAILED **
+  IOS_EXIT=65   MAC_EXIT=65   (full-app; NOT caused by this surface)
+
+Root cause = PRE-EXISTING, repo-wide, owned by the P4/P99 acceptance gate (NOT this code):
+  1. Co-located XCTest-in-app convention: every feature-views/*Tests.swift is globbed into the
+     app target (project.yml has no excludes), and `import XCTest` is unresolvable there. The app
+     build halts on the FIRST such file — an already-committed sibling, not mine:
+        feature-views/AcDcStatsPanel.Tests.swift:19  error: unable to resolve module dependency: 'XCTest'
+        feature-views/ActionBuilder.ModelTests.swift:11 error: unable to resolve module dependency: 'XCTest'
+     (TemperatureSection.Tests.swift is authored for the TeslaSyncTests target, same as every sibling.)
+  2. Parallel-merge duplicate-definition collisions in unrelated siblings (revealed once *Tests.swift
+     are excluded): 96x "is ambiguous for type lookup", 8x "invalid redeclaration" across
+     dashboard-widgets/*.Model.swift, DashboardWidgets/*, feature-views/OverviewTab.* (e.g.
+     DashboardWidgetSize / PowerFlowConnection redefined Nx across Sources + TeslaSync trees).
+  3. macOS development-signing identities (unavailable on this runner; CODE_SIGNING_ALLOWED=NO used).
+
+EVIDENCE THAT THIS SURFACE IS CLEAN:
+  - grep for 'TemperatureSection.*error:' across BOTH full-app build logs (tests-excluded, both
+    platforms): ZERO matches. Every error belongs to a pre-existing sibling file listed above.
+  - The same disposition is recorded by every prior P4 feature-view surface and tracked in
+    apps/macos-pending-verifications.md (row: p4-apple/feature-views/P-0010-ToolCard ->
+    deferred to p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner).
+    Precedents: 0010 ToolCard, 0057 DrivingTemperatureStats, 0071 AlertsSection,
+    0092 SpeedTrendChart, 0096 AcDcStatsPanel — all EXIT=0 / STATUS=DONE with this rationale.
+
+------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------------
+[x] Surface renders all web-source states (loading/empty/error/stale/offline/content).
+[x] Hooks bind through the shared P1/S8 state-holder seam (TemperatureSectionSource); no HTTP in the view.
+[x] Every source i18n key has a matching P1/S10 catalog key (TemperatureSection.strings).
+[x] Accessibility labels on every interactive element + chart summary; Dynamic Type / reduce-motion.
+[x] Tests: adapter unit + projector + per-state model + a11y (run green in isolation; A5/A6).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (A3).
+[x] Per-surface host gate EXIT=0; full-app xcodebuild build/test DEFERRED to P99 (pre-existing, evidenced).
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/TemperatureSection.swift \
+          apps/apple/TeslaSync/feature-views/TemperatureSection.Adapter.swift \
+          apps/apple/TeslaSync/feature-views/TemperatureSection.Projector.swift \
+          apps/apple/TeslaSync/feature-views/TemperatureSection.Model.swift \
+          apps/apple/TeslaSync/feature-views/TemperatureSection.Views.swift \
+          apps/apple/TeslaSync/feature-views/TemperatureSection.Chart.swift \
+          apps/apple/TeslaSync/feature-views/TemperatureSection.Previews.swift \
+          apps/apple/TeslaSync/feature-views/TemperatureSection.Tests.swift \
+          apps/apple/TeslaSync/feature-views/TemperatureSection.strings \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0150-TemperatureSection.log
+  git commit -m "feat(apps/apple/feature-views): add TemperatureSection surface (P4)"
+
+EXIT=0
+STATUS=DONE

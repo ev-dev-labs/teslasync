@@ -1,0 +1,59 @@
+/*
+  TemperatureSection.strings
+  TeslaSync — P4 feature view · 0150 · TemperatureSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `TemperatureSection` resolves (table "TemperatureSection") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/driving/components/drive-detail/TemperatureSection.tsx). The remainder
+  back the native state envelope (climate words, fan max label, freshness chip,
+  connectivity banner, loading / empty / error chrome) and the chart axes.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"driveDetail.temperatures" = "Temperatures";
+"driveDetail.temperatures.aria" = "Inside, outside, driver and passenger temperature lines over the drive timeline";
+"driveDetail.outsideTemp" = "Outside Temperature";
+"driveDetail.insideTemp" = "Inside Temperature";
+"driveDetail.driverTemp" = "Driver Temperature";
+"driveDetail.passengerTemp" = "Passenger Temperature";
+"driveDetail.climate" = "Climate";
+"driveDetail.fanStatus" = "Fan Status";
+"driveDetail.avg" = "Avg";
+"driveDetail.outside" = "Outside";
+"driveDetail.inside" = "Inside";
+"driveDetail.driver" = "Driver";
+"driveDetail.passenger" = "Passenger";
+"driveDetail.noTemperatureData" = "No temperature telemetry is available for this drive.";
+
+/* --- Climate status words (web `stats.climateStatus` literals) --- */
+"driveDetail.climateOn" = "On";
+"driveDetail.climateMostlyOff" = "Mostly Off";
+"driveDetail.climateOff" = "Off";
+
+/* --- Fan summary (web `· Max ${maxFanSpeed}`) --- */
+"driveDetail.max" = "Max";
+
+/* --- Chart axes / scale labels --- */
+"driveDetail.time" = "Time";
+"driveDetail.temperature" = "Temperature";
+"driveDetail.series" = "Series";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"driveDetail.live" = "Live";
+"driveDetail.stale" = "Stale";
+"driveDetail.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"driveDetail.staleBanner" = "Reconnecting — temperatures may be stale";
+"driveDetail.offlineBanner" = "Offline — showing last known temperatures";
+
+/* --- Loading / empty / error chrome --- */
+"driveDetail.tempLoading" = "Loading temperatures";
+"driveDetail.tempErrorTitle" = "Couldn't load temperatures";
+"driveDetail.retry" = "Retry";
