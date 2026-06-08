@@ -1,0 +1,52 @@
+/*
+  AISettings.strings
+  TeslaSync — P4 feature view · 0202 · AISettings (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `AISettings` resolves (table "AISettings") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/settings/components/AISettings.tsx). The second group backs the native
+  chrome (the P4 leaf freshness / loading / empty / error copy), so the Swift sources
+  hold no English literals.
+
+  Parity note on `ai.settings.costCap.amount`: the web value is the i18next template
+  `${{spent}} / ${{cap}}`; the native catalog uses the equivalent positional
+  `String(format:)` specifier so the two dollar parts interpolate identically.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"ai.settings.title" = "Helix";
+"ai.settings.subtitle" = "Optional. Helix is off by default; nothing is enabled until you opt in here.";
+"ai.settings.modeLegend" = "Helix mode";
+"ai.settings.mode.off" = "Off (default)";
+"ai.settings.mode.offHint" = "No Helix features. The app works fully without them.";
+"ai.settings.mode.local" = "Local-only";
+"ai.settings.mode.localHint" = "Use a private model on your network (e.g. Ollama). No data leaves your install.";
+"ai.settings.mode.cloud" = "Cloud";
+"ai.settings.mode.cloudHint" = "Use a cloud provider (e.g. OpenAI). Requires an API key.";
+"ai.settings.bannerOff" = "Helix is off. Your app works fully without it. Enable a mode above to opt in.";
+"ai.settings.saving" = "Saving…";
+"ai.settings.save" = "Save Helix settings";
+"ai.settings.costCap.todayTitle" = "Today’s Helix spend";
+"ai.settings.costCap.loading" = "Loading…";
+"ai.settings.costCap.amount" = "$%1$@ / $%2$@";
+"ai.settings.costCap.barLabel" = "Helix cost cap usage";
+"ai.settings.costCap.warnHint" = "You are nearing today’s cap. Calls will pause once you reach it.";
+"ai.settings.costCap.criticalHint" = "Cap reached — new Helix calls will be rejected until the cap resets at UTC midnight or you raise it.";
+
+/* --- Native chrome: P4 leaf freshness / loading / empty / error --- */
+"ai.settings.live" = "Live";
+"ai.settings.stale" = "Stale";
+"ai.settings.offline" = "Offline";
+"ai.settings.staleBanner" = "Reconnecting — settings may be stale";
+"ai.settings.offlineBanner" = "Offline — showing last known settings";
+"ai.settings.refresh" = "Refresh";
+"ai.settings.loadingA11y" = "Loading Helix settings";
+"ai.settings.empty" = "Helix settings are unavailable right now.";
+"ai.settings.errorTitle" = "Couldn't load Helix settings";
+"ai.settings.retry" = "Retry";
