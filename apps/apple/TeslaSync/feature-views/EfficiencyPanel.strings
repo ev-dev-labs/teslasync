@@ -1,0 +1,36 @@
+/*
+  EfficiencyPanel.strings
+  TeslaSync — P4 feature view · 0102 · EfficiencyPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `EfficiencyPanel` resolves (table "EfficiencyPanel") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/charging/components/charging-list/EfficiencyPanel.tsx). The second group
+  backs the native-only chrome (loading / empty / error / retry / freshness) the Apple
+  HIG states contract requires.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"charging.efficiency.title" = "Charging Efficiency";
+"charging.efficiency.hint" = "Wall-to-battery energy conversion";
+"charging.efficiency.sessionsWithData" = "sessions with data";
+"charging.efficiency.average" = "Average Efficiency";
+"charging.efficiency.best" = "Best Session";
+"charging.efficiency.worst" = "Worst Session";
+"charging.efficiency.wallLoss" = "Wall-to-Battery Loss";
+
+/* --- Native chrome: states + freshness + accessibility --- */
+"charging.efficiency.loadingA11y" = "Loading charging efficiency";
+"charging.efficiency.empty" = "No charging efficiency data yet";
+"charging.efficiency.errorTitle" = "Couldn't load charging efficiency";
+"charging.efficiency.retry" = "Retry";
+"charging.efficiency.live" = "Live";
+"charging.efficiency.stale" = "Stale";
+"charging.efficiency.offline" = "Offline";
+"charging.efficiency.staleBanner" = "Reconnecting — charging efficiency may be stale";
+"charging.efficiency.offlineBanner" = "Offline — showing last known charging efficiency";
