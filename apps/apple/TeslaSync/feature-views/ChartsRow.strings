@@ -1,0 +1,42 @@
+/*
+  ChartsRow.strings
+  TeslaSync — P4 feature view · 0099 · ChartsRow (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ChartsRow` resolves (table "ChartsRow") lives here with its web value. These entries
+  fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table so each parallel surface prompt owns its own strings
+  without editing the shared catalog.
+
+  The first group is the exact keys + values extracted from the web source
+  (features/charging/components/charging-list/ChartsRow.tsx), verified against
+  web/src/i18n/en.json (charging.charts.*). The second group localizes the labels the
+  web hardcoded inline (series names + units), and the third backs the native-only
+  chrome (freshness banners, loading / error copy, empty states, accessibility).
+*/
+
+/* --- Web source (charging.charts.*, parity with en.json) --- */
+"charging.charts.energyCostTrend" = "Energy & Cost Trend";
+"charging.charts.chargerBreakdown" = "Charger Breakdown";
+
+/* --- Web inline labels + units (hardcoded in the web JSX, localized natively) --- */
+"charging.charts.energySeries" = "Energy (kWh)";
+"charging.charts.costSeries" = "Cost ($)";
+"charging.charts.energyUnit" = "kWh";
+"charging.charts.costTotalSuffix" = "total";
+"charging.charts.perKwhSuffix" = "/kWh";
+
+/* --- Native chrome: empty states --- */
+"charging.charts.noTrend" = "No energy or cost data";
+"charging.charts.noBreakdown" = "No charger breakdown data";
+
+/* --- Native chrome: accessibility + loading + error --- */
+"charging.charts.a11y" = "Charging charts";
+"charging.charts.loading" = "Loading charging charts";
+"charging.charts.errorTitle" = "Couldn't load charging charts";
+"charging.charts.retry" = "Retry";
+
+/* --- Native chrome: freshness banners --- */
+"charging.charts.refresh" = "Refresh";
+"charging.charts.staleBanner" = "Reconnecting — charging charts may be out of date";
+"charging.charts.offlineBanner" = "Offline — showing the last known charging charts";
