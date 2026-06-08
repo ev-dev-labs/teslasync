@@ -1,0 +1,42 @@
+/*
+  EventTimeline.strings
+  TeslaSync — P4 feature view · 0043 · EventTimeline (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `EventTimeline` resolves (table "EventTimeline") lives here with its web `t(key,
+  default)` English value. These entries fold into the app `Localizable.xcstrings` master
+  catalog at integration time; they are kept in a per-surface table so each parallel
+  surface prompt owns its own strings without editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/admin/components/security-access/EventTimeline.tsx — the title, the
+  useTimelineLabels titles/descriptions, and the EmptyState message). The second group
+  backs the native-only chrome (freshness chip / connectivity banner / loading / error /
+  retry / accessibility) the Apple HIG states contract requires.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"admin.security.timeline.title" = "Security Event Timeline";
+"admin.security.timeline.lock.positive" = "Vehicle Locked";
+"admin.security.timeline.lock.negative" = "Vehicle Unlocked";
+"admin.security.timeline.lock.positiveDesc" = "Doors secured";
+"admin.security.timeline.lock.negativeDesc" = "Doors accessible";
+"admin.security.timeline.sentry.positive" = "Sentry Mode Activated";
+"admin.security.timeline.sentry.negative" = "Sentry Mode Deactivated";
+"admin.security.timeline.sentry.positiveDesc" = "Camera surveillance enabled";
+"admin.security.timeline.sentry.negativeDesc" = "Camera surveillance disabled";
+"admin.security.timeline.door.positive" = "Doors Closed";
+"admin.security.timeline.door.negative" = "Door Opened";
+"admin.security.timeline.noEvents" = "No state changes detected in the history.";
+
+/* --- Native chrome: freshness + connectivity --- */
+"admin.security.timeline.live" = "Live";
+"admin.security.timeline.stale" = "Stale";
+"admin.security.timeline.offline" = "Offline";
+"admin.security.timeline.staleBanner" = "Reconnecting — the security timeline may be stale";
+"admin.security.timeline.offlineBanner" = "Offline — showing the last known security history";
+
+/* --- Native chrome: states + accessibility --- */
+"admin.security.timeline.loadingA11y" = "Loading security event timeline";
+"admin.security.timeline.errorTitle" = "Couldn't load the security timeline";
+"admin.security.timeline.retry" = "Retry";
