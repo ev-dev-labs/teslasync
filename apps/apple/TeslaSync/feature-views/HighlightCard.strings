@@ -1,0 +1,27 @@
+/*
+  HighlightCard.strings
+  TeslaSync — P4 feature view · 0076 · HighlightCard (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. HighlightCard is a
+  reusable presentational card: its label, value, and subtitle are supplied (and
+  localised) by the embedding surface — exactly as in the web component, where
+  the caller passes `t(...)` results — so they are NOT listed here. Only the
+  card's *own* intrinsic chrome lives in this table: the empty-value em dash and
+  the trend accessibility phrasing (the spoken form of the lucide TrendingUp /
+  TrendingDown glyphs).
+
+  These entries fold into the app Localizable.xcstrings master catalog (table
+  "HighlightCard") at integration time; they are kept in a per-surface table so
+  each parallel surface prompt owns its own strings without editing the shared
+  catalog.
+*/
+
+/* Empty value: shown in place of a missing metric so the card never renders a
+   blank box, with a spoken "No data" form for VoiceOver. */
+"highlightCard.value.empty" = "—";
+"highlightCard.value.empty.a11y" = "No data";
+
+/* Trend chip accessibility — direction announced instead of the arrow glyph.
+   %@ is the caller-formatted delta string (e.g. "+12.3%"). */
+"highlightCard.change.increase.a11y" = "Increased by %@";
+"highlightCard.change.decrease.a11y" = "Decreased by %@";
