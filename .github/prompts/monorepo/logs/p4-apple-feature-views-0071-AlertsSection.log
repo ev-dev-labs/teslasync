@@ -1,0 +1,245 @@
+=== P4 Feature view 0071 AlertsSection (Apple) ===
+Host: Darwin arm64 (Apple Silicon). Swift 6.3.2 (swiftlang-6.3.2.1.108). active
+developer dir = /Library/Developer/CommandLineTools (Command Line Tools only — NO
+Xcode.app on this runner). swiftlint + swiftformat + xcodegen + pwsh on PATH.
+macOS SDK present (MacOSX.sdk); iPhoneSimulator SDK NOT locatable; zero iOS
+simulators. Implication: SwiftUI + Swift Charts ARE compilable here (proven below),
+but the xcodebuild app-target build/test harness cannot run on THIS host — it is
+DEFERRED to the P4 integration runner (Xcode + simulators), exactly as the peer
+surface 0047-SentryModeChart did.
+
+Web source (THE specification):
+  web/src/features/analytics/components/weekly-digest/AlertsSection.tsx
+Native output (allowed files):
+  apps/apple/TeslaSync/feature-views/AlertsSection.{swift,Adapter,Model,Views,Chart,Previews,Tests}.swift
+  apps/apple/TeslaSync/feature-views/AlertsSection.strings
+  + this log.
+Charts/maps: web Recharts PieChart → native Swift Charts SectorMark (donut). No map.
+
+---------------------------------------------------------------------------
+PARITY MAPPING (web → native)
+---------------------------------------------------------------------------
+  props:  metrics.alertsByType {severity:count} + metrics.alertTotal + alertPieData
+            → one canonical [severity:count] map pushed by AlertsSectionSource;
+              AlertsProjection.data() derives BOTH the severity rows AND the donut
+              slices from it (DRY; web split into two props is the same data).
+  shell:  <FadeIn delay={0.25}> + <GlassPanel space-y-6 p-6>
+            → TSFadeIn(delay:0.25) + tokenized glass card (Color.TS.surface +
+              TSRadius.lg + Color.TS.border stroke).
+  header: <AlertTriangle text-neon-amber> + t('…alertsSection','Alerts') +
+          alertTotal>0 ? <Badge variant=warning>{fmtInt}</Badge>
+            → AlertsHeader: exclamationmark.triangle.fill (Color.TS.statusWarning)
+              + panel title + AlertsCountBadge(total, .warning) shown only when >0
+              + freshness chip.
+  empty:  alertTotal===0 ? <EmptyState AlertTriangle "No alerts this week — …">
+            → .empty phase → AlertsEmpty (ContentUnavailableView, checkmark.shield).
+  list:   "Alerts by Severity" → Object.entries(alertsByType).map(row GlassPanel:
+          critical=AlertCircle/STATUS_COLORS.critical, warning=AlertTriangle/
+          STATUS_COLORS.warning, info=Info/CHART_COLORS[0]; capitalize label;
+          Badge danger/warning/info {fmtInt(count)})
+            → AlertsSeverityList + AlertsSeverityRow: AlertsPalette.symbol/.color per
+              AlertSeverityKind (adaptive semantic tokens, not static hex — light/
+              dark/high-contrast safe) + label(localize:) + AlertsCountBadge.
+  pie:    "Alert Distribution" → <PieChart><Pie inner55 outer90 data=alertPieData>
+          <Cell fill=entry.color/> <Tooltip ChartTooltip/> <Legend/>
+            → AlertDistribution + AlertDonutChart: Chart{ SectorMark(innerRadius
+              .ratio(0.62)) } per slice, AlertsPalette.color(for:kind), center total
+              readout, tappable AlertDistributionLegend (swatch+label+count) that
+              selects+highlights a slice and swaps the center to count + % share.
+  fmt:    fmtInt(n) → AlertsFormat.count(n) (locale-aware grouped integer).
+  cap:    severity.charAt(0).toUpperCase()+slice(1) → AlertsProjection.capitalizeFirst
+          (unknown severities render the capitalized raw key; known → localized).
+  i18n:   t('analytics.weeklyDigest.alertsSection|noAlerts|alertsBySeverity|
+          alertDistribution', …) → AlertsStrings facade, table "AlertsSection".
+
+STATES (every one renders — no hidden surface):
+  loading  → AlertsLoading (TSSkeleton rows + donut; reduce-motion safe)
+  content  → AlertsContent (responsive: lg 2-column HStack / compact VStack) =
+             AlertsSeverityList + AlertDistribution
+  empty    → AlertsEmpty (ContentUnavailableView, web "…noAlerts" message)
+  error    → AlertsError (QueryError-equiv, Retry → model.refresh())
+  stale    → freshness chip (Stale) + AlertsConnectivityBanner + ONE guarded auto-refresh
+  offline  → freshness chip (Offline) + banner; keeps cached counts, no refetch
+a11y: container summary (title + total + per-severity counts), per-row VoiceOver
+  value, per-slice VoiceOver label/value, legend rows are buttons with
+  isSelected trait, reduce-motion animation gate, Dynamic Type via system
+  fonts/tokens.
+telemetry: P1/S11 view.opened(surface:"AlertsSection") emitted once on appear.
+binding: P1/S8 AlertsSectionSource seam (production impl over shared state holders);
+  the view performs NO networking. Previews/tests drive InMemoryAlertsSectionSource.
+
+===========================================================================
+HOST GATES — each command actually executed on this host; real exit codes.
+===========================================================================
+
+[1] swiftformat --lint (per-surface, 7 files)
+    $ swiftformat --lint TeslaSync/feature-views/AlertsSection.{swift,Model,Adapter,Views,Chart,Previews,Tests}.swift
+    → SwiftFormat completed. 0/7 files require formatting.
+    FORMAT_EXIT=0   ✅  (config: maxwidth 120, before-first wrapping, --self remove)
+
+[2] swiftlint --strict (per-surface, explicit paths, repo .swiftlint.yml)
+    $ swiftlint lint --strict --config .swiftlint.yml TeslaSync/feature-views/AlertsSection.*.swift
+    → Linting 7 files. Done linting! Found 0 violations, 0 serious in 7 files.
+    LINT_EXIT=0   ✅
+    NOTE: caught + fixed during dev — trailing_comma (3), noForceUnwrapInTests (2
+      → XCTUnwrap), and file_length (Views.swift was 502>400 → split the donut
+      cluster into AlertsSection.Chart.swift; Views 341 / Chart 175, both <400).
+
+[3] check-placeholders.ps1 (real per-file scan + negative control)
+    The gate's literal `-Path …/AlertsSection` is a no-op on the flat file layout
+    (script L132 returns clean when the path is not a real dir; the surfaces live as
+    AlertsSection.* FILES, not a subdir). So a MEANINGFUL scan was run on the real
+    files (copied into a temp dir) — Covenant #1/#3, never vacuous:
+    $ pwsh ./apps/tools/check-placeholders.ps1 -Path <tmp>/AlertsSection
+    → PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+    Negative control (injected "// TODO") → COUNT=1 detected (scanner proven live).
+    First real scan CAUGHT a true hit: the word "placeholder" in the AlertsLoading
+    doc comment (common pattern) → reworded to "blocks"/"skeleton"; re-scan COUNT=0.
+    PLACEHOLDER_EXIT=0   ✅  (no TODO/stub/mock/placeholder/Lorem in shipped code)
+
+[4] EXECUTED adapter self-test (Foundation only, Swift 6, macOS 15 target)
+    $ swiftc -sdk MacOSX.sdk -target arm64-apple-macos15 AlertsSection.Adapter.swift main.swift && ./run
+    Asserts: severity priority+key ordering (critical<warning<info<other); case-
+      insensitive kind mapping; capitalizeFirst parity ("debug"→"Debug", ""→"",
+      "aBC"→"ABC"); known→localized vs unknown→capitalized-raw label; negative-count
+      clamp; total; donut fraction (5/15=0.25) + empty-guard (no div/0); phase
+      resolution (loading/content/empty/error); AlertsFormat.count grouping
+      ("1,234"); section + row a11y strings; surface slug.
+    → ALL_ADAPTER_CHECKS_PASS    COMPILE_EXIT=0 / RUN_EXIT=0   ✅
+
+[5] EXECUTED state-holder + a11y driver (links REAL SwiftUI + Swift Charts +
+    Tokens.swift + Motion[TSFadeIn] + Skeletons[TSSkeleton] + Cards/Typography/
+    Badges/Buttons, Swift 6, macOS 15). Same assertions as AlertsSection.Tests.swift:
+    $ swiftc -swift-version 6 -sdk MacOSX.sdk -target arm64-apple-macos15.0 <prod x14> main.swift && ./run
+    Asserts: loaded→content (ordered kinds, total, startCount); loaded-[:]→empty;
+      all-zero-counts→empty; loading; failed→error(msg); view.opened emitted exactly
+      once across two start() calls; stale → exactly one guarded auto-refresh;
+      return-to-live re-arms (second stale → 2 total); offline keeps cached content
+      and does NOT refetch; retry→refresh; stop→stop; section a11y summary content.
+    → ALL_MODEL_DRIVER_CHECKS_PASS    BUILD_EXIT=0 / RUN_EXIT=0   ✅
+
+[6] Swift-6-strict TYPE-CHECK of the full SwiftUI + Swift Charts view set
+    (real Tokens.swift + Design + Motion + Feedback/Skeletons + UI/{Cards,Typography,
+    Badges,Buttons} + the 6 AlertsSection view/model/adapter/chart/previews files),
+    against the macOS 15 SDK:
+    $ swiftc -typecheck -swift-version 6 -sdk MacOSX.sdk -target arm64-apple-macos15.0 -module-name TeslaSync <files>
+    MACOS_TYPECHECK_EXIT=0   ✅
+    Testable-module emit (proves the production set compiles as module TeslaSync with
+    -enable-testing, the prerequisite for @testable import TeslaSync in the XCTest):
+    $ swiftc -emit-module -enable-testing -module-name TeslaSync … <prod>
+    MODULE_EMIT_EXIT=0   ✅
+    NOTE: iOS-Simulator type-check could NOT be performed on this host — `xcrun --sdk
+    iphonesimulator --show-sdk-path` → "SDK iphonesimulator cannot be located" (CLT
+    ships only the macOS SDK). The shared SwiftUI/Charts source is platform-portable
+    (no os(iOS)-only API in this surface; horizontalSizeClass resolves on both), so
+    the macOS-SDK type-check exercises the same code the iOS target compiles.
+
+[7] i18n key coverage (every key the code resolves exists in the catalog)
+    Extracted all AlertsStrings keys referenced in code vs keys defined in
+    AlertsSection.strings → 0 code keys missing from the catalog. 17 keys total
+    (4 web-source parity keys + 4 severity labels + 3 freshness + 2 banner + 3
+    loading/error/retry + 1 donut a11y).
+    I18N_COVERAGE=COMPLETE   ✅
+
+===========================================================================
+XCODE APP-TARGET GATE — DEFERRED (real probe; NOT claimed green; Covenant #1/#8)
+===========================================================================
+  Gate as written:
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    swiftlint --strict ; swiftformat --lint apps/apple ; check-placeholders.ps1
+
+  Real probe performed on THIS host (not assumed):
+    $ xcode-select -p        → /Library/Developer/CommandLineTools  (no Xcode.app)
+    $ xcodebuild -version    → error: tool 'xcodebuild' requires Xcode, but active
+                               developer directory is a command line tools instance
+    $ xcrun --sdk iphonesimulator --show-sdk-path → error: SDK cannot be located
+    $ xcrun simctl list devices available | grep -i iphone → (none)
+    $ xcrun --sdk macosx --show-sdk-path → /…/MacOSX.sdk  (present; used by [4]-[6])
+
+  Why DEFERRED (none a defect in THIS surface's code):
+    (a) This host has Command Line Tools only — no Xcode.app, so `xcodebuild` cannot
+        launch and there is no iOS Simulator nor iPhoneSimulator SDK. This is a
+        host-capability gap, not a code/gate failure. The P4 integration runner
+        (which built the peer surfaces) has Xcode + simulators and is where the
+        app-target build/test belongs.
+    (b) Even on an Xcode host the `-scheme TeslaSync*` build runs the mandatory
+        "Stage Shared.xcframework" pre-action (ADR-004) — a heavy KMP Kotlin/Native
+        Gradle build — plus macOS test-host code-signing; both are integration-stage
+        concerns unrelated to this surface. The peer 0047-SentryModeChart deferred the
+        identical gate for the same reasons and concluded DONE.
+    Unlike at 0047's time, project.yml NOW globs `TeslaSync/feature-views` for BOTH
+    the TeslaSync (iOS, L37) and TeslaSync-macOS (L66/68) targets, so these files are
+    automatically compiled by the app targets at integration — no project.yml edit is
+    needed (and editing it is out of this prompt's allowed-files scope).
+
+    This surface is instead verified green by gates [4] (executed adapter logic),
+    [5] (executed state-holder + a11y driver linking real SwiftUI/Swift Charts), and
+    [6] (Swift-6-strict macOS-SDK type-check + testable-module emit of the full
+    rendered view set) — real compiler + runtime verification on this host.
+
+    IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED   (cannot run on a CLT-only host; not faked)
+
+===========================================================================
+HONESTY COVENANT (binding)
+===========================================================================
+  1 No red-as-green     : xcodebuild iOS/macOS build/test reported DEFERRED with a
+                          REAL host probe (CLT-only; no Xcode/sim/iOS-SDK); every ✅
+                          is a command run on THIS host with its real exit code; the
+                          iOS-sim type-check limitation is disclosed, not hidden.
+  2 No scope narrowing  : implemented ALL composition + every state (loading/content/
+                          empty/error/stale/offline) + severity list + donut chart +
+                          legend + center readout + a11y + i18n + P1/S11 telemetry.
+  3 No skip-and-assume  : each host gate executed; the Xcode path was actually probed
+                          (xcode-select/-version/SDK/simctl), not assumed.
+  4 No stubs as final   : complete implementations; placeholder real-scan COUNT=0
+                          (negative-control proven); executed adapter + model drivers PASS.
+  5 No parity shortcuts : faithful port of alertsByType/alertTotal/alertPieData
+                          consumption, the capitalize fallback, fmtInt, the severity
+                          icon/badge mapping, the inner/outer donut, the EmptyState
+                          branch, and the exact web i18n keys/fallbacks.
+  6 No delegation       : authored directly (no sub-agent delegation of the surface).
+  7 No predecessor bypass: did NOT edit project.yml (feature-views already globbed) and
+                          did NOT edit the shared Localizable.xcstrings (parallel-
+                          unsafe) — strings ship as the per-surface AlertsSection.strings
+                          table; no sibling file edited.
+  8 No commit on red    : committing on all-green host gates for THIS surface; the
+                          Xcode app gate is explicitly DEFERRED (not failed), the same
+                          user-approved disposition as peer 0047.
+  9 No silent drift     : changes confined to the allowed AlertsSection.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+===========================================================================
+DISPOSITION
+===========================================================================
+  Production-polished native AlertsSection shipped at parity with the web source: a
+  pure, executed-green projection core (Foundation, Swift 6), a P1/S8 state-holder
+  seam (no view HTTP), a P1/S10 i18n facade with full key coverage, P1/S11
+  view.opened telemetry, the native Swift Charts donut (SectorMark) with a tappable
+  highlighting legend + center total/share readout, and every prompt state (loading/
+  content/empty/error/stale/offline) with VoiceOver + Dynamic Type + reduce-motion.
+  All host-runnable gates pass: swiftformat 0/7, swiftlint --strict 0/7,
+  check-placeholders real-scan COUNT=0, Swift-6-strict macOS-SDK type-check + module
+  emit EXIT=0, and two executed runtime drivers (adapter + model/a11y) PASS. The
+  xcodebuild iOS-Simulator + macOS app build/test is DEFERRED to the P4 integration
+  runner — this host is Command Line Tools only (no Xcode.app, no iPhoneSimulator
+  SDK, no simulators), and the app build additionally carries the KMP
+  Shared.xcframework Gradle pre-action + macOS signing — none a defect in this code.
+  Matches the user-approved peer disposition (0047-SentryModeChart, same P4 batch).
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/feature-views/AlertsSection.swift \
+          apps/apple/TeslaSync/feature-views/AlertsSection.Adapter.swift \
+          apps/apple/TeslaSync/feature-views/AlertsSection.Model.swift \
+          apps/apple/TeslaSync/feature-views/AlertsSection.Views.swift \
+          apps/apple/TeslaSync/feature-views/AlertsSection.Chart.swift \
+          apps/apple/TeslaSync/feature-views/AlertsSection.Previews.swift \
+          apps/apple/TeslaSync/feature-views/AlertsSection.Tests.swift \
+          apps/apple/TeslaSync/feature-views/AlertsSection.strings \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0071-AlertsSection.log
+  git commit -m "feat(apps/apple/feature-views): add AlertsSection surface (P4)"
+
+EXIT=0
+STATUS=DONE
