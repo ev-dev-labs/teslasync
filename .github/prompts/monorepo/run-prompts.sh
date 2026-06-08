@@ -377,14 +377,22 @@ run_prompt() { # $1=prompt fullpath  $2=logfile
 # pid is proven dead. Two distinct locks exist: the parent's whole-run lock and
 # this per-run git mutex ($PP_LOCKDIR) — they MUST never be the same path.
 pp_lock() {
-    local owner
+    local owner waited=0
     while ! mkdir "$PP_LOCKDIR" 2>/dev/null; do
         owner="$(cat "$PP_LOCKDIR/pid" 2>/dev/null)"
         if [ -n "$owner" ] && ! kill -0 "$owner" 2>/dev/null; then
+            # Holder died (e.g. watchdog-killed mid-section) — reclaim the lock.
             rm -rf "$PP_LOCKDIR" 2>/dev/null
             continue
         fi
         sleep 0.2
+        waited=$((waited + 1))
+        # Hard ceiling (~5 min): a live-but-wedged holder must never be able to
+        # stall the whole run forever. Force-break and re-contend.
+        if [ "$waited" -ge 1500 ]; then
+            rm -rf "$PP_LOCKDIR" 2>/dev/null
+            waited=0
+        fi
     done
     echo "$$" > "$PP_LOCKDIR/pid" 2>/dev/null
 }
@@ -394,13 +402,24 @@ pp_unlock() {
     return 0
 }
 
-# Verify the integration worktree is clean (no in-progress merge, no dirty
-# tree). On failure, flag the whole run fatal so other workers stop merging.
+# Verify the integration worktree is clean (no in-progress merge, no dirty tree).
 pp_integration_is_clean() {
     [ -f "$PP_INT_WT/.git" ] || [ -d "$PP_INT_WT/.git" ] || return 1
     if [ -f "$PP_INT_GITDIR/MERGE_HEAD" ]; then return 1; fi
     git -C "$PP_INT_WT" diff --quiet 2>/dev/null \
         && git -C "$PP_INT_WT" diff --cached --quiet 2>/dev/null
+}
+
+# Force the integration worktree back to a known-good state. A single conflicted
+# or half-applied merge must NEVER be allowed to poison every subsequent merge
+# (the original code latched a permanent INTEGRATION_FATAL flag that discarded
+# hundreds of otherwise-green prompts). Recover in place instead: abort any merge,
+# hard-reset to HEAD, and drop untracked leftovers. Caller re-checks cleanliness.
+pp_integration_recover() {
+    git -C "$PP_INT_WT" -c gc.auto=0 merge --abort      >/dev/null 2>&1
+    git -C "$PP_INT_WT" -c gc.auto=0 reset --hard HEAD   >/dev/null 2>&1
+    git -C "$PP_INT_WT" -c gc.auto=0 clean -fd           >/dev/null 2>&1
+    return 0
 }
 
 # ---------------------------------------------------------------------------
@@ -491,20 +510,20 @@ worker_main() { # $1 = manifest line number (1-based)
     fi
 
     # --- merge GREEN into the integration branch -----------------------------
+    # A conflict or unclean tree fails ONLY this prompt — never the whole run.
+    # We self-heal the integration worktree before and after each attempt so one
+    # bad merge can't cascade into hundreds of false BLOCKEDs.
     if [ "$verdict" = "GREEN" ]; then
         pp_lock
-        if [ -f "$PP_STATE/INTEGRATION_FATAL" ]; then
-            verdict="BLOCKED"; reason="integration worktree fatal — merge skipped"
-        elif ! pp_integration_is_clean; then
-            : > "$PP_STATE/INTEGRATION_FATAL"
-            verdict="BLOCKED"; reason="integration worktree not clean before merge"
+        pp_integration_is_clean || pp_integration_recover
+        if ! pp_integration_is_clean; then
+            verdict="BLOCKED"; reason="integration worktree unrecoverable — merge skipped"
         elif git -C "$PP_INT_WT" -c gc.auto=0 merge --no-ff --no-edit \
                 -m "merge(parallel): $relpath" "auto/$PP_RUN_ID/$n" >>"$logfile" 2>&1; then
             grep -Fxq "$relpath" "$DONE_FILE" 2>/dev/null || printf '%s\n' "$relpath" >> "$DONE_FILE"
             verdict="MERGED"; reason=""
         else
-            git -C "$PP_INT_WT" -c gc.auto=0 merge --abort >/dev/null 2>&1
-            if ! pp_integration_is_clean; then : > "$PP_STATE/INTEGRATION_FATAL"; fi
+            pp_integration_recover
             verdict="CONFLICT"; reason="merge conflict into integration branch"
         fi
         pp_unlock
