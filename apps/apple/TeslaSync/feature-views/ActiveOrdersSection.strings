@@ -1,0 +1,45 @@
+/*
+  ActiveOrdersSection.strings
+  TeslaSync — P4 feature view · 0196 · ActiveOrdersSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ActiveOrdersSection` resolves (table "ActiveOrdersSection") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/settings/components/ActiveOrdersSection.tsx, `useTranslation('settings')`
+  `orders.*` + `toast.*`). The remainder back the native state envelope (freshness
+  chip, connectivity banner, loading / error chrome).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"settings.orders.title" = "Active Orders";
+"settings.orders.subtitle" = "Vehicle orders and delivery tracking from Tesla";
+"settings.orders.lastSynced" = "Synced";
+"settings.orders.refresh" = "Refresh";
+"settings.orders.orderId" = "Order ID";
+"settings.orders.vin" = "VIN";
+"settings.orders.deliveryDate" = "Delivery Date";
+"settings.orders.upgradable" = "Upgradable";
+"settings.orders.noOrders" = "No active orders found.";
+"settings.orders.noData" = "No order data yet. Click Refresh to fetch from Tesla.";
+
+/* --- Toast keys from the web source (parity) --- */
+"settings.toast.ordersRefreshed" = "Orders refreshed";
+"settings.toast.ordersFailed" = "Failed to refresh orders";
+
+/* --- Freshness chip (Stale / Offline) --- */
+"settings.orders.stale" = "Stale";
+"settings.orders.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"settings.orders.staleBanner" = "Reconnecting — orders may be out of date";
+"settings.orders.offlineBanner" = "Offline — showing last synced orders";
+
+/* --- Loading / error chrome --- */
+"settings.orders.loading" = "Loading orders";
+"settings.orders.errorTitle" = "Couldn't load orders";
+"settings.orders.retry" = "Retry";
