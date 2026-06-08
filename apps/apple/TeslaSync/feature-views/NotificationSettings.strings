@@ -1,0 +1,71 @@
+/*
+  NotificationSettings.strings
+  TeslaSync — P4 feature view · 0208 · NotificationSettings (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `NotificationSettings`
+  resolves (table "NotificationSettings") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The first groups are the exact keys extracted from the web source
+  (features/settings/components/NotificationSettings.tsx), reproduced verbatim for parity. The remainder
+  back the native state envelope (freshness chip, connectivity banner, loading / empty / error chrome) and
+  the accessibility copy.
+*/
+
+/* --- Browser Notifications header + authorization (web parity) --- */
+"browserNotifications.title" = "Browser Notifications";
+"browserNotifications.subtitle" = "Get notified when the app tab is in the background";
+"browserNotifications.unsupported" = "Browser notifications are not supported in this browser.";
+"browserNotifications.enable" = "Enable Browser Notifications";
+"browserNotifications.enabled" = "Enabled";
+"browserNotifications.blocked" = "Notifications are blocked. Enable in your browser settings.";
+"browserNotifications.events" = "Notify me about";
+"browserNotifications.alerts" = "Alerts";
+"browserNotifications.exportStatus" = "Export completions";
+"browserNotifications.hint" = "Notifications only fire when the app tab is in the background.";
+
+/* --- Browser tab signals (web parity) --- */
+"settings.tab.heading" = "Browser tab signals";
+"settings.tab.badge" = "Show unread count in browser tab";
+"settings.tab.flash" = "Flash tab title on critical alerts";
+"settings.tab.hint" = "Adds a \"(N)\" prefix and favicon dot when there are unread notifications. Critical alerts briefly flash \"(!) ALERT\" when the tab is in the background.";
+
+/* --- Notification sounds (web parity) --- */
+"notificationSounds.title" = "Notification sounds";
+"notificationSounds.subtitle" = "Play a short cue when an alert or completion event arrives. Plays even while the tab is visible.";
+"notificationSounds.master" = "Enable notification sounds";
+"notificationSounds.autoplayHint" = "Some browsers require a click before audio is allowed. Use the Test buttons below once to authorise playback.";
+"notificationSounds.categoriesHeading" = "Channels";
+"notificationSounds.test" = "Test";
+"notificationSounds.testAria" = "Test {{name}} sound";
+"notificationSounds.volume" = "Volume";
+
+/* --- Sound channel labels (web `categoryFallback`) --- */
+"notificationSounds.category.critical_alert" = "Critical alerts";
+"notificationSounds.category.warning_alert" = "Warning alerts";
+"notificationSounds.category.info_alert" = "Informational alerts";
+"notificationSounds.category.charge_complete" = "Charge complete";
+"notificationSounds.category.drive_complete" = "Drive complete";
+"notificationSounds.category.automation_run" = "Automation runs";
+"notificationSounds.category.achievement" = "Achievements";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"notifications.settings.live" = "Live";
+"notifications.settings.stale" = "Stale";
+"notifications.settings.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"notifications.settings.staleBanner" = "Reconnecting — notification settings may be out of date";
+"notifications.settings.offlineBanner" = "Offline — showing your last saved notification settings";
+
+/* --- Loading / empty / error chrome --- */
+"notifications.settings.loading" = "Loading notification settings";
+"notifications.settings.empty.title" = "Notification settings are unavailable";
+"notifications.settings.empty.hint" = "Notification and sound options will appear here once this device supports them.";
+"notifications.settings.error.title" = "Couldn't load notification settings";
+"notifications.settings.error.retry" = "Retry";
+
+/* --- Accessibility summary --- */
+"notifications.settings.a11y.soundsOn" = "Notification sounds on";
+"notifications.settings.a11y.soundsOff" = "Notification sounds off";
