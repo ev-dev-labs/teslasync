@@ -1,0 +1,256 @@
+================================================================================
+P4 · Feature view · 0043 — EventTimeline (Apple)
+Run: 2026-06-07T20:22-0700   Host: Darwin arm64 (macOS 26.x)   Slot: slot-164
+Prompt: P4/feature-views/0043 — Feature view: EventTimeline
+Web source (spec): web/src/features/admin/components/security-access/EventTimeline.tsx
+Mode: code-complete + REAL iOS-18 & macOS-15 SDK typechecks + EXECUTED XCTest (30/30) +
+      DEFERRED signed Xcode app build/test (0005/0009 precedent, ADR-012). No stubs as final.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iphonesimulator26.5 (iOS 18.0 deploy target)         OK
+  macOS SDK .................. macosx26.5 (macOS 15.0 deploy target)                OK
+  iPhone 16 simulator ........ present (83717DEE-70A3-4325-AA61-CBDDD3140989)       OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                    OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                  OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen 2.45.4                     OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  design tokens .............. apps/design/generated/apple/Tokens.swift (committed)  OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  surface in project.yml ..... 0 references (feature-views/ not yet target-registered)  WARN
+
+  NOTE on active toolchain: `xcode-select -p` points at /Library/Developer/
+  CommandLineTools (no iPhoneSimulator SDK), so a bare `xcodebuild` fails ("tool
+  requires Xcode"). Full Xcode 26.5 IS installed at /Applications/Xcode.app and is used
+  here via the DEVELOPER_DIR override (the 0005/0009 precedent), which unlocks the iOS 18
+  simulator SDK, the macOS 15 SDK, the iPhone 16 simulator, and `swift test`.
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is available
+  and PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles below. The
+  capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT apply —
+  the surface is authored, both-SDK-compiled, and host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/EventTimeline.*) ===
+  EventTimeline.Adapter.swift   326  testable projection core — EventTimelineSignal
+                                     (bool|string|absent) + deriveTimeline port
+                                     (helpers.ts) + isSentryActive/doorClosed + iconSystemName
+                                     (timelineIcon) + EventTimelineLabels (useTimelineLabels)
+                                     + timestamp fmt + a11y row summary + surface slug
+  EventTimeline.Model.swift     241  P1/S8 state-holder seam (EventTimelineSource ->
+                                     EventTimelineModel) + P1/S11 telemetry seam +
+                                     LoadStatus/Connection/Update/Phase + EventTimelineProjection
+                                     + in-memory source + P1/S10 EventTimelineStrings facade
+  EventTimeline.Views.swift     252  presentational subviews — variant->tone map / freshness
+                                     chip / stale+offline banner / timeline row (variant icon
+                                     circle + title/subtitle + timestamp) / loading skeleton /
+                                     error retry (QueryError eq) / empty (TSEmptyState)
+  EventTimeline.swift            86  EventTimeline surface — TSFadeIn(0.35) + glass panel +
+                                     title + freshness chip + banner + phase switch +
+                                     scrollable list (web max-h-96 = 384pt)
+  EventTimeline.Previews.swift  107  #if DEBUG previews — one per state (content / empty /
+                                     loading / error / stale / offline)
+  EventTimeline.Tests.swift     397  XCTest — derive + predicates + icon + labels + timestamp
+                                     + projection + model + a11y (30 methods)
+  EventTimeline.strings          42  P1/S10 catalog contribution (12 web-source keys + 8
+                                     native chrome/a11y keys)
+  Total 1451 lines across 7 files (1409 Swift + 42 strings); every file <= 400 lines
+  (house file_length; max is Tests at 397). Shared tokens (Color.TS / Font.TS / TSSpacing /
+  TSRadius / TSMotion) + TSTone (Badges) + tsGlassPanel (TSMaterial) + TSFadeIn (Motion) +
+  TSSkeleton (Skeletons) + TSEmptyState (States) are REUSED from the P4 component library —
+  no redeclaration in shipped files (no duplicate symbols when compiled in the app module).
+
+=== PARITY (vs web EventTimeline.tsx) ===
+  Data sources -> bound via the shared state-holder seam (EventTimelineSource ->
+    EventTimelineModel): useTranslation (the P1/S10 facade) + useTimelineLabels (ported to
+    the pure EventTimelineLabels resolver). The web leaf receives an already-derived
+    `timelineEvents` prop from its parent (the Security & Access page's deriveTimeline(history));
+    the native source carries the cached security history + load/freshness state and the model
+    reproduces deriveTimeline, so the derivation is exercised end-to-end (the 0009 pattern). The
+    view performs NO HTTP.
+  Projection -> EventTimelineAdapter.deriveTimeline is a 1:1 port of helpers.deriveTimeline:
+    sort newest-first; diff each record vs the next-older one; emit a lock row on a `locked`
+    change (variant locked?positive:negative, detail = doorState string ?? "—"), a sentry row on
+    a `sentryMode` change (variant isSentryActive?positive:negative), a door row on a `doorState`
+    change (variant doorClosed?positive:negative, detail = doorState string ?? closed?"Closed":
+    "Open"); cap at 50; return newest-first. isSentryActive (!contains "off") + doorClosed
+    (absent/"closed"/"0"/"false") ported verbatim. ALL verified by EXECUTED XCTest.
+  Composition -> web `FadeIn delay={0.35}` + `GlassPanel p-4` reproduced with TSFadeIn(0.35) +
+    tsGlassPanel; the h2 title (text-lg) -> Font.TS.section header; each row is the web
+    `flex items-start gap-3 rounded-lg bg-white/[0.02] p-3`: a variant-tinted icon circle
+    (positive->green, negative->red, neutral->gray) with the timelineIcon SF Symbol
+    (lock.fill/lock.open.fill, checkmark.shield.fill/exclamationmark.shield.fill,
+    door.left.hand.closed/door.left.hand.open) + title/subtitle + absolute timestamp; the list
+    scrolls within the web max-h-96 (384pt) cap.
+  Shared components -> @/components/ui/GlassPanel -> tsGlassPanel (TSMaterial);
+    @/components/data-display TimeStamp -> EventTimelineTimestamp.absolute; @/components/feedback/
+    EmptyState -> TSEmptyState; @/components/motion/FadeIn -> TSFadeIn. Compiled against the REAL
+    apps/apple library (tokens + Badges/TSTone + Material + Motion) in the iOS 18 + macOS 15
+    typechecks below. Recharts -> none / Leaflet -> none (no chart/map on this surface).
+  States (all render) -> content (scrollable timeline list) · empty (web EmptyState "No state
+    changes detected in the history.") · loading (skeleton rows) · error (QueryError-equivalent
+    retry — native chrome, since the web leaf relies on its parent's react-query) · stale (chip +
+    banner + one guarded auto-refresh) · offline (cached rows + chip + banner). Cached rows stay
+    visible behind refresh/failure. Each has a #if DEBUG preview + is unit-tested via the
+    projection.
+  i18n -> all 12 source keys resolve through the P1/S10 facade (table "EventTimeline") with the
+    web t(key,default) fallback: admin.security.timeline.title; .lock.{positive,negative,
+    positiveDesc,negativeDesc}; .sentry.{positive,negative,positiveDesc,negativeDesc};
+    .door.{positive,negative}; .noEvents — ALL present in EventTimeline.strings, plus 8 native
+    chrome/a11y keys (live/stale/offline/staleBanner/offlineBanner/loadingA11y/errorTitle/retry).
+    The web door subtitle is the raw `ev.detail` (not a key) and is rendered verbatim. No English
+    literal in Swift (Text(verbatim:) over the facade).
+  a11y -> each row is one combined element carrying EventTimelineAccessibility.rowSummary (title +
+    subtitle-when-present + absolute timestamp); the icon circle is accessibilityHidden; the title
+    carries the .isHeader trait; the freshness chip + retry button carry accessibilityLabels; the
+    loading state is one labeled element; Dynamic Type via tokens; Reduce Motion gates the
+    TSSkeleton shimmer + TSFadeIn.
+  Telemetry -> EventTimelineModel.start() emits viewOpened(surface:"EventTimeline") -> bridges the
+    shared Telemetry.track (P1/S11). Asserted by a spy test (fires exactly once).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the surface runtime — Adapter + Model + Views +
+    surface — compiled with the REAL design Tokens + REAL TSTone Badges + TSMaterial + Motion +
+    minimal real-interface TSSkeleton/TSEmptyState shims; Swift 6 language mode):
+      xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator \
+        -swift-version 6 Tokens.swift TSMaterial.swift Motion.swift Badges.swift _Shims.swift \
+        EventTimeline.Adapter.swift EventTimeline.Model.swift EventTimeline.Views.swift EventTimeline.swift
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0, -swift-version 6):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — DEBUG previews under -D DEBUG (the 5 surface files + closure; SwiftUI
+    #Preview macros), BOTH SDKs:
+      MAC_PREVIEW_TYPECHECK_EXIT=0   IOS_PREVIEW_TYPECHECK_EXIT=0                    OK
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM
+    harness (real production Adapter + Model — both SwiftUI-free — + the real Tests file),
+    Swift 6 language mode (.swiftLanguageMode(.v6)):
+      Executed 30 tests, with 0 failures (0 unexpected) in 0.007 seconds
+        EventTimelineDeriveTests             7/7  (empty / single / no-change / every-field-change
+                                                  positive / negative + lock em-dash + door Open
+                                                  fallback / newest-first ordering / 50-row cap)
+        EventTimelineAdapterPredicateTests   3/3  (isSentryActive matrix / doorClosed matrix /
+                                                  iconSystemName per kind+variant incl. neutral)
+        EventTimelineLabelsTests             5/5  (lock / sentry / door raw-detail subtitle /
+                                                  neutral-as-negative / localizer keys requested)
+        EventTimelineTimestampTests          3/3  (nil -> em-dash / absolute human-readable / relative)
+        EventTimelineProjectionTests         4/4  (loading / empty / loaded / failed, hasRows matrix)
+        EventTimelineModelTests              6/6  (start derives + telemetry-once + startCount==1 /
+                                                  empty-history -> empty phase / refresh delegation /
+                                                  push phase+connection+refreshing / stale one-shot
+                                                  auto-refresh per episode / offline no auto-refresh)
+        EventTimelineAccessibilityTests      2/2  (row summary combines title+subtitle+timestamp /
+                                                  omits empty subtitle)
+      SWIFT_TEST_EXIT=0                                                             OK
+[5] swiftlint --strict on the 6 surface .swift files (explicit paths; config apps/apple/.swiftlint.yml):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_SURFACE_EXIT=0                                                           OK
+    Whole-tree note: a bare `swiftlint --strict` over apps/apple reports 1 violation —
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length, 78>50).
+      That file is a SIBLING surface, is PRE-EXISTING (the only added files are EventTimeline.*), is
+      OUTSIDE this prompt's allowed files, and is the identical hit the 0005 predecessor disclosed.
+      This surface contributes 0 violations; `feature-views` is also not in the .swiftlint.yml
+      `included` scope (integration-prompt wiring), so the explicit-path strict run is the meaningful
+      evidence.
+[6] swiftformat --lint apps/apple (the exact gate command, config apps/apple/.swiftformat):
+      0/650 files require formatting, 3 files skipped.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; pwsh) — REAL scan of the surface .swift files:
+      ./apps/tools/check-placeholders.ps1 -Path <EventTimeline .swift files> -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+      (The bare gate invocation `-Path .../EventTimeline` resolves to a non-existent literal path and
+       trivially scans nothing — EXIT=0; the real file scan above is the meaningful evidence.)
+[8] xcodegen generate — project + targets + schemes generate cleanly:
+      XCODEGEN_EXIT=0                                                               OK
+
+=== GATE — XCODE APP BUILD/TEST (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real command run on this host, full Xcode 26.5):
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO ->
+        error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+        ** BUILD FAILED **   XCODEBUILD_EXIT=65
+    Why deferred (code-unrelated, outside this prompt's allowed files — identical disposition to the
+    0005/0009 predecessors, Honesty rule 7):
+      (a) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native Gradle build (the scheme runs it as a pre-build phase). Integration/CI-runner
+          scope (ADR-012, apps/macos-pending-verifications.md), independent of this UI surface;
+          concrete missing-framework error captured above.
+      (b) feature-views project registration: TeslaSync/feature-views is NOT a source path in
+          project.yml (proven: 0 `EventTimeline` + 0 `feature-views` refs in the generated
+          project.pbxproj). Adding it (+ the .swiftlint.yml `included` scope) is a one-time wiring
+          step shared by ALL feature-view surfaces; doing it here would edit files outside the allowed
+          set and collide with every parallel feature-view prompt on the same project.yml lines.
+          Running xcodebuild now would build the app WITHOUT these files — zero evidence about this
+          deliverable. Steps [1]-[3] DO compile this surface against the real library on both SDKs and
+          step [4] EXECUTES its full XCTest suite — the meaningful validation.
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    Under Xcode these same tests run in the TeslaSync(/-macOS) test target; here the SAME logic is
+    PROVEN GREEN (30/30) by the executed SwiftPM harness in step [4], and the surface compiles against
+    BOTH the iOS 18 and macOS 15 SDKs in steps [1]-[3].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (content / empty) + the HIG states (loading / error / stale /
+      offline) — implemented; each has a #if DEBUG preview; phase logic unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (EventTimelineSource->EventTimelineModel);
+      no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — all 12 source keys present in
+      EventTimeline.strings (+ 8 native-chrome keys).
+  [x] Accessibility labels on every interactive element; each row is one labeled element; title is a
+      header; icons are hidden.
+  [x] Tests: adapter (derive/predicates/icon/labels/timestamp) + projection per-state + model wiring +
+      a11y — 30 methods, EXECUTED 30/30 green.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates + both-SDK compiles + executed tests green; signed Xcode app
+      build/test DEFERRED with captured evidence (code-unrelated infra blocker, outside allowed files).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : signed Xcode app build/test shown DEFERRED (not green) with the real
+                       XCODEBUILD_EXIT=65 missing-framework error captured; every "OK" is a command
+                       actually run with its real exit code (incl. iOS+macOS SDK compiles and an
+                       EXECUTED 30/30 XCTest run). The 1 whole-tree swiftlint hit is disclosed as a
+                       pre-existing sibling issue, and the unregistered feature-views path is disclosed.
+  2  No scope narrowing: implemented ALL web states + the HIG states + i18n + a11y + telemetry + the
+                       full deriveTimeline derivation (not just rendering a prop).
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (TSSkeleton/TSEmptyState
+                       shims are used ONLY in the throwaway typecheck harness, clearly labeled, NEVER
+                       in shipped files — the shipped surface reuses the real shared components.)
+  5  No parity shortcuts: faithful port of deriveTimeline + isSentryActive + doorClosed + timelineIcon
+                       + useTimelineLabels (incl. the raw-detail door subtitle + neutral-as-negative)
+                       + the FadeIn/GlassPanel/EmptyState/TimeStamp composition.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register the feature-views path in project.yml / .swiftlint.yml
+                       and did NOT stage Shared.xcframework / edit the shared Localizable.xcstrings
+                       (parallel-unsafe, integration-runner scope) — strings shipped as the per-surface
+                       table, exactly like 0005/0009.
+  8  No commit on red  : committing on green host gates + iOS/macOS compiles + executed 30/30 tests;
+                       signed Xcode app build/test explicitly DEFERRED (captured evidence), not failed;
+                       the lone whole-tree lint hit is pre-existing in a sibling, outside allowed files.
+  9  No silent drift   : changes confined to the allowed EventTimeline.* files + this log. (Two
+                       unrelated pre-existing web/*.tsx working-tree modifications are NOT mine and are
+                       NOT staged.)
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native EventTimeline shipped at parity with the web source: a pure-Swift
+  derivation + semantic-resolution core (EXECUTED-green XCTest, 30/30), a P1/S8 state-holder seam (no
+  view HTTP), P1/S11 telemetry, every web + HIG state, all 12 i18n keys, per-row a11y, and the
+  variant-tinted lock/sentry/door timeline rows. All host-runnable gates pass AND the surface compiles
+  against BOTH the iOS 18 simulator and macOS 15 SDKs with the real Xcode 26 toolchain under Swift 6
+  strict concurrency. The signed Xcode app build/test is DEFERRED to the downstream integration/signed
+  runner (un-staged KMP Shared.xcframework + the one-time feature-views project registration + macOS
+  signing — none a defect in this code, all outside this prompt's allowed files), matching the
+  0005/0009 "code-complete + DEFERRED Xcode gate" precedent (ADR-012).
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/EventTimeline.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0043-EventTimeline.log
+  git commit -m "feat(apps/apple/feature-views): add EventTimeline surface (P4)"
+
+EXIT=0
+STATUS=DONE
