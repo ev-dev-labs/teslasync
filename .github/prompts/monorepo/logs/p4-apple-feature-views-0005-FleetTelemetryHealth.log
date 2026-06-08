@@ -1,0 +1,231 @@
+================================================================================
+P4 · Feature view · 0005 — FleetTelemetryHealth (Apple)
+Run: 2026-06-07T19:45-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/126
+Base: 06869c5e
+Prompt: P4/feature-views/0005 — FleetTelemetryHealth
+Web source (spec): web/src/features/admin/components/devtools/FleetTelemetryHealth.tsx
+Mode: code-complete + REAL iOS-18/macOS-15 SDK typechecks + EXECUTED XCTest (20/20) +
+      DEFERRED Xcode app build/test (0086 SentryEventLogWidget precedent, ADR-012). No stubs as final.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)       OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15 deploy target)              OK
+  iPhone 16 simulator ........ present                                              OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                    OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                  OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                            OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  feature-views path ......... NOT yet a source path in project.yml / .swiftlint.yml  WARN
+
+  NOTE on active toolchain: `xcode-select -p` points at /Library/Developer/
+  CommandLineTools (no iPhoneSimulator SDK), so a bare `xcodebuild` fails ("tool
+  requires Xcode"). Full Xcode 26.5 IS installed at /Applications/Xcode.app and is
+  used here via the DEVELOPER_DIR override (the 0086 SentryEventLogWidget precedent),
+  which unlocks the iOS 18 simulator SDK, the macOS 15 SDK, the iPhone 16 simulator,
+  and `swift test`.
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles below.
+  The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT
+  apply — the surface is authored, both-SDK-compiled, and host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/FleetTelemetryHealth.*) ===
+  FleetTelemetryHealth.Model.swift     321  P1/S8 state-holder seam (FleetHealthSource ->
+                                            FleetHealthModel) + P1/S11 telemetry seam +
+                                            error-VIN/error-record DTOs + in-memory source +
+                                            P1/S10 strings facade + surface slug
+  FleetTelemetryHealth.Adapter.swift   228  testable projection core — isRecent (<24h),
+                                            normalized (empty->nil), vinRows/errorRows + emphasis,
+                                            resolvePhase, vinBadgeTone, timestamp fmt, a11y summaries
+  FleetTelemetryHealth.Views.swift     235  chrome subviews — freshness chip / connectivity banner /
+                                            section card (web ToolCard) / count+filter badges /
+                                            refresh button / empty + loading states
+  FleetTelemetryHealth.Tables.swift    204  the two data tables (web DataTable) — VIN table (tap
+                                            toggles filter) + error table (danger code badge / em-dash /
+                                            recency-colored reported-at) + timestamp cell
+  FleetTelemetryHealth.swift           184  FleetTelemetryHealth surface — freshness/banner + two
+                                            section cards (Error VINs / Error Log) + per-section
+                                            phase switch + shared error state (QueryError equivalent)
+  FleetTelemetryHealth.Previews.swift  127  #if DEBUG previews — content / filtered / empty / loading /
+                                            error / stale / offline
+  FleetTelemetryHealth.Tests.swift     303  XCTest — adapter + model + a11y (20 methods)
+  FleetTelemetryHealth.strings          48  P1/S10 catalog contribution (17 web-parity devtools.health.*
+                                            keys + 9 native-chrome keys)
+  Total 1650 lines across 8 files; every file <= 400 lines (house file_length).
+  Shared tokens (Color.TS / Font.TS / TSSpacing / TSRadius) + TSTone/TSIconBox (real
+  Badges.swift) + TSSkeleton are REUSED from the P4 core (no redeclaration in shipped
+  files). The web `DataTable` maps to a purpose-built compact table composition: the
+  generic `TSDataTable` always renders a selection-checkbox column, which this read-only
+  admin surface does not have, so a custom header+rows composition gives truer parity.
+
+=== PARITY (vs web FleetTelemetryHealth.tsx) ===
+  Data sources -> bound via the shared state-holder seam (FleetHealthSource -> FleetHealthModel):
+    useTranslation, useFleetTelemetryErrorVINs, useFleetTelemetryErrors (+ the two Tesla-refresh
+    mutations useRefreshFleetTelemetryError{VINs,s}). The production app wires FleetHealthSource by
+    composing the error-VINs query with the VIN-filtered error-log query; the view performs NO HTTP.
+  Projection -> FleetHealthProjection is a 1:1 port: isRecent(d) = now - d < 24h (nil never recent,
+    future treated recent, matching the web signed comparison); empty code/message folds to the
+    em-dash (web `?? '—'` / falsy `''`); vinBadgeTone = count>0 ? danger : success
+    (web `vinList.length > 0`). Last-seen emphasis recent->rose / else->amber (web rose/amber);
+    reported-at recent->rose / else->secondary (web rose/secondary). All verified by EXECUTED XCTest.
+  Composition -> two ToolCard sections: "Error VINs" (exclamationmark.triangle.fill, danger) with the
+    {n} affected badge + optional "Filtered: {vin}" badge (× clears) + "Refresh from Tesla"; and
+    "Error Log" (exclamationmark.circle.fill, warning) with "Refresh from Tesla". VIN tap toggles the
+    error-log filter (web setSelectedVin(r.vin === selectedVin ? '' : r.vin)).
+  Shared components -> reuses Color.TS / Font.TS / TSSpacing / TSRadius / TSTone / TSIconBox compiled
+    against the REAL design tokens + real Badges.swift in the typechecks below. Recharts -> none /
+    Leaflet -> none (no chart/map on this surface).
+  States (all render) -> loading (skeleton rows) · empty ("No vehicles with telemetry errors" /
+    "No fleet telemetry errors recorded") · error (QueryError-equivalent retry, native chrome since
+    the web relies on react-query's implicit handling) · stale (chip + banner + one guarded auto-
+    refresh) · offline (cached rows + chip + banner) · content; per section. Cached rows stay visible
+    behind refresh/failure, matching the web shell.
+  i18n -> all source strings resolve through the P1/S10 facade (table "FleetTelemetryHealth") with the
+    web English fallback — the canonical devtools.health.* namespace (already in the shared catalog):
+      errorVinsTitle, errorVinsDesc, affectedVehicles, filteredBy, clearVinFilter, refreshVins, vin,
+      firstSeen, lastSeen, noErrorVins, errorLogTitle, errorLogDesc, refreshErrors, errorCode, message,
+      reportedAt, noErrors  + native chrome (live/stale/offline/staleBanner/offlineBanner/loading/
+      errorTitle/retry/filterHint) — ALL present in FleetTelemetryHealth.strings. No English literal
+      in Swift.
+  a11y -> each VIN row is one labeled, selectable button (full-row tap toggles the filter) carrying the
+    pure vinRowSummary + a filter hint; each error row is one combined element carrying errorRowSummary;
+    the freshness chip / clear-filter / refresh / retry controls each carry an accessibilityLabel; icons
+    are accessibilityHidden; Dynamic Type via tokens; Reduce Motion gates the skeleton shimmer.
+  Telemetry -> FleetHealthModel.start() emits viewOpened(surface:"FleetTelemetryHealth") -> bridges the
+    shared Telemetry.track (P1/S11). Asserted by a spy test (fires exactly once).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the surface runtime — Model + Adapter + Views + Tables +
+    surface — compiled with the REAL design Tokens + REAL TSTone/TSIconBox Badges + a minimal real-
+    interface TSSkeleton shim; Swift 6 language mode):
+      xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator -swift-version 6 ...
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0, -swift-version 6):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+    + Previews compiled under -D DEBUG (SwiftUI #Preview macros, Swift 6):
+      MAC_PREVIEW_TYPECHECK_EXIT=0                                                  OK
+      (This step caught + fixed a real Swift-6 actor-isolation bug: a @MainActor preview helper called
+       from a nonisolated context — now @MainActor. Honest red->green, not assumed.)
+[3] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM harness
+    (real production Adapter/Model/Views/Tables/surface + real design Tokens + real Badges + minimal
+    real-interface TSSkeleton shim), Swift 6 language mode (.swiftLanguageMode(.v6)):
+      Executed 20 tests, with 0 failures (0 unexpected) in 0.007 seconds
+        FleetHealthAdapterTests        7/7  (isRecent boundaries incl. nil/future, normalized trim+empty,
+                                             vinRows order+emphasis, errorRows normalize+emphasis,
+                                             resolvePhase matrix, vinBadgeTone, timestamp fmt)
+        FleetHealthModelTests         10/10 (per-section phases loading/empty/error/content, cached-stays-
+                                             content, toggle/clear filter + source delegation, refresh
+                                             delegation, selectedVin echo, stale auto-refresh once-per-
+                                             episode, view.opened once, connection/refreshing tracking)
+        FleetHealthAccessibilityTests  3/3  (VIN row summary, error row summary present/absent segments)
+      SWIFT_TEST_EXIT=0                                                             OK
+[4] swiftlint --strict on the 7 surface .swift files (explicit paths; config apps/apple/.swiftlint.yml):
+      Done linting! Found 0 violations, 0 serious in 7 files.
+      LINT_SURFACE_EXIT=0                                                           OK
+    Whole-tree note: a bare `swiftlint --strict` over apps/apple reports 1 violation —
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length, 78>50).
+      That file is a SIBLING surface (0055), is PRE-EXISTING (the only added files are
+      FleetTelemetryHealth.*), and is OUTSIDE this prompt's allowed files. This surface contributes 0
+      violations. (The feature-views path is also not yet in the .swiftlint.yml `included` scope — see
+      the project-registration note below — so the bare run does not even lint these files; the
+      explicit-path strict run above is the meaningful evidence.)
+[5] swiftformat --lint apps/apple (gate command, config apps/apple/.swiftformat):
+      0/469 files require formatting, 3 files skipped.
+      FORMAT_EXIT=0                                                                 OK
+[6] check-placeholders (ADR-011 stub gate; pwsh) — REAL scan of the surface directory:
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+      (The bare gate invocation `-Path .../FleetTelemetryHealth` resolves to a non-existent literal path
+       and trivially scans nothing; the real directory scan above is the meaningful evidence.)
+[7] xcodegen generate — project + 12 targets + schemes generate cleanly:
+      XCODEGEN_EXIT=0                                                               OK
+
+=== GATE — XCODE APP BUILD/TEST (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real command run on this host, full Xcode 26.5):
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO ->
+        error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+        ** BUILD FAILED **   XCODEBUILD_TARGET_EXIT=65
+    Why deferred (code-unrelated, outside this prompt's allowed files — identical disposition to the
+    0086 predecessor, Honesty rule 7):
+      (a) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native Gradle build (the scheme runs it as a pre-build phase). This is the
+          integration/CI runner's job (ADR-012, apps/macos-pending-verifications.md) and is independent
+          of this UI surface. Concrete missing-framework error captured above.
+      (b) feature-views project registration: TeslaSync/feature-views is a NEW directory; adding it as a
+          source path in project.yml (both app targets) + the .swiftlint.yml `included` scope is a
+          one-time wiring step shared by ALL ~290 feature-view surfaces. Doing it here would (i) edit
+          files outside this prompt's allowed set and (ii) collide with every other parallel feature-view
+          prompt on the same project.yml lines. Per the 0086 precedent it is left to the P4-core/
+          integration runner (same disposition as staging the framework). xcodegen EXIT=0 confirms the
+          project still generates; the surface compiles for real in steps [1]/[2] and its tests EXECUTE
+          green in step [3], so registration is purely mechanical wiring.
+    The MEANINGFUL validation IS performed above: the surface compiles against BOTH the iOS 18 simulator
+    and macOS 15 SDKs (steps [1]/[2]) and its full XCTest suite EXECUTES green (20/20, step [3]). Under
+    Xcode these same tests run in the TeslaSync(/-macOS) test target.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) per section —
+      implemented; each has a #if DEBUG preview; phase logic unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (FleetHealthSource->FleetHealthModel); no
+      view HTTP.
+  [x] Every i18n key from source has a matching catalog key — the 17 devtools.health.* parity keys, all
+      present in FleetTelemetryHealth.strings (+ 9 native-chrome keys).
+  [x] Accessibility labels on every interactive element; each table row is one labeled element.
+  [x] Tests: adapter + per-section model + a11y — 20 methods, EXECUTED 20/20.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates + both-SDK compiles + executed tests green; Xcode app
+      build/test DEFERRED with captured evidence (code-unrelated infra blocker, outside allowed files).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real BUILD_EXIT=65
+                       missing-framework error captured; every "OK" is a command actually run with its
+                       real exit code (incl. iOS+macOS SDK compiles and an EXECUTED 20/20 XCTest run).
+                       The 1 whole-tree swiftlint hit is disclosed as a pre-existing sibling issue, and
+                       the unregistered feature-views path is disclosed, not hidden.
+  2  No scope narrowing: implemented ALL states/sections + i18n + a11y + telemetry + filter + refresh +
+                       stale auto-refresh.
+  3  No skip-and-assume: each host gate executed; nothing assumed green (a real actor-isolation bug was
+                       found by step [2] and fixed before reporting green).
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (The TSSkeleton shim is used
+                       ONLY in the throwaway typecheck/test harness — clearly labeled, NEVER in shipped
+                       files.)
+  5  No parity shortcuts: faithful port of isRecent + emphasis + badge tone + filter toggle + all states.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register the feature-views path in project.yml / .swiftlint.yml
+                       and did NOT stage Shared.xcframework / edit the shared Localizable.xcstrings
+                       (parallel-unsafe, integration-runner scope) — strings shipped as the per-surface
+                       table, exactly like 0086.
+  8  No commit on red  : committing on green host gates + iOS/macOS compiles + executed 20/20 tests;
+                       Xcode app build/test explicitly DEFERRED (captured evidence), not failed; the lone
+                       whole-tree lint hit is pre-existing in a sibling, outside allowed files.
+  9  No silent drift   : changes confined to the allowed FleetTelemetryHealth.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native FleetTelemetryHealth shipped at parity with the web source: pure-Swift
+  projection core (EXECUTED-green XCTest, 20/20), P1/S8 state-holder seam (no view HTTP), P1/S11
+  telemetry, every state + i18n key + a11y label, the VIN-filter link between the two tables, and the
+  Tesla-refresh actions. All host-runnable gates pass AND the surface compiles against BOTH the iOS 18
+  simulator and macOS 15 SDKs with the real Xcode 26 toolchain under Swift 6 strict concurrency. The
+  signed Xcode app build/test is DEFERRED to the downstream integration/signed runner (un-staged KMP
+  Shared.xcframework + the one-time feature-views project registration — neither a defect in this code,
+  both outside this prompt's allowed files), matching the 0086 "code-complete + DEFERRED Xcode gate"
+  precedent.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/FleetTelemetryHealth.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0005-FleetTelemetryHealth.log
+  git commit -m "feat(apps/apple/feature-views): add FleetTelemetryHealth surface (P4)"
+
+EXIT=0
+STATUS=DONE
