@@ -1,0 +1,51 @@
+/*
+  TorqueHistoryChart.strings
+  TeslaSync — P4 feature view · 0164 · TorqueHistoryChart (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `TorqueHistoryChart` resolves (table "TorqueHistoryChart") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/driving/components/drivetrain-health/TorqueHistoryChart.tsx). The
+  remainder back the native state envelope (freshness chip, connectivity banner,
+  loading / empty / error chrome) and the chart units / accessibility summaries.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"drivetrain.torqueHistory" = "Motor Torque";
+"drivetrain.torqueHistorySub" = "Drive inverter torque output over time";
+"drivetrain.torqueHistory.aria" = "Motor inverter torque output history area chart";
+"drivetrain.col.time" = "Time";
+"drivetrain.col.torque" = "Torque (Nm)";
+"drivetrain.torque" = "Torque";
+
+/* --- Shared --- */
+"common.noData" = "No data available";
+
+/* --- Legend + units --- */
+"drivetrain.torque.legend" = "Torque (Nm)";
+"drivetrain.nmUnit" = "Nm";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"drivetrain.torque.live" = "Live";
+"drivetrain.torque.stale" = "Stale";
+"drivetrain.torque.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"drivetrain.torque.staleBanner" = "Reconnecting — torque trace may be stale";
+"drivetrain.torque.offlineBanner" = "Offline — showing last known torque trace";
+
+/* --- Accessibility summary --- */
+"drivetrain.torque.sampleCount" = "samples";
+"drivetrain.torque.latest" = "Latest";
+"drivetrain.torque.range" = "Range";
+
+/* --- Loading / empty / error chrome --- */
+"drivetrain.torque.loading" = "Loading motor torque history";
+"drivetrain.torque.emptyHint" = "Motor torque history will appear here once drive-inverter telemetry is recorded.";
+"drivetrain.torque.errorTitle" = "Couldn't load motor torque history";
+"drivetrain.torque.retry" = "Retry";
