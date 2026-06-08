@@ -1,0 +1,46 @@
+/*
+  RecentDrivesWidget.strings
+  TeslaSync — P4 dashboard widget · 0079 · RecentDrivesWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `RecentDrivesWidget` resolves (table "RecentDrivesWidget") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/dashboard/widgets/RecentDrivesWidget.tsx) — the title, the "View all"
+  action, and the empty-state copy. The remaining keys back the projector's
+  pre-localized copy (the `min · …% → …%` detail layout reproduced verbatim from
+  the source) and the native-only chrome (freshness chip, refresh/retry/loading/
+  error/banner copy, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.recentDrives" = "Recent Drives";
+"widget.recentDrives.description" = "Last 5 drives with distance and efficiency";
+"widget.viewAll" = "View all";
+"widget.noDrives" = "No recent drives";
+
+/* --- Projector copy (web row layout: `${min} min · ${start}% → ${end}%`, `?`, `—`) --- */
+"widget.recentDrives.tripDetail" = "%1$@ min · %2$@%% → %3$@%%";
+"widget.recentDrives.socUnknown" = "?";
+"widget.recentDrives.noDate" = "—";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.recentDrives.live" = "Live";
+"widget.recentDrives.stale" = "Stale";
+"widget.recentDrives.offline" = "Offline";
+"widget.recentDrives.refresh" = "Refresh";
+"widget.recentDrives.retry" = "Retry";
+
+/* --- Native chrome: states --- */
+"widget.recentDrives.loading" = "Loading recent drives";
+"widget.recentDrives.emptyHint" = "Drives will appear here once your vehicle logs a trip.";
+"widget.recentDrives.errorTitle" = "Couldn't load recent drives";
+"widget.recentDrives.staleBanner" = "Reconnecting — drives may be stale";
+"widget.recentDrives.offlineBanner" = "Offline — showing last known drives";
+
+/* --- Accessibility --- */
+"widget.recentDrives.viewAllA11y" = "View all drives";
