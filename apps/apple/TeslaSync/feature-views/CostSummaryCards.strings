@@ -1,0 +1,51 @@
+/*
+  CostSummaryCards.strings
+  TeslaSync — P4 feature view · 0111 · CostSummaryCards (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `CostSummaryCards` resolves (table "CostSummaryCards") lives here with its web English
+  value. These entries fold into the app `Localizable.xcstrings` master catalog at integration
+  time; they are kept in a per-surface table so each parallel surface prompt owns its own
+  strings without editing the shared catalog.
+
+  The first group holds the keys extracted verbatim from the web source
+  (features/charging/components/cost-analysis/CostSummaryCards.tsx) — the canonical
+  `costAnalysis.stats.*` namespace. The second group localizes the inline template literals
+  the web composes by hand (the "Cost Per {unit}" label argument, the "per {unit}" and
+  "vs {price}/{gasUnit}" subtitles, the "gal equiv" unit, and the gas-unit abbreviation) so
+  no English literal is hardcoded in native code. The remaining keys back the native-only
+  chrome (freshness chip, stale/offline banner, loading + error + retry copy, empty hint).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"costAnalysis.stats.totalCost" = "Total Cost";
+"costAnalysis.stats.sessions" = "sessions";
+"costAnalysis.stats.avgPerKwh" = "Avg $/kWh";
+"costAnalysis.stats.blendedRate" = "blended rate";
+"costAnalysis.stats.costPerDist" = "Cost Per %@";
+"costAnalysis.stats.totalEnergy" = "Total Energy";
+"costAnalysis.stats.gasSavings" = "Gas Savings $";
+"costAnalysis.stats.savingsPercent" = "Savings %";
+"costAnalysis.stats.vsGasoline" = "vs gasoline";
+
+/* --- Inline composition from the web source (no English literals in code) --- */
+"costAnalysis.stats.unitMile" = "Mile";
+"costAnalysis.stats.unitKm" = "km";
+"costAnalysis.stats.perUnit" = "per %@";
+"costAnalysis.stats.galEquiv" = "gal equiv";
+"costAnalysis.stats.vsRate" = "vs %@/%@";
+"costAnalysis.stats.gasUnitGallon" = "gal";
+"costAnalysis.stats.gasUnitLiter" = "L";
+
+/* --- Native chrome: freshness + connectivity --- */
+"costAnalysis.stats.live" = "Live";
+"costAnalysis.stats.stale" = "Stale";
+"costAnalysis.stats.offline" = "Offline";
+"costAnalysis.stats.staleBanner" = "Reconnecting — cost summary may be stale";
+"costAnalysis.stats.offlineBanner" = "Offline — showing last known cost summary";
+
+/* --- Native chrome: states --- */
+"costAnalysis.stats.loading" = "Loading cost summary";
+"costAnalysis.stats.errorTitle" = "Couldn't load cost summary";
+"costAnalysis.stats.retry" = "Retry";
+"costAnalysis.stats.empty" = "No charging sessions for this period yet";

@@ -1,0 +1,156 @@
+=== P4 Feature view 0111 CostSummaryCards (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon) — shared runner.
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.x · swiftformat 0.61.x · xcodegen 2.45.4 · pwsh · OpenJDK 17.
+  Destinations       : iOS Simulator "iPhone 16" present (iOS 26.5) · iphonesimulator + macOS 26.5 SDKs present.
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 9m08s; debug + release
+                       XCFrameworks staged to apps/apple/Frameworks/Shared.xcframework).
+  Capability         : SwiftUI + Swift Charts + MapKit SDKs + iPhone 16 simulator all present → NOT capability-BLOCKED.
+                       (This surface uses no charts/maps — pure SwiftUI tiles — but the full Apple capability is present.)
+
+WEB SOURCE (the specification)
+  web/src/features/charging/components/cost-analysis/CostSummaryCards.tsx — the charging cost-analysis "summary
+  cards" row. props: { coreStats: CoreStats | null, gasPrice, distanceUnit, isMiles }. Hooks: useTranslation,
+  useFormatting (formatCurrency = currencySymbol + fmtNumber), useSettings (gas_unit → 'L'|'gal'; locale; currency).
+  Wrapped in <StaggerContainer>; six <StatBox> tiles each in a <StaggerItem>, in a 2/3/6-col responsive grid:
+    1 Total Cost    : formatCurrency(totalCost,2)         sub `${fmtInt(count)} sessions`         DollarSign cyan  glow cyan
+    2 Avg $/kWh     : formatCurrency(avgCostPerKwh,3)     sub 'blended rate'                      Zap yellow       glow none
+    3 Cost Per {u}  : formatCurrency(costPerDist,3)       sub `per ${distanceUnit}`               Car blue         glow none
+                      label t('…costPerDist',{unit:isMiles?'Mile':'km','Cost Per {{unit}}'})
+    4 Total Energy  : fmtWithUnit(totalEnergy,'kWh',1)    sub fmtWithUnit(gallonsEquiv,'gal equiv',1)  Zap green   glow green
+    5 Gas Savings $ : formatCurrency(savings,2)           sub `vs ${formatCurrency(gasPrice,2)}/${gasUnit}` Fuel red glow green
+    6 Savings %     : `${fmtNumber(savingsPercent,1)}%`   sub 'vs gasoline'                       TrendingDown emerald glow green
+  numberFormat.fmtNumber = safeNumber(v).toLocaleString(locale,{min=max=decimals}); fmtInt = 0dp; fmtWithUnit = "n unit";
+  safeNumber → finite|0. coreStats===null → every field falls back to 0 (web `coreStats?.x ?? 0`), so the empty surface
+  renders six ZEROED tiles, never em-dash/blank. The prompt's extracted-key list omitted card 3 (its t() uses the object
+  form); parity requires all SIX cards — reproduced. Loading/error/stale/offline are owned by the web parent page; this
+  native surface re-homes them onto the shared P1/S8 source seam so every prompt-required state renders.
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/feature-views/CostSummaryCards.* — 1,598 lines total)
+  CostSummaryCards.Model.swift    (333) — telemetry seam (view.opened, P1/S11) + load/connection enums +
+                                          CostSummaryStats (the 8 CoreStats fields, with `.zero`) + CostGasUnit (gal|L,
+                                          localized) + CostSummaryUnitContext (gasPrice/distanceUnit/isMiles/currencySymbol/
+                                          gasUnit/locale) + CostSummaryUpdate + CostSummarySource (P1/S8) + @Observable
+                                          CostSummaryModel (phase + stale auto-refresh) + InMemoryCostSummarySource +
+                                          CostSummaryCards.surfaceSlug + CostSummaryStrings (P1/S10 facade).
+  CostSummaryCards.Adapter.swift  (355) — PURE Foundation: CostFormat.safe/fmtNumber(.halfUp, grouping, locale swap)/
+                                          fmtInt/fmtWithUnit/currency/percent — ported 1:1 from numberFormat.ts +
+                                          useFormatting; the six-tile spec table (value formatters + injected-localize
+                                          label/subtitle), phase resolution, accessibility summary. No bundle, no store.
+  CostSummaryCards.swift           (72) — CostSummaryCards view: phase switch (loading/empty/error/content) + freshness
+                                          header + connectivity banner + StaggerContainer composition + lifecycle.
+  CostSummaryCards.Views.swift    (281) — freshness chip, stale/offline banner, tinted accent icon box, StatBox tile
+                                          (icon + label/value/subtitle + glow border/shadow), responsive StaggerItem grid,
+                                          skeleton, empty hint, error state + retry.
+  CostSummaryCards.Previews.swift (106) — #Preview per state: Content (imperial USD) / Content (metric EUR) / Empty /
+                                          Loading / Error / Stale / Offline.
+  CostSummaryCards.strings         (51) — P1/S10 "CostSummaryCards" table: every web costAnalysis.stats.* key + the inline
+                                          composition keys (unitMile/unitKm/perUnit/galEquiv/vsRate/gasUnit*) + native chrome.
+  CostSummaryCards.Tests.swift    (400) — 29 XCTest cases (CostFormat golden vectors incl. de-DE locale swap; projection
+                                          values/subtitles/labels/icons/accents/glows + zero & non-finite fallback + phase
+                                          matrix; model phases/refresh/stale-once/telemetry; accessibility summary).
+  No shared/wiring files were edited: project.yml + .swiftlint.yml already glob TeslaSync/feature-views, and the strings
+  live in the per-surface table — so this change stays strictly within the allowed CostSummaryCards.* scope.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  StatBox (GlassPanel glow + neutral icon box + tinted lucide glyph) → CostStatTile over Color.TS.surfaceGlass + border,
+    with an Apple-idiomatic tinted icon chip (accent @12% bg + glyph) and the GlassPanel `glow` rendered as a persistent
+    tinted border + soft shadow (web shows it on hover; touch platforms have no hover).
+  icon tint → token : cyan→.accent · yellow→.statusWarning · blue→.chartSeriesSpeed (no theme-adaptive blue token) ·
+    green/emerald→.statusSuccess · red→.statusDanger. glow → cyan/.accent · green/.statusSuccess · none/neutral border.
+  StaggerContainer/StaggerItem → TSStaggerContainer/TSStaggerItem (Sources/Components/Motion), reduce-motion-honoring.
+  useFormatting.formatCurrency / numberFormat.fmtNumber|fmtInt|fmtWithUnit / safeNumber → CostFormat ported 1:1
+    (NumberFormatter .halfUp, grouping, min=max=decimals, en-US fallback for blank locale; symbol-prefix currency). Golden
+    vectors pinned for en-US AND de-DE (1.234,56 grouping/decimal swap) so every platform shows identical strings.
+  i18n      : every string via the P1/S10 facade (NSLocalizedString tableName:"CostSummaryCards", value:<web English>);
+              zero English literals in code — even the inline web template literals ("per {u}", "vs {price}/{gasUnit}",
+              "Cost Per {u}", "gal equiv", the gas-unit abbreviation) resolve through keys.
+  a11y      : each tile is one VoiceOver element "{label}, {value} {subtitle}"; icon boxes are decorative/hidden;
+              reduce-motion honored on the stagger; Dynamic Type via Font.TS roles; monospacedDigit values.
+  telemetry : view.opened surface="CostSummaryCards" via CostSummaryCards.surfaceSlug (P1/S11), default OSLog sink, once.
+
+STATES (all render — verified by #Previews + model tests)
+  loading  → skeleton chrome (six redacted tiles)                  empty   → six ZEROED tiles + empty hint (web `?? 0`)
+  error    → titled error + retry (→ model.refresh)                content → six tiles in StaggerItem grid
+  stale    → amber freshness chip + "reconnecting" banner + ONE guarded auto-refresh per stale episode
+  offline  → muted chip + "showing last known" banner, cached values stay visible (no auto-refresh)
+
+GATES (every gate executed on THIS runner; raw results pasted)
+  [GREEN]    swiftformat --lint  (CostSummaryCards.* / whole tree)     : 0/6 + 0/984 files require formatting  FORMAT_EXIT=0
+  [GREEN]    swiftlint --strict  (CostSummaryCards.* — 6 files)        : 0 violations                          LINT_EXIT=0
+             swiftlint --strict  (whole tree, 980 files)               : 1 violation — PRE-EXISTING, in
+             TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift (function_body_length); 0 in CostSummaryCards.*,
+             outside this prompt's allowed scope, not touched.
+  [GREEN]    check-placeholders.ps1 (CostSummaryCards.* via real-dir scan): PLACEHOLDER_COUNT=0               PLACEHOLDER_EXIT=0
+             (NOTE: the prompt's `-Path …/CostSummaryCards` is a file PREFIX, not a directory; the script returns 0 for a
+             non-existent path — a false-clean. Re-ran against a temp dir holding the actual 7 files → genuinely 0; grep of
+             the files for TODO/FIXME/stub/mock/placeholder/Lorem/fatalError = 0.)
+  [GREEN]    Isolated SwiftPM build + test — swift-tools 6.0 (Swift 6 language mode = strict-concurrency complete, same as
+             the app), compiling the EXACT shipped CostSummaryCards.{swift,Model,Adapter,Views,Previews} sources against the
+             REAL design-system (apps/design/generated/apple/Tokens.swift + Sources/Components/Motion):
+                 Build complete!  ·  Executed 29 tests, with 0 failures            SWIFT_BUILD_EXIT=0  SWIFT_TEST_EXIT=0
+  [GREEN]    Symbol-collision scan (whole apps/apple): every Cost*/CostFormat/CostAccent/CostGlow type name is unique —
+             the surface integrates with the other 380+ feature-views with no naming collision.
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO CostSummaryCards errors; all blockers pre-exist this change):
+    iOS  build test : aborts at module-dependency resolution — `Unable to resolve module dependency: 'XCTest'` (4 hits,
+                      first cited file = AlertsSection.Tests.swift, NOT mine). Co-located *.Tests.swift import XCTest into
+                      the app target; ~60+ such files already exist across feature-views/dashboard-widgets;
+                      CostSummaryCards.Tests.swift follows the identical sanctioned pattern (it runs GREEN in the isolated
+                      harness above where the test target links XCTest).
+    iOS  build (EXCLUDED_SOURCE_FILE_NAMES=*Tests.swift, to get past XCTest) : 204 errors, ALL pre-existing parallel-merge
+                      duplicate-type collisions — 'DashboardWidgetSize' ambiguous ×105, 'MediaConnection' ×54, plus cascade.
+                      grep `feature-views/CostSummaryCards…: error:` = 0 hits.
+    macOS build test : MAC_EXIT=65 at the code-signing/entitlements check ("TeslaSync-macOS has entitlements that require
+                      signing with a development certificate") — an unsigned-runner limitation deferred to the signed
+                      macos-latest CI runner per apps/macos-pending-verifications.md. 0 CostSummaryCards errors.
+    macOS build (CODE_SIGNING_ALLOWED=NO, *Tests.swift excluded) : 436 errors, same pre-existing duplicate-type root cause
+                      ('DashboardWidgetSize' ambiguous ×64 + cascade). grep `feature-views/CostSummaryCards…: error:` = 0 hits.
+    Across all four full-app invocations: CostSummaryCards error lines = 0. The failures are owned by the P4/P99 Apple
+    acceptance gate + a dashboard-widget/Media de-duplication pass, NOT by a single feature-view prompt (task rule: do not
+    fix pre-existing unrelated breakage). The surface ALSO type-checks for macOS in the isolated harness (test target
+    platform arm64e-apple-macos), so both platforms are independently proven to compile this code.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65/MAC_EXIT=65) and DEFERRED
+                           with evidence — never reported as passing. The placeholder false-clean is disclosed + re-verified.
+  2  No scope narrowing  : every web region + branch reproduced — all SIX cards (incl. card 3 the prompt's key-list omitted),
+                           the unit-aware label, every subtitle template, the zero fallback, gas-unit/currency/locale — plus
+                           the required loading/error/stale/offline states.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits + error counts/kinds pasted; the macOS failure was
+                           reproduced (signing + dupes), not assumed.
+  4  No stubs as final   : complete production surface (1,598 lines) + 29 real tests; placeholder scanner = 0.
+  5  No parity shortcut  : number/currency formatting ported 1:1 and pinned by tests (grouping, .halfUp, fixed precision,
+                           de-DE locale swap, safe-coercion); both unit-aware label words + all six subtitle templates
+                           reproduced; nil→zeroed cards (not em-dash) to match the web `?? 0`.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n, P1/S11 telemetry, P4 core (Motion) consumed;
+                           the spec-table + model/source/telemetry shape mirrors the sanctioned predecessor surfaces.
+  8  No commit on red    : the COMMITTED artifact (CostSummaryCards.*) is GREEN on every host gate AND on a real isolated
+                           Swift 6 build+test against the real design-system; the deferred full-app gate is RED only on
+                           pre-existing, unrelated surfaces, which this commit neither introduces nor touches.
+  9  No silent drift     : changes confined to apps/apple/TeslaSync/feature-views/CostSummaryCards.* and this log; generated
+                           TeslaSync.xcodeproj + staged Frameworks/Shared.xcframework + apps/shared build outputs are all
+                           git-ignored and NOT committed.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic CostSummaryCards shipped at parity with the web source and INDEPENDENTLY VERIFIED: it
+  compiles and its 29 tests pass under the app's own Swift 6 strict-concurrency rules, against the real design-system, with
+  swiftlint/swiftformat/placeholder all green and zero symbol collisions. The full-app iOS-Simulator + macOS xcodebuild
+  build/test gate is DEFERRED (not failed by this code): it is blocked by pre-existing parallel-merge duplicate-type
+  collisions across the dashboard-widget/Media surfaces, by co-located XCTest-in-app-target wiring, and (macOS) by an
+  unsigned-runner code-signing block — all owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition
+  used by every P4 surface to date (cf. BatteryTab 0052).
+
+EXIT=0
+STATUS=DONE
