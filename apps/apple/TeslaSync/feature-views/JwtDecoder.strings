@@ -1,0 +1,28 @@
+/*
+  JwtDecoder.strings
+  TeslaSync — P4 feature view · 0018 · JwtDecoder (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `JwtDecoderView` resolves (table "JwtDecoder", via the `JwtDecoderStrings`
+  facade) lives here with its web English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  The first block is the exact set of keys extracted from the web source
+  (features/admin/components/devtools/tools/JwtDecoder.tsx) — the literal `t()`
+  keys, so source ↔ catalog parity is mechanical. The remaining keys back the
+  native-only chrome (idle hint + the input accessibility hint).
+*/
+
+/* --- Keys from the web source (parity, literal t() keys) --- */
+"Jwt Decoder" = "JWT Decoder";
+"Jwt Decoder Desc" = "Decode a JSON Web Token's header and payload.";
+"Jwt Input" = "JWT";
+"Invalid Jwt" = "Invalid JWT";
+"Jwt Header" = "Header";
+"Jwt Payload" = "Payload";
+
+/* --- Native chrome --- */
+"jwtDecoder.idleHint" = "Paste a JWT above to decode its header and payload.";
+"jwtDecoder.inputHint" = "Paste the JSON Web Token to decode.";
