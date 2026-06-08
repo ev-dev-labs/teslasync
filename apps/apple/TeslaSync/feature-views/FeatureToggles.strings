@@ -1,0 +1,43 @@
+/*
+  FeatureToggles.strings
+  TeslaSync — P4 feature view · 0205 · FeatureToggles (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  FeatureToggles resolves (table "FeatureToggles") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first block is the exact key set extracted from the web source
+  (features/settings/components/FeatureToggles.tsx, namespace `settings`). The
+  remaining keys back the native-only chrome (freshness chip, stale/offline
+  banners, loading / error copy) and the accessibility labels.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"settings.featureConfig.title" = "Feature Flags";
+"settings.featureConfig.subtitle" = "Tesla account feature configuration";
+"settings.featureConfig.lastSynced" = "Synced";
+"settings.featureConfig.refresh" = "Refresh";
+"settings.featureConfig.feature" = "Feature";
+"settings.featureConfig.status" = "Status";
+"settings.featureConfig.details" = "Details";
+"settings.featureConfig.enabled" = "Enabled";
+"settings.featureConfig.disabled" = "Disabled";
+"settings.featureConfig.noData" = "No feature config data yet. Click Refresh to fetch from Tesla.";
+"settings.toast.featureConfigRefreshed" = "Feature config refreshed";
+"settings.toast.featureConfigFailed" = "Failed to refresh feature config";
+
+/* --- Native surface chrome (freshness / banners / loading / error) --- */
+"settings.featureConfig.stale" = "Stale";
+"settings.featureConfig.offline" = "Offline";
+"settings.featureConfig.staleBanner" = "Reconnecting — feature config may be stale";
+"settings.featureConfig.offlineBanner" = "Offline — showing last known feature config";
+"settings.featureConfig.loading" = "Loading feature config";
+"settings.featureConfig.errorTitle" = "Couldn't load feature config";
+"settings.featureConfig.retry" = "Retry";
+
+/* --- Accessibility (VoiceOver labels) --- */
+"settings.featureConfig.a11y.count" = "%lld features";
+"settings.featureConfig.a11y.enabled" = "%lld enabled";
