@@ -1,0 +1,63 @@
+/*
+  SoftwareUpdateHistoryWidget.strings
+  TeslaSync — P4 dashboard widget · 0091 · SoftwareUpdateHistoryWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  SoftwareUpdateHistoryWidget resolves (table "SoftwareUpdateHistoryWidget") lives
+  here with its web `t(key, default)` English value. These entries fold into the
+  app Localizable.xcstrings master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first block is the exact key set extracted from the web source
+  (features/dashboard/widgets/SoftwareUpdateHistoryWidget.tsx). The remaining keys
+  back the native-only chrome (per-status labels, freshness chip, refresh/retry/
+  empty/error copy, relative-time phrasing, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.softwareUpdateHistory" = "Update History";
+"widget.updateCurrent" = "Current";
+"widget.noUpdates" = "No update history";
+
+/* Web `t('widget.updateStatus', status)` renders the raw status string as its
+   own fallback. Natively superseded by the explicit per-status labels below; the
+   key is retained for source parity. */
+"widget.updateStatus" = "Update";
+
+/* --- Registry metadata (registry/vehicle.ts) --- */
+"widget.softwareUpdateHistory.description" = "Firmware update timeline: versions installed, dates, changelogs";
+
+/* --- Per-status labels (localization of the raw web `STATUS_MAP` enum) --- */
+"widget.softwareUpdateHistory.status.installed" = "Installed";
+"widget.softwareUpdateHistory.status.installing" = "Installing";
+"widget.softwareUpdateHistory.status.downloading" = "Downloading";
+"widget.softwareUpdateHistory.status.available" = "Available";
+"widget.softwareUpdateHistory.status.scheduled" = "Scheduled";
+"widget.softwareUpdateHistory.status.unknown" = "Update";
+
+/* --- Relative-time phrasing (port of WidgetEventFeed.formatRelativeTime) --- */
+"widget.softwareUpdateHistory.relativeNow" = "Just now";
+"widget.softwareUpdateHistory.relativeMinutes" = "%lldm ago";
+"widget.softwareUpdateHistory.relativeHours" = "%lldh ago";
+
+/* --- Native chrome: freshness --- */
+"widget.softwareUpdateHistory.live" = "Live";
+"widget.softwareUpdateHistory.stale" = "Stale";
+"widget.softwareUpdateHistory.offline" = "Offline";
+
+/* --- Native chrome: actions --- */
+"widget.softwareUpdateHistory.refresh" = "Refresh";
+"widget.softwareUpdateHistory.retry" = "Retry";
+"widget.softwareUpdateHistory.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.softwareUpdateHistory.loading" = "Loading update history";
+"widget.softwareUpdateHistory.errorTitle" = "Couldn't load updates";
+"widget.softwareUpdateHistory.emptyHint" = "Installed firmware versions will appear here.";
+"widget.softwareUpdateHistory.offlineBanner" = "Offline — showing last synced updates";
+"widget.softwareUpdateHistory.staleBanner" = "Reconnecting — updates may be stale";
+
+/* --- Accessibility --- */
+"widget.softwareUpdateHistory.openA11y" = "Open the software updates page";
+"widget.softwareUpdateHistory.countA11y" = "%lld updates in history";
