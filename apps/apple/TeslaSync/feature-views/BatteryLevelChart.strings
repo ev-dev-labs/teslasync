@@ -1,0 +1,46 @@
+/*
+  BatteryLevelChart.strings
+  TeslaSync — P4 feature view · 0097 · BatteryLevelChart (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `BatteryLevelChart` resolves (table "BatteryLevelChart") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/charging/components/charging-list/BatteryLevelChart.tsx). The remainder
+  back the native state envelope (freshness chip, connectivity banner, loading /
+  empty / error chrome) and the chart axes / accessibility summaries.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"charging.charts.batteryLevelAtStart" = "Battery Level at Charge Start";
+"charging.charts.batteryLevelHint" = "How low do you typically go before charging?";
+"charging.charts.batteryLevelSessions" = "Sessions";
+"common.noData" = "No data available";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"charging.charts.live" = "Live";
+"charging.charts.stale" = "Stale";
+"charging.charts.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"charging.charts.staleBanner" = "Reconnecting — charge history may be stale";
+"charging.charts.offlineBanner" = "Offline — showing the last loaded charge history";
+
+/* --- Chart axes scaffolding --- */
+"charging.charts.batteryLevel.range" = "Start Level";
+
+/* --- Loading / empty / error chrome --- */
+"charging.charts.batteryLevel.loading" = "Loading charge history";
+"charging.charts.batteryLevel.emptyHint" = "Start-level distribution will appear here once charge sessions are recorded.";
+"charging.charts.batteryLevel.errorTitle" = "Couldn't load charge history";
+"charging.charts.batteryLevel.retry" = "Retry";
+
+/* --- Accessibility summaries --- */
+"charging.charts.batteryLevel.a11y" = "Bar chart of how many charge sessions started in each ten percent battery-level range";
+"charging.charts.batteryLevel.sessionsNoun" = "sessions";
+"charging.charts.batteryLevel.rangesNoun" = "ranges";
+"charging.charts.batteryLevel.mostCommon" = "most common";
