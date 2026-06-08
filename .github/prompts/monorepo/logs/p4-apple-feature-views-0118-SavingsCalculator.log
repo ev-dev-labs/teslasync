@@ -1,0 +1,198 @@
+=== P4 Feature view 0118 SavingsCalculator (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/SavingsCalculator.{swift,Models,Projection,Model,
+          Components,Content,Previews,Tests}.swift + SavingsCalculator.strings
+Web spec: web/src/features/charging/components/cost-analysis/SavingsCalculator.tsx
+Runner  : Darwin (macOS 26 / arm64), Apple Swift 6.3.2 (swiftlang-6.3.2.1.108), swiftlint 0.63.3,
+          swiftformat 0.61.1, xcodegen 2.45.4, pwsh 7.6.2.
+          *** Command Line Tools ONLY *** — full Xcode.app is NOT the active developer dir and the
+          iOS-18 Simulator is NOT installed (see section C). `xcodebuild` + `simctl` are therefore
+          UNRUNNABLE on this runner. The macOS SDK (CommandLineTools/SDKs/MacOSX.sdk) + SwiftUI ARE
+          available and were exercised (compile + execute).
+
+--------------------------------------------------------------------------------
+SCOPE NOTE (honesty)
+--------------------------------------------------------------------------------
+The full-app `xcodebuild -scheme TeslaSync … build test` (and the -macOS scheme) is the documented
+DEFERRED acceptance-gate step for every P4 Apple feature-view surface — apps/macos-pending-
+verifications.md ("not unfinished work … deferred artifact verifications that ADR-012's CI matrix
+runs on macos-latest") → p4-apple/P99-0001-apple-acceptance-gate. It is DEFERRED here — NOT claimed
+green — for TWO honest reasons: (1) this runner has Command-Line-Tools only, so `xcodebuild` cannot
+run at all (section C is the API evidence); (2) per the ledger, the full-app build is independently
+blocked by PRE-EXISTING, unrelated app-target collisions (DashboardWidgetSize redefined across
+Sources/DashboardWidgets/*, co-located *.Tests.swift importing XCTest into the app target, macOS
+signing) outside this prompt's allowed files. This matches the accepted 0065-SavingsSlide /
+0058-HeroGauges / 0010-ToolCard "code-complete + DEFERRED full-app gate" precedent — every sibling
+p4-apple-feature-views-*.log ends STATUS=DONE on the same basis.
+
+Every "0"/"PASS" below is a command actually run on this runner with its real exit code. No xcodebuild
+step is reported as green.
+
+================================================================================
+A. SURFACE-SCOPED GATES (the prompt's swiftformat / swiftlint / placeholder steps)
+================================================================================
+
+--- swiftformat --lint (SavingsCalculator.* .swift, the 8 shipped Swift files) ---
+$ cd apps/apple && swiftformat --lint TeslaSync/feature-views/SavingsCalculator.swift \
+    TeslaSync/feature-views/SavingsCalculator.*.swift
+(lint mode - no files will be changed.)
+0/8 files require formatting.
+FORMAT_EXIT=0
+  (Tree-wide `swiftformat --lint apps/apple` additionally flags exactly ONE PRE-EXISTING,
+   unrelated file — TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)
+   — which is OUTSIDE this prompt's allowed files and was not authored or touched here. The
+   surface-scoped result above is the prompt's step.)
+
+--- swiftlint --strict (SavingsCalculator.* .swift) ---
+$ cd apps/apple && swiftlint lint --strict --quiet TeslaSync/feature-views/SavingsCalculator.swift \
+    TeslaSync/feature-views/SavingsCalculator.*.swift
+(0 output lines — Found 0 violations, 0 serious in 8 files.)
+LINT_EXIT=0
+
+--- placeholder gate ---
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/SavingsCalculator
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+  (Independent sweep — grep -niE 'TODO|FIXME|XXX|coming soon|lorem|not implemented|placeholder|
+   \bstub\b|\bmock\b' across the 8 shipped Swift files + .strings: no matches.)
+
+================================================================================
+B. SURFACE COMPILE + EXECUTE against the real SDK (exceeds the gate; the parity proof)
+================================================================================
+Because `xcodebuild` is unrunnable here, the surface was verified directly with the CLT swiftc +
+the real macOS SDK, against the REAL shipped shared layers (P1/S9 design tokens + material, P1/S8
+components, P1/S11 telemetry) — i.e. exactly the code that ships, isolated from the KMP-linked app
+layers the full app also needs.
+
+--- B1. Pure core host-typecheck (Models + Projection + Model) ---
+$ swiftc -typecheck -sdk $(xcrun --show-sdk-path) -target arm64-apple-macos15.0 \
+    SavingsCalculator.Models.swift SavingsCalculator.Projection.swift SavingsCalculator.Model.swift
+TRIO_TYPECHECK_EXIT=0
+
+--- B2. FULL surface host-typecheck vs the REAL shared components ---
+$ swiftc -typecheck -sdk $(xcrun --show-sdk-path) -target arm64-apple-macos15.0 \
+    ../design/generated/apple/Tokens.swift Sources/Design/TSMaterial.swift \
+    Sources/Components/UI/{Badges,Buttons,Cards,Typography}.swift \
+    Sources/Components/Feedback/Skeletons.swift \
+    Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift \
+    SavingsCalculator.{Models,Projection,Model,Components,Content,swift}
+SURFACE_TYPECHECK_EXIT=0
+  (Compiles the View + Components + Content against the real TSGlassPanel / TSButton / TSSkeleton /
+   Color.TS / Font.TS / TSSpacing / TSRadius / DashboardWidgetTelemetryEvent|Sink — no shims. The
+   DEBUG-only #Preview bodies are excluded, exactly as the swiftc host gate does: the #Preview macro
+   needs the full-Xcode PreviewsMacros plugin, absent under CLT.)
+
+--- B3. EXECUTED parity logic (throwaway /tmp binary, the real shipped Models+Projection+Model) ---
+$ swiftc -sdk $(xcrun --show-sdk-path) -target arm64-apple-macos15.0 -o run \
+    SavingsCalculator.{Models,Projection,Model}.swift /tmp/scv/main.swift && ./run
+VERIFY 60/60 checks passed
+VERIFY_RESULT=PASS
+EXEC_VERIFY_EXIT=0
+  60 executed assertions over the shipped code:
+   • decode: snake_case full payload, partial→zero/"mi" defaults, garbage→nil.
+   • input parse guards (web Number()||n): parseRate ""/"abc"/"0"→0, "3.5"→3.5;
+     parseMpg "0"/""→1 (0 is falsy in JS), "30"→30; fieldText 30/3.5/0.13 round-trip.
+   • gasComparison memo (web useCostAnalysisData L175-200): gasCost 1050, evCost 52,
+     actualCost 300, savings 750, monthlySavings 998/12, yearlySavings 998, costPerDist gas/EV,
+     and the zero-distance / zero-month / zero-MPG divisor guards.
+   • projection formatting (en_US): "$1,050.00", "$0.117/mi", "$300.00" (EV card = actualCost),
+     "$0.033/mi", "$750.00", "$83.17", "~$998"; currency grouping; NaN→"0.00".
+   • presentation resolver — every state: idle/loading→loading, loading-cached-stale→content,
+     loaded live/stale→content, empty→empty, offline-nil→offlineNoData, offline-cached→content,
+     network-nil→error(retryable), decode-nil→error(non-retryable), network-cached→content.
+   • web-prop loadState mapping + accessibility summary (contains every key amount).
+  (The full SavingsCalculator.Tests.swift XCTest target — incl. the 4 @MainActor model tests for
+   start/stop/refresh delegation + resetDefaults — executes under the deferred full-Xcode acceptance
+   gate; its pure-logic assertions are mirrored + executed green above.)
+
+================================================================================
+C. CAPABILITY EVIDENCE for the DEFERRED xcodebuild steps (no red-as-green)
+================================================================================
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+'/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun simctl list devices available
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+
+GATE STEPS THAT CANNOT RUN ON THIS RUNNER (deferred to p4-apple/P99-0001-apple-acceptance-gate):
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+      IOS_EXIT=DEFERRED (xcodebuild unavailable: CommandLineTools only; iPhone-16 sim not installed)
+  xcodebuild -scheme TeslaSync-macOS build test
+      MAC_EXIT=DEFERRED (xcodebuild unavailable: CommandLineTools only)
+
+================================================================================
+D. PARITY MAPPING (web SavingsCalculator.tsx → native)
+================================================================================
+Data        : web is presentational (props: gasComparison|null, gasPrice, mpg, electricityRate,
+              onChange×3, distanceUnit; hook useTranslation). Native binds the resolved charging
+              aggregates via the P1/S8 SavingsCalculatorSource seam (no HTTP in the view) and OWNS the
+              three assumption fields + Reset, recomputing GasComparison live on every edit — the
+              parent hook's useMemo behavior, ported VERBATIM (gallons = dist/mpg, gasCost, evCost,
+              monthly = (gas−ev)/months, yearly ×12, savings, costPerMile gas/EV; EV card surfaces
+              actualCost). SI stays at the source/facade boundary; the view is unit-agnostic.
+Composition : TSGlassPanel surface; header (calculator glyph + title + freshness/refresh accessory);
+              responsive ViewThatFits(.horizontal) → "Your Assumptions" column (3 token fields with
+              unit suffixes + Reset Defaults TSButton) beside the "Comparison" column (4 TSGlassPanel
+              cards: Gas Cost / EV Cost / Total Savings / Monthly Savings).
+States      : loading (skeleton grid) · empty ("Not enough data for comparison") · error (retry) ·
+              stale (chip + auto-refresh) · offline (cached or message + retry) · content. The
+              assumptions column renders in EVERY state — the surface is never blank.
+i18n        : all 14 source t() keys present in SavingsCalculator.strings (table "SavingsCalculator")
+              with web English fallbacks, + input suffixes + native chrome. No English literals in code.
+a11y        : VoiceOver labels/values on every field + the combined comparison summary; decorative
+              glyphs hidden; Dynamic Type (system fonts) + Reduce-Motion respected (TSSkeleton/TSButton).
+Telemetry   : emits DashboardWidgetTelemetryEvent .viewOpened(surface:"SavingsCalculator") on .task
+              (P1/S11). surfaceSlug + event asserted in tests.
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : the two xcodebuild steps are shown DEFERRED with API evidence (section C),
+                       never as a pass. Every 0/PASS above is a real command's real exit code
+                       (format/lint/placeholder + two host-typechecks + a 60/60 EXECUTED binary).
+ 2 No scope narrowing: all four comparison cards + the three editable assumptions + Reset + every
+                       state (loading/empty/error/stale/offline/content) + i18n + a11y + view.opened.
+ 3 No skip-and-assume: each surface-scoped gate executed; the full-app gate was probed (xcode-select/
+                       xcodebuild/simctl) and is deferred with captured evidence, never assumed green.
+ 4 No stubs as final : complete implementations; PLACEHOLDER_COUNT=0. The /tmp verifier is throwaway
+                       verification scaffolding, never a shipped surface file.
+ 5 No parity shortcuts: web numeric pipeline ported verbatim (gasComparison memo, Number()||0 / ||1
+                       input guards, fmtNumber grouped 2-/3-/0-dp, EV card = actualCost) — pinned by
+                       executed assertions against the same formatter the projection uses.
+ 6 No delegation     : authored directly (no sub-agent delegation of the surface).
+ 7 No predecessor bypass: did NOT edit the shared Localizable.xcstrings (per-surface table shipped),
+                       project.yml, the shared registry types, or apps/macos-pending-verifications.md.
+ 8 No commit on red  : committing on green surface-scoped gates + green surface compile/execute; the
+                       full-app build/test is explicitly DEFERRED (macos-pending), not a red result.
+ 9 No silent drift   : changes confined to the allowed SavingsCalculator.* files + this log. A
+                       pre-existing unrelated working-tree edit (web/.../BackupRestorePage.tsx,
+                       FleetApiSection.tsx) was NOT touched/staged; the pre-existing unrelated
+                       ActionBuilder.Previews.swift format nit was NOT touched (outside allowed files).
+10 Log ends with EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+Production-polished native SavingsCalculator shipped at parity with the web source: a Foundation-only
+data + math + projection core (60/60 EXECUTED assertions), a P1/S8 state-holder seam (no HTTP in the
+view) that owns the live interactive assumptions + Reset, P1/S11 view.opened telemetry, every state +
+every i18n key + VoiceOver labels + Dynamic-Type/Reduce-Motion support. ALL surface-scoped gates pass
+(swiftformat 0/8, swiftlint 0 violations, placeholder COUNT=0) AND the full surface (View + Components
++ Content) host-typechecks against the REAL shared P1/S9 tokens + P1/S8 components + P1/S11 telemetry
+under the macOS SDK. The full-app `xcodebuild build test` (iOS-18 Simulator + macOS schemes, and the
+@MainActor XCTest model cases) is DEFERRED to p4-apple/P99-0001-apple-acceptance-gate — unrunnable on
+this CommandLineTools-only runner (section C) and independently macos-pending — matching every
+accepted sibling p4-apple-feature-views surface (0065-SavingsSlide / 0058-HeroGauges / 0010-ToolCard).
+
+================================================================================
+COMMIT
+================================================================================
+git add apps/apple/TeslaSync/feature-views/SavingsCalculator.* \
+        .github/prompts/monorepo/logs/p4-apple-feature-views-0118-SavingsCalculator.log
+git commit -m "feat(apps/apple/feature-views): add SavingsCalculator surface (P4)"
+
+EXIT=0
+STATUS=DONE
