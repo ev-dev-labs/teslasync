@@ -1,0 +1,43 @@
+/*
+  PatternsSlide.strings
+  TeslaSync — P4 feature view · 0064 · PatternsSlide (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `PatternsSlide` resolves (table "PatternsSlide") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  The first block is the exact set of keys extracted from the web source
+  (features/analytics/components/review/PatternsSlide.tsx). The web
+  `yearReview.distancePerDrive` default is i18next `'{{unit}}/drive avg'`; the
+  native catalog stores the single-brace `{unit}` token its facade substitutes,
+  so the rendered output ("mi/drive avg" / "km/drive avg") is identical.
+  The remaining keys back the native-only chrome (freshness chip, retry / empty /
+  error copy, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"yearReview.drivingPatterns" = "Your driving patterns";
+"yearReview.favoriteDay" = "Favorite driving day";
+"yearReview.peakHour" = "Peak driving hour";
+"yearReview.drivesWeek" = "drives/week";
+"yearReview.distancePerDrive" = "{unit}/drive avg";
+"yearReview.avg" = "avg";
+
+/* --- Native chrome: freshness + actions --- */
+"patterns.live" = "Live";
+"patterns.updating" = "Updating";
+"patterns.stale" = "Stale";
+"patterns.offline" = "Offline";
+"patterns.refresh" = "Refresh";
+"patterns.retry" = "Retry";
+
+/* --- Native chrome: states --- */
+"patterns.loading" = "Loading driving patterns";
+"patterns.empty.title" = "No driving patterns yet";
+"patterns.empty.hint" = "Take a few drives and your patterns will appear here.";
+"patterns.error.title" = "Couldn't load driving patterns";
+"patterns.offlineBanner" = "Offline — showing your last recap";
+"patterns.staleBanner" = "Reconnecting — patterns may be stale";
