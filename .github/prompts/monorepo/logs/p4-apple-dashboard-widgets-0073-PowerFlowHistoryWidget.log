@@ -1,0 +1,206 @@
+================================================================================
+P4 · Dashboard widget · 0073 — PowerFlowHistoryWidget (Apple)
+Run: 2026-06-07T19:07-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/76
+Base: 39201cea
+Prompt: P4/dashboard-widgets/0073 — PowerFlowHistoryWidget
+Web source (spec): web/src/features/dashboard/widgets/PowerFlowHistoryWidget.tsx
+Mode: code-complete + host-verified; DEFERRED Xcode app build/test
+      (0054 GuardModeWidget / 0036 DigitalTwinWidget precedent, ADR-012).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)       OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15 deploy target)               OK
+  Swift Charts ............... import Charts compiles on both SDKs (used by surface) OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                    OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                  OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  surface in project.yml ..... 0 references (not yet target-registered)             WARN
+
+  Charts/Maps capability note: this surface uses Swift Charts (a stacked AreaMark
+  routing chart, the native port of the web stacked <AreaChart>) and NO MapKit
+  (web "Charts/maps used: (none)" for maps). The core requirements — SwiftUI +
+  Swift Charts — are available and PROVEN by the real iOS-18-simulator AND
+  macOS-15 SDK compiles below (Views.swift `import Charts` compiles), and by the
+  EXECUTED XCTest harness. The capability-BLOCKED escape hatch does NOT apply —
+  the surface is authored, host-compiled (iOS+macOS), and host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/PowerFlowHistoryWidget.*) ===
+  PowerFlowHistoryWidget.Adapter.swift   251  testable projection core — PowerFlowSeries catalog
+                                              (solar/battery/grid/home + exact web hex), PowerFlowPoint
+                                              (W->kW), PowerFlowSummary (avg/peak/net), stacked-sample
+                                              flatten, PowerFlowFormat (fmtNumber/shortTime parity),
+                                              PowerFlowAccessibility summaries
+  PowerFlowHistoryWidget.Model.swift     273  P1/S8 state-holder seam (PowerFlowSource->PowerFlowModel)
+                                              + P1/S11 telemetry seam + P1/S10 strings facade + in-memory
+                                              source; phase + empty-reason resolution
+  PowerFlowHistoryWidget.Views.swift     191  presentational subviews — stat row, stacked-area Swift
+                                              Chart (AreaMark .stacking(.standard), web colors, monotone),
+                                              legend, friendly empty surface
+  PowerFlowHistoryWidget.swift           262  surface (shell chrome + freshness chip + state switch +
+                                              compact/standard composition + registry)
+  PowerFlowHistoryWidget.Previews.swift  170  #if DEBUG previews — one per state (content/wide/compact/
+                                              no-data/no-site/loading/error/offline/stale)
+  PowerFlowHistoryWidget.Tests.swift     331  XCTest — adapter + model + registry + a11y (24 methods)
+  PowerFlowHistoryWidget.strings          53  P1/S10 catalog contribution (10 web-source keys + registry
+                                              description + native chrome/axes/a11y keys)
+  Every file <= 400 lines (house file_length). Total 1531 lines across 7 files.
+  Shared registry types (DashboardWidgetSize / DashboardWidgetRegistration) are REUSED from the 0036
+  surface (no redeclaration -> no duplicate symbols when the staging tier compiles in the app module).
+
+=== PARITY (vs web PowerFlowHistoryWidget.tsx) ===
+  Data sources -> bound via the shared state-holder seam (PowerFlowSource -> PowerFlowModel):
+    useTeslaEnergySites + useTeslaEnergyLiveStatusHistory(siteId, since=-24h), useTranslation. The
+    production app wires PowerFlowSource over the KMP Tesla-Energy site + live-status-history stores;
+    the view performs NO HTTP. The aggregate sites+history loading/error is coalesced into
+    PowerFlowLoadStatus exactly as the web `isLoading = sitesLoading || (siteId && historyLoading)`.
+  Projection -> PowerFlowProjection.points applies the web `(x ?? 0)/1000` watt->kW conversion +
+    per-field null-coalescing (solar_power/battery_power/grid_power/load_power -> solar/battery/grid/
+    home kW). PowerFlowProjection.summary mirrors avgSolarKw (mean), peakHomeKw (max), netGridKwh
+    (sum). hasData mirrors `chartData.some(d => d.solar!==0 || ...)`. Verified by executed XCTest.
+  Composition -> shell chrome (trend icon + "Power Flow History" title + freshness chip + refresh +
+    Open) · no-site empty ("No Tesla Energy site linked") · 1-col CompactView (Avg Solar + Peak Home
+    stats only, defensive — registry min is 2 cols) · 2x4+ StandardView (Avg Solar + Peak Home + Net
+    Grid stats, then the stacked-area chart + legend) · no-data empty ("No power flow data").
+  Chart -> web Recharts stacked <AreaChart> with four <Area stackId="1"> (solar/battery/grid/home) is
+    ported to Swift Charts: AreaMark(x: date, y: kW, stacking: .standard) + .interpolationMethod(.monotone)
+    (web type="monotone") + .chartForegroundStyleScale mapping the EXACT web stroke hex
+    (#facc15 / #22c55e / #3b82f6 / #9ca3af). Leaflet -> none (no map on this surface).
+  Shared components -> reuses Color.TS / Font.TS / TSSpacing / TSRadius + TSSkeleton + Swift Charts
+    (compiled against the REAL apps/apple component library in the typechecks below).
+  States (all render) -> loading (skeleton chrome) · error (retry affordance) · no-site empty ·
+    no-data empty · stale (freshness chip) · offline (cached values + freshness chip) · content. Model
+    phase resolution keeps cached content visible behind background refetch, matching the web shell;
+    a hard query error replaces the body (web `if (error) return <QueryError/>`).
+  i18n -> all 10 source strings resolve through the P1/S10 facade with the web t(key,default) fallback:
+    widget.powerFlowHistory.{title,noSite,noData,avgSolar,peakHome,netGrid,solar,battery,grid,home} ->
+    ALL PRESENT in PowerFlowHistoryWidget.strings. No English literals in native code (verbatim facade).
+  a11y -> stat cells carry combined label:value:unit; the chart carries a combined VoiceOver summary
+    (PowerFlowAccessibility.chartSummary: title + 3 stats); legend items + every button an
+    accessibilityLabel; Dynamic Type via tokens; Reduce Motion gates the TSSkeleton shimmer.
+  Telemetry -> PowerFlowModel.start() emits viewOpened(surface:"PowerFlowHistoryWidget") -> bridges the
+    shared Telemetry.track(.screenView) (P1/S11). Asserted by a spy test (fires exactly once).
+  Registry -> PowerFlowHistoryWidget.registration: id "power-flow-history", category "energy", default
+    2x4, min 2x4, max 4x40 (+ clamp()), matching registry/energy.ts. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the 5 shipping non-test sources compiled together with
+    the REAL apps/apple component library — design Tokens + Design + Components/UI{Cards,Typography,
+    Badges,Buttons} + Feedback/Skeletons — and the exact-copy registry-type shim; none import the
+    Shared xcframework; -default-isolation MainActor to match the app target's Xcode-26 mode):
+      swiftc -typecheck -swift-version 6 -default-isolation MainActor \
+        -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator -D DEBUG <files>
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — the XCTest file against the real public API (XCTAssert* provided via a tiny
+    function shim, which raw swiftc does not import from the XCTest macro header):
+      TEST_TYPECHECK_EXIT=0                                                         OK
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM
+    harness (the REAL production Adapter/Model/Views/Widget sources + real design Tokens + minimal
+    TSSkeleton/registry shims), Swift 6 language mode (.swiftLanguageMode(.v6)):
+      Executed 24 tests, with 0 failures (0 unexpected) in 0.005 seconds
+        PowerFlowAdapterTests        10/10  (W->kW convert, null-coalesce, mean/peak/sum summary,
+                                             zero summary, hasData zero-vs-signal, sample flatten order,
+                                             kW format 1-decimal/grouping/non-finite-dash, shortTime
+                                             zero-pad, series catalog parity)
+        PowerFlowModelTests          10/10  (loading skeleton, no-site empty, no-data empty, content,
+                                             cached-stays-content, error, telemetry-once, refresh
+                                             delegation, connection+projection tracking, resolve* direct)
+        PowerFlowRegistryTests        2/2   (canonical power-flow-history metadata + slug, clamp min/max)
+        PowerFlowAccessibilityTests   2/2   (chart summary title+3 stats; stat label value+unit)
+      SWIFT_TEST_EXIT=0                                                             OK
+[5] swiftlint --strict on the 6 surface .swift files (explicit paths; the repo .swiftlint.yml
+    `included:` does not list TeslaSync/dashboard-widgets — that wiring is the P4 integration
+    prompt's job — so the bare gate `swiftlint --strict` SKIPS this dir; run explicitly here):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0                                                                   OK
+[6] swiftformat --lint on the 6 surface .swift files (config: apps/apple/.swiftformat):
+      0/6 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; swift):
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host):
+      - `xcodegen generate` -> EXIT=0 (project + targets + schemes generate cleanly).
+      - generated TeslaSync.xcodeproj references to "PowerFlowHistoryWidget" -> 0
+        (and to the predecessor "GuardModeWidget" -> 0): the staging tier is not target-registered.
+      - `xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator build` ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          BUILD FAILED   BUILD_EXIT=65
+    Why deferred (independent, code-unrelated reasons — none is a defect in this surface; identical
+    disposition to the 0054 / 0036 predecessor surfaces, Honesty rule 7):
+      (a) NOT-YET-REGISTERED: project.yml's app targets glob `Sources/`; this surface lives at
+          TeslaSync/dashboard-widgets/ and has 0 references in the generated project. It is registered
+          into the XcodeGen target + the dashboard grid by the downstream P4 integration/acceptance
+          prompt. Editing project.yml is OUTSIDE this prompt's allowed files. Running xcodebuild now
+          would build the app WITHOUT these files and re-run the existing suite — ZERO evidence about
+          this deliverable. Steps [1]/[2] DO compile this surface against the real library on BOTH
+          SDKs, and step [4] EXECUTES its full XCTest suite — the meaningful validation.
+      (b) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native gradle build (apps/shared/gradlew :core:assembleSharedXCFramework). Independent
+          of this UI surface; concrete missing-framework error captured above (BUILD_EXIT=65).
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    XCTest under Xcode runs in the TeslaSync/-macOS test target; here the SAME tests are PROVEN GREEN
+    (24/24) by the executed SwiftPM harness in step [4], and the views/model/adapter/widget compile
+    against BOTH the iOS 18 and macOS 15 SDKs in steps [1]/[2].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/error/no-site/no-data/stale/offline/content) —
+      implemented; each has a #if DEBUG preview; phase + empty-reason logic unit-tested + executed green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (PowerFlowSource->PowerFlowModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — 10 web-source keys all present in
+      PowerFlowHistoryWidget.strings (+ registry description + native chrome/axes/a11y).
+  [x] Accessibility labels on every interactive element; stat cells + chart carry combined values.
+  [x] Tests: adapter unit + per-state model + registry + a11y — 24 methods, EXECUTED 24/24 green.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured evidence.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real BUILD_EXIT=65
+                       framework error + the 0-reference not-registered finding captured; every "OK"
+                       is a command actually run with its real exit code (incl. an executed 24/24
+                       XCTest run and iOS+macOS SDK compiles).
+  2  No scope narrowing: implemented ALL states/views + the stacked-area chart + legend + i18n + a11y
+                       + telemetry + registry.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (Shims used ONLY in the
+                       throwaway typecheck/test harness, never in shipped surface files.)
+  5  No parity shortcuts: faithful port of chartData/summary memos + the stacked <AreaChart> (4 series,
+                       exact web hex, monotone, stacking) + full compact/standard composition + states.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface) — delegation FORBIDDEN.
+  7  No predecessor bypass: did NOT self-register into project.yml / dashboard grid (integration
+                       prompt's scope) and did NOT edit the shared Localizable.xcstrings (parallel-
+                       unsafe) — strings shipped as the per-surface table, exactly like 0054/0036.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed PowerFlowHistoryWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native PowerFlowHistoryWidget shipped at parity with the web source: pure-Swift
+  projection core (executed-green XCTest, 24/24), P1/S8 state-holder seam (no view HTTP), P1/S11
+  telemetry, every state + i18n key + a11y label, a Swift Charts stacked-area routing chart that
+  reproduces the four web series with their exact hex, registry-correct (power-flow-history, 2x4 /
+  2x4 / 4x40). All host-runnable gates pass AND the surface compiles against BOTH the iOS 18 simulator
+  and macOS 15 SDKs with the real Xcode 26 toolchain under Swift 6 strict concurrency. The Xcode app
+  build/test is DEFERRED to the downstream integration/signed runner (surface not yet target-registered
+  + Shared.xcframework KMP staging — neither a defect in this code, both outside this prompt's allowed
+  files), matching the 0054 GuardModeWidget / 0036 DigitalTwinWidget precedent.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/PowerFlowHistoryWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0073-PowerFlowHistoryWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add PowerFlowHistoryWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE
