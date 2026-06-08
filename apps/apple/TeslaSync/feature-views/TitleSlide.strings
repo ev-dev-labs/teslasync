@@ -1,0 +1,35 @@
+/*
+  TitleSlide.strings
+  TeslaSync — P4 feature view · 0070 · TitleSlide (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `TitleSlide` resolves (table "TitleSlide") lives here with its web `t(key, default)`
+  English value. These entries fold into the app `Localizable.xcstrings` master catalog
+  at integration time; they are kept in a per-surface table so each parallel surface
+  prompt owns its own strings without editing the shared catalog (parallel-unsafe across
+  the concurrent slots).
+
+  The first block is the exact key extracted from the web source
+  (features/analytics/components/review/TitleSlide.tsx → t('yearReview.title', …)). The
+  remaining keys back the native-only chrome (freshness chip, refresh/retry, the loading /
+  empty / error states, the stale + offline banners, accessibility copy).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"yearReview.title" = "Year in Review";
+
+/* --- Native chrome: freshness + actions --- */
+"titleSlide.live" = "Live";
+"titleSlide.updating" = "Updating";
+"titleSlide.stale" = "Stale";
+"titleSlide.offline" = "Offline";
+"titleSlide.refresh" = "Refresh";
+"titleSlide.retry" = "Retry";
+
+/* --- Native chrome: states --- */
+"titleSlide.loading" = "Loading year in review";
+"titleSlide.noData" = "No year-in-review data";
+"titleSlide.emptyHint" = "Drive through the year to build up your recap.";
+"titleSlide.errorTitle" = "Couldn't load year in review";
+"titleSlide.staleBanner" = "Reconnecting — recap may be stale";
+"titleSlide.offlineBanner" = "Offline — showing last known recap";
