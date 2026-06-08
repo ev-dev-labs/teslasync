@@ -1,0 +1,61 @@
+/*
+  OnboardingGate.strings
+  TeslaSync — P4 feature view · 0194 · OnboardingGate (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `OnboardingGateView` resolves (table "OnboardingGate") lives here with its
+  English `t(key, default)` value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-safe across the concurrent surface slots).
+
+  The web source (features/onboarding/components/OnboardingGate.tsx) is non-visual
+  (it renders null and only triggers a redirect), so it contains no `t()` calls.
+  Every key below backs the native gate surface the prompt requires — the header,
+  the verdict card, the three onboarding anchors (the status feed's data), the
+  loading / empty / error chrome, the freshness chip, the connectivity banners,
+  and the accessibility nouns. The anchor titles mirror the OnboardingPage step
+  vocabulary so the gate and the full wizard read consistently.
+*/
+
+/* --- Header --- */
+"onboarding.gate.title" = "Finish setting up TeslaSync";
+"onboarding.gate.subtitle" = "A few steps remain before your dashboard is ready.";
+
+/* --- Verdict card: redirect (web `navigate('/onboarding')`) --- */
+"onboarding.gate.redirect.title" = "Taking you to setup";
+"onboarding.gate.redirect.body" = "Complete the remaining steps to unlock your dashboard.";
+"onboarding.gate.redirect.cta" = "Go to setup";
+
+/* --- Verdict card: complete (web `data.is_complete`) --- */
+"onboarding.gate.complete.title" = "You're all set";
+"onboarding.gate.complete.body" = "Setup is complete — your dashboard is ready.";
+
+/* --- Verdict card: continue (web `isSkipped` / `isAllowed`) --- */
+"onboarding.gate.continue.title" = "Continuing to your dashboard";
+"onboarding.gate.continue.body" = "You can finish setup any time from Settings.";
+
+/* --- Anchor checklist (the status feed's three anchors) --- */
+"onboarding.gate.progress" = "%1$d of %2$d complete";
+"onboarding.gate.anchor.tesla" = "Tesla account connected";
+"onboarding.gate.anchor.vehicle" = "Vehicles synced";
+"onboarding.gate.anchor.telemetry" = "Telemetry flowing";
+
+/* --- States: loading / empty / error --- */
+"onboarding.gate.loading" = "Checking your setup…";
+"onboarding.gate.empty" = "Setup status unavailable";
+"onboarding.gate.empty.body" = "We couldn't read your setup status. It will refresh automatically.";
+"onboarding.gate.error.title" = "Couldn't verify setup";
+"onboarding.gate.error.body" = "We'll keep you here so nothing is interrupted. Try again.";
+"onboarding.gate.retry" = "Try again";
+
+/* --- Freshness chip + connectivity banners --- */
+"onboarding.gate.live" = "Live";
+"onboarding.gate.stale" = "Stale";
+"onboarding.gate.offline" = "Offline";
+"onboarding.gate.staleBanner" = "Reconnecting — this status may be out of date";
+"onboarding.gate.offlineBanner" = "Offline — showing the last known status";
+
+/* --- Accessibility nouns --- */
+"onboarding.gate.anchor.done.a11y" = "completed";
+"onboarding.gate.anchor.pending.a11y" = "pending";
