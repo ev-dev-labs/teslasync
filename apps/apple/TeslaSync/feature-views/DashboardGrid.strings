@@ -1,0 +1,42 @@
+/*
+  DashboardGrid.strings
+  TeslaSync — P4 feature view · 0122 · DashboardGrid (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface (table "DashboardGrid").
+  Every key the native DashboardGrid resolves lives here with its English value.
+  These entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table so each parallel surface
+  prompt owns its strings without editing the shared catalog.
+
+  The web source (web/src/features/dashboard/components/DashboardGrid.tsx) makes
+  NO `t()` calls — the surface is anonymous and its only user-facing strings are
+  hardcoded English aria-labels (`Settings for ${name}`, `Remove ${name}`,
+  `Expand ${name}`) and the "Exit Fullscreen" control. Those are reproduced here
+  as keyed strings (web `${name}` interpolation expressed as `%@`, resolved with
+  String(format:)). The remaining keys back the native chrome that every P4 surface
+  requires (the load/empty/error states and the live stale/offline freshness chip).
+*/
+
+/* --- Web-parity chrome: per-widget controls (web aria-labels, `${name}` → %@) --- */
+"dashboard.grid.widget.settings" = "Settings for %@";
+"dashboard.grid.widget.remove" = "Remove %@";
+"dashboard.grid.widget.expand" = "Expand %@";
+"dashboard.grid.widget.dragHandle" = "Drag to reorder %@";
+"dashboard.grid.widget.tile" = "%@ widget";
+
+/* --- Web-parity chrome: fullscreen overlay --- */
+"dashboard.grid.fullscreen.exit" = "Exit Fullscreen";
+
+/* --- Native chrome: grid container accessibility --- */
+"dashboard.grid.accessibilityLabel" = "Dashboard widget grid";
+
+/* --- Native chrome: load / empty / error states --- */
+"dashboard.grid.loading" = "Loading dashboard…";
+"dashboard.grid.empty.title" = "No widgets";
+"dashboard.grid.empty.message" = "Add widgets to build your dashboard.";
+"dashboard.grid.error.title" = "Couldn’t load dashboard";
+"dashboard.grid.error.message" = "Something went wrong loading your dashboard.";
+
+/* --- Native chrome: live freshness chip (stale / offline) --- */
+"dashboard.grid.freshness.stale" = "Stale";
+"dashboard.grid.freshness.offline" = "Offline";
