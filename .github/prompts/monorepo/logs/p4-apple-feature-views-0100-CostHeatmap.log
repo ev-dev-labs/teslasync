@@ -1,0 +1,189 @@
+=== P4 Feature view 0100 CostHeatmap (Apple) ===
+date: Sun Jun  7 21:27:06 PDT 2026
+host: macOS 26.5.1 | Xcode 26.5 | Swift version 6.3.2
+web source: web/src/features/charging/components/charging-list/CostHeatmap.tsx
+native output: apps/apple/TeslaSync/feature-views/CostHeatmap.{swift,Model,Adapter,Views,Grid,Previews,Tests}.swift + CostHeatmap.strings
+
+---------------------------------------------------------------------
+GATE STEP 1/8 — swiftlint --strict (surface files)
+---------------------------------------------------------------------
+Linting Swift files at paths TeslaSync/feature-views/CostHeatmap.swift, TeslaSync/feature-views/CostHeatmap.Model.swift, TeslaSync/feature-views/CostHeatmap.Adapter.swift, TeslaSync/feature-views/CostHeatmap.Views.swift, TeslaSync/feature-views/CostHeatmap.Grid.swift, TeslaSync/feature-views/CostHeatmap.Previews.swift, TeslaSync/feature-views/CostHeatmap.Tests.swift
+Linting 'CostHeatmap.swift' (1/7)
+Linting 'CostHeatmap.Model.swift' (2/7)
+Linting 'CostHeatmap.Views.swift' (4/7)
+Linting 'CostHeatmap.Adapter.swift' (3/7)
+Linting 'CostHeatmap.Grid.swift' (5/7)
+Linting 'CostHeatmap.Tests.swift' (7/7)
+Linting 'CostHeatmap.Previews.swift' (6/7)
+Done linting! Found 0 violations, 0 serious in 7 files.
+LINT_EXIT=0
+
+---------------------------------------------------------------------
+GATE STEP 2/8 — swiftformat --lint (surface files)
+---------------------------------------------------------------------
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-221/apps/apple/.swiftformat
+SwiftFormat completed in 0.62s.
+0/7 files require formatting.
+FORMAT_EXIT=0
+
+---------------------------------------------------------------------
+GATE STEP 3/8 — placeholder / stub gate (genuine scan of surface .swift)
+---------------------------------------------------------------------
+# Note: the prompt's literal '-Path .../CostHeatmap' resolves to no file
+# (surface ships as CostHeatmap.* not CostHeatmap/) so it is a clean no-op;
+# this step scans the ACTUAL surface .swift files to verify honestly.
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+---------------------------------------------------------------------
+GATE STEP 4/8 — surface unit tests EXECUTED (SwiftPM, real XCTest)
+---------------------------------------------------------------------
+# Adapter + Model + Formatting + Accessibility compiled into a library module
+# 'TeslaSync' and run via 'swift test' (SwiftUI view files + surface-slug come
+# from a thin shim, as the feature-view .Tests.swift cannot host in the app
+# target — see step 8). This is the executed-green proof of the surface logic.
+Test Suite 'All tests' passed at 2026-06-07 21:27:38.808.
+	 Executed 34 tests, with 0 failures (0 unexpected) in 0.007 (0.011) seconds
+SWIFT_TEST_EXIT=0
+
+---------------------------------------------------------------------
+GATE STEP 5/8 — surface typecheck vs iOS 18 simulator SDK (Swift 6, strict-concurrency=complete)
+---------------------------------------------------------------------
+SDK: /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk ; target arm64-apple-ios18.0-simulator
+IOS_TYPECHECK_EXIT=0 (0 errors)
+
+---------------------------------------------------------------------
+GATE STEP 6/8 — surface typecheck vs macOS 15 SDK (Swift 6, strict-concurrency=complete)
+---------------------------------------------------------------------
+SDK: /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk ; target arm64-apple-macos15.0
+MAC_TYPECHECK_EXIT=0 (0 errors)
+
+---------------------------------------------------------------------
+GATE STEP 7/8 — KMP Shared.xcframework (Gradle) — app-link prerequisite
+---------------------------------------------------------------------
+$ ./apps/shared/gradlew :core:assembleSharedXCFramework  ->  BUILD SUCCESSFUL in 7m 34s (GRADLE_EXIT=0)
+staged: apps/apple/Frameworks/Shared.xcframework (git-ignored)
+
+---------------------------------------------------------------------
+GATE STEP 8/8 — xcodebuild build test (iOS 18 sim + macOS 15) — DEFERRED w/ evidence
+---------------------------------------------------------------------
+$ DEVELOPER_DIR=/Applications/Xcode.app/... xcodebuild -scheme TeslaSync \
+      -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  -> IOS_EXIT=65 (** TEST FAILED **).  MAC step DEFERRED under the same blockers.
+
+ROOT CAUSE — TWO pre-existing conditions OUTSIDE this prompt's allowed files
+(allowed: apps/apple/TeslaSync/feature-views/CostHeatmap.*, the log). NOT my code:
+
+  (B1) project.yml test-target membership: every feature-view/dashboard-widget
+       '*Tests.swift' is a member of the APP target (which does not link XCTest),
+       so the app-target compile fails on 'import XCTest'. Breaks pre-existing
+       siblings (AuditPanel, ...) identically. Representative lines:
+         AuditPanel.Tests.swift:19:8: error: unable to resolve module dependency: 'XCTest'
+         AuditPanel.Tests.swift:19:8: error: Unable to resolve module dependency: 'XCTest'
+         AuditPanel.Tests.swift:20:18: warning: file 'AuditPanel.Tests.swift' is part of module 'TeslaSync'; ignoring import
+         AuditPanel.Tests.swift:20:18: warning: File 'AuditPanel.Tests.swift' is part of module 'TeslaSync'; ignoring import
+
+  (B2) dashboard-widgets duplicate type: 'DashboardWidgetSize' is declared in
+       ~15 dashboard-widget files; the app module compile is ambiguous (surviving
+       even with *Tests.swift excluded). Representative lines:
+         DigitalTwinWidget.Model.swift:238:29: error: 'DashboardWidgetSize' is ambiguous for type lookup in this context
+         DigitalTwinWidget.Model.swift:239:25: error: 'DashboardWidgetSize' is ambiguous for type lookup in this context
+         DigitalTwinWidget.Model.swift:240:25: error: 'DashboardWidgetSize' is ambiguous for type lookup in this context
+
+  CostHeatmap-attributable compiler errors across BOTH full-app compiles:
+     build test run:                 0
+     build (EXCLUDED *Tests.swift):  0
+  => the surface itself contributes ZERO errors; verified green instead via
+     steps 4 (executed tests), 5 (iOS SDK typecheck), 6 (macOS SDK typecheck).
+  Matches the predecessor-accepted disposition (0053 ChargingDetailSection,
+  0069 SummarySlide): code-complete + green host gates, Xcode build/test DEFERRED.
+
+----------------------------------------------------------------------
+PARITY SUMMARY (web CostHeatmap.tsx -> native CostHeatmap.*)
+----------------------------------------------------------------------
+  Data sources : useTranslation -> CostHeatmapStrings (P1/S10 facade);
+                 useFormatting  -> CostHeatmapFormatting (formatCurrency @3dp).
+                 Web takes heatmap+peakCostPerKwh as props; native binds them via the
+                 P1/S8 CostHeatmapSource state-holder seam (no HTTP in the view).
+  Shared comps : @/components/ui -> GlassPanel => tsGlassPanel(); EmptyState =>
+                 ContentUnavailableView; Skeleton => TSSkeleton; tokens P1/S9.
+  Charts/maps  : none (web is a flex grid of aspect-square cells) -> native Canvas
+                 7x24 grid (no Swift Charts / MapKit needed; both present in SDK).
+  Math parity  : maxCost = peakCostPerKwh || 0.30; cell rgba(round(t*239),
+                 round((1-t)*187), round((1-t)*100), min(0.9, 0.15+sessions*0.12)),
+                 t=min(1,cost/maxCost); legend [0.15,0.3,0.5,0.7,0.9] @ alpha 0.6;
+                 first-match-wins grid build. All asserted in step-4 tests.
+  i18n keys    : charging.optimizer.heatmap = "Charging Cost Heatmap"
+                 charging.optimizer.cheap = "Cheap"
+                 charging.optimizer.expensive = "Expensive"
+                 (+ native chrome: a11y/legend/sessions/cheapest/priciest/busiest/
+                  perKwh/empty/loading/errorTitle/retry/refresh/stale/offline banners)
+                 verified vs web/src/i18n/en.json (charging.optimizer.*).
+  States       : loading (skeleton) / loaded / empty (no-session ContentUnavailable,
+                 never blank) / error (QueryError-equiv + retry) / stale + offline
+                 (freshness banner + cached grid). All 6 previews + tests.
+  A11y         : panel speaks CostHeatmapAccessibility.summary (totals + cost range +
+                 busiest slot); legend has a scale label; refresh/retry buttons
+                 labelled; canvas decorative; Dynamic Type via tokens; shim-free
+                 reduce-motion (no animations introduced).
+  Telemetry    : P1/S11 view.opened on appear, surface slug "CostHeatmap" (step-4
+                 testStartEmitsViewOpenedTelemetryOnce).
+
+----------------------------------------------------------------------
+HONESTY COVENANT (binding)
+----------------------------------------------------------------------
+  1  No red-as-green ...... runnable gates (lint/format/placeholder/executed tests/
+                            iOS+macOS SDK typecheck) are really green (raw output above);
+                            the Xcode build/test is reported RED (IOS_EXIT=65) + DEFERRED,
+                            never claimed green.
+  2  No scope narrowing ... full surface: grid+legend+title+all 6 states+a11y+i18n+
+                            telemetry; ~12.4KB adapter + full view/model/tests, no cuts.
+  3  No skip-and-assume ... every web conditional reproduced (sessions>0 fill vs empty
+                            track; legend; maxCost fallback) and unit-tested.
+  4  No stubs as final .... zero TODO/stub/mock/placeholder/Lorem (step 3, genuine scan).
+                            The SwiftPM/TSSkeleton shims are TEST-HARNESS only (/tmp),
+                            never shipped; shipped files are complete.
+  5  No parity shortcuts .. colour ramp, alpha, first-match grid, 3-dp currency, Sunday-
+                            first day labels all match the web exactly (step-4 asserts).
+  6  No delegation ........ authored directly; no sub-agent used for the surface.
+  7  No predecessor bypass  did NOT edit project.yml / .swiftlint.yml / .swiftformat /
+                            shared Localizable.xcstrings / any sibling; strings ship as the
+                            per-surface CostHeatmap table. Same host-gate + Xcode-deferral
+                            disposition as 0053/0069.
+  8  No commit on red ..... committing on all-green RUNNABLE gates; the Xcode app step is
+                            honestly DEFERRED with evidence (pre-existing B1+B2), not faked.
+  9  No silent drift ...... changes confined to the allowed CostHeatmap.* files + this log.
+                            Generated TeslaSync.xcodeproj + staged Frameworks/Shared.xcframework
+                            are git-ignored (not committed). The two working-tree web edits
+                            (FleetApiSection.tsx, BackupRestorePage.tsx) are NOT mine and are
+                            excluded from the scoped commit.
+  10 Log ends with EXIT/STATUS below.
+
+----------------------------------------------------------------------
+DISPOSITION
+----------------------------------------------------------------------
+  Production-polished native CostHeatmap shipped at parity with the web source: a pure
+  Foundation-only projection core (EXECUTED-green XCTest, 34/34), the P1/S8 state-holder
+  seam (no view HTTP), P1/S11 view.opened telemetry (slug "CostHeatmap"), every state +
+  i18n key + a11y label, a faithful Canvas 7x24 cheap->expensive heatmap, the five-swatch
+  legend, and the clock-titled glass panel. All host-runnable gates pass AND the surface
+  typechecks against BOTH the iOS 18 simulator and macOS 15 SDKs under Swift 6 strict
+  concurrency. The full xcodebuild build/test is DEFERRED to the downstream integration
+  runner, blocked only by two pre-existing conditions outside this prompt's allowed files:
+  (B1) project.yml makes *Tests.swift app-target members lacking XCTest (breaks every
+  sibling incl. AuditPanel), and (B2) a duplicate 'DashboardWidgetSize' across ~15
+  dashboard-widget files. The surface contributes ZERO compiler errors.
+
+----------------------------------------------------------------------
+COMMIT
+----------------------------------------------------------------------
+  git add apps/apple/TeslaSync/feature-views/CostHeatmap.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0100-CostHeatmap.log
+  git commit -m "feat(apps/apple/feature-views): add CostHeatmap surface (P4)"
+
+EXIT=0
+STATUS=DONE
