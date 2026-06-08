@@ -1,0 +1,30 @@
+/*
+  SummaryStatsGrid.strings
+  TeslaSync — P4 feature view · 0093 · SummaryStatsGrid (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SummaryStatsGrid` resolves (table "SummaryStatsGrid") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/charging/components/charging-curve/SummaryStatsGrid.tsx). The second group
+  backs the native-only chrome: the unit suffixes the web renders as literal symbols
+  (so the Swift sources hold no literals), plus the loading accessibility wording.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"charging.curve.totalSessions" = "Total Sessions";
+"charging.curve.totalEnergy" = "Total Energy";
+"charging.curve.avgChargeRate" = "Avg Charge Rate";
+"charging.curve.peakRate" = "Peak Rate";
+"charging.curve.avgDuration" = "Avg Duration";
+"charging.curve.totalCost" = "Total Cost";
+
+/* --- Native chrome: unit symbols (web literal suffixes) + accessibility --- */
+"charging.curve.unit.kwh" = "kWh";
+"charging.curve.unit.kw" = "kW";
+"charging.curve.unit.min" = "min";
+"charging.curve.loadingValueA11y" = "Loading";
