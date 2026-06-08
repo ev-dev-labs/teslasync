@@ -1,0 +1,150 @@
+=== P4 Feature view 0139 DriveStatCards (Apple) ===
+Runner: Darwin (macOS), Xcode 26.5 (Build 17F42) at /Applications/Xcode.app — activated for
+this run via DEVELOPER_DIR (the default xcode-select points at /Library/Developer/CommandLineTools).
+Tooling present: xcodebuild, xcodegen 2.x, swift 6.3.2, swiftlint, swiftformat, pwsh, iPhone 16 simulator (booted).
+=> Platform capability AVAILABLE. This surface is NOT blocked on capability; see gate results below.
+
+Web source (THE spec): features/driving/components/drive-detail/DriveStatCards.tsx
+Native output (9 files, all within the allowed `DriveStatCards.*` glob):
+  DriveStatCards.swift            71  — root View (header + connectivity banner + phase switch)
+  DriveStatCards.Model.swift     316  — P1/S8 state-holder seam, P1/S11 telemetry seam, P1/S10 strings facade
+  DriveStatCards.Adapter.swift   386  — Phase / Accent / Item / Projection / Accessibility (pure, testable)
+  DriveStatCards.Format.swift     69  — DriveStatCardsUnitMath (SI convert + fmtNumber/fmtInt/formatDuration)
+  DriveStatCards.Views.swift     242  — freshness chip, banner, IconStatCard-parity tile, grid, skeleton, error, empty
+  DriveStatCards.Previews.swift  107  — #Preview per state x metric/imperial (DEBUG)
+  DriveStatCards.Tests.swift     317  — projection + model XCTest
+  DriveStatCards.AdapterTests.swift 112 — unit-math + accessibility XCTest
+  DriveStatCards.strings          42  — P1/S10 i18n table
+
+PARITY NOTES
+  • Ten tiles reproduced in web call order: Distance, Duration, Max Speed, Avg Speed, SOC, Max Power,
+    Elev. Gain, Elev. Loss, then the two conditional cost tiles Trip Cost (`stats.energyWh > 0`) and
+    Cost / unit (`stats.energyWh > 0 && drive.distanceM > 0`).
+  • The prompt's "i18n keys extracted from source" lists 9 labels and omits `driveDetail.costPerUnit`.
+    The web source (line 46) DOES render that tenth tile, so it is reproduced for true parity (honesty
+    covenant #5 "no parity shortcuts"); its i18next `{{unit}}` interpolation ships as the `%@` argument.
+  • Value formatting matches web exactly: convertDistanceFromSI@1dp, formatDuration (h=floor(min/60),
+    m=round(min%60)), raw display-unit speeds@0dp (web stats.maxSpd = toSpeedDisplay(maxSpeedMps)),
+    fmtInt SOC pair (nil->0), fmtWithUnit(_, "kW")@precision, Math.round elevation@0dp,
+    formatEnergyCost / formatCurrency(_,3) / costPerDistanceUnit from useFormatting.
+  • States: loading / empty / error / stale / offline / content — all render (no hidden surfaces).
+  • Data via the shared DriveStatCardsSource seam (P1/S8); no HTTP in the view. view.opened telemetry (P1/S11).
+
+------------------------------------------------------------------------------------------
+GATE RESULTS (real exit codes; nothing fabricated)
+------------------------------------------------------------------------------------------
+
+[A] SURFACE-SCOPE GATES — all GREEN (these prove the shipped surface)
+
+A1. Isolated SwiftPM compile of the 6 production files (incl. #Preview) against the REAL design
+    tokens (apps/design/generated/apple/Tokens.swift), module named TeslaSync, Swift 6 / macOS 15:
+        Building for debugging...
+        [8/9] Emitting module TeslaSync
+        Build complete! (15.04s)
+    => BUILD SUCCEEDED. EXIT=0
+
+A2. Executed XCTest over the real Adapter+Format+Model+Projection+Accessibility (same isolated package):
+        Test Suite 'All tests' passed.
+             Executed 29 tests, with 0 failures (0 unexpected)
+    Coverage: SI distance convert + fmtNumber grouping/rounding + safe() guard + formatDuration h/m
+    split; 10-tile projection values for BOTH imperial and metric prefs (256.4 mi / 412.7 km, 4h 32m,
+    125 mph, 88% -> 24%, 285.00 kW, 1,240 m up, 980 m down, $7.49, $0.029 / $0.018); conditional
+    cost-tile show/hide (count 10/9/8); nil-input em-dash tiles; nil-SOC -> 0% -> 0%; non-finite safe();
+    phase matrix; model phases + refresh delegation + stale-auto-refresh-once + view.opened-once;
+    accessibility summary incl. Cost / {{unit}} interpolation.
+    => 29/29 PASSED. EXIT=0
+
+A3. swiftformat --lint --config apps/apple/.swiftformat <9 files>:
+        0/8 files require formatting.
+    => FORMAT_EXIT=0
+
+A4. swiftlint lint --strict --config apps/apple/.swiftlint.yml <8 swift files>:
+        Done linting! Found 0 violations, 0 serious in 8 files.
+    => LINT_EXIT=0   (file_length<=400, function_body_length<=50, line_length<=120 all satisfied;
+       UnitMath split into Format.swift + cost tiles extracted to keep within limits)
+
+A5. ./apps/tools/check-placeholders.ps1 (verbatim gate path AND a scan of the actual 8 .swift files):
+        PLACEHOLDER_ALLOWED=0
+        PLACEHOLDER_COUNT=0
+    => PLACEHOLDER_EXIT=0   (no TODO/FIXME/XXX/"Coming soon"/Placeholder/"Lorem ipsum"/"not implemented")
+
+A6. In-tree app-target compilation (xcodegen-generated TeslaSync.xcodeproj) of the FULL module, both
+    SDKs — proves the shipped files compile inside the real app with no symbol collisions:
+        iOS   (iphonesimulator26.5): 0 error: lines referencing any DriveStatCards.* file
+        macOS (macosx26.5):          0 error: lines referencing any DriveStatCards.* file
+
+[B] WHOLE-TREE GATES — RED, but DEFERRED on PRE-EXISTING sibling breakage (NOT this surface,
+    and in files this prompt forbids me to touch). Real exit codes recorded; not reported as green.
+
+B1. xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+        ** BUILD FAILED **   IOS_EXIT=65
+    Cause: 4 errors, ALL "unable to resolve module dependency: 'XCTest'" in
+    apps/apple/TeslaSync/feature-views/AcDcStatsPanel.Tests.swift (a sibling I did not create or touch).
+    project.yml globs every feature-views file — including the 97 co-located *.Tests.swift — into the
+    app target, which does not link XCTest. grep of the failure log: 0 errors reference DriveStatCards.
+
+B2. In-tree compile with *Tests.swift excluded (xcconfig EXCLUDED_SOURCE_FILE_NAMES=*Tests.swift),
+    to see PAST the XCTest issue. iOS AND macOS, identical result:
+        ** BUILD FAILED **   IOS_EXIT=65 / MAC_EXIT=65   (90 error: lines each)
+        by directory:  83 apps/apple/TeslaSync/dashboard-widgets/
+                        7 apps/apple/TeslaSync/feature-views/WindowStatusDetail.Adapter.swift
+                        0 apps/apple/TeslaSync/feature-views/DriveStatCards.*
+    Nature (top messages): 50x "'DashboardWidgetSize' is ambiguous", 8x "'WeeklyDigestDTO' is ambiguous",
+        2x "invalid redeclaration of 'DashboardWidgetSize'", 2x "invalid redeclaration of
+        'DashboardWidgetRegistration'", 3x "'WindowState' is ambiguous", "invalid redeclaration of
+        'WindowState'" (WindowStatusDetail) ...
+    These are the documented parallel-merge collisions where multiple parallel branches each defined the
+    same shared widget/detail types; they are inert with respect to DriveStatCards. This is the same
+    blocker recorded by predecessors 0005/0057/0086/0098 ("code-complete + DEFERRED whole-tree Xcode gate").
+
+------------------------------------------------------------------------------------------
+HONESTY COVENANT
+------------------------------------------------------------------------------------------
+ 1 No red-as-green     : The two whole-tree xcodebuild steps are RED (IOS_EXIT=65 / MAC_EXIT=65) and are
+                         reported as RED-but-DEFERRED, never as green. The GREEN claims (A1-A6) are each
+                         backed by pasted real output.
+ 2 No scope narrowing  : All 10 web tiles (incl. the extraction-omitted costPerUnit), all six states,
+                         i18n, a11y, telemetry, stale auto-refresh — implemented; nothing dropped.
+ 3 No skip-and-assume  : iOS full gate RAN; iOS AND macOS in-tree compiles RAN; the surface logic was
+                         EXECUTED (29 XCTest) and compiled against BOTH device SDKs. The macOS blocker was
+                         verified, not assumed.
+ 4 No stubs as final   : complete implementations; PLACEHOLDER_COUNT=0. (The /tmp SwiftPM harness +
+                         /tmp xcconfig are throwaway verifiers, never shipped/committed.)
+ 5 No parity shortcuts : faithful port of the ten-tile grid, the two conditional cost branches, the SOC
+                         pair, the elevation arrows, the unit-baked values, and every t() call.
+ 6 No delegation       : authored directly (no sub-agent delegation of the surface).
+ 7 No predecessor bypass: did NOT edit project.yml / .swiftlint.yml / .swiftformat / sibling files / the
+                         shared Localizable.xcstrings; strings ship as the per-surface table; the
+                         xcconfig test-exclude is an ephemeral verifier (never committed); the generated
+                         .xcodeproj is a local git-ignored build artifact.
+ 8 No commit on red    : committing on GREEN surface-scope gates (isolated dual-SDK compile + 29 EXECUTED
+                         tests + swiftlint --strict + swiftformat --lint + placeholder + in-tree 0-error
+                         compile on both SDKs). The 2 whole-tree xcodebuild steps are DEFERRED — blocked
+                         SOLELY by pre-existing parallel-merge sibling breakage / app-target XCTest
+                         globbing, all in files outside this prompt's allowed set.
+ 9 No silent drift     : `git status --porcelain` lists ONLY the 9 DriveStatCards.* files (+ this log).
+                         The 2 pre-existing modified web files are untouched by this surface.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED> below.
+
+------------------------------------------------------------------------------------------
+DISPOSITION
+------------------------------------------------------------------------------------------
+Production-polished native DriveStatCards shipped at parity with the web source and verified by every
+in-scope, host-runnable means: a BUILD-SUCCEEDED isolated SwiftPM compile of the full surface (incl.
+#Preview) against the REAL design tokens under Swift 6, an EXECUTED-green XCTest bundle (29/29) over the
+real Adapter+Format+Model+Projection+Accessibility, green swiftlint --strict + swiftformat --lint +
+placeholder gates, and a 0-error in-tree compile of the surface inside the full app module on BOTH the
+iOS-sim and macOS SDKs. The whole-tree `xcodebuild build test` (iOS + macOS) is DEFERRED to the
+integration/signed runner because it is blocked SOLELY by pre-existing, parallel-merge sibling breakage
+(97 co-located *.Tests.swift compiled into the app target with no XCTest link; ambiguous/redeclared
+DashboardWidgetSize / WeeklyDigestDTO / DashboardWidgetRegistration / WindowState across unmodified
+dashboard-widgets + WindowStatusDetail siblings) — every failing line is in a file this prompt forbids me
+to touch, and across both full app builds the batch compile reported ZERO errors in any DriveStatCards.*
+file. This matches the established 0005/0057/0086/0098 precedent.
+
+COMMIT
+  git add apps/apple/TeslaSync/feature-views/DriveStatCards.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0139-DriveStatCards.log
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,42 @@
+/*
+  DriveStatCards.strings
+  TeslaSync — P4 feature view · 0139 · DriveStatCards (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `DriveStatCards` resolves (table "DriveStatCards") lives here with its web English value.
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time;
+  they are kept in a per-surface table so each parallel surface prompt owns its own strings
+  without editing the shared catalog.
+
+  The first group holds the keys extracted verbatim from the web source
+  (features/driving/components/drive-detail/DriveStatCards.tsx) — the canonical
+  `driveDetail.*` namespace, including `driveDetail.costPerUnit` (web source line 46, whose
+  i18next `{{unit}}` interpolation is expressed here as the `%@` format argument). The
+  remaining keys back the native-only chrome (freshness chip, stale/offline banner, loading +
+  error + retry copy, empty hint).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"driveDetail.distance" = "Distance";
+"driveDetail.duration" = "Duration";
+"driveDetail.maxSpeed" = "Max Speed";
+"driveDetail.avgSpeed" = "Avg Speed";
+"driveDetail.soc" = "SOC";
+"driveDetail.maxPower" = "Max Power";
+"driveDetail.elevGain" = "Elev. Gain";
+"driveDetail.elevLoss" = "Elev. Loss";
+"driveDetail.tripCost" = "Trip Cost";
+"driveDetail.costPerUnit" = "Cost / %@";
+
+/* --- Native chrome: freshness + connectivity --- */
+"driveDetail.stats.live" = "Live";
+"driveDetail.stats.stale" = "Stale";
+"driveDetail.stats.offline" = "Offline";
+"driveDetail.stats.staleBanner" = "Reconnecting — drive stats may be stale";
+"driveDetail.stats.offlineBanner" = "Offline — showing last known drive stats";
+
+/* --- Native chrome: states --- */
+"driveDetail.stats.loading" = "Loading drive stats";
+"driveDetail.stats.errorTitle" = "Couldn't load drive stats";
+"driveDetail.stats.retry" = "Retry";
+"driveDetail.stats.empty" = "No stats for this drive yet";
