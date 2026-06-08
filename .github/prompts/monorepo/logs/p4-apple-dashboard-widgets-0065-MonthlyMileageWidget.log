@@ -1,0 +1,179 @@
+================================================================================
+P4 · Dashboard widget · 0065 — MonthlyMileageWidget (Apple)
+Run: 2026-06-07T19:14-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/68
+Base: e9e15143
+Prompt: P4/dashboard-widgets/0065 — MonthlyMileageWidget
+Web source (spec): web/src/features/dashboard/widgets/MonthlyMileageWidget.tsx
+Mode: code-complete + Xcode app build/test EXECUTED GREEN (iOS Simulator + macOS).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2, macOS SDK present                  ✅
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                     ✅
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                   ✅
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                                 ✅
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override          ✅
+  xcodegen ................... /opt/homebrew/bin/xcodegen                             ✅
+  iPhone 16 simulator ........ present (83717DEE-…)                                   ✅
+  java ....................... OpenJDK 17.0.19 (Kotlin/Native)                        ✅
+  Shared.xcframework ......... BUILT + STAGED via apps/shared/gradlew                 ✅ (apps/apple/Frameworks/Shared.xcframework)
+  codesign identities ........ "0 valid identities found"                            ⚠ → CODE_SIGNING_ALLOWED=NO for build/test (env only; not a code defect)
+
+  Charts/maps capability note: this surface uses Swift Charts (web Recharts BarChart →
+  SwiftUI Charts BarMark) and NO MapKit (web "maps used: none"). SwiftUI + Swift Charts
+  are available and PROVEN by the real Xcode build+test below. The capability-BLOCKED
+  escape hatch does NOT apply — the surface is authored AND Xcode-validated for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/MonthlyMileageWidget.*) ===
+  MonthlyMileageWidget.Models.swift    117  domain value types (row/vehicle/bar/projection; port of BarDatum)
+  MonthlyMileageWidget.Builder.swift   135  pure cached→projection adapter + distance converter seam + fmt
+  MonthlyMileageWidget.Model.swift     281  P1/S8 state-holder seam + P1/S11 telemetry + P1/S10 strings + a11y
+  MonthlyMileageWidget.swift           322  MonthlyMileageWidget surface (shell + states + compact/standard)
+  MonthlyMileageWidget.Chart.swift     124  MonthlyMileageChart — Swift Charts bar chart (per-bar highlight + selection tooltip)
+  MonthlyMileageWidget.Previews.swift  161  #if DEBUG previews — one per state (content/wide/loading/empty/error/stale/offline/compact)
+  MonthlyMileageWidget.Tests.swift     334  XCTest: builder + format + model + registry + a11y (27 methods)
+  MonthlyMileageWidget.strings          45  P1/S10 catalog contribution (6 source keys + native chrome/chart/a11y keys)
+  Total 1519 lines. Every file ≤400 (house file_length); one exported view per file; DashboardWidgetSize/
+  DashboardWidgetRegistration are REUSED from the in-module sibling (no redeclaration).
+
+=== PARITY (vs web MonthlyMileageWidget.tsx) ===
+  Data sources → bound via the shared state-holder seam (MonthlyMileageSource → MonthlyMileageModel):
+    useMonthlyMileage, useVehicles, useUnits, useAnalytics, useTranslation. The production app wires
+    MonthlyMileageSource over the KMP analytics/vehicle stores (StateHolderModel<LoadableState<…>>);
+    the view performs NO HTTP. No direct transport in the view.
+  Projection → MonthlyMileageBuilder is a 1:1 port of the web useMemo pipeline: shortMonth("2026-04"→"Apr"),
+    currentMonthKey, slice(-12), convertDistanceFromSI(total_km*1000, unit), isCurrent flag, 12-Mo total,
+    This-Month value, hasData (non-empty AND any distance>0). Distance factors km=/1000, mi=/1609.344,
+    ft=/0.3048 match lib/unitConversion.ts exactly. Verified by executed XCTest + harness.
+  Composition → WidgetShell chrome (chart.bar icon + "Monthly Mileage" title + freshness chip + refresh +
+    "Open") · stat header (This Month / 12-Mo Total with unit) · bar chart (current month accent-highlighted,
+    prior months muted, tap-to-inspect tooltip showing "Distance" + value+unit) · compact (cols≤1) shows
+    stats only, standard (2×4+) shows stats+chart, wide (cols≥3) uses larger axis ticks — all web branches.
+  Shared components → reuses Color.TS / Font.TS / TSSpacing / TSRadius / TSMotion / TSSkeleton (compiled
+    against the REAL apps/apple component library + KMP framework in the Xcode build below).
+    Recharts BarChart/Bar/Cell/Tooltip/XAxis/YAxis → SwiftUI Charts BarMark + chartXSelection annotation +
+    token-styled chartXAxis/chartYAxis. Leaflet → none (no map on this surface).
+  States (all render) → loading (skeleton chrome) · empty ("No mileage data" ContentUnavailableView) ·
+    error (retry) · stale (chip + banner + 30s auto-refresh) · offline (cached value + chip + banner) ·
+    content. Model phase resolution keeps cached bars visible behind refresh/offline/error (web shell).
+  i18n → all 6 source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    widget.monthlyMileage.title, .description, .noData, .thisMonth, .total12m, .distance  →  ALL PRESENT in
+    MonthlyMileageWidget.strings. No English literals in native code (verified: swiftlint + manual).
+  a11y → chart carries a localized label; each bar exposes a VoiceOver value ("<Month>: <dist> <unit>"
+    + "current month"); every button has an accessibilityLabel; stat cells combine label+value+unit;
+    Dynamic Type via tokens; Reduce Motion gates the bar animation.
+  Telemetry → MonthlyMileageModel.start() emits viewOpened(surface:"MonthlyMileageWidget") → bridges shared
+    Telemetry.track(.screenView) (P1/S11). Asserted by a spy test (executed green).
+  Registry → MonthlyMileageWidget.registration: id "monthly-mileage", category "analytics",
+    default 2×4, min 2×4, max 4×40 (+ clamp()), matching registry/analytics.ts. Asserted (executed green).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck  (production widget files compiled with the REAL apps/apple component library —
+    Tokens + Design + Components/UI{Cards,Badges,Typography,Buttons} + Feedback/Skeletons + the sibling
+    DigitalTwin widget — under the app's own Swift 6 + complete strict-concurrency settings):
+      xcrun swiftc -typecheck -target arm64-apple-macos15.0 -swift-version 6 \
+        -strict-concurrency=complete -parse-as-library <component closure> <MonthlyMileageWidget.*>
+      SWIFTC_EXIT=0                                                                   ✅
+      Previews (-D DEBUG) typecheck: PREVIEW_TC_EXIT=0                                 ✅
+      Tests parse:                    TESTS_PARSE_EXIT=0                               ✅
+      (Surface is platform-agnostic SwiftUI/Charts — no `#if os(iOS)` branches — so this macOS
+       compile covers the iOS code paths; confirmed by the iOS Xcode build in [A] below.)
+
+[2] Executed logic runner (compiled Models+Builder+Model+View+Chart+harness to a native binary and RAN
+    it — real runtime verification, not a typecheck):
+      33/33 checks PASSED — shortMonth, currentMonthKey, buildProjection (km/mi, last-12 window, totals,
+      current-month flag, hasData), fmtInt/decimal/NaN, converter factors (km/mi/ft + fallback),
+      registry id/category/sizes/clamp, a11y summary + bar label, model phases
+      (loading/content/empty/error + cached-on-failed→content+offline), telemetry-once, start-once.
+      RUNNER_EXIT=0                                                                   ✅
+
+[3] swiftlint --strict on the 8 surface files (explicit paths; the repo .swiftlint.yml `included:` does
+    not yet list TeslaSync/dashboard-widgets — that wiring is the P4 integration prompt's job):
+      Done linting! Found 0 violations, 0 serious in 7 files (1 non-source .strings excluded).
+      SWIFTLINT_EXIT=0                                                                ✅
+
+[4] swiftformat --lint on the 8 surface files (repo apps/apple/.swiftformat rules):
+      0/7 files require formatting.
+      SWIFTFORMAT_EXIT=0                                                              ✅
+
+[5] check-placeholders (ADR-011 stub gate; swift), real per-file scan of the surface:
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   →  PLACEHOLDER_EXIT=0             ✅
+      (The prompt's literal -Path …/MonthlyMileageWidget is a filename PREFIX that Test-Path resolves to
+       nothing → a trivially-clean scan; the meaningful isolated-copy scan above is reported instead.)
+
+=== GATE — XCODE BUILD + TEST (EXECUTED GREEN on this host; NOT deferred, NOT faked) ===
+  Pre-step: built the KMP core as Shared.xcframework and staged it to apps/apple/Frameworks/ —
+    apps/shared/gradlew :core:assembleSharedXCFramework → "BUILD SUCCESSFUL", "✓ Shared.xcframework staged".
+  Integration: the surface was wired into the XcodeGen app + unit-test targets (xcodegen `sources`), which
+    is exactly how the P4 acceptance gate registers it permanently. project.yml was RESTORED to pristine
+    afterward (git diff project.yml == empty); the generated .xcodeproj is git-ignored. Code signing was
+    disabled (CODE_SIGNING_ALLOWED=NO) because this host has 0 codesigning identities — an environment
+    limitation that does not affect compilation or unit-test execution.
+
+  [A] iOS — xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' \
+            CODE_SIGNING_ALLOWED=NO ... build test
+        Compiling MonthlyMileageWidget.{swift,Chart,Model,Models,Builder,Previews}  → ** BUILD SUCCEEDED **
+        Test Suite 'TeslaSyncTests.xctest' … Executed 27 tests, with 0 failures      → ** TEST SUCCEEDED **
+        IOS_EXIT=0                                                                    ✅
+
+  [B] macOS — xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO ... build test
+        Compiling MonthlyMileageWidget.{swift,Chart,Model,Models,Builder,Previews}  → ** BUILD SUCCEEDED **
+        Test Suite 'TeslaSync-macOSTests.xctest' … Executed 27 tests, with 0 failures→ ** TEST SUCCEEDED **
+        MAC_EXIT=0                                                                    ✅
+
+      Per-suite (both platforms, identical): MonthlyMileageBuilderTests 10/10 · MonthlyMileageFormatTests
+      3/3 · MonthlyMileageModelTests 9/9 · MonthlyMileageRegistryTests 2/2 · MonthlyMileageAccessibilityTests
+      3/3  →  27/27, 0 failures.
+      Note (honesty): the FIRST macOS run surfaced 1 real failure — a faulty TEST expectation
+      (decimal(1000.05,1) → "1,000.0", not "1,000.1", because 1000.05 stores as 1000.0499…; the
+      implementation was correct). The assertion was fixed to an unambiguous value (1234.56→"1,234.6")
+      and BOTH platforms re-ran 27/27 green. No production code changed for this.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content + compact) — each has a
+      #if DEBUG preview; phase logic unit-tested + executed green on iOS & macOS.
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 6/6 present in MonthlyMileageWidget.strings.
+  [x] Accessibility labels on every interactive element; chart carries label + per-bar VoiceOver values.
+  [x] Tests: adapter unit test + per-state model test + registry + a11y label test — 27 methods, executed
+      GREEN via xcodebuild on iOS Simulator AND macOS.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — every gate step (iOS build test, macOS build test, swiftlint, swiftformat,
+      placeholder) returned 0.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : every "✅" is a command actually run on this host with its real exit code. The one
+                       red test was a faulty assertion, fixed, and re-run green on both platforms.
+  2  No scope narrowing: implemented ALL states/layouts (compact+standard+wide) + chart + i18n + a11y +
+                       telemetry + registry.
+  3  No skip-and-assume: each gate executed (incl. full iOS+macOS xcodebuild build test); nothing assumed.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of the web chartData/totals pipeline + full chart + all states.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT permanently edit project.yml / the dashboard grid (integration prompt's
+                       scope — temporary wiring used only to run the gate, then RESTORED to pristine) and did
+                       NOT edit the shared Localizable.xcstrings (parallel-unsafe) — strings shipped as the
+                       per-surface table.
+  8  No commit on red  : committing on all-green host + Xcode gates (iOS+macOS build test 27/27).
+  9  No silent drift   : working-tree changes confined to the allowed MonthlyMileageWidget.* files + this log
+                       (git status verified; project.yml + generated artifacts untracked/restored).
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native MonthlyMileageWidget shipped at parity with the web source: pure-Swift
+  cached→projection adapter (executed-green), P1/S8 state-holder seam (no view HTTP), Swift Charts bar
+  chart with current-month highlight + tap tooltip, P1/S11 telemetry, every state + i18n key + a11y label,
+  registry-correct (monthly-mileage, analytics, 2×4/2×4/4×40). ALL host gates green AND the full Xcode
+  build+test ran GREEN on both iOS Simulator (iPhone 16) and macOS (27/27 each) after building + staging
+  the KMP Shared.xcframework. The only environmental caveat — code signing disabled (0 identities on this
+  host) — does not affect compile/test correctness; permanent project.yml/grid registration is the P4
+  acceptance gate's scope (predecessor, Honesty rule 7).
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/MonthlyMileageWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0065-MonthlyMileageWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add MonthlyMileageWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE
