@@ -1,0 +1,36 @@
+/*
+  DrivingPerformanceCards.strings
+  TeslaSync — P4 feature view · 0055 · DrivingPerformanceCards (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `DrivingPerformanceCards` resolves (table "DrivingPerformanceCards") lives here with its
+  web English value. These entries fold into the app `Localizable.xcstrings` master catalog
+  at integration time; they are kept in a per-surface table so each parallel surface prompt
+  owns its own strings without editing the shared catalog.
+
+  The first group holds the keys extracted verbatim from the web source
+  (features/analytics/components/analytics/DrivingPerformanceCards.tsx) — the canonical
+  `analytics.driving.*` namespace. The remaining keys back the native-only chrome
+  (freshness chip, stale/offline banner, loading + error + retry copy, empty hint).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"analytics.driving.topSpeed" = "Top Speed";
+"analytics.driving.avgSpeed" = "Avg Speed";
+"analytics.driving.peakPower" = "Peak Power";
+"analytics.driving.peakRegen" = "Peak Regen";
+"analytics.driving.avgDriveDist" = "Avg Drive Distance";
+"analytics.driving.longestDrive" = "Longest Drive";
+
+/* --- Native chrome: freshness + connectivity --- */
+"analytics.driving.live" = "Live";
+"analytics.driving.stale" = "Stale";
+"analytics.driving.offline" = "Offline";
+"analytics.driving.staleBanner" = "Reconnecting — driving metrics may be stale";
+"analytics.driving.offlineBanner" = "Offline — showing last known driving metrics";
+
+/* --- Native chrome: states --- */
+"analytics.driving.loading" = "Loading driving performance";
+"analytics.driving.errorTitle" = "Couldn't load driving performance";
+"analytics.driving.retry" = "Retry";
+"analytics.driving.empty" = "No drive data for this period yet";
