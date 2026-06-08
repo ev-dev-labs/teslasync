@@ -1,0 +1,50 @@
+/*
+  helpers.strings
+  TeslaSync — P4 feature view · 0245 · helpers (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `StatusHelpersPanel` resolves (table "helpers") lives here with its English value.
+  These entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table so each parallel surface
+  prompt owns its own strings without editing the shared catalog.
+
+  The web source (features/system/components/status/helpers.tsx) is a pure utility
+  module and extracts NO i18n keys of its own. These keys therefore back the native
+  reference surface chrome: the section titles, the status display names + badge
+  variant labels (the human form of the strings the web helpers classify), the
+  formatting-reference labels, and the P4 leaf freshness / loading / empty / error
+  copy — so the Swift sources hold no English literals.
+*/
+
+/* --- Surface chrome --- */
+"helpers.title" = "Status Helpers";
+"helpers.legendTitle" = "Status Legend";
+"helpers.formattingTitle" = "Formatting";
+"helpers.uptimeLabel" = "Uptime";
+"helpers.bytesLabel" = "Storage";
+
+/* --- Badge variant labels (web statusToBadgeVariant outcomes) --- */
+"helpers.variant.success" = "Operational";
+"helpers.variant.warning" = "Degraded";
+"helpers.variant.danger" = "Down";
+"helpers.variant.neutral" = "Unknown";
+
+/* --- Status display names (human form of the classified tokens) --- */
+"helpers.status.healthy" = "Healthy";
+"helpers.status.connected" = "Connected";
+"helpers.status.degraded" = "Degraded";
+"helpers.status.offline" = "Offline";
+"helpers.status.queued" = "Queued";
+"helpers.status.unknown" = "Unknown";
+
+/* --- P4 leaf freshness / loading / empty / error --- */
+"helpers.live" = "Live";
+"helpers.stale" = "Stale";
+"helpers.offline" = "Offline";
+"helpers.staleBanner" = "Reconnecting — data may be stale";
+"helpers.offlineBanner" = "Offline — showing last known data";
+"helpers.refresh" = "Refresh";
+"helpers.loadingA11y" = "Loading status helpers";
+"helpers.empty" = "No status samples to show.";
+"helpers.errorTitle" = "Couldn't load status helpers";
+"helpers.retry" = "Retry";
