@@ -1,0 +1,264 @@
+================================================================================
+P4 · Feature view · 0138 — DriveOverviewChart (Apple)
+Run: 2026-06-07T21:55-0700   Host: Darwin arm64 (Atuls-Mac-Studio)   Branch: auto/20260607-170817-98066/259
+Base: 1ab7e0e1e
+Prompt: P4/feature-views/0138 — Feature view: DriveOverviewChart
+Web source (spec): web/src/features/driving/components/drive-detail/DriveOverviewChart.tsx
+Mode: code-complete + host-proven (typecheck both SDKs + EXECUTED XCTest 32/32 + DEBUG
+      previews macro typecheck + swiftlint/swiftformat/placeholder) + DEFERRED Xcode app
+      build/test (Shared.xcframework not staged; ADR-004/ADR-012; Honesty rule 7 —
+      0089 SessionComparisonChart predecessor parity).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-…-CBDDD3140989, Booted)            OK
+  Swift Charts ............... present in both SDKs (this surface USES it)          OK
+  MapKit ..................... present in both SDKs (this surface uses NONE)        OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint  0.63.3                  OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                 OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh  7.6.2                        OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  xcodegen ................... 2.45.4 (project generates cleanly, see deferred)     OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+  feature-views in project.yml  REGISTERED (lines 37 + 68 — iOS + macOS app targets)  OK
+
+  Capability note: the prompt's capability-BLOCKED escape hatch ("SwiftUI / Swift
+  Charts / MapKit unavailable") does NOT apply — SwiftUI + Swift Charts are AVAILABLE
+  and PROVEN by real iOS-18-simulator AND macOS-15 SDK compiles below, and the full
+  XCTest suite is EXECUTED on the macOS host (32/32). This surface uses Swift Charts
+  (web Recharts ComposedChart → native Chart{ AreaMark + LineMark }); it uses no maps.
+  STATUS is DONE, not BLOCKED.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/DriveOverviewChart.*) ===
+  DriveOverviewChart.Adapter.swift     322  value types — DriveChartSample (web
+                                            ChartDataPoint subset), DriveSeriesKind (hex +
+                                            dash + i18n keys/fallbacks + unit suffix),
+                                            DriveSeriesStat, DriveLegendItem, phase/status/
+                                            connection enums, DriveUnitLabels (of:
+                                            MeasurementSystem), DriveNumberFormat (fmtNumber/
+                                            fmtInt/fmtPercent/fmtWithUnit), surface slug.
+  DriveOverviewChart.Projection.swift  261  pure logic — series-presence guards
+                                            (chartData.some), est??rated fallback, statFn +
+                                            SOC battery>0 rule, rich legend builder, primary/
+                                            power dual-axis domains, rescale + inverse +
+                                            powerAxisTicks, resolvePhase (length>1), a11y
+                                            summaries. Foundation only.
+  DriveOverviewChart.Model.swift       263  P1/S8 state-holder seam (DriveOverviewSource →
+                                            DriveOverviewChartModel) + P1/S11 telemetry seam
+                                            (view.opened) + P1/S10 strings facade +
+                                            DriveOverviewUpdate + in-memory source + synced
+                                            cursor (cursorIndex). @Observable.
+  DriveOverviewChart.Chart.swift       317  Swift Charts ComposedChart — speed AreaMark+Line
+                                            (gradient 0.08, 1.5pt), dashed range lines
+                                            (4 2), SOC + usableSoc lines, power line rescaled
+                                            onto the hidden primary scale, trailing kW axis
+                                            (inverse rescale), endpoint time x-axis
+                                            (preserveStartEnd), synced-cursor RuleMark +
+                                            value tooltip (ChartTooltip).
+  DriveOverviewChart.Views.swift       304  header (ChartContainer title + freshness chip) +
+                                            connectivity banner + loading / empty / error
+                                            states + rich Mean/Max/Min legend (web ChartLegend)
+                                            with colored line swatches + a flow layout.
+  DriveOverviewChart.swift              71  the surface — TSFadeIn glass card + phase switch +
+                                            onAppear/onDisappear + a11y + surfaceSlug; passes
+                                            the synced-cursor binding to the chart.
+  DriveOverviewChart.Previews.swift    113  #if DEBUG previews — one per state
+                                            (content/empty/loading/error/stale/offline).
+  DriveOverviewChart.Tests.swift       399  XCTest — projection + number format + series
+                                            identity + model + a11y (32 methods).
+  DriveOverviewChart.strings            57  P1/S10 catalog (table "DriveOverviewChart", 24 keys).
+  Largest .swift = 322 lines (swiftlint file_length<=400 honored — the pure core was split
+  into Adapter (types) + Projection (logic) to stay within budget). No file imports the
+  Shared xcframework (seams are Swift protocols; the prod app injects the facade-backed
+  source, previews/tests inject InMemoryDriveOverviewSource).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources (web useTranslation + useUnits + useSyncedCursor + useSyncedReferenceLineX
+    + the parent `chartData` prop):
+      • useTranslation -> DriveOverviewStrings (P1/S10 table facade, t(key, default)).
+      • useUnits -> DriveUnitLabels.of(MeasurementSystem) carried in the bound snapshot
+        (web unitPrefs.speed/.distance); values arrive pre-converted in the samples, exactly
+        like the web `chartData` prop (converted in useDriveDetailData before render).
+      • useSyncedCursor / useSyncedReferenceLineX -> model.cursorIndex (P1/S8), read+written
+        by the chart's chartXSelection + rendered as the RuleMark; a parent coordinator can
+        mirror it across sibling drive charts. No HTTP in the view.
+  - Conditional series (web chartData.some(...) guards, EXECUTED-verified):
+      speed area + line (always); idealRange dashed line iff any idealRange!=nil; est line
+      iff any estRange!=nil||ratedRange!=nil, plotting estRange when present else ratedRange
+      (web dataKey ternary); SOC line (always, dataKey=battery); usableSoc line iff any
+      usableSoc!=nil; power line (always), rescaled onto the hidden left axis.
+  - Dual axis (web hidden `<YAxis yAxisId="speed" hide />` + right `<YAxis unit=" kW" />`):
+      speed/range/SOC share one (leading, hidden) scale exactly as the web overlay; power is
+      linearly rescaled onto that scale and the trailing axis is relabeled to kW via the
+      inverse rescale. ReferenceLine y=0 honored by including 0 in powerDomain.
+  - Rich legend (web ChartLegend statFn + per-series formatting, EXECUTED-verified):
+      Mean/Max/Min per series in web order (Speed, Range ideal, Range est., SOC, Usable SOC,
+      Power), each present only when its stat is non-null. Formatting parity: speed mean/max
+      `fmtNumber` (2dp) + min `fmtInt`; ranges `fmtInt`; SOC/usableSoc `fmtPercent`; power
+      `fmtWithUnit(_, 'kW')`. SOC stat uses `battery>0 ? battery : null`. est stat uses
+      `estRange ?? ratedRange`. Verified: speed [10,30,20] -> mean "20.00 mph"/max "30.00
+      mph"/min "10 mph"; power [20,40,-10] -> mean "16.67 kW"/min "-10.00 kW"; ideal mean
+      "190 mi"; fmtInt(12345.6) -> "12,346" (grouped); non-finite -> 0.
+  - Composition (web ChartContainer + ComposedChart + ChartLegend):
+      • ChartContainer title `Drive Overview` (height 360) -> glass-card header + freshness
+        chip; aria preserved verbatim.
+      • Area type 'monotone' (AREA_DEFAULTS) -> .interpolationMethod(.monotone); strokeWidths
+        1.5/1/1/1.5/1/1.5; strokeDasharray "4 2" -> StrokeStyle dash [4,2]; grid "3 3" ->
+        dashed AxisGridLine; XAxis interval preserveStartEnd -> first+last time labels.
+      • Tooltip/ChartTooltip + synced ReferenceLine -> tap-snap RuleMark + per-series value
+        tooltip at the selected sample.
+  - States (ALL rendered, each with a #if DEBUG preview + a model/projection unit test):
+      loading (skeleton chrome) · empty (web length<=1 "No telemetry data available" ->
+      ContentUnavailableView) · error (message + Retry) · content (trace + rich legend) ·
+      stale (freshness chip + "may be out of date" banner + one guarded auto-refresh) ·
+      offline (cached trace kept + "showing the last loaded drive trace" banner, no refetch).
+  - i18n (P1/S10): the 9 web source keys preserved verbatim (driveDetail.driveChart /
+      .driveChart.aria / .speed / .rangeIdeal / .rangeEst / .soc / .usableSoc / .power /
+      .noChartData). The web passes "Range (ideal)" / "Range (est.)" as the SAME
+      driveDetail.range* key default at the legend call site — preserved as distinct
+      driveDetail.range*.legend catalog keys so the native legend renders the same
+      parenthetical text. Native chrome (freshness/banner/loading/error/Mean/Max/Min/samples)
+      namespaced driveDetail.*. Every code-referenced key (24) is declared in the catalog —
+      referenced==declared verified, 0 missing. NO English literals in native code (all via
+      the facade + Text(verbatim:)).
+  - Accessibility: the chart carries a combined VoiceOver summary (title + sample count +
+      present series names); each legend row carries a per-series value ("{label}: Mean M,
+      Max X, Min N"); decorative glyphs hidden; Dynamic-Type system fonts (Font.TS);
+      reduce-motion honored (chart animation gated + TSFadeIn + TSSkeleton shimmer).
+  - Telemetry (P1/S11): DriveOverviewChartModel.start() emits view.opened with surface slug
+      "DriveOverviewChart" exactly once (OSLog default; prod injects the shared diagnostics
+      adapter). Verified by testStartEmitsViewOpenedExactlyOnce.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 6 production files compiled together with the REAL apps/apple
+  component closure (design Tokens + Design/{TSDesign,TSMaterial} + Components/Motion +
+  Components/UI/{Typography,Badges,Buttons,Cards,Utility} + Feedback/{Banners,States,
+  Skeletons} + Platform/Settings/MeasurementSystem); none import the Shared xcframework.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+          -swift-version 6 -strict-concurrency=complete -module-name TeslaSync <closure> <6 prod files>
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [3] swiftc -typecheck — DEBUG previews (-D DEBUG, Xcode #Preview macro plugin; the 6
+        production files + Previews.swift + closure, macOS 15):
+        PREVIEWS_TYPECHECK_EXIT=0                                                  OK
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained
+        SwiftPM harness (real production surface + real design tokens + real TS component
+        closure; @testable import TeslaSync), Swift 6 language mode:
+          Test Suite 'DriveOverviewProjectionTests'      passed — 11 tests, 0 failures
+          Test Suite 'DriveNumberFormatTests'            passed —  3 tests, 0 failures
+          Test Suite 'DriveSeriesKindTests'              passed —  5 tests, 0 failures
+          Test Suite 'DriveOverviewChartModelTests'      passed — 10 tests, 0 failures
+          Test Suite 'DriveOverviewAccessibilityTests'   passed —  3 tests, 0 failures
+          Executed 32 tests, with 0 failures (0 unexpected) in 0.018 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: presence guards + est/rated fallback + plottedKinds; statFn + SOC battery>0;
+        legend order + per-series formatting parity (speed int-min, ranges int, SOC/usable
+        percent, power kW); primary/power domains (0-clamp + regen-negative); rescale +
+        inverse round-trip + degenerate guard; powerAxisTicks; resolvePhase length>1;
+        number format (grouped int, percent, withUnit, non-finite->0); series hex/dash/keys/
+        unitSuffix; unit labels; slug; model loading/loaded/empty(<=1)/failed, view.opened-
+        once, stale auto-refresh once + re-arm on live, offline keeps cached + no refetch,
+        retry, stop, cursor clamp; a11y chart summary + empty + per-legend label.
+  [5] swiftlint --strict (8 surface .swift files; explicit paths — the repo .swiftlint.yml
+        `included:` lists TeslaSync/feature-views so this dir is covered):
+          0 violations.
+        LINT_EXIT=0                                                               OK
+        Whole-tree `swiftlint --strict` was ALSO run: the only violation is the PRE-EXISTING
+        TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length,
+        present at base 1ab7e0e1e, out of this prompt's allowed-files scope). 0 DriveOverviewChart
+        violations — this surface adds zero.
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/8 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+        Whole-tree `swiftformat --lint apps/apple` was ALSO run: the only violation is the
+        PRE-EXISTING TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes,
+        present at base, out of allowed-files scope). 0 DriveOverviewChart violations.
+  [7] check-placeholders.ps1 (ADR-011 stub gate; pwsh) on the surface's files:
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+        (Scanner self-checked: an injected `// TODO` on a temp copy was detected — COUNT=1,
+        EXIT=1 — proving the gate genuinely scans these files; the shipped files are clean.)
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on THIS host via the Xcode toolchain):
+      - `xcodegen generate`                          -> XCODEGEN_EXIT=0 (project + targets +
+                                                        schemes; my 9 files registered, 54
+                                                        pbxproj refs; generated .xcodeproj is
+                                                        git-ignored).
+      - `xcodebuild -target TeslaSync-macOS build`   ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **                         -> MAC_BUILD_EXIT=65
+      - `xcodebuild -target TeslaSync -sdk iphonesimulator build` ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **                         -> IOS_BUILD_EXIT=65
+    Why deferred (code-unrelated environment blocker — NOT a defect in this surface;
+    identical disposition to the 0089 SessionComparisonChart predecessor, Honesty rule 7):
+      (a) Shared.xcframework not staged: the iOS + macOS app targets link the KMP core;
+          staging it needs a Kotlin/Native gradle build (apps/shared
+          :core:assembleSharedXCFramework). apps/apple/Frameworks holds only .gitkeep, so
+          xcodebuild fails at framework resolution BEFORE compiling app sources — the concrete
+          missing-framework error is captured above. Independent of this UI surface.
+      (b) The app targets' source path (TeslaSync/feature-views) co-locates 72 per-surface
+          *.Tests.swift files (XCTest + @testable import TeslaSync) by repo convention, so the
+          app-target xcodebuild cannot host them either; the SAME tests are EXECUTED green
+          (32/32) by the SwiftPM harness in step [4], against the real surface + real closure.
+      (c) macOS hardened-runtime signing requires a development certificate on a signed
+          runner (ADR-012).
+    The surface itself is PROVEN to compile against BOTH the iOS 18 and macOS 15 SDKs
+    (steps [1]/[2]) + the DEBUG previews (step [3]), and its tests EXECUTE green (step [4]).
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source (content/empty/loading/error/stale/
+      offline) — implemented; each has a #if DEBUG preview; phase logic unit-tested + EXECUTED.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (DriveOverviewSource ->
+      DriveOverviewChartModel; useUnits -> carried units; useSyncedCursor/ReferenceLineX ->
+      model.cursorIndex); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — 9 source keys + aria preserved
+      verbatim; 24/24 referenced keys declared (0 missing, verified).
+  [x] Accessibility labels on every interactive/data element (chart summary, legend rows,
+      freshness chip, retry, banners, tooltip).
+  [x] Tests: projection/adapter unit + per-state model + a11y — 32 methods, EXECUTED 32/32,
+      exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured
+      evidence (missing Shared.xcframework, exit 65 on both targets), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the xcodebuild build/test is shown
+                          DEFERRED with its real exit 65 + cause on BOTH targets, not as a pass.
+  2 No scope narrowing ... full surface (9 files + strings), all 6 states, both seams, dual
+                          axis, rich legend, synced cursor, 32 tests.
+  3 No skip-and-assume ... web source + useDriveDetailData + numberFormat read end-to-end;
+                          every t() + conditional branch + the statFn/format math reproduced
+                          and EXECUTED-verified.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0 (scanner self-proven).
+  5 No parity shortcuts .. conditional series + est/rated fallback + dual-axis overlay +
+                          monotone strokes + dashed ranges + kW trailing axis + tooltip +
+                          Mean/Max/Min legend + 6 states.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0089 SessionComparisonChart host-gate + xcframework
+                          deferral; whole-tree lint/format pre-existing violations attributed,
+                          not masked.
+  8 No commit on red ..... committed work is green on every runnable gate; the only non-green
+                          steps are the environment-blocked xcframework builds, deferred with
+                          fresh captured evidence.
+  9 No silent drift ...... the pure core was split into Adapter (types) + Projection (logic) to
+                          honor file_length; the legend parenthetical labels use distinct
+                          .legend catalog keys (documented) to preserve the web's two call-site
+                          defaults for the same source key. No other deviation.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE
