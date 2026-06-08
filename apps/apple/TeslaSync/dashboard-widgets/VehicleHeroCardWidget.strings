@@ -1,0 +1,56 @@
+/*
+  VehicleHeroCardWidget.strings
+  TeslaSync — P4 dashboard widget · 0107 · VehicleHeroCardWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `VehicleHeroCardWidget` resolves (table "VehicleHeroCardWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  The first block is the exact set of keys extracted from the web source
+  (features/dashboard/widgets/VehicleHeroCardWidget.tsx + registry/vehicle.ts). The
+  status labels mirror types/fsm/vehicle.ts VEHICLE_STATE_LABELS (the web StatusBadge
+  shows the capitalized state). The remaining keys back the native-only chrome
+  (freshness chip, retry/empty/error copy, connectivity banners, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.vehicleHeroCard" = "Vehicle";
+"widget.vehicleHeroCard.description" = "Vehicle name, model, state badge (online/asleep/driving/charging), battery, range, temp";
+"widget.noVehicle" = "No vehicle data";
+"widget.battery" = "Battery";
+"widget.range" = "Range";
+"widget.cabin" = "Cabin";
+"widget.outside" = "Outside";
+"widget.charging" = "Charging";
+"widget.idealRange" = "Ideal";
+
+/* --- Vehicle status labels (web FSM VEHICLE_STATE_LABELS) --- */
+"vehicle.state.online" = "Online";
+"vehicle.state.driving" = "Driving";
+"vehicle.state.charging" = "Charging";
+"vehicle.state.parked" = "Parked";
+"vehicle.state.updating" = "Updating";
+"vehicle.state.asleep" = "Asleep";
+"vehicle.state.offline" = "Offline";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.vehicleHeroCard.live" = "Live";
+"widget.vehicleHeroCard.updating" = "Updating";
+"widget.vehicleHeroCard.stale" = "Stale";
+"widget.vehicleHeroCard.offline" = "Offline";
+"widget.vehicleHeroCard.refresh" = "Refresh";
+"widget.vehicleHeroCard.retry" = "Retry";
+"widget.vehicleHeroCard.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.vehicleHeroCard.loading" = "Loading vehicle";
+"widget.vehicleHeroCard.emptyHint" = "Vehicle data will appear once a vehicle reports in.";
+"widget.vehicleHeroCard.errorTitle" = "Couldn't load vehicle";
+"widget.vehicleHeroCard.offlineBanner" = "Offline — showing last known data";
+"widget.vehicleHeroCard.staleBanner" = "Reconnecting — data may be stale";
+
+/* --- Accessibility --- */
+"widget.vehicleHeroCard.openA11y" = "Open the vehicle page";
