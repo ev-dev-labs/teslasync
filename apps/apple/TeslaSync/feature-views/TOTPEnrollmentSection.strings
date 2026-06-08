@@ -1,0 +1,71 @@
+/*
+  TOTPEnrollmentSection.strings
+  TeslaSync — P4 feature view · 0217 · TOTPEnrollmentSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  TOTPEnrollmentSection resolves (table "TOTPEnrollmentSection") lives here with
+  its web t(key, default) English value. These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys the web source
+  (features/settings/components/TOTPEnrollmentSection.tsx) passes to t(). The
+  second group backs the native-only chrome (close / error / retry / freshness)
+  the Apple HIG states contract requires.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"totp.title" = "Two-factor authentication";
+"totp.subtitle" = "TOTP codes from your authenticator app are required for the sudo step-up before destructive admin actions.";
+"totp.status.active" = "Active";
+"totp.status.notEnrolled" = "Not enrolled";
+"totp.lastUsed.label" = "Last used";
+"totp.lastUsed.never" = "Never";
+"totp.backupCodesRemaining.label" = "Backup codes remaining";
+"totp.actions.enroll" = "Enable TOTP";
+"totp.actions.enrollHint" = "Compatible with Google Authenticator, 1Password, Bitwarden, Authy and other RFC 6238 clients.";
+"totp.actions.regenerate" = "Regenerate backup codes";
+"totp.actions.disable" = "Disable";
+"totp.loading" = "Loading two-factor settings…";
+"totp.openMode.message" = "Per-user TOTP requires forward-auth mode. Configure your reverse proxy to inject X-Forwarded-User then reload.";
+
+/* enroll modal */
+"totp.modal.enrollTitle" = "Enable TOTP";
+"totp.modal.scanInstructions" = "Scan the QR code with your authenticator app, or enter the secret manually.";
+"totp.modal.qrAlt" = "TOTP QR code";
+"totp.modal.manualLabel" = "Manual entry secret";
+"totp.modal.codeLabel" = "Enter the 6-digit code from your app";
+"totp.modal.cancel" = "Cancel";
+"totp.modal.verify" = "Verify and activate";
+
+/* backup-codes reveal */
+"totp.backupCodes.title" = "Save your backup codes";
+"totp.backupCodes.warning" = "These codes will not be shown again. Store them in a password manager. Each code can be used once if you lose access to your authenticator app.";
+"totp.backupCodes.download" = "Download .txt";
+"totp.backupCodes.done" = "I saved them";
+"totp.backupCodes.fileHeader" = "# TeslaSync TOTP backup codes — keep secret.";
+
+/* disable confirmation */
+"totp.disable.title" = "Disable two-factor authentication?";
+"totp.disable.message" = "You will no longer be prompted for a TOTP code on the sudo step-up. Your backup codes will be invalidated.";
+"totp.disable.confirm" = "Disable";
+"totp.disable.cancel" = "Keep TOTP enabled";
+"totp.disable.typedLabel" = "Type DISABLE to confirm";
+
+/* verify errors (web handleVerify catch) */
+"totp.errors.codeLength" = "Enter all 6 digits.";
+"totp.errors.invalidCode" = "Code did not match. Try the next one.";
+"totp.errors.rateLimited" = "Too many incorrect attempts. Try again in 15 minutes.";
+"totp.errors.enrollmentExpired" = "Enrollment expired. Close and start over.";
+"totp.errors.verifyGeneric" = "Verification failed.";
+
+/* --- Native chrome: modal close + states + freshness --- */
+"totp.modal.close" = "Close";
+"totp.cards.errorTitle" = "Couldn't load two-factor settings";
+"totp.cards.retry" = "Retry";
+"totp.cards.live" = "Live";
+"totp.cards.stale" = "Stale";
+"totp.cards.offline" = "Offline";
+"totp.cards.staleBanner" = "Reconnecting — two-factor status may be stale";
+"totp.cards.offlineBanner" = "Offline — showing last known two-factor status";
